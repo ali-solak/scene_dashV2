@@ -1,0 +1,19 @@
+name: headless_example
+description: >-
+  The smallest complete Scene-Dash v2 game: plain components, one Script,
+  one Director, spawn-list bundles and a frame-exact TestGame suite — no
+  Flutter, no annotations, no codegen.
+version: 0.0.1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  scene_dash_v2_core:
+    path: ../../packages/scene_dash_v2_core
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.31.1

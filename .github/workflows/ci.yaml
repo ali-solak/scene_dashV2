@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  core:
+    name: core (pure Dart)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # flutter_scene needs Flutter master; the workspace resolves with the
+      # same SDK everywhere (see README for the pinned ref).
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: master
+      - run: flutter pub get
+      - run: dart analyze
+      - run: dart test
+        working-directory: packages/scene_dash_v2_core
+      - run: dart test
+        working-directory: examples/headless_example
+
+  integration:
+    name: integration (Flutter)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: master
+      - run: flutter pub get
+      - run: flutter test
+        working-directory: packages/scene_dash_v2
+      - run: flutter test
+        working-directory: examples/scene_game
+
+  no-v1-shapes:
+    name: no v1 shapes ever
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: grep for banned symbols
+        # Comment lines are allowed to *mention* the old shapes (the carried
+        # cargo documents its own history); code may not use them.
+        run: |
+          ! grep -rn --include="*.dart" --include="*.yaml" \
+            -e "build_runner" -e "\.g\.dart" \
+            -e "@ObjectComponent" -e "@GamePlugin" -e "@PackedComponent" \
+            packages/ examples/ 2>/dev/null \
+            | grep -v -e ":[0-9]*: *///" -e ":[0-9]*: *//" -e ":[0-9]*: *#"

@@ -1,0 +1,19 @@
+name: scene_dash_v2_benchmarks
+description: >-
+  Object-first benchmarks for scene_dash_v2. These exist to measure the real
+  cost of sparse-set queries against straightforward object iteration — and
+  the record-query sugar against the arity machinery it wraps — not to prove
+  the ECS is faster. Not published.
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  scene_dash_v2_core:
+    path: ../packages/scene_dash_v2_core
+  vector_math: ^2.1.0
+
+dev_dependencies:
+  lints: ^6.1.0

@@ -1,0 +1,15 @@
+# Dart workspace root. scene_dash_v2 depends on Flutter + flutter_scene, so
+# the workspace resolves via `flutter pub get` (not `dart pub get`).
+name: _scene_dash_v2_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+
+workspace:
+  - packages/scene_dash_v2_core
+  - packages/scene_dash_v2
+  - examples/headless_example
+  - examples/scene_game
+  - examples/scene_benchmark
+  - benchmarks

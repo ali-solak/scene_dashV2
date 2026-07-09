@@ -1,0 +1,27 @@
+name: scene_dash_v2
+description: >-
+  Scene-Dash v2, flutter_scene integration: SceneGame boot, GameView, scene
+  node binding and transform sync, physics bridge and collision hooks, and
+  the world-as-data-source UI primitives, over the scene_dash_v2_core engine.
+version: 0.0.1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+  flutter: ">=3.16.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  scene_dash_v2_core:
+    path: ../scene_dash_v2_core
+  # flutter_scene 0.18.x requires a recent Flutter master build (Flutter GPU /
+  # Impeller) and `flutter run --enable-flutter-gpu`.
+  flutter_scene: ^0.18.1
+  vector_math: ^2.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

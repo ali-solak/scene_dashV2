@@ -1,0 +1,31 @@
+name: scene_game
+description: >-
+  Rock Dodge, the Scene-Dash v2 reference game: dodge rocks rolling down a
+  ramp using a kinematic character controller. . Requires the Flutter master
+  channel + Flutter GPU (`flutter run --enable-flutter-gpu`).
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+  flutter: ">=3.16.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Cubit-as-resource (§1.10): app-shell state widgets drive with bloc
+  # tooling and systems read as a plain resource.
+  flutter_bloc: ^9.0.0
+  flutter_scene: ^0.18.1
+  flutter_scene_rapier: ^0.2.1
+  scene_dash_v2:
+    path: ../../packages/scene_dash_v2
+  vector_math: ^2.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

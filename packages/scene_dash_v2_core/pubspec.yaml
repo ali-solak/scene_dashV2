@@ -1,0 +1,19 @@
+name: scene_dash_v2_core
+description: >-
+  Scene-Dash v2, headless core: the proven ECS engine (sparse sets,
+  generational entities, events, clock, command buffers) under the Scripts
+  API — Script/Director lifecycle and phase hooks, listen/emit, record
+  queries, GameState and the headless TestGame.
+version: 0.0.1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  meta: ^1.18.3
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.31.1

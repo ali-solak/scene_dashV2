@@ -1,0 +1,167 @@
+### object_query
+
+=== Integrate motion: position += velocity * dt  (N = 10000) ===
+  flat List<Actor> loop                  1.23 ns/op
+  object sparse Query2                   10.35 ns/op
+
+=== Single-component read (sum position.x)  (N = 10000) ===
+  flat List<Actor> loop                  0.54 ns/op
+  object sparse Query1                   8.08 ns/op
+
+=== Filtered: skip half the entities (Frozen tag)  (N = 10000) ===
+  flat loop + bool check                 0.67 ns/op
+  object sparse Query2 excludes Frozen   9.28 ns/op
+
+### spawn_despawn
+
+=== Spawn entity + insert two components  (N = 10000) ===
+  spawn N                                52.01 ns/op
+
+=== Despawn entity (strips all components)  (N = 10000) ===
+  despawn N                              20.59 ns/op
+
+=== Component insert  (N = 10000) ===
+  insert Position on N                   22.47 ns/op
+
+=== Component remove (swap removal)  (N = 10000) ===
+  remove Position from N                 16.81 ns/op
+
+=== Command buffer: apply N deferred inserts  (N = 10000) ===
+  apply N queued inserts                 24.95 ns/op
+
+### representative
+
+=== Representative per-frame object-ECS queries  (N = 10000) ===
+  move: Query2<Position,Velocity> excl. Frozen 9.93 ns/op
+  scan: Query1<Position> req. Player     5.79 ns/op
+  regen: Query3<Position,Velocity,Health> 3.81 ns/op
+
+### transform_sync
+
+=== Transform synchronization  (N = 100) ===
+  full TRS sync (unconditional)          10.92 ns/op
+  translation-only sync                  1.32 ns/op
+  changed-only sync (0% changed)         0.78 ns/op
+  changed-only sync (10% changed)        1.44 ns/op
+  changed-only sync (50% changed)        5.72 ns/op
+  changed-only sync (100% changed)       12.02 ns/op
+
+=== Transform synchronization  (N = 1000) ===
+  full TRS sync (unconditional)          11.91 ns/op
+  translation-only sync                  2.58 ns/op
+  changed-only sync (0% changed)         0.52 ns/op
+  changed-only sync (10% changed)        1.90 ns/op
+  changed-only sync (50% changed)        6.57 ns/op
+  changed-only sync (100% changed)       12.11 ns/op
+
+=== Transform synchronization  (N = 10000) ===
+  full TRS sync (unconditional)          13.51 ns/op
+  translation-only sync                  6.98 ns/op
+  changed-only sync (0% changed)         0.59 ns/op
+  changed-only sync (10% changed)        3.74 ns/op
+  changed-only sync (50% changed)        7.97 ns/op
+  changed-only sync (100% changed)       13.61 ns/op
+
+=== Transform synchronization  (N = 50000) ===
+  full TRS sync (unconditional)          18.93 ns/op
+  translation-only sync                  6.69 ns/op
+  changed-only sync (0% changed)         2.12 ns/op
+  changed-only sync (10% changed)        4.81 ns/op
+  changed-only sync (50% changed)        9.62 ns/op
+  changed-only sync (100% changed)       18.85 ns/op
+
+### structural_churn
+
+=== Command record only: Bundle2  (N = 18000) ===
+  record spawn Bundle2                   87.13 ns/op
+
+=== Command apply only: Bundle2  (N = 18000) ===
+  apply queued Bundle2 spawns            98.50 ns/op
+
+=== Command record + apply per frame: Bundle2  (N = 18000) ===
+  record+apply Bundle2 spawns            116.91 ns/op
+
+=== Command record + apply per frame: Bundle6  (N = 18000) ===
+  record+apply Bundle6 spawns            307.03 ns/op
+
+=== Mixed record + apply: replace/remove/despawn/spawn  (N = 18000) ===
+  mixed churn Bundle2                    182.07 ns/op
+
+=== Command record only: Bundle2  (N = 180000) ===
+  record spawn Bundle2                   114.55 ns/op
+
+=== Command apply only: Bundle2  (N = 180000) ===
+  apply queued Bundle2 spawns            122.43 ns/op
+
+=== Command record + apply per frame: Bundle2  (N = 180000) ===
+  record+apply Bundle2 spawns            138.95 ns/op
+
+=== Command record + apply per frame: Bundle6  (N = 180000) ===
+  record+apply Bundle6 spawns            402.70 ns/op
+
+=== Mixed record + apply: replace/remove/despawn/spawn  (N = 180000) ===
+  mixed churn Bundle2                    195.93 ns/op
+
+### despawn_store_scaling
+
+=== Mass despawn with 8 registered stores  (N = 10000) ===
+  despawn fixed 4-component entities     46.60 ns/op
+
+=== Mass despawn with 32 registered stores  (N = 10000) ===
+  despawn fixed 4-component entities     96.59 ns/op
+
+=== Mass despawn with 64 registered stores  (N = 10000) ===
+  despawn fixed 4-component entities     164.06 ns/op
+
+=== Mass despawn with 128 registered stores  (N = 10000) ===
+  despawn fixed 4-component entities     289.09 ns/op
+
+### query_entity_allocation
+
+=== Query entity handle probe  (N = 10000) ===
+  Query1.each entity ignored             6.86 ns/op
+  Query1.each entity consumed            7.42 ns/op
+  store direct value loop (entity-free probe) 1.07 ns/op
+
+### rts_workload
+
+=== RTS logic: movement  (N = 10000) ===
+  move 10k-ish units                     9.91 ns/op
+
+=== RTS logic: state/target/economy tick  (N = 10000) ===
+  health state target validation         12.62 ns/op
+
+=== RTS selection/tag filtering  (N = 10000) ===
+  selected unit scan                     13.23 ns/op
+
+=== RTS spatial grid  (N = 10000) ===
+  rebuild uniform grid                   13.61 ns/op
+  nearby candidate lookup                45.50 ns/op
+
+=== RTS churn: 100 despawns + 100 spawns  (N = 200) ===
+  100/s-style churn batch                150.81 ns/op
+
+### schedule_dispatch
+
+=== Frame skeleton at scale  (N = 400) ===
+  dispatch: 400 no-op systems            1.45 ns/op
+  dispatch: half gated off by runIf      1.88 ns/op
+  400 systems, each a 16-match query     190.80 ns/op
+  1000 query executions (16 matches)     189.96 ns/op
+  event update x64 channels              25.76 ns/op
+
+### record_query
+
+=== Integrate motion: position += velocity * dt  (N = 10000) ===
+  classic Query2.each (cached)           10.10 ns/op
+  record view .each (per-call construct) 10.31 ns/op
+  record view .records for-in            21.34 ns/op
+
+=== Filtered: skip half the entities (Frozen tag)  (N = 10000) ===
+  classic Query2.each excludes (cached)  9.54 ns/op
+  record view .each exclude:             10.17 ns/op
+
+=== Construction alone (object kept observable)  (N = 1) ===
+  classic query2(...) construct          88.99 ns/op
+  record query2(...) construct           80.29 ns/op
+

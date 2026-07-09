@@ -1,0 +1,71 @@
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.class
+*.log
+*.pyc
+*.swp
+
+# Local IDE/project files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.metadata.tmp
+
+# Local AI/tooling state
+.agents/
+.claude/
+.codex/
+
+# Dart/Flutter/Pub
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+**/.dart_tool/
+**/.pub-cache/
+**/.pub/
+**/build/
+**/coverage/
+**/doc/api/
+/pubspec.lock
+
+# Flutter generated/local state
+**/ios/Flutter/.last_build_id
+**/.widget_preview/
+app.*.symbols
+app.*.map.json
+
+# Android local config, signing, and generated outputs
+**/android/local.properties
+**/android/key.properties
+**/android/.gradle/
+**/android/captures/
+**/android/.cxx/
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+**/GeneratedPluginRegistrant.java
+**/*.jks
+**/*.keystore
+**/*.p12
+**/*.pem
+**/*.crt
+**/*.cer
+**/*.key
+**/google-services.json
+**/GoogleService-Info.plist
+
+# Release/build artifacts and archives
+*.apk
+*.aab
+*.exe
+*.dll
+*.so
+*.dylib
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.tgz

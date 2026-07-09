@@ -1,0 +1,28 @@
+name: scene_benchmark
+description: On-device flutter_scene integration benchmark for Scene-Dash v2.
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+  flutter: ">=3.16.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_scene: ^0.18.1
+  scene_dash_v2:
+    path: ../../packages/scene_dash_v2
+  # Direct dependency: mountOnly assembles the driver from the machinery
+  # tier (advanced.dart).
+  scene_dash_v2_core:
+    path: ../../packages/scene_dash_v2_core
+  vector_math: ^2.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
