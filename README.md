@@ -612,7 +612,6 @@ examples/scene_game/lib/
 
 Deeper docs: [architecture](docs/concept.md) ·
 [integration](docs/integration.md) ·
-[machinery tier](docs/advanced.md)
 
 ## Development
 
