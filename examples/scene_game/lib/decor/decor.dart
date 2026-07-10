@@ -17,6 +17,11 @@ part 'systems/systems.dart';
 void installDecor(GameBuilder game) {
   game.world.insert(MoteField());
   game
-    ..addSystem(Schedules.startup, spawnMotes, reads: const {})
+    ..addSystem(
+      Schedules.startup,
+      spawnMotes,
+      reads: const {},
+      runIf: hasResource<Scene>(),
+    )
     ..addSystem(Schedules.update, animateMotes, reads: const {});
 }

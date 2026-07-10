@@ -163,9 +163,12 @@ release:
 ### Scene-wide settings from a startup system
 
 ```dart
+// Registration: gate on the scene — headless boots skip the system.
+game.addSystem(Schedules.startup, setupScene,
+    reads: const {}, runIf: hasResource<Scene>());
+
 void setupScene(World world) {
-  final scene = world.resources.tryGet<Scene>();
-  if (scene == null) return;   // headless test boot — nothing to configure
+  final scene = world.resource<Scene>();
   scene
     ..antiAliasingMode = AntiAliasingMode.auto // MSAA where supported, else FXAA
     ..renderScale = 1.0                        // <1.0 faster, >1.0 supersamples
@@ -176,9 +179,11 @@ void setupScene(World world) {
 }
 ```
 
-The `tryGet` guard is the standard shape for startup systems that build
-visuals: headless boots (tests) simply skip them, and the same feature
-installs everywhere. The example game uses it in every `vfx` spawn system.
+`runIf: hasResource<Scene>()` is the standard shape for systems that
+build visuals: headless boots (tests) skip them at the schedule, the body
+reads the scene unconditionally, and the dependency sits in the manifest
+next to `reads:`/`writes:` instead of repeating as a guard in every body.
+The example game gates every `vfx` spawn system this way.
 
 ### Picking: `SceneNodeIndex` (node → entity)
 

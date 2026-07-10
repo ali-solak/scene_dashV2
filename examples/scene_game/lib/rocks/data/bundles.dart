@@ -71,6 +71,6 @@ Node _makeRockNode(double x, bool flaming, Node shell) {
 /// Tagged with `PhysicsLayers.rock` so overlap hits can be classified by
 /// collider layer; the collision *mask* stays permissive (default).
 RapierCollider buildRockCollider() => RapierCollider(
-      shape: SphereShape(radius: rockRadius),
-      collisionLayer: PhysicsLayers.rock,
-    );
+  shape: SphereShape(radius: rockRadius),
+  collisionLayer: PhysicsLayers.rock,
+);

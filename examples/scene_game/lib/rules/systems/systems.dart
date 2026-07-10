@@ -9,8 +9,7 @@ final Ray _groundRay = Ray.originDirection(Vector3.zero(), Vector3(0, -1, 0));
 /// Evaluates the lose condition (no ground below) and rock contacts each
 /// frame.
 void evaluateGameRules(World world) {
-  final player =
-      world.query<SceneNode>(require: const [Player]).firstOrNull;
+  final player = world.query<SceneNode>(require: const [Player]).firstOrNull;
   if (player == null) return;
   final node = player.$2.node;
   node.globalTranslationInto(_playerPos);
@@ -20,8 +19,7 @@ void evaluateGameRules(World world) {
   game.addSurvival(world.dt);
 
   if (game.survived > startupGrace) {
-    world.gizmos
-        .ray(pos, _down, groundProbeDistance, color: GizmoColor.yellow);
+    world.gizmos.ray(pos, _down, groundProbeDistance, color: GizmoColor.yellow);
     _groundRay.origin.setFrom(pos);
     final ground = world.physics.raycast(
       _groundRay,
@@ -37,8 +35,11 @@ void evaluateGameRules(World world) {
     }
   }
 
-  world.gizmos
-      .sphere(pos, playerCollisionRadius + hitPadding, color: GizmoColor.red);
+  world.gizmos.sphere(
+    pos,
+    playerCollisionRadius + hitPadding,
+    color: GizmoColor.red,
+  );
   final knockback = world.resource<PlayerKnockback>();
   final shield = world.resource<ShieldState>();
   final deflectVfx = world.resource<ShieldDeflectVfx>();
@@ -107,8 +108,7 @@ void _deflectRock(
 
 /// Camera follow: observes the latest player state after the rules pass.
 void playerView(World world) {
-  final player =
-      world.query<SceneNode>(require: const [Player]).firstOrNull;
+  final player = world.query<SceneNode>(require: const [Player]).firstOrNull;
   if (player == null) return;
   player.$2.node.globalTranslationInto(_playerPos);
   world.resource<CameraRig>().follow(_playerPos, world.dt);

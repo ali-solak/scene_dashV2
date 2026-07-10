@@ -31,8 +31,7 @@ final Material _chargedTrailMaterial = glowMaterial(
 );
 
 final _projectileGeometry = SphereGeometry(radius: projectileRadius);
-final _projectileGlowGeometry =
-    SphereGeometry(radius: projectileRadius * 1.35);
+final _projectileGlowGeometry = SphereGeometry(radius: projectileRadius * 1.35);
 final _projectileTrailGeometry = CuboidGeometry(Vector3(0.07, 0.07, 0.78));
 
 /// A shot's spawn list: a fast trigger sphere with glow and trail children.
@@ -55,8 +54,9 @@ Node _makeProjectileNode(Vector3 position, double charge) {
   final scale = charge > 0 ? chargedProjectileScale(charge) : 1.0;
   final mainMaterial = charge > 0 ? _chargedMaterial : _projectileMaterial;
   final glowMat = charge > 0 ? _chargedGlowMaterial : _projectileGlowMaterial;
-  final trailMat =
-      charge > 0 ? _chargedTrailMaterial : _projectileTrailMaterial;
+  final trailMat = charge > 0
+      ? _chargedTrailMaterial
+      : _projectileTrailMaterial;
   final colliderRadius = projectileRadius * scale;
   final trailThickness = charge > 0 ? scale * 1.8 : 1.0;
   final trailLength = charge > 0 ? scale * 2.4 : 1.0;

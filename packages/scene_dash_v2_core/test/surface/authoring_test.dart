@@ -337,5 +337,24 @@ void main() {
       expect(log, ['enter', 'exit']);
       expect(game.world.isAlive(scoped), isFalse);
     });
+
+    test('hasResource gates a system on an optional capability', () {
+      final log = <String>[];
+      final game = TestGame.headless(features: [
+        (game) => game.addSystem(
+              Schedules.update,
+              (w) => log.add('ran'),
+              reads: const {},
+              runIf: hasResource<_Capability>(),
+            ),
+      ]);
+      game.pump();
+      expect(log, isEmpty, reason: 'resource absent: the system is skipped');
+      game.world.insert(_Capability());
+      game.pump();
+      expect(log, ['ran'], reason: 'resource present: runs from then on');
+    });
   });
 }
+
+final class _Capability {}

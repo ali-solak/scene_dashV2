@@ -215,6 +215,30 @@ void main() {
     expect(drainIdle(b).charged, 0);
   });
 
+  test('phase edges follow the machine latch: charging-started is readable '
+      'until the next update', () {
+    final b = Blaster()
+      ..update(
+        pressed: true,
+        released: false,
+        canceled: false,
+        held: true,
+        dt: 0,
+      );
+    // The HUD's charging-started signal — a machine edge, no bookkeeping.
+    expect(b.phase.justEntered(BlasterPhase.charging), isTrue);
+    b.update(
+      pressed: false,
+      released: false,
+      canceled: false,
+      held: true,
+      dt: frame,
+    );
+    expect(b.phase.justEntered(BlasterPhase.charging), isFalse,
+        reason: 'the next update ticks the machine: window closed');
+    expect(b.phase.state, BlasterPhase.charging);
+  });
+
   test('reset clears all state', () {
     final b = Blaster()
       ..update(pressed: true, released: false, canceled: false, held: true, dt: 0)

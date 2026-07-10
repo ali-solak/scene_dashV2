@@ -55,8 +55,11 @@ Future<void> main() async {
           // Cubit-as-resource: the same instance the tree gets through
           // BlocProvider; this system applies its choices to the world.
           ..world.insert(debug)
-          ..addSystem(Schedules.frameStart, applyDebugSettings,
-              reads: const {});
+          ..addSystem(
+            Schedules.frameStart,
+            applyDebugSettings,
+            reads: const {},
+          );
       },
       installWorldGeometry,
       installPlayer,

@@ -63,8 +63,18 @@ void installProjectiles(GameBuilder game) {
       inSet: GameSets.actions,
       runIf: inState(GameStatus.playing),
     )
-    ..addSystem(Schedules.startup, spawnImpactVfx, reads: const {})
-    ..addSystem(Schedules.startup, spawnLockOnReticle, reads: const {})
+    ..addSystem(
+      Schedules.startup,
+      spawnImpactVfx,
+      reads: const {},
+      runIf: hasResource<Scene>(),
+    )
+    ..addSystem(
+      Schedules.startup,
+      spawnLockOnReticle,
+      reads: const {},
+      runIf: hasResource<Scene>(),
+    )
     // The rock-hit reaction insert is deferred (world.add applies at the
     // command boundary), so only the live Projectile mutation is a write.
     ..addSystem(

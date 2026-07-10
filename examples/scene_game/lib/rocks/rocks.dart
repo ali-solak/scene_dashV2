@@ -25,16 +25,30 @@ void installRocks(GameBuilder game) {
   game
     ..registerTag<Rock>()
     ..registerTag<Flaming>()
-    ..addSystem(Schedules.startup, spawnRockTrails, reads: const {})
-    ..addSystem(OnEnter(GameStatus.playing), resetRocksOnRunStart,
-        reads: const {})
+    ..addSystem(
+      Schedules.startup,
+      spawnRockTrails,
+      reads: const {},
+      runIf: hasResource<Scene>(),
+    )
+    ..addSystem(
+      OnEnter(GameStatus.playing),
+      resetRocksOnRunStart,
+      reads: const {},
+    )
     // The spawn itself is deferred to the command boundary, so the
     // declared writes are the feature-owned types.
-    ..addSystem(Schedules.fixedUpdate, spawnRocks,
-        writes: {Rock, Flaming},
-        runIf: inState(GameStatus.playing))
+    ..addSystem(
+      Schedules.fixedUpdate,
+      spawnRocks,
+      writes: {Rock, Flaming},
+      runIf: inState(GameStatus.playing),
+    )
     ..addSystem(Schedules.update, cleanupRocks, reads: {SceneNode})
-    ..addSystem(Schedules.update, updateRockHitReactions,
-        writes: {RockHitReaction, RockVisuals})
+    ..addSystem(
+      Schedules.update,
+      updateRockHitReactions,
+      writes: {RockHitReaction, RockVisuals},
+    )
     ..addSystem(Schedules.update, updateRockTrails, reads: {SceneNode});
 }

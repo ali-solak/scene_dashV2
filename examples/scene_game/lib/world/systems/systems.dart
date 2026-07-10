@@ -5,8 +5,7 @@ part of '../world.dart';
 /// moves. Runs once at startup; a no-op in a headless game (timing tests),
 /// where there is no scene to dress.
 void setupWorld(World world) {
-  final scene = world.resources.tryGet<Scene>();
-  if (scene == null) return;
+  final scene = world.resource<Scene>();
   scene
     ..skybox = Skybox(GradientSkySource())
     ..environment = EnvironmentMap.studio()

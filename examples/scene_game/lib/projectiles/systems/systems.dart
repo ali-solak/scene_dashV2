@@ -33,8 +33,7 @@ void shootProjectiles(World world) {
   );
   if (shots.isEmpty) return;
 
-  final player =
-      world.query<SceneNode>(require: const [Player]).firstOrNull;
+  final player = world.query<SceneNode>(require: const [Player]).firstOrNull;
   if (player == null) return;
   final base = player.$2.node.globalTransform.getTranslation()
     ..y += playerBodyVisualRadius * 0.45
@@ -132,9 +131,7 @@ int _knockRocks(World world, Vector3 position, Projectile projectile) {
       if (projectile.charged) projectile.hitRocks.add(entity);
       world.add(
         entity,
-        RockHitReaction(
-          strength: projectile.charge.clamp(0.0, 1.0).toDouble(),
-        ),
+        RockHitReaction(strength: projectile.charge.clamp(0.0, 1.0).toDouble()),
       );
       vfx.emit(_rockHitPosition, strength: projectile.charge);
       hitCount++;

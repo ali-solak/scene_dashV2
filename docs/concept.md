@@ -105,6 +105,32 @@ resolve to a fixpoint in one boundary, and `DespawnOnExit`/`DespawnAfter`
 ride the same path. The immediate `*Now` variants exist for setup code and
 live in `advanced.dart` with their no-active-query asserts.
 
+## Components may bear logic — the boundary rule
+
+Components may bear logic. The boundary: the object computes, the system
+performs world effects. A component method never holds or touches
+`World`; holding an `Entity` as data is fine. Machines expose edges;
+systems spawn, emit and mutate on them.
+
+### State at three scales
+
+The same edge vocabulary at every scale:
+
+- **`GameTimer`** — durations inside gameplay (cooldowns, windups,
+  cadences): `tick(world.dt)`, `finished`, `justFinished` true for
+  exactly one tick.
+- **`Machine<S>`** — an entity's *mode* (idle / charging / rolling):
+  `tick(world.dt)`, `inState`, `go`, with `justEntered`/`justExited`
+  true for exactly one tick-window.
+- **Whole-game state machines** (`addState<S>`) — title / playing /
+  lost: transitions applied at frame boundaries, `OnEnter`/`OnExit` as
+  schedules, `inState(...)` as the run condition.
+
+Timers and machines are plain values ticked by their owner systems, so
+they pause, slow and freeze with the game and add nothing to the
+schedule; whole-game state is a framework machine because independent
+features must coordinate on it.
+
 ## Access metadata is diagnostic, not enforced
 
 `reads:`/`writes:` on `addSystem` declare which components a system

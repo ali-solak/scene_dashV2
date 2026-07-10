@@ -85,5 +85,31 @@ void main() {
         'Entity(${e.index} v${e.generation}) <stale>',
       );
     });
+
+    test('a component overriding toString renders its description; '
+        'non-overriding components stay types-only', () {
+      final world = _worldWithStores()
+        ..stores.register<Described>(ObjectComponentStore<Described>());
+      final e = world.entities.spawn();
+      world.insertNow<Position>(e, Position(1));
+      world.insertNow<Described>(e, Described(Machine<Mood>(Mood.calm)));
+
+      expect(
+        world.debugDescribe(e),
+        'Entity(${e.index} v${e.generation}) [Position, calm (0.00s)]',
+        reason: 'Position keeps the type fallback; Described speaks',
+      );
+    });
   });
+}
+
+enum Mood { calm, furious }
+
+/// A component that describes itself — the [Machine] carrier shape.
+final class Described {
+  final Machine<Mood> mood;
+  Described(this.mood);
+
+  @override
+  String toString() => '$mood';
 }

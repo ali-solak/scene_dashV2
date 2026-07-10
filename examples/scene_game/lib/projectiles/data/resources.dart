@@ -16,22 +16,27 @@ final class BlasterShots {
   static const none = BlasterShots();
 }
 
-/// Tap-to-burst / hold-to-charge fire state machine; the HUD and charge VFX
-/// read it through [BlasterView].
+/// Tap-to-burst / hold-to-charge fire state machine; the HUD reads it
+/// through the world. The mode lives on a [Machine] — `phase.inState` is
+/// the charge clock and transition edges replace hand-rolled flags —
+/// while recovery stays a [GameTimer] (a genuine duration spanning the
+/// bursting and cooldown states) and burst pellets stay an emission
+/// queue.
 final class Blaster {
   Blaster() {
-    // Start with recovery fully served, so the blaster is ready and the HUD
-    // shows no cooldown before the first shot.
+    // Start with recovery fully served, so the blaster is ready and the
+    // HUD shows no cooldown before the first shot.
     _recovery.tick(blasterCooldown);
   }
 
-  BlasterPhase _phase = BlasterPhase.ready;
+  /// The fire mode. [update] owns the tick; readers act on transition
+  /// edges — `phase.justEntered(BlasterPhase.charging)` is the
+  /// charging-started signal, readable until the next update.
+  final Machine<BlasterPhase> phase = Machine(BlasterPhase.ready);
 
-  /// Charge accrual while the fire button is held; clamps at max charge.
-  final GameTimer _charge = GameTimer(blasterMaxChargeDuration);
-
-  /// Recovery after firing. The duration varies per shot type, so each fire
-  /// resets it with the right target.
+  /// Recovery after firing. The duration varies per shot type, so each
+  /// fire resets it with the right target; it serves through both the
+  /// bursting and cooldown states.
   final GameTimer _recovery = GameTimer(blasterCooldown);
 
   // Burst pellets are an emission queue (n shots at a fixed spacing, first
@@ -39,23 +44,21 @@ final class Blaster {
   int _queuedBurst = 0;
   double _burstTimer = 0;
 
-  BlasterPhase get phase => _phase;
-
   double get charge01 {
-    if (_phase != BlasterPhase.charging) return 0;
+    if (phase.state != BlasterPhase.charging) return 0;
     const span = blasterMaxChargeDuration - blasterChargeThreshold;
-    return ((_charge.elapsed - blasterChargeThreshold) / span).clamp(0.0, 1.0);
+    return ((phase.inState - blasterChargeThreshold) / span).clamp(0.0, 1.0);
   }
 
   double get cooldown01 => 1 - _recovery.fraction;
 
   bool get isCharging =>
-      _phase == BlasterPhase.charging &&
-      _charge.elapsed >= blasterChargeThreshold;
+      phase.state == BlasterPhase.charging &&
+      phase.inState >= blasterChargeThreshold;
 
   bool get isCoolingDown => !_recovery.finished;
 
-  bool get isReady => _phase == BlasterPhase.ready;
+  bool get isReady => phase.state == BlasterPhase.ready;
 
   /// Advances the blaster one fixed step and returns the shots to spawn.
   BlasterShots update({
@@ -65,36 +68,34 @@ final class Blaster {
     required bool held,
     required double dt,
   }) {
-    // Recovery serves through both bursting and cooldown phases, so total
-    // recovery after firing is one timer duration.
+    // The machine ticks first — closing the previous edge window — so the
+    // transitions below stay readable until the next update.
+    phase.tick(dt);
     _recovery.tick(dt);
-    if (_phase == BlasterPhase.cooldown && _recovery.finished) {
-      _phase = BlasterPhase.ready;
+    if (phase.state == BlasterPhase.cooldown && _recovery.finished) {
+      phase.go(BlasterPhase.ready);
     }
 
     double? charged;
 
-    if (pressed && _phase == BlasterPhase.ready) {
-      _phase = BlasterPhase.charging;
-      _charge.reset();
+    if (pressed && phase.state == BlasterPhase.ready) {
+      phase.go(BlasterPhase.charging);
     }
 
-    if (_phase == BlasterPhase.charging) {
+    if (phase.state == BlasterPhase.charging) {
       if (canceled) {
-        _phase = BlasterPhase.ready;
+        phase.go(BlasterPhase.ready);
       } else if (released) {
-        if (_charge.elapsed >= blasterChargeThreshold) {
+        if (phase.inState >= blasterChargeThreshold) {
           charged = charge01; // Read before the phase leaves `charging`.
           _startCooldown(chargedShotCooldown);
         } else {
           _startBurst();
         }
-      } else if (held) {
-        _charge.tick(dt);
-      } else {
-        // Held dropped with no transition flag (focus loss mid-step): abort so
-        // the blaster can't get stuck charging.
-        _phase = BlasterPhase.ready;
+      } else if (!held) {
+        // Held dropped with no transition flag (focus loss mid-step): abort
+        // so the blaster can't get stuck charging.
+        phase.go(BlasterPhase.ready);
       }
     }
 
@@ -105,19 +106,19 @@ final class Blaster {
   }
 
   void _startBurst() {
-    _phase = BlasterPhase.bursting;
+    phase.go(BlasterPhase.bursting);
     _queuedBurst = blasterBurstShots;
     _burstTimer = 0;
     _recovery.reset(blasterCooldown);
   }
 
   void _startCooldown(double duration) {
-    _phase = BlasterPhase.cooldown;
+    phase.go(BlasterPhase.cooldown);
     _recovery.reset(duration);
   }
 
   int _emitBurstPellets(double dt) {
-    if (_phase != BlasterPhase.bursting) return 0;
+    if (phase.state != BlasterPhase.bursting) return 0;
     var fired = 0;
     _burstTimer -= dt;
     while (_queuedBurst > 0 && _burstTimer <= 0) {
@@ -126,14 +127,15 @@ final class Blaster {
       _burstTimer += blasterBurstInterval;
     }
     if (_queuedBurst == 0) {
-      _phase = _recovery.finished ? BlasterPhase.ready : BlasterPhase.cooldown;
+      phase.go(
+        _recovery.finished ? BlasterPhase.ready : BlasterPhase.cooldown,
+      );
     }
     return fired;
   }
 
   void reset() {
-    _phase = BlasterPhase.ready;
-    _charge.reset();
+    phase.go(BlasterPhase.ready);
     _recovery
       ..reset()
       ..tick(_recovery.duration);

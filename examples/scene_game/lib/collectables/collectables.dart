@@ -47,7 +47,12 @@ void installCollectables(GameBuilder game) {
       writes: {Collectable, ShieldPickup},
       runIf: inState(GameStatus.playing),
     )
-    ..addSystem(Schedules.startup, spawnShieldDeflectVfx, reads: const {})
+    ..addSystem(
+      Schedules.startup,
+      spawnShieldDeflectVfx,
+      reads: const {},
+      runIf: hasResource<Scene>(),
+    )
     ..addSystem(
       Schedules.update,
       updateShieldState,

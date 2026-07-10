@@ -1,8 +1,3 @@
-/// The machinery tier of `scene_dash_v2_core` — everything under the Part 1
-/// surface, exported for escape hatches, migration interop and the
-/// framework's own tests. Game code imports `scene_dash_v2_core.dart`
-/// instead; nothing here appears in the README.
-///
 /// This surface runs the internal pipeline: the sparse-set stores, the
 /// schedule graph and its adapters, the arity query classes the record
 /// surface wraps, the deferred command buffer the structural verbs ride on,

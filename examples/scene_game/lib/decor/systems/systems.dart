@@ -3,8 +3,7 @@ part of '../decor.dart';
 /// Startup: build the instanced pool and scatter the motes. A no-op in a
 /// headless game — decoration needs a scene.
 void spawnMotes(World world) {
-  final scene = world.resources.tryGet<Scene>();
-  if (scene == null) return;
+  final scene = world.resource<Scene>();
   final field = world.resource<MoteField>();
   final pool = InstancedPool(
     geometry: SphereGeometry(radius: 0.07, segments: 8, rings: 6),

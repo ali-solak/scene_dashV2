@@ -22,14 +22,28 @@ void installPlayer(GameBuilder game) {
   game.world.insert(PlayerKnockback());
   game
     ..registerTag<Player>()
-    ..addSystem(Schedules.startup, spawnPlayer,
-        writes: {Player, SceneNode, PlayerVisuals})
-    ..addSystem(OnEnter(GameStatus.playing), resetPlayerOnRunStart,
-        writes: {SceneNode, PlayerVisuals})
-    ..addSystem(Schedules.fixedUpdate, movePlayer,
-        writes: {SceneNode},
-        inSet: GameSets.movement,
-        runIf: inState(GameStatus.playing))
-    ..addSystem(Schedules.update, animateCrabLegs,
-        writes: {PlayerVisuals}, runIf: inState(GameStatus.playing));
+    ..addSystem(
+      Schedules.startup,
+      spawnPlayer,
+      writes: {Player, SceneNode, PlayerVisuals},
+      runIf: hasResource<Scene>(),
+    )
+    ..addSystem(
+      OnEnter(GameStatus.playing),
+      resetPlayerOnRunStart,
+      writes: {SceneNode, PlayerVisuals},
+    )
+    ..addSystem(
+      Schedules.fixedUpdate,
+      movePlayer,
+      writes: {SceneNode},
+      inSet: GameSets.movement,
+      runIf: inState(GameStatus.playing),
+    )
+    ..addSystem(
+      Schedules.update,
+      animateCrabLegs,
+      writes: {PlayerVisuals},
+      runIf: inState(GameStatus.playing),
+    );
 }

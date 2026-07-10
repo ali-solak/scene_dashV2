@@ -3,10 +3,10 @@ part of '../projectiles.dart';
 // Reused scratch so the per-frame targeting pass allocates nothing.
 final Vector3 _reticlePlayerPos = Vector3.zero();
 
-/// Startup: build the single reused reticle node. A no-op headless.
+/// Startup: build the single reused reticle node. Gated on the scene at
+/// registration (`runIf: hasResource<Scene>()`), so headless boots skip it.
 void spawnLockOnReticle(World world) {
-  final scene = world.resources.tryGet<Scene>();
-  if (scene == null) return;
+  final scene = world.resource<Scene>();
   final reticle = world.resource<LockOnReticle>();
   final component = WidgetComponent(
     child: ReticleWidget(reticle.model),
@@ -36,8 +36,7 @@ void updateLockOnReticle(World world) {
   reticle.firedFlash = math.max(0, reticle.firedFlash - dt / 0.25);
   reticle.impactFlash = math.max(0, reticle.impactFlash - dt / 0.3);
 
-  final player =
-      world.query<SceneNode>(require: const [Player]).firstOrNull;
+  final player = world.query<SceneNode>(require: const [Player]).firstOrNull;
   if (player == null) return;
   player.$2.node.globalTranslationInto(_reticlePlayerPos);
   final pos = _reticlePlayerPos;
@@ -61,7 +60,8 @@ void updateLockOnReticle(World world) {
   });
 
   final charging = blaster.isCharging;
-  final showing = hasRock &&
+  final showing =
+      hasRock &&
       (charging || reticle.firedFlash > 0.01 || reticle.impactFlash > 0.01);
   reticle.opacity = approach(reticle.opacity, showing ? 1.0 : 0.0, dt * 10);
   reticle.charge01 = approach(

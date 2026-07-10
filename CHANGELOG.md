@@ -23,6 +23,9 @@
   `entitiesWith`, `gizmos`, `physics`.
 - Bundles are functions returning `List<Object>`; composition is a
   spread; `ownedBy:` ties subtree lifetimes to their owner.
+- `hasResource<T>()` run condition — gate a system on an optional
+  capability (`runIf: hasResource<Scene>()` skips visual spawners on
+  headless boots) instead of an early-return guard in the body.
 - Access declarations (`reads:`/`writes:`) feed the carried conflict
   detector; omitting both excludes the system, `strictAccess: true` makes
   that an error, and a debug drift check compares declarations against
@@ -67,8 +70,9 @@
 - Classic machinery — arity query classes, `Single`/`OptionalSingle`,
   `EntityQuery`, `Commands`, immediate `*Now` verbs, `App`/`AppBuilder`/
   `Plugin`, `EcsFrameLoop`, `SystemAdapter`, stores — moved to
-  `advanced.dart` (see `docs/advanced.md`). Nothing is silently absent;
-  the parity ledger in `docs/plan.md` maps every v1 feature to its tier.
+  `advanced.dart` (documented in the library itself). Nothing is silently
+  absent — every v1 feature maps to the surface, the machinery tier, or a
+  named replacement.
 
 ### Removed (by design, without successor)
 

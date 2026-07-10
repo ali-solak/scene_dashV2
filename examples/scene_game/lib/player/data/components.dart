@@ -264,11 +264,11 @@ final class PlayerShieldVisuals {
 /// bundle stays a list of parts, each owned (written) by exactly one
 /// feature.
 (PlayerVisuals, PlayerChargeVisuals, PlayerShieldVisuals)
-    buildPlayerVisuals() => (
-          PlayerVisuals._create(),
-          PlayerChargeVisuals._create(),
-          PlayerShieldVisuals._create(),
-        );
+buildPlayerVisuals() => (
+  PlayerVisuals._create(),
+  PlayerChargeVisuals._create(),
+  PlayerShieldVisuals._create(),
+);
 
 PhysicallyBasedMaterial _blendMaterial(Vector4 base, Vector4 emissive) {
   return PhysicallyBasedMaterial()

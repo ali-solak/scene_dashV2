@@ -4,8 +4,9 @@ part of '../projectiles.dart';
 /// source of charge truth. Mutates player-owned nodes and unique materials in
 /// place.
 void updateChargeVisuals(World world) {
-  final visuals =
-      world.query<PlayerChargeVisuals>(require: const [Player]).firstOrNull;
+  final visuals = world
+      .query<PlayerChargeVisuals>(require: const [Player])
+      .firstOrNull;
   if (visuals == null) return;
   final v = visuals.$2;
   final blaster = world.resource<Blaster>();
@@ -14,8 +15,11 @@ void updateChargeVisuals(World world) {
 
   v.chargePhase += world.dt * (6 + 10 * c);
   // Eased show factor so release/cancel shrinks the orb and beam cleanly.
-  final show = v.chargeShow =
-      approach(v.chargeShow, charging ? 1.0 : 0.0, world.dt * 12);
+  final show = v.chargeShow = approach(
+    v.chargeShow,
+    charging ? 1.0 : 0.0,
+    world.dt * 12,
+  );
 
   final pulse = 1 + 0.08 * math.sin(v.chargePhase);
   final flash = (charging && c > 0.82)

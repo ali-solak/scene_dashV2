@@ -34,9 +34,9 @@ List<Object> shieldPickupBundle({required double x}) {
 }
 
 Node _makeGlow() => Node(
-      mesh: Mesh(_glowGeometry, _glowMaterial),
-      localTransform: Matrix4.identity(),
-    )..frustumCulled = false;
+  mesh: Mesh(_glowGeometry, _glowMaterial),
+  localTransform: Matrix4.identity(),
+)..frustumCulled = false;
 
 Node _makePickupNode(double x, Node glow) {
   return Node(

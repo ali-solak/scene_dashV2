@@ -1,9 +1,9 @@
 part of '../player.dart';
 
-/// Startup: build and spawn the player. A no-op headless — the body and
-/// feedback nodes need the scene's shader resources.
+/// Startup: build and spawn the player. Gated on the scene at
+/// registration (`runIf: hasResource<Scene>()`) — the body and feedback
+/// nodes need the scene's shader resources.
 void spawnPlayer(World world) {
-  if (world.resources.tryGet<Scene>() == null) return;
   world.spawn(playerBundle());
 }
 
@@ -24,8 +24,7 @@ void movePlayer(World world) {
     final positionY = m[13];
     // Ordering keeps the original mapping: left = +1, right = -1.
     final horizontal = input.axis(GameAction.right, GameAction.left);
-    final motion = knockback.step(dt)
-      ..x += horizontal * playerStrafeSpeed * dt;
+    final motion = knockback.step(dt)..x += horizontal * playerStrafeSpeed * dt;
     final nextX = m[12] + motion.x;
     final nextZ = m[14] + motion.z;
     if (isOverRampFootprint(nextX, nextZ)) {
@@ -91,8 +90,11 @@ void animateCrabLegs(World world) {
 /// rules feature only resets what it owns (run clock, camera).
 void resetPlayerOnRunStart(World world) {
   final knockback = world.resource<PlayerKnockback>();
-  world.query2<SceneNode, PlayerVisuals>(require: const [Player]).each(
-      (entity, ref, visuals) {
+  world.query2<SceneNode, PlayerVisuals>(require: const [Player]).each((
+    entity,
+    ref,
+    visuals,
+  ) {
     final body = ref.component<RapierRigidBody>();
     if (body != null) {
       body

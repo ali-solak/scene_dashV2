@@ -32,13 +32,14 @@ void animateShieldPickups(World world) {
   final dt = world.dt;
   world
       .query2<ShieldPickupState, ShieldPickupVisuals>(
-          require: const [ShieldPickup])
+        require: const [ShieldPickup],
+      )
       .each((entity, state, visuals) {
-    state.age += dt;
-    final pulse = 1 + 0.18 * math.sin(state.age * 6);
-    final bob = 0.12 * math.sin(state.age * 3);
-    visuals.glow.setLocalUniform(0, bob, 0, pulse);
-  });
+        state.age += dt;
+        final pulse = 1 + 0.18 * math.sin(state.age * 6);
+        final bob = 0.12 * math.sin(state.age * 3);
+        visuals.glow.setLocalUniform(0, bob, 0, pulse);
+      });
 }
 
 /// Collects a pickup when the player is close enough (a direct squared
@@ -46,14 +47,14 @@ void animateShieldPickups(World world) {
 /// at the first collection: one shield per frame, no further distance
 /// checks.
 void collectShieldPickups(World world) {
-  final player =
-      world.query<SceneNode>(require: const [Player]).firstOrNull;
+  final player = world.query<SceneNode>(require: const [Player]).firstOrNull;
   if (player == null) return;
   player.$2.node.globalTranslationInto(_playerScratch);
   final shield = world.resource<ShieldState>();
-  world
-      .query<SceneNode>(require: const [ShieldPickup])
-      .eachUntil((entity, binding) {
+  world.query<SceneNode>(require: const [ShieldPickup]).eachUntil((
+    entity,
+    binding,
+  ) {
     binding.node.globalTranslationInto(_pickupScratch);
     final dx = _pickupScratch.x - _playerScratch.x;
     final dy = _pickupScratch.y - _playerScratch.y;
@@ -71,8 +72,9 @@ void collectShieldPickups(World world) {
 /// [ShieldState], which owns the timing. Mutates player-owned
 /// nodes/materials in place.
 void updateShieldVisuals(World world) {
-  final visuals =
-      world.query<PlayerShieldVisuals>(require: const [Player]).firstOrNull;
+  final visuals = world
+      .query<PlayerShieldVisuals>(require: const [Player])
+      .firstOrNull;
   if (visuals == null) return;
   final v = visuals.$2;
   final shield = world.resource<ShieldState>();
@@ -118,8 +120,7 @@ void updateShieldVisuals(World world) {
 
 /// Despawns pickups that fell below the world or rolled past the ramp.
 void cleanupPickups(World world) {
-  world.query<SceneNode>(require: const [Collectable]).each(
-      (entity, binding) {
+  world.query<SceneNode>(require: const [Collectable]).each((entity, binding) {
     binding.node.globalTranslationInto(_pickupScratch);
     if (_pickupScratch.y < collectableKillY ||
         _pickupScratch.z > collectablePassZ) {
@@ -128,11 +129,11 @@ void cleanupPickups(World world) {
   });
 }
 
-/// Startup: build the shared deflection pool. A no-op headless.
+/// Startup: build the shared deflection pool. Gated on the scene at
+/// registration (`runIf: hasResource<Scene>()`), so headless boots skip it.
 void spawnShieldDeflectVfx(World world) {
-  final scene = world.resources.tryGet<Scene>();
-  if (scene == null) return;
-  world.resource<ShieldDeflectVfx>().pool = buildDeflectPool()..addTo(scene);
+  world.resource<ShieldDeflectVfx>().pool = buildDeflectPool()
+    ..addTo(world.resource<Scene>());
 }
 
 void updateShieldDeflectVfx(World world) {

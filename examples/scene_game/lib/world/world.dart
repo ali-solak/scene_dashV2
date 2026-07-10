@@ -11,5 +11,10 @@ part 'systems/systems.dart';
 /// Installs world setup: lighting, post-processing, and the ramp — v1's
 /// plugin body without the class.
 void installWorldGeometry(GameBuilder game) {
-  game.addSystem(Schedules.startup, setupWorld, reads: const {});
+  game.addSystem(
+    Schedules.startup,
+    setupWorld,
+    reads: const {},
+    runIf: hasResource<Scene>(),
+  );
 }

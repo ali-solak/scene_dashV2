@@ -30,16 +30,18 @@ void cleanupRocks(World world) {
 }
 
 /// Rocks reset their own spawner cadence when a run (re)starts.
-void resetRocksOnRunStart(World world) =>
-    world.resource<RockSpawner>().reset();
+void resetRocksOnRunStart(World world) => world.resource<RockSpawner>().reset();
 
 /// Animates the per-rock flash shell while a hit reaction is active, then
 /// drops the component. Only the child shell is scaled — never the
 /// physics-driven root node.
 void updateRockHitReactions(World world) {
   final dt = world.dt;
-  world.query2<RockHitReaction, RockVisuals>().each(
-      (entity, reaction, visuals) {
+  world.query2<RockHitReaction, RockVisuals>().each((
+    entity,
+    reaction,
+    visuals,
+  ) {
     reaction.flash.tick(dt);
     final shell = visuals.shell;
     if (reaction.flash.finished) {
@@ -55,11 +57,11 @@ void updateRockHitReactions(World world) {
   });
 }
 
-/// Startup: build the shared trail pool. A no-op headless.
+/// Startup: build the shared trail pool. Gated on the scene at
+/// registration (`runIf: hasResource<Scene>()`), so headless boots skip it.
 void spawnRockTrails(World world) {
-  final scene = world.resources.tryGet<Scene>();
-  if (scene == null) return;
-  world.resource<RockTrails>().pool = buildFlamePool()..addTo(scene);
+  world.resource<RockTrails>().pool = buildFlamePool()
+    ..addTo(world.resource<Scene>());
 }
 
 /// Lays each flaming rock's trail puffs into the shared instanced pool by
@@ -73,9 +75,10 @@ void updateRockTrails(World world) {
   final scratch = pool.scratch;
   var slot = 0;
 
-  world
-      .query<SceneNode>(require: const [Rock, Flaming])
-      .eachUntil((entity, binding) {
+  world.query<SceneNode>(require: const [Rock, Flaming]).eachUntil((
+    entity,
+    binding,
+  ) {
     if (slot + _puffsPerRock > pool.capacity) return false; // pool full
     final m = binding.node.globalTransform;
     for (var i = 0; i < _puffsPerRock; i++) {

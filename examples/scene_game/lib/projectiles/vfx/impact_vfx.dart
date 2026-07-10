@@ -1,9 +1,9 @@
 part of '../projectiles.dart';
 
-/// Startup: build the impact pools. A no-op headless.
+/// Startup: build the impact pools. Gated on the scene at registration
+/// (`runIf: hasResource<Scene>()`), so headless boots skip it.
 void spawnImpactVfx(World world) {
-  final scene = world.resources.tryGet<Scene>();
-  if (scene == null) return;
+  final scene = world.resource<Scene>();
   final vfx = world.resource<ImpactVfx>();
   vfx.sparkPool = InstancedPool(
     geometry: SphereGeometry(radius: 0.22, segments: 12, rings: 6),

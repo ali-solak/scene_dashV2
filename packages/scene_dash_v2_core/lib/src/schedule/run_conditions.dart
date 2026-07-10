@@ -72,6 +72,25 @@ RunCondition every(double seconds) {
 RunCondition hasEvents<T>() =>
     (World world) => world.eventChannel<T>().isNotEmpty;
 
+/// A condition that passes while a resource of type [T] is registered —
+/// for systems that only make sense when an optional capability is
+/// present, without an early-return guard hiding the fact inside the body.
+///
+/// The motivating case is environment-dependent wiring: a visual spawn
+/// system needs the `Scene`, which a headless boot never inserts. Gated at
+/// registration, the dependency sits in the manifest next to
+/// `reads:`/`writes:` instead of repeating as a guard in every body:
+///
+/// ```dart
+/// game.addSystem(Schedules.startup, spawnImpactVfx,
+///     reads: const {}, runIf: hasResource<Scene>());
+/// ```
+///
+/// Evaluated per run like any condition, so a resource inserted later
+/// starts the system passing from that point on.
+RunCondition hasResource<T extends Object>() =>
+    (World world) => world.hasResource<T>();
+
 /// Short-circuiting composition of [RunCondition]s.
 extension RunConditionOps on RunCondition {
   /// Passes only when both this condition and [other] pass. [other] is not
