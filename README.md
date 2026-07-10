@@ -797,7 +797,12 @@ examples/scene_game/lib/
 ```
 
 Deeper docs: [architecture](docs/concept.md) ·
+<<<<<<< HEAD
 [integration](docs/integration.md) 
+=======
+[integration](docs/integration.md) ·
+
+>>>>>>> b92c88e6d4616dbe0bcac6f32e7b3d9ba6c812b4
 ## Development
 
 ```bash
