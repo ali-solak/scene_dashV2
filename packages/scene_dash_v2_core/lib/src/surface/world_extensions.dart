@@ -14,6 +14,8 @@ import '../time/frame_time.dart';
 import '../time/game_clock.dart';
 import '../world/world.dart';
 import 'game_builder.dart';
+import 'observers.dart';
+import 'remove_after.dart';
 import 'spawning.dart';
 
 /// The Part 1 world surface.
@@ -40,6 +42,13 @@ extension WorldSurface on World {
   Iterable<E> events<E extends Object>() {
     final host = runningSystem;
     if (host is! EventCursorHost) {
+      if (host is ObserverDispatch) {
+        throw StateError(
+          'world.events<$E>() called inside a component observer. Observers '
+          'have no event-cursor registration: observers emit, systems read. '
+          'Use world.emit here and consume the event in a system.',
+        );
+      }
       throw StateError(
         'world.events<$E>() called outside a running system. Event cursors '
         'are per-registration; read events inside a system registered with '
@@ -78,12 +87,71 @@ extension WorldSurface on World {
   /// registered store by then (spawn a value of the type, query it, or
   /// `registerComponent<T>()` at install); parked otherwise, like a
   /// spawn-list part.
-  void add(Entity entity, Object component) =>
-      SpawnQueue.of(this).addPart(entity, component);
+  ///
+  /// With [removeAfter], the component is removed again that many seconds
+  /// of *fixed-step game time* later (pause and hitstop do not consume the
+  /// duration), through a deferred remove at the step's command boundary —
+  /// `onRemove` observers fire there. Adding over an existing component
+  /// replaces the value and the lifetime policy together: a new
+  /// [removeAfter] refreshes the deadline (S4), omitting it cancels any
+  /// tracked deadline. [expiryOf] reads the time remaining.
+  void add(Entity entity, Object component, {double? removeAfter}) {
+    SpawnQueue.of(this).addPart(entity, component);
+    if (removeAfter != null) {
+      RemoveAfterTracker.of(
+        this,
+      ).track(entity, component.runtimeType, removeAfter);
+    } else {
+      resources
+          .tryGet<RemoveAfterTracker>()
+          ?.cancel(entity, component.runtimeType);
+    }
+  }
 
   /// Queues removing the component of type [T] from [entity], applied at
-  /// the next command flush (D10).
-  void remove<T>(Entity entity) => commands.remove<T>(entity);
+  /// the next command flush (D10). Cancels any `removeAfter:` deadline
+  /// tracked for it.
+  void remove<T>(Entity entity) {
+    resources.tryGet<RemoveAfterTracker>()?.cancel(entity, T);
+    commands.remove<T>(entity);
+  }
+
+  /// Seconds until the `removeAfter:` deadline removes [T] from [entity],
+  /// or `null` when no deadline is tracked (never added with
+  /// `removeAfter:`, canceled, expired, or the entity died).
+  double? expiryOf<T>(Entity entity) =>
+      resources.tryGet<RemoveAfterTracker>()?.expiryOf(entity, T);
+
+  // ── component singletons (S9) ─────────────────────────────────────────
+
+  /// The sole [T] component in the world, unwrapped — what makes an
+  /// entity-condition or process singleton as ergonomic as the resource it
+  /// replaces. Sugar over `query<T>().single`: throws with the actual
+  /// count when zero or several entities carry [T].
+  T single<T extends Object>() {
+    final store = SpawnQueue.of(this).ensureStore<T>();
+    if (store.length != 1) {
+      throw StateError(
+        'world.single<$T>(): expected exactly one entity with $T, '
+        'found ${store.length}.',
+      );
+    }
+    return store.valueAt(0);
+  }
+
+  /// The sole [T] component, or `null` when none exists. Still throws when
+  /// more than one entity carries [T] — absence is expected, duplication
+  /// is a bug.
+  T? singleOrNull<T extends Object>() {
+    final store = SpawnQueue.of(this).ensureStore<T>();
+    if (store.length > 1) {
+      throw StateError(
+        'world.singleOrNull<$T>(): expected at most one entity with $T, '
+        'found ${store.length}.',
+      );
+    }
+    return store.length == 0 ? null : store.valueAt(0);
+  }
 
   // ── time (D9) ─────────────────────────────────────────────────────────
 

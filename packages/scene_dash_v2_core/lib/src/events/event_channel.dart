@@ -9,6 +9,15 @@ abstract interface class EventChannelMaintenance {
   /// the retention window this pass (`0` when no reader fell behind).
   int update();
 
+  /// Number of events currently buffered (sent but not yet reclaimed).
+  /// Diagnostics surface — the inspector snapshot reads it.
+  int get pendingCount;
+
+  /// Whether the most recent [update] found a reader that lost events to
+  /// the retention window. Diagnostics surface — the inspector snapshot
+  /// reads it; cleared by the next pass where nobody falls behind.
+  bool get readerLagged;
+
   /// Appends [event] without a static type argument. Used by [World.sendEvent]
   /// to route an event to the channel for its *runtime* type, so a
   /// statically-widened value still lands in the right channel. Throws if
@@ -66,6 +75,14 @@ final class EventChannel<T> implements EventChannelMaintenance {
 
   /// Absolute index just past the last event (one more than the newest).
   int get _end => _base + _events.length;
+
+  bool _readerLagged = false;
+
+  @override
+  int get pendingCount => _events.length;
+
+  @override
+  bool get readerLagged => _readerLagged;
 
   /// Whether the channel currently buffers any events. An event stays
   /// buffered until every reader has consumed it, capped by the retention
@@ -142,6 +159,7 @@ final class EventChannel<T> implements EventChannelMaintenance {
   /// can surface a diagnostic for readers that skip frames.
   @override
   int update() {
+    _readerLagged = false;
     if (_readers.isEmpty) {
       // v2: a channel can exist before its first reader (per-registration
       // cursors are created lazily on a system's first run), so a
@@ -206,6 +224,7 @@ final class EventChannel<T> implements EventChannelMaintenance {
       _events.removeRange(0, drop);
       _base += drop;
     }
+    _readerLagged = maxSkipped > 0;
     return maxSkipped;
   }
 }

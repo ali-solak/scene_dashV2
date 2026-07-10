@@ -19,6 +19,7 @@ import '../schedule/system_set.dart';
 import '../system/system_access.dart';
 import '../system/system_adapter.dart';
 import '../world/world.dart';
+import 'observers.dart';
 
 /// A system: stateless, world-in. All state lives in the world; event
 /// cursors are managed per registration by the framework.
@@ -141,6 +142,35 @@ final class GameBuilder {
   /// v1 machinery; systems register into `OnEnter(value)`/`OnExit(value)`
   /// through [addSystem].
   void addState<S extends Object>(S initial) => _app.addState<S>(initial);
+
+  /// Registers component observers for [T]: [onAdd] fires when an entity
+  /// gains a [T], [onRemove] when it loses one — [onRemove] receives the
+  /// still-live removed instance. Explicit and per feature; multiple
+  /// observers per type fire in registration order.
+  ///
+  /// Observers fire during the command-boundary flush, immediately after
+  /// the individual change applies, identically on device and under
+  /// `TestGame` (S1). Despawn strips components, so [onRemove] fires for
+  /// each observed component the entity carried — the "react to Health
+  /// removed" pattern is intended, not incidental (S3). Adding a component
+  /// the entity already has replaces the value, refreshes any
+  /// `removeAfter:` deadline, and fires **nothing**; there is no
+  /// `onChange`, deliberately — in-place object mutation makes honest
+  /// change marking impossible (S4).
+  ///
+  /// Observer bodies may use the deferred verbs (`add`, `remove`, `spawn`,
+  /// `despawn` — they land in the same flush) and `world.emit`, but not
+  /// `world.events<T>()`: observers have no registration cursor, so
+  /// observers emit and systems read (S5). Observers sit outside the
+  /// `reads:`/`writes:` conflict model, like resources — declare what your
+  /// *systems* touch; observer access is not detected. An observer
+  /// re-adding or re-removing what it observes loops the flush; a
+  /// debug-mode guard trips after 16 firings of one type per flush (S6).
+  void observe<T extends Object>({
+    ComponentObserver<T>? onAdd,
+    ComponentObserver<T>? onRemove,
+  }) =>
+      ObserverRegistry.of(world).observe<T>(onAdd: onAdd, onRemove: onRemove);
 
   /// Registers the component store for [T] up front, for types that only
   /// ever appear in spawn lists (never queried). Idempotent.

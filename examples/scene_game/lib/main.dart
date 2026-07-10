@@ -26,9 +26,9 @@ import 'world/world.dart';
 const bool showDebugGizmos = false;
 
 Future<void> main() async {
-  // Only what the widget shell itself writes: gameplay-owned resources
-  // (GameState, Blaster, ShieldState) are constructed inside their
-  // features, and the HUD reads them back through the world.
+  // Only what the widget shell itself writes: gameplay-owned state
+  // (GameState, the player's Blaster and Shielded components) lives in
+  // the features, and the HUD reads it back through the world.
   final input = ButtonInput<GameAction>();
   final cameraRig = CameraRig();
   final fps = FpsCounter();

@@ -16,15 +16,22 @@ part 'data/bundles.dart';
 part 'vfx/vfx.dart';
 part 'systems/systems.dart';
 
-/// Installs the rocks feature and its spawner resource — v1's plugin body
-/// without the class.
+/// Installs the rocks feature — v1's plugin body without the class. The
+/// spawner is a run-scoped process entity (spawned on every
+/// `OnEnter(playing)`); [RockTrails] stays a resource, explicitly: a
+/// shared instanced pool is a world-level cache, not anyone's state — the
+/// state doctrine's worked counter-example ("could there ever be two?").
 void installRocks(GameBuilder game) {
-  game.world
-    ..insert(RockSpawner())
-    ..insert(RockTrails());
+  game.world.insert(RockTrails());
   game
     ..registerTag<Rock>()
     ..registerTag<Flaming>()
+    ..registerComponent<RockSpawner>()
+    // The tag is the single source of the flaming look; runtime ignition
+    // is one `world.add(rock, const Flaming())`.
+    ..observe<Flaming>(onAdd: igniteRock, onRemove: extinguishRock)
+    // Invariant: no reaction ⇒ shell hidden, on every removal path.
+    ..observe<RockHitReaction>(onRemove: clearHitShell)
     ..addSystem(
       Schedules.startup,
       spawnRockTrails,
@@ -33,15 +40,15 @@ void installRocks(GameBuilder game) {
     )
     ..addSystem(
       OnEnter(GameStatus.playing),
-      resetRocksOnRunStart,
-      reads: const {},
+      spawnRockSpawner,
+      writes: {RockSpawner},
     )
     // The spawn itself is deferred to the command boundary, so the
     // declared writes are the feature-owned types.
     ..addSystem(
       Schedules.fixedUpdate,
       spawnRocks,
-      writes: {Rock, Flaming},
+      writes: {Rock, Flaming, RockSpawner},
       runIf: inState(GameStatus.playing),
     )
     ..addSystem(Schedules.update, cleanupRocks, reads: {SceneNode})

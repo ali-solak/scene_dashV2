@@ -3,19 +3,32 @@ part of '../rocks.dart';
 // Reused scratch so per-rock position reads allocate nothing.
 final Vector3 _rockScratch = Vector3.zero();
 
-/// Drops new rocks at the top of the ramp each fixed step.
+/// OnEnter(playing): spawn the spawner — a run-scoped process entity.
+/// Respawning per run *is* the cadence reset, and `DespawnOnExit` sweeps
+/// it with everything else when the run ends.
+void spawnRockSpawner(World world) {
+  world.spawn([
+    const Name('rock-spawner'),
+    RockSpawner(),
+    const DespawnOnExit(GameStatus.playing),
+  ]);
+}
+
+/// Drops new rocks at the top of the ramp each fixed step, driven by the
+/// run's spawner process entity (absent outside `playing`).
 void spawnRocks(World world) {
-  final spawner = world.resource<RockSpawner>();
   final game = world.resource<GameState>();
-  final due = spawner.tick(world.dt, survived: game.survived);
-  for (var i = 0; i < due; i++) {
-    world.spawn(
-      rockBundle(
-        x: spawner.nextLane(),
-        flaming: spawner.nextIsFlaming(game.survived),
-      ),
-    );
-  }
+  world.query<RockSpawner>().each((entity, spawner) {
+    final due = spawner.tick(world.dt, survived: game.survived);
+    for (var i = 0; i < due; i++) {
+      world.spawn(
+        rockBundle(
+          x: spawner.nextLane(),
+          flaming: spawner.nextIsFlaming(game.survived),
+        ),
+      );
+    }
+  });
 }
 
 /// Despawns rocks that have rolled off the bottom into the void —
@@ -29,12 +42,16 @@ void cleanupRocks(World world) {
   });
 }
 
-/// Rocks reset their own spawner cadence when a run (re)starts.
-void resetRocksOnRunStart(World world) => world.resource<RockSpawner>().reset();
+/// `observe<RockHitReaction>` onRemove: no reaction ⇒ shell hidden, for
+/// *every* removal path — flash finished, rock despawned mid-flash, any
+/// future dispel — not just the animator's happy path.
+void clearHitShell(World world, Entity entity, RockHitReaction reaction) {
+  world.tryGet<RockVisuals>(entity)?.shell.setLocalUniform(0, 0, 0, 0);
+}
 
 /// Animates the per-rock flash shell while a hit reaction is active, then
-/// drops the component. Only the child shell is scaled — never the
-/// physics-driven root node.
+/// drops the component (the observer zeroes the shell). Only the child
+/// shell is scaled — never the physics-driven root node.
 void updateRockHitReactions(World world) {
   final dt = world.dt;
   world.query2<RockHitReaction, RockVisuals>().each((
@@ -43,9 +60,7 @@ void updateRockHitReactions(World world) {
     visuals,
   ) {
     reaction.flash.tick(dt);
-    final shell = visuals.shell;
     if (reaction.flash.finished) {
-      shell.setLocalUniform(0, 0, 0, 0);
       world.remove<RockHitReaction>(entity);
       return;
     }
@@ -53,7 +68,7 @@ void updateRockHitReactions(World world) {
     final env = math.sin(t * math.pi);
     final pulse = 1 + 0.1 * math.sin(t * math.pi * 4);
     final peak = 1.15 + 0.55 * reaction.strength;
-    shell.setLocalUniform(0, 0, 0, peak * env * pulse);
+    visuals.shell.setLocalUniform(0, 0, 0, peak * env * pulse);
   });
 }
 

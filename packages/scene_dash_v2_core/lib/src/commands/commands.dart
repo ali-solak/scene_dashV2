@@ -79,6 +79,14 @@ final class Commands {
     _push(_opRemove, entity, null, T);
   }
 
+  /// Non-generic variant of [remove], keyed by a runtime [componentType].
+  ///
+  /// Used by the `removeAfter:` deadline tracker, which records the
+  /// component type per row instead of capturing it in a closure.
+  void removeByType(Type componentType, Entity entity) {
+    _push(_opRemove, entity, null, componentType);
+  }
+
   /// Queues despawning [entity].
   ///
   /// Idempotent at the flush: an entity already despawned by an earlier
@@ -97,26 +105,32 @@ final class Commands {
       'Commands.apply() called while a query is iterating.',
     );
     if (_ops.isEmpty) return;
-    // Iterate by index: a command may enqueue follow-up commands, which should
-    // also be applied in this flush.
-    for (var i = 0; i < _ops.length; i++) {
-      final entity = _entities[i];
-      switch (_ops[i]) {
-        case _opInsert:
-          _world.insertNowByType(_types[i], entity, _payloads[i]);
-        case _opRemove:
-          _world.removeNowByType(_types[i], entity);
-        case _opDespawn:
-          // A second despawn queued for the same entity finds it already
-          // gone; skipping keeps deferred despawn idempotent (see [despawn]).
-          if (_world.isAlive(entity)) _world.despawnNow(entity);
-        case _opBundle:
-          (_payloads[i] as SceneDashBundle).insertInto(_world, entity);
+    _world.beginFlush();
+    try {
+      // Iterate by index: a command may enqueue follow-up commands (an
+      // observer reacting to an applied change included), which should also
+      // be applied in this flush.
+      for (var i = 0; i < _ops.length; i++) {
+        final entity = _entities[i];
+        switch (_ops[i]) {
+          case _opInsert:
+            _world.insertNowByType(_types[i], entity, _payloads[i]);
+          case _opRemove:
+            _world.removeNowByType(_types[i], entity);
+          case _opDespawn:
+            // A second despawn queued for the same entity finds it already
+            // gone; skipping keeps deferred despawn idempotent (see [despawn]).
+            if (_world.isAlive(entity)) _world.despawnNow(entity);
+          case _opBundle:
+            (_payloads[i] as SceneDashBundle).insertInto(_world, entity);
+        }
       }
+      _ops.clear();
+      _entities.clear();
+      _payloads.clear();
+      _types.clear();
+    } finally {
+      _world.endFlush();
     }
-    _ops.clear();
-    _entities.clear();
-    _payloads.clear();
-    _types.clear();
   }
 }

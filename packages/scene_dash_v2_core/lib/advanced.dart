@@ -20,6 +20,7 @@ export 'src/commands/entity_commands.dart';
 export 'src/diagnostics/app_diagnostics.dart';
 // system_profiler.dart includes system_timing.dart as a part, so exporting it
 // also exports SystemTiming.
+export 'src/diagnostics/inspector_snapshot.dart';
 export 'src/diagnostics/system_profiler.dart';
 export 'src/events/event_channel.dart'
     show EventChannel, EventReader, EventWriter;
@@ -41,5 +42,7 @@ export 'src/storage/object_store.dart';
 export 'src/storage/store_registry.dart';
 export 'src/storage/tag_store.dart';
 export 'src/surface/game_builder.dart' show EventCursorHost;
+export 'src/surface/observers.dart' show ObserverDispatch, ObserverRegistry;
+export 'src/surface/remove_after.dart';
 export 'src/system/system_access.dart';
 export 'src/system/system_adapter.dart';

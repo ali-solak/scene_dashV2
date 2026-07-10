@@ -1,9 +1,12 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:scene_dash_inspector/scene_dash_inspector.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 
 import '../collectables/collectables.dart';
+import '../collectables/data/config.dart';
 import '../game/game_state.dart';
 import '../projectiles/projectiles.dart';
 import 'debug_panel.dart';
@@ -111,13 +114,18 @@ class _PlayingHud extends StatelessWidget {
           left: 0,
           right: 0,
           child: IgnorePointer(
+            // The shield is a component with a removeAfter deadline:
+            // resolve the carrier, then read the deadline back.
             child: WorldBuilder<(bool, double, bool)>(
               select: (world) {
-                final shield = world.resource<ShieldState>();
+                final shielded = world.query<Shielded>().firstOrNull;
+                if (shielded == null) return (false, 0.0, false);
+                final remaining =
+                    world.expiryOf<Shielded>(shielded.$1) ?? 0.0;
                 return (
-                  shield.active,
-                  _centi(shield.normalized),
-                  shield.expiringSoon,
+                  true,
+                  _centi(remaining / shieldDuration),
+                  remaining <= shieldWarningWindow,
                 );
               },
               builder: (context, shield) => shield.$1
@@ -127,6 +135,14 @@ class _PlayingHud extends StatelessWidget {
           ),
         ),
         const Positioned(top: 64, left: 24, child: DebugPanel()),
+        // The inspector consumes core snapshots only (never the live
+        // world); the debug chip beside gizmos/stats toggles it.
+        BlocBuilder<DebugCubit, DebugSettings>(
+          buildWhen: (previous, current) =>
+              previous.inspector != current.inspector,
+          builder: (context, settings) =>
+              InspectorOverlay(visible: settings.inspector),
+        ),
         _Controls(
           onLeftChanged: onLeftChanged,
           onRightChanged: onRightChanged,
@@ -179,11 +195,14 @@ class _Controls extends StatelessWidget {
           ),
           Align(
             alignment: Alignment.bottomRight,
-            // The ring and cooldown meter read the blaster straight off the
-            // world; the fire button's pressed visuals stay widget state.
+            // The ring and cooldown meter read the blaster component
+            // straight off the world (absent until the first run attaches
+            // it — shown ready); the fire button's pressed visuals stay
+            // widget state.
             child: WorldBuilder<(double, double, bool, bool)>(
               select: (world) {
-                final blaster = world.resource<Blaster>();
+                final blaster = world.singleOrNull<Blaster>();
+                if (blaster == null) return (0.0, 0.0, false, true);
                 return (
                   _centi(blaster.charge01),
                   _centi(blaster.cooldown01),

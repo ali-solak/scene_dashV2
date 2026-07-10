@@ -1,0 +1,25 @@
+name: scene_dash_inspector
+description: >-
+  Read-only in-app inspector overlay for Scene-Dash v2 games: live entities,
+  resources, system timings and event channels, consumed through the core
+  snapshot boundary. Optional — games run without it.
+version: 0.0.1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+  flutter: ">=3.16.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  scene_dash_v2:
+    path: ../scene_dash_v2
+  scene_dash_v2_core:
+    path: ../scene_dash_v2_core
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

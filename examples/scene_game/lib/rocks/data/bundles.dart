@@ -28,6 +28,11 @@ final _shellGeometry = SphereGeometry(radius: rockRadius * 1.12);
 /// A dynamic rock's spawn list. Rapier owns its node transform, hence
 /// `PhysicsDriven`; each rock carries a hidden flash shell child for the
 /// hit flash, and every rock is scoped to the run.
+///
+/// The [Flaming] *velocities* are spawn-baked (physics initial state); the
+/// flaming *look* is not — the `observe<Flaming>` pair swaps the material,
+/// so the tag part below is the single source of the visual and runtime
+/// ignition is one `world.add` away.
 List<Object> rockBundle({required double x, bool flaming = false}) {
   final shell = _makeShell();
   return [
@@ -40,6 +45,22 @@ List<Object> rockBundle({required double x, bool flaming = false}) {
   ];
 }
 
+/// `observe<Flaming>` onAdd: give the rock the on-fire look. Fires when
+/// the spawn list applies (the [SceneNode] part lands earlier in the same
+/// flush) and on any runtime `world.add(rock, const Flaming())`.
+void igniteRock(World world, Entity entity, Flaming flaming) {
+  final node = world.tryGet<SceneNode>(entity)?.node;
+  if (node == null) return;
+  node.mesh = Mesh(_rockGeometry, _flamingMaterial);
+}
+
+/// `observe<Flaming>` onRemove: back to the plain rock look.
+void extinguishRock(World world, Entity entity, Flaming flaming) {
+  final node = world.tryGet<SceneNode>(entity)?.node;
+  if (node == null) return;
+  node.mesh = Mesh(_rockGeometry, _rockMaterial);
+}
+
 Node _makeShell() {
   return Node(
     mesh: Mesh(_shellGeometry, _shellMaterial),
@@ -48,8 +69,9 @@ Node _makeShell() {
 }
 
 Node _makeRockNode(double x, bool flaming, Node shell) {
+  // Always the plain material: the Flaming observer owns the look.
   final node = Node(
-    mesh: Mesh(_rockGeometry, flaming ? _flamingMaterial : _rockMaterial),
+    mesh: Mesh(_rockGeometry, _rockMaterial),
     localTransform: Matrix4.translation(Vector3(x, rockSpawnY, rockSpawnZ)),
   )..add(shell);
   return node

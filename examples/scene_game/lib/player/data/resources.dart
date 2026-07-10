@@ -1,7 +1,10 @@
 part of '../player.dart';
 
-/// Player-owned shove state: rules decide when a rock contacted the player;
-/// this decides how that becomes controller movement.
+/// Player-owned shove state, a component on the player (attached fresh by
+/// an `OnEnter(playing)` system — the same pattern as `Blaster`, and the
+/// reason it is per-entity: multi-victim knockback later is just more
+/// carriers). Rules decide when a rock contacted the player; this decides
+/// how that becomes controller movement.
 final class PlayerKnockback {
   final Vector3 _velocity = Vector3.zero();
   final Vector3 _displacement = Vector3.zero();

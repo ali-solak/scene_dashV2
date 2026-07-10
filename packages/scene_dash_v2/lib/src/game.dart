@@ -248,7 +248,10 @@ final class Game {
       schedule: Schedules.renderSync,
       label: const SystemLabel('scene.syncTransform'),
     );
-    app.start();
+    // Startup spawns flush before the initial OnEnter schedules run, so
+    // enter systems see them exactly as a later transition would (the mount
+    // adapter is not initialized yet — nodes mount at the _mountStep below).
+    app.start(onStartupFlushed: _extraCommandBoundary);
     // The mount adapter is not scheduled, so initialize it explicitly now that
     // stores exist, then mount any nodes spawned by startup systems and flush so
     // they are parented before the first frame's fixed/update steps run.

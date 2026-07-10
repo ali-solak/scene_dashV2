@@ -45,7 +45,6 @@ export 'src/scene_node_index.dart';
 export 'src/scene_node.dart';
 export 'src/scene_sync.dart';
 export 'src/world_inspector.dart';
-export 'src/world_overlay.dart';
 export 'src/world_scene_extensions.dart';
 export 'src/world_widgets.dart';
 export 'src/scene_transform.dart';

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:scene_game/collectables/collectables.dart';
+import 'package:scene_game/collectables/data/config.dart';
 import 'package:scene_game/game/game_state.dart';
 import 'package:scene_game/hud/debug_panel.dart';
 import 'package:scene_game/hud/game_hud.dart';
@@ -14,15 +15,19 @@ import 'package:scene_game/projectiles/projectiles.dart';
 /// playing/lost routing — all selected through the world from the real
 /// feature resources, exactly as the shipped HUD reads them.
 void main() {
+  // The blaster is a component on the player entity now; the HUD selects
+  // it with singleOrNull<Blaster>(), so the harness spawns one carrier.
   Future<WorldGame> bootHud() => WorldGame.boot(
     features: [
       (g) {
+        g
+          ..registerComponent<Blaster>()
+          ..registerComponent<Shielded>();
         g.addState<GameStatus>(GameStatus.playing);
         g.world
           ..insert(GameState())
           ..insert(FpsCounter())
-          ..insert(Blaster())
-          ..insert(ShieldState());
+          ..spawn([Blaster()]);
       },
     ],
   );
@@ -117,7 +122,7 @@ void main() {
     final game = await bootHud();
     // Drive the real blaster to exactly 60% charge.
     const span = blasterMaxChargeDuration - blasterChargeThreshold;
-    game.world.resource<Blaster>()
+    game.world.single<Blaster>()
       ..update(
         pressed: true,
         released: false,
@@ -141,7 +146,7 @@ void main() {
     final handle = tester.ensureSemantics();
     final game = await bootHud();
     // A charged release puts the real blaster into cooldown.
-    game.world.resource<Blaster>()
+    game.world.single<Blaster>()
       ..update(
         pressed: true,
         released: false,
@@ -177,7 +182,11 @@ void main() {
 
   testWidgets('an active shield shows the shield indicator', (tester) async {
     final game = await bootHud();
-    game.world.resource<ShieldState>().activate();
+    // The shield is a component with a removeAfter deadline, exactly as
+    // pickup collection adds it.
+    final carrier = game.world.spawn(<Object>[]);
+    game.world.add(carrier, const Shielded(), removeAfter: shieldDuration);
+    drive(game); // flush the deferred add so the HUD selection sees it
     await pumpHud(tester, game);
     expect(find.byIcon(Icons.shield_rounded), findsOneWidget);
   });

@@ -24,6 +24,7 @@ import '../time/frame_time.dart';
 import '../time/game_clock.dart';
 import '../world/world.dart';
 import 'game_builder.dart';
+import 'remove_after.dart';
 import 'spawning.dart';
 
 /// A headless Scene-Dash v2 game for tests and simulations.
@@ -109,13 +110,14 @@ final class TestGame {
   void _boundary() => SpawnQueue.of(world).flush();
 
   /// Compiles schedules and runs startup once. Spawns queued by features
-  /// apply first, so startup systems see them. Called automatically by the
-  /// first [pump].
+  /// apply first, so startup systems see them; startup spawns flush before
+  /// the initial `OnEnter` schedules, so enter systems see them too.
+  /// Called automatically by the first [pump].
   void start() {
     if (_started) return;
     _started = true;
     _boundary();
-    app.start();
+    app.start(onStartupFlushed: _boundary);
     _boundary();
   }
 
@@ -150,6 +152,10 @@ final class TestGame {
         ..delta = fixedDt
         ..tick += 1;
       app.runSchedule(Schedules.fixedUpdate);
+      // removeAfter: deadlines advance after the schedule (a same-step
+      // refresh beats expiry) and expiries flush with this boundary —
+      // exactly the device driver's fixedStep.
+      world.resources.tryGet<RemoveAfterTracker>()?.tick(fixedDt);
       _boundary();
     }
     world.resources.get<FrameTime>().delta = scaled;

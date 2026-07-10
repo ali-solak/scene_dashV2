@@ -16,6 +16,12 @@ typedef Query1UntilCallback<A> = bool Function(Entity entity, A a);
 /// A cached query over one object component [A], with optional `with`/`without`
 /// filters.
 final class Query1<A> extends Query {
+  @override
+  String get debugLabel => 'query<$A>';
+
+  @override
+  int get debugRowEstimate => Query.chooseDriver(_driverCandidates).length;
+
   final World _world;
   final ObjectComponentStore<A> _a;
   final List<ComponentStore> _withStores;
@@ -35,7 +41,7 @@ final class Query1<A> extends Query {
   void each(Query1Callback<A> callback) {
     final driver = Query.chooseDriver(_driverCandidates);
     final driverIsA = identical(driver, _a);
-    _world.beginQuery();
+    _world.beginQuery(this);
     try {
       for (var i = 0; i < driver.length; i++) {
         final entityIndex = driver.entityIndexAt(i);
@@ -64,7 +70,7 @@ final class Query1<A> extends Query {
   void eachUntil(Query1UntilCallback<A> callback) {
     final driver = Query.chooseDriver(_driverCandidates);
     final driverIsA = identical(driver, _a);
-    _world.beginQuery();
+    _world.beginQuery(this);
     try {
       for (var i = 0; i < driver.length; i++) {
         final entityIndex = driver.entityIndexAt(i);
@@ -101,7 +107,7 @@ final class Query1<A> extends Query {
   (Entity, A)? firstWhere(Query1UntilCallback<A> predicate) {
     final driver = Query.chooseDriver(_driverCandidates);
     final driverIsA = identical(driver, _a);
-    _world.beginQuery();
+    _world.beginQuery(this);
     try {
       for (var i = 0; i < driver.length; i++) {
         final entityIndex = driver.entityIndexAt(i);
@@ -175,7 +181,7 @@ final class Query1<A> extends Query {
   bool get isEmpty {
     final driver = Query.chooseDriver(_driverCandidates);
     final driverIsA = identical(driver, _a);
-    _world.beginQuery();
+    _world.beginQuery(this);
     try {
       for (var i = 0; i < driver.length; i++) {
         final entityIndex = driver.entityIndexAt(i);
@@ -199,7 +205,7 @@ final class Query1<A> extends Query {
   (Entity, A)? singleOrNull() {
     final driver = Query.chooseDriver(_driverCandidates);
     final driverIsA = identical(driver, _a);
-    _world.beginQuery();
+    _world.beginQuery(this);
     try {
       (Entity, A)? match;
       for (var i = 0; i < driver.length; i++) {
@@ -242,7 +248,7 @@ final class Query1<A> extends Query {
     final driver = Query.chooseDriver(_driverCandidates);
     final driverIsA = identical(driver, _a);
     var matches = 0;
-    _world.beginQuery();
+    _world.beginQuery(this);
     try {
       for (var i = 0; i < driver.length; i++) {
         final entityIndex = driver.entityIndexAt(i);

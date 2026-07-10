@@ -7,12 +7,27 @@ void spawnPlayer(World world) {
   world.spawn(playerBundle());
 }
 
+/// OnEnter(playing): give the player a fresh [PlayerKnockback] — attached
+/// rather than bundled so a re-add replaces it and every run starts
+/// unshoved (the old knockback.reset() died here). Headless boots have no
+/// player and simply skip.
+void attachPlayerKnockback(World world) {
+  final player = world
+      .entitiesWith(require: const [Player])
+      .firstWhere((entity) => true);
+  if (player == null) return;
+  world.add(player, PlayerKnockback());
+}
+
 /// Translates input into a move-and-slide request each fixed step.
 void movePlayer(World world) {
   final input = world.buttons<GameAction>();
-  final knockback = world.resource<PlayerKnockback>();
   final dt = world.dt;
-  world.query<SceneNode>(require: const [Player]).each((entity, ref) {
+  world.query2<PlayerKnockback, SceneNode>(require: const [Player]).each((
+    entity,
+    knockback,
+    ref,
+  ) {
     final controller = ref.component<RapierKinematicCharacterController>();
     if (controller == null) return;
 
@@ -85,11 +100,11 @@ void animateCrabLegs(World world) {
   });
 }
 
-/// Restores the player's body, pose and knockback for a fresh run. Each
-/// feature resets its own state in `OnEnter(GameStatus.playing)`; the
-/// rules feature only resets what it owns (run clock, camera).
+/// Restores the player's body and pose for a fresh run (the knockback is
+/// replaced wholesale by [attachPlayerKnockback]). Each feature resets its
+/// own state in `OnEnter(GameStatus.playing)`; the rules feature only
+/// resets what it owns (run clock, camera).
 void resetPlayerOnRunStart(World world) {
-  final knockback = world.resource<PlayerKnockback>();
   world.query2<SceneNode, PlayerVisuals>(require: const [Player]).each((
     entity,
     ref,
@@ -105,7 +120,6 @@ void resetPlayerOnRunStart(World world) {
     ref.node.localTransform = Matrix4.translation(
       Vector3(0, playerStartY, playerStartZ),
     );
-    knockback.reset();
     visuals.resetLegs();
   });
 }

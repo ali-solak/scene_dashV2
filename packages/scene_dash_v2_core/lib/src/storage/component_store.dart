@@ -24,6 +24,18 @@ abstract base class ComponentStore {
   int _length = 0;
   int _revision = 0;
 
+  /// Observer seam, attached by the surface observer registry when the
+  /// component type is observed; `null` (zero-cost) otherwise. Fires after
+  /// an absent→present insert, with the inserted payload. Replacing an
+  /// existing component fires nothing.
+  void Function(int entityIndex, Object? payload)? onAdded;
+
+  /// Observer seam for removal: fires after the entity left the store,
+  /// with the payload captured just before the swap removal overwrote its
+  /// row — the still-live instance observers receive. Bulk [clear] (the
+  /// `World.reset` teardown) never fires it.
+  void Function(int entityIndex, Object? payload)? onRemoved;
+
   ComponentStore({int denseCapacity = 8, int sparseCapacity = 16})
     : _denseEntities = Uint32List(denseCapacity),
       _sparse = Uint32List(sparseCapacity);
@@ -60,7 +72,23 @@ abstract base class ComponentStore {
   void insertDynamic(int entityIndex, Object? value);
 
   /// Removes the component of [entityIndex] if present (swap removal).
-  void removeEntityIndex(int entityIndex) => removeSlot(entityIndex);
+  ///
+  /// When the store is observed, the payload is read *before* the swap
+  /// removal (which overwrites the row) and handed to [onRemoved] after the
+  /// entity has left the store — observers see the world post-change but
+  /// still receive the removed instance.
+  void removeEntityIndex(int entityIndex) {
+    final removed = onRemoved;
+    if (removed == null) {
+      removeSlot(entityIndex);
+      return;
+    }
+    final dense = denseIndexOf(entityIndex);
+    if (dense < 0) return;
+    final payload = payloadAt(dense);
+    removeSlot(entityIndex);
+    removed(entityIndex, payload);
+  }
 
   /// Removes every entity from this store at once — the store side of
   /// `World.reset`. The store stays registered and keeps its capacity.
@@ -120,6 +148,11 @@ abstract base class ComponentStore {
     bumpRevision();
     return dense;
   }
+
+  /// The payload at dense row [dense] as observers see it: the stored value
+  /// for object stores, the canonical witness instance for tag stores.
+  @protected
+  Object? payloadAt(int dense) => null;
 
   /// Hook: move payload from dense row [from] to row [to] during swap removal.
   @protected

@@ -42,12 +42,12 @@ void main() {
       expect(m.justEntered(Phase.active), isFalse);
     });
 
-    test('same-state go is fully inert: no edges, inState preserved', () {
+    test('same-state go is fully inert: no edges, elapsed preserved', () {
       final m = Machine<Phase>(Phase.idle)..tick(0.5);
       m.go(Phase.idle);
       expect(m.justEntered(Phase.idle), isFalse);
       expect(m.justExited(Phase.idle), isFalse);
-      expect(m.inState, 0.5, reason: 'not reset by a same-state go');
+      expect(m.elapsed, 0.5, reason: 'not reset by a same-state go');
     });
 
     test('multiple gos in one window: the final entry and the last exit '
@@ -76,7 +76,7 @@ void main() {
   });
 
   group('Machine time', () {
-    test('inState accumulates the owner-passed dt and go zeroes it', () {
+    test('elapsed accumulates the owner-passed dt and go zeroes it', () {
       final m = Machine<Phase>(Phase.idle);
       // A scripted dt sequence: normal steps, a freeze (dt 0, exactly what
       // the fixed loop delivers under pause/hitstop: no ticks at all — the
@@ -84,11 +84,11 @@ void main() {
       m.tick(0.5);
       m.tick(0);
       m.tick(0.25);
-      expect(m.inState, 0.75);
+      expect(m.elapsed, 0.75);
       m.go(Phase.startup);
-      expect(m.inState, 0, reason: 'go zeroes the state clock');
+      expect(m.elapsed, 0, reason: 'go zeroes the state clock');
       m.tick(0.1);
-      expect(m.inState, 0.1);
+      expect(m.elapsed, 0.1);
     });
   });
 

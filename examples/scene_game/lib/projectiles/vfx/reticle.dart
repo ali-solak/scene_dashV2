@@ -30,7 +30,8 @@ void spawnLockOnReticle(World world) {
 /// facing the camera. Visual feedback only — no homing.
 void updateLockOnReticle(World world) {
   final reticle = world.resource<LockOnReticle>();
-  final blaster = world.resource<Blaster>();
+  final blaster = world.singleOrNull<Blaster>();
+  if (blaster == null) return;
   final camera = world.resource<CameraRig>();
   final dt = world.dt;
   reticle.firedFlash = math.max(0, reticle.firedFlash - dt / 0.25);
@@ -78,6 +79,3 @@ void updateLockOnReticle(World world) {
     reticle.hideNode();
   }
 }
-
-void disposeLockOnReticle(World world) =>
-    world.resource<LockOnReticle>().disposeModel();

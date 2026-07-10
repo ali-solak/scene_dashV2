@@ -5,9 +5,14 @@ import 'package:scene_dash_v2/scene_dash_v2.dart';
 import '../player/player.dart';
 import '../rocks/rocks.dart';
 
-/// App-shell debug switches: the gizmo overlay and the live-stats panel.
+/// App-shell debug switches: the gizmo overlay, the live-stats panel and
+/// the inspector.
 final class DebugSettings {
-  const DebugSettings({this.gizmos = false, this.stats = false});
+  const DebugSettings({
+    this.gizmos = false,
+    this.stats = false,
+    this.inspector = false,
+  });
 
   /// Draw the gizmo overlay (ground probe, hit radii). A true runtime
   /// toggle — the pools build on the first enabled frame and hide again
@@ -17,21 +22,36 @@ final class DebugSettings {
   /// Show the live-stats panel (rock count, player position).
   final bool stats;
 
-  DebugSettings copyWith({bool? gizmos, bool? stats}) =>
-      DebugSettings(gizmos: gizmos ?? this.gizmos, stats: stats ?? this.stats);
+  /// Show the inspector overlay (entities, resources, timings, events).
+  final bool inspector;
+
+  DebugSettings copyWith({bool? gizmos, bool? stats, bool? inspector}) =>
+      DebugSettings(
+        gizmos: gizmos ?? this.gizmos,
+        stats: stats ?? this.stats,
+        inspector: inspector ?? this.inspector,
+      );
 }
 
 /// Cubit-as-resource (§1.10), the app-shell pattern: `main` constructs one
 /// instance, hands it to the widget tree through `BlocProvider` *and*
 /// inserts it into the world — widgets drive it with ordinary cubit
 /// methods, and systems read `cubit.state` like any other resource. The
-/// write path stays one-directional: UI → cubit → world.
-final class DebugCubit extends Cubit<DebugSettings> {
+/// write path stays one-directional: UI → cubit → world. [Disposable] is
+/// the whole teardown wiring: the framework disposes the resource at game
+/// shutdown, so nothing closes the cubit by hand.
+final class DebugCubit extends Cubit<DebugSettings> implements Disposable {
   DebugCubit([super.initial = const DebugSettings()]);
 
   void toggleGizmos() => emit(state.copyWith(gizmos: !state.gizmos));
 
   void toggleStats() => emit(state.copyWith(stats: !state.stats));
+
+  void toggleInspector() =>
+      emit(state.copyWith(inspector: !state.inspector));
+
+  @override
+  void dispose() => close();
 }
 
 /// The read half of the cubit-as-resource pattern: once per frame, apply
@@ -70,6 +90,13 @@ class DebugPanel extends StatelessWidget {
                   semanticLabel: 'Toggle debug gizmos',
                   active: settings.gizmos,
                   onPressed: cubit.toggleGizmos,
+                ),
+                const SizedBox(width: 8),
+                _ToggleChip(
+                  icon: Icons.manage_search,
+                  semanticLabel: 'Toggle inspector',
+                  active: settings.inspector,
+                  onPressed: cubit.toggleInspector,
                 ),
               ],
             ),

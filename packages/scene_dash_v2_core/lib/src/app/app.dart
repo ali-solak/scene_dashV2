@@ -80,6 +80,11 @@ final class App implements AppBuilder {
     if (p != null) world.resources.insert<SystemProfiler>(p);
     final sink = onDiagnostic;
     if (sink != null) {
+      // The accidental O(N×M) shape: a query iterated inside another
+      // query's `each` in the same system. Detection runs only in debug
+      // mode (the world's tracking sits inside asserts) and reports once
+      // per system.
+      world.onNestedQuery = sink;
       // Surface the one silent failure mode of bounded event retention: a
       // reader that skips frames (paused, or gated by runIf) losing unread
       // events. Reported once per event type so a stalled reader does not
@@ -275,9 +280,14 @@ final class App implements AppBuilder {
   /// runs the [Schedules.startup] schedule once, then runs each state
   /// machine's `OnEnter(initial)`.
   ///
+  /// [onStartupFlushed] runs between the two — the surface drivers flush
+  /// deferred spawns there, so the initial `OnEnter` systems see startup
+  /// spawns exactly as a later transition (applied at a frame boundary with
+  /// every earlier spawn flushed) would.
+  ///
   /// Transitions queued during startup or the initial enters are not applied
   /// here; they apply at the first [applyStateTransitions].
-  void start() {
+  void start({void Function()? onStartupFlushed}) {
     if (_finalized) {
       throw StateError('App has already been started.');
     }
@@ -290,6 +300,7 @@ final class App implements AppBuilder {
     _reportAccessConflicts();
     _finalized = true;
     runSchedule(Schedules.startup);
+    onStartupFlushed?.call();
     for (final machine in _stateMachines) {
       machine.enterInitial(_runStateSchedule);
     }
@@ -413,7 +424,9 @@ final class App implements AppBuilder {
   /// frame at a safe boundary (typically frame start).
   void updateEvents() => world.updateEvents();
 
-  /// Runs the [Schedules.shutdown] schedule and all cleanup callbacks once.
+  /// Runs the [Schedules.shutdown] schedule and all cleanup callbacks once,
+  /// then disposes every [Disposable] resource in reverse insertion order —
+  /// dependents die before their dependencies.
   Future<void> shutdown() async {
     if (!_finalized || _shutdown) return;
     _shutdown = true;
@@ -421,6 +434,7 @@ final class App implements AppBuilder {
     for (var i = _cleanups.length - 1; i >= 0; i--) {
       await _cleanups[i]();
     }
+    world.resources.disposeAll();
   }
 
   void _assertOpen() {

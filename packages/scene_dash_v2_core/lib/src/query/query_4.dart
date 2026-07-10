@@ -28,6 +28,12 @@ typedef Query4UntilCallback<A, B, C, D> = bool Function(
 /// A cached query over four object components [A], [B], [C] and [D], with
 /// optional `requires`/`excludes` filters.
 final class Query4<A, B, C, D> extends Query {
+  @override
+  String get debugLabel => 'query4<$A, $B, $C, $D>';
+
+  @override
+  int get debugRowEstimate => Query.chooseDriver(_driverCandidates).length;
+
   final World _world;
   final ObjectComponentStore<A> _a;
   final ObjectComponentStore<B> _b;
@@ -62,7 +68,7 @@ final class Query4<A, B, C, D> extends Query {
     final driverIsB = identical(driver, _b);
     final driverIsC = identical(driver, _c);
     final driverIsD = identical(driver, _d);
-    _world.beginQuery();
+    _world.beginQuery(this);
     try {
       for (var i = 0; i < driver.length; i++) {
         final entityIndex = driver.entityIndexAt(i);
@@ -107,7 +113,7 @@ final class Query4<A, B, C, D> extends Query {
     final driverIsB = identical(driver, _b);
     final driverIsC = identical(driver, _c);
     final driverIsD = identical(driver, _d);
-    _world.beginQuery();
+    _world.beginQuery(this);
     try {
       for (var i = 0; i < driver.length; i++) {
         final entityIndex = driver.entityIndexAt(i);
@@ -158,7 +164,7 @@ final class Query4<A, B, C, D> extends Query {
     final driverIsB = identical(driver, _b);
     final driverIsC = identical(driver, _c);
     final driverIsD = identical(driver, _d);
-    _world.beginQuery();
+    _world.beginQuery(this);
     try {
       for (var i = 0; i < driver.length; i++) {
         final entityIndex = driver.entityIndexAt(i);
@@ -272,7 +278,7 @@ final class Query4<A, B, C, D> extends Query {
     final driverIsB = identical(driver, _b);
     final driverIsC = identical(driver, _c);
     final driverIsD = identical(driver, _d);
-    _world.beginQuery();
+    _world.beginQuery(this);
     try {
       for (var i = 0; i < driver.length; i++) {
         final entityIndex = driver.entityIndexAt(i);
@@ -301,7 +307,7 @@ final class Query4<A, B, C, D> extends Query {
     final driverIsC = identical(driver, _c);
     final driverIsD = identical(driver, _d);
     var matches = 0;
-    _world.beginQuery();
+    _world.beginQuery(this);
     try {
       for (var i = 0; i < driver.length; i++) {
         final entityIndex = driver.entityIndexAt(i);
@@ -328,7 +334,7 @@ final class Query4<A, B, C, D> extends Query {
     final driverIsB = identical(driver, _b);
     final driverIsC = identical(driver, _c);
     final driverIsD = identical(driver, _d);
-    _world.beginQuery();
+    _world.beginQuery(this);
     try {
       (Entity, A, B, C, D)? match;
       for (var i = 0; i < driver.length; i++) {

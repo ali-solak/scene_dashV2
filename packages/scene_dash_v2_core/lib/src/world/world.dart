@@ -3,6 +3,7 @@ import '../entity/entity.dart';
 import '../entity/entity_registry.dart';
 import '../events/event_channel.dart';
 import '../query/entity_query.dart';
+import '../query/query.dart';
 import '../resources/resources.dart';
 import '../storage/object_store.dart';
 import '../storage/store_registry.dart';
@@ -63,6 +64,40 @@ final class World {
   /// Number of queries currently iterating. Used by debug guards to detect
   /// structural mutation during active iteration.
   int _activeQueries = 0;
+
+  /// Called (debug mode only) the first time a system starts a query
+  /// iteration while another of its queries is still iterating — the
+  /// accidental O(N×M) shape. Set by the app to the diagnostics sink;
+  /// reported once per system.
+  void Function(String message)? onNestedQuery;
+
+  // Nested-query tracking (debug only — mutated inside asserts): the
+  // outermost active query, the system it ran under, and the systems
+  // already reported so the diagnostic fires once per system.
+  Query? _debugOuterQuery;
+  Object? _debugOuterSystem;
+  Set<Object>? _debugNestedReported;
+
+  /// Number of command-boundary flushes currently on the stack
+  /// (`Commands.apply`, the spawn-queue flush) — they nest, so the counter
+  /// pairs [beginFlush]/[endFlush].
+  int _flushDepth = 0;
+
+  /// Monotonic counter of *completed* outermost flushes. The observer
+  /// registry's debug cascade guard resets its per-type firing counts when
+  /// this advances, so "fired N times within one flush" is measurable
+  /// without the registry knowing the flush call sites.
+  int flushEpoch = 0;
+
+  /// Marks entry into a command-boundary flush; pairs with [endFlush].
+  void beginFlush() => _flushDepth++;
+
+  /// Marks exit from a command-boundary flush; advances [flushEpoch] when
+  /// the outermost flush completes.
+  void endFlush() {
+    _flushDepth--;
+    if (_flushDepth == 0) flushEpoch++;
+  }
 
   /// Returns the object store for component type [T], registering a fresh one
   /// if none exists yet. Idempotent. Generated adapters and bundle inserts call
@@ -127,6 +162,16 @@ final class World {
     for (var i = 0; i < _eventChannelList.length; i++) {
       final skipped = _eventChannelList[i].update();
       if (skipped > 0) onEventReaderSkip?.call(_eventTypes[i], skipped);
+    }
+  }
+
+  /// Every registered event channel with its event type, in registration
+  /// order. Diagnostics surface — the inspector snapshot reads pending
+  /// counts and lagging-reader flags through it; allocates an iterator, so
+  /// not for per-frame engine code.
+  Iterable<(Type, EventChannelMaintenance)> get debugEventChannels sync* {
+    for (var i = 0; i < _eventChannelList.length; i++) {
+      yield (_eventTypes[i], _eventChannelList[i]);
     }
   }
 
@@ -290,7 +335,8 @@ final class World {
   /// [keepResources] (the default) preserves all resources — timers, input,
   /// clocks, and the `CurrentState`/`NextState` machines keep running, so a
   /// game wanting a state reset queues a `NextState` transition after the
-  /// call. Pass `false` to also drop every resource; only do that when
+  /// call. Pass `false` to also drop every resource — [Disposable] ones are
+  /// disposed, in reverse insertion order; only do that when
   /// re-initialization follows, since initialized systems keep their resolved
   /// resource references.
   ///
@@ -313,7 +359,7 @@ final class World {
     for (var i = 0; i < _eventChannelList.length; i++) {
       _eventChannelList[i].clear();
     }
-    if (!keepResources) resources.clear();
+    if (!keepResources) resources.disposeAll();
   }
 
   /// Creates an entity-only query over the entities carrying every type in
@@ -343,10 +389,68 @@ final class World {
 
   /// Begins query iteration (debug guard bookkeeping). Returns when iteration
   /// is allowed to proceed.
-  void beginQuery() => _activeQueries++;
+  void beginQuery([Query? query]) {
+    assert(() {
+      _debugNoteQueryBegin(query);
+      return true;
+    }());
+    _activeQueries++;
+  }
 
   /// Ends query iteration started by [beginQuery].
-  void endQuery() => _activeQueries--;
+  void endQuery() {
+    _activeQueries--;
+    assert(() {
+      if (_activeQueries == 0) {
+        _debugOuterQuery = null;
+        _debugOuterSystem = null;
+      }
+      return true;
+    }());
+  }
+
+  /// Nested-query detection (I5), debug mode only — every call sits inside
+  /// an assert. Depth is [_activeQueries] scoped to [runningSystem]: an
+  /// iteration beginning while another is active *in the same system* is
+  /// the accidental O(N×M) shape; sequential iterations are fine. Reported
+  /// once per system through [onNestedQuery].
+  void _debugNoteQueryBegin(Query? query) {
+    final system = runningSystem;
+    if (query == null || system == null) return;
+    if (_activeQueries == 0) {
+      _debugOuterQuery = query;
+      _debugOuterSystem = system;
+      return;
+    }
+    final outer = _debugOuterQuery;
+    if (outer == null || !identical(_debugOuterSystem, system)) return;
+    final reported = _debugNestedReported ??= Set.identity();
+    if (!reported.add(system)) return;
+    final sink = onNestedQuery;
+    if (sink == null) return;
+    final n = outer.debugRowEstimate;
+    final m = query.debugRowEstimate;
+    sink(
+      'Nested query in ${_debugSystemName(system)}: ${query.debugLabel} '
+      'iterated inside ${outer.debugLabel}.each — ~$n×$m comparisons per '
+      'run. Hoist the inner query or restructure (see README query rules).',
+    );
+  }
+
+  /// Short system name for diagnostics: the function-system adapter's
+  /// `toString` is its stable label id (`library#name@N`); everything
+  /// after the `#` is the declared name, minus the numeric registration
+  /// disambiguator.
+  static String _debugSystemName(Object system) {
+    final id = system.toString();
+    final hash = id.lastIndexOf('#');
+    var name = hash < 0 ? id : id.substring(hash + 1);
+    final at = name.lastIndexOf('@');
+    if (at > 0 && int.tryParse(name.substring(at + 1)) != null) {
+      name = name.substring(0, at);
+    }
+    return name;
+  }
 
   /// Whether any query is currently iterating.
   bool get isQueryActive => _activeQueries > 0;

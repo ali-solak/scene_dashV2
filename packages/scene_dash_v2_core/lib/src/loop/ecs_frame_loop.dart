@@ -1,5 +1,6 @@
 import '../app/app.dart';
 import '../schedule/schedules.dart';
+import '../surface/remove_after.dart';
 import '../time/fixed_time.dart';
 import '../time/frame_time.dart';
 import '../time/game_clock.dart';
@@ -83,11 +84,16 @@ final class EcsFrameLoop {
 
   /// Fixed step (before the scene physics step): update [FixedTime] and run
   /// [Schedules.fixedPrePhysics]. May run several times per frame.
+  ///
+  /// After the schedule, `removeAfter:` deadlines advance one step — after,
+  /// so a system refreshing a deadline this step always beats its expiry —
+  /// and any expiries flush with the step's command boundary.
   void fixedStep(double fixedDt) {
     app.world.resources.get<FixedTime>()
       ..delta = fixedDt
       ..tick += 1;
     app.runSchedule(Schedules.fixedPrePhysics);
+    app.world.resources.tryGet<RemoveAfterTracker>()?.tick(fixedDt);
     onCommandBoundary?.call();
   }
 

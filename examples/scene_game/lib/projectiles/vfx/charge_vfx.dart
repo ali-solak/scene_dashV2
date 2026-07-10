@@ -9,7 +9,8 @@ void updateChargeVisuals(World world) {
       .firstOrNull;
   if (visuals == null) return;
   final v = visuals.$2;
-  final blaster = world.resource<Blaster>();
+  final blaster = world.singleOrNull<Blaster>();
+  if (blaster == null) return;
   final c = blaster.charge01;
   final charging = blaster.isCharging;
 

@@ -31,7 +31,8 @@ void installRules(GameBuilder game) {
     ..addSystem(
       Schedules.update,
       evaluateGameRules,
-      reads: {SceneNode},
+      reads: {SceneNode, Shielded},
+      writes: {PlayerKnockback},
       inSet: GameSets.rules,
       runIf: inState(GameStatus.playing),
     )

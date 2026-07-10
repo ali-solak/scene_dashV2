@@ -239,14 +239,15 @@ final class PlayerShieldVisuals {
   final Node shieldBadge;
   final PhysicallyBasedMaterial shieldBadgeMaterial;
 
-  // Visual-only animation state; the shield resource owns the gameplay
-  // truth.
+  // Visual-only animation state; the Shielded component (and its
+  // removeAfter deadline) owns the gameplay truth.
   double shieldPhase = 0;
   double shieldShow = 0;
   double badgePop = 0;
 
-  /// Lets the shield VFX system fire the pop on the inactive -> active edge.
-  bool shieldWasActive = false;
+  /// Bubble target, flipped by the collectables feature's
+  /// `observe<Shielded>` pair; the per-frame VFX system eases toward it.
+  bool shieldActive = false;
 
   static final _bubbleGeometry = SphereGeometry(
     radius: shieldBubbleRadius,

@@ -39,6 +39,7 @@ export 'src/state/states.dart'
     show CurrentState, DespawnOnExit, NextState, OnEnter, OnExit, inState;
 export 'src/surface/game_builder.dart'
     show Feature, GameBuilder, WorldSystem;
+export 'src/surface/observers.dart' show ComponentObserver;
 export 'src/surface/queries.dart';
 export 'src/surface/spawning.dart' show OwnedBy, SpawnQueue;
 export 'src/surface/tag.dart';

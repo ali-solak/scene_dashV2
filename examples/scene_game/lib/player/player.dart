@@ -19,14 +19,23 @@ part 'systems/systems.dart';
 
 /// Installs the player feature — v1's plugin body without the class.
 void installPlayer(GameBuilder game) {
-  game.world.insert(PlayerKnockback());
   game
     ..registerTag<Player>()
+    ..registerComponent<PlayerKnockback>()
     ..addSystem(
       Schedules.startup,
       spawnPlayer,
       writes: {Player, SceneNode, PlayerVisuals},
       runIf: hasResource<Scene>(),
+    )
+    // The attach is deferred (world.add), so the declared write is the
+    // feature-owned component; the player is found by tag, keeping this
+    // clear of resetPlayerOnRunStart's SceneNode write in the same enter.
+    ..addSystem(
+      OnEnter(GameStatus.playing),
+      attachPlayerKnockback,
+      reads: {Player},
+      writes: {PlayerKnockback},
     )
     ..addSystem(
       OnEnter(GameStatus.playing),
@@ -36,7 +45,7 @@ void installPlayer(GameBuilder game) {
     ..addSystem(
       Schedules.fixedUpdate,
       movePlayer,
-      writes: {SceneNode},
+      writes: {SceneNode, PlayerKnockback},
       inSet: GameSets.movement,
       runIf: inState(GameStatus.playing),
     )

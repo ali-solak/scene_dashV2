@@ -31,6 +31,15 @@ final class EntityRegistry {
   /// Number of slots currently occupied by live entities.
   int get aliveCount => _count - _freeCount;
 
+  /// Number of slots ever allocated — the exclusive upper bound for
+  /// [isIndexAlive]. Diagnostics surface: the inspector snapshot walks
+  /// `0..slotCount` to enumerate live entities.
+  int get slotCount => _count;
+
+  /// Whether slot [index] currently holds a live entity. Diagnostics
+  /// surface — pair with [resolve] to obtain the live handle.
+  bool isIndexAlive(int index) => index < _count && _alive[index] == 1;
+
   /// Allocates a new live entity, reusing a freed slot when available.
   Entity spawn() {
     final int index;

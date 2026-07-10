@@ -49,12 +49,11 @@ GameStateBuilder<GameStatus>(builder: (ctx, s) => switch (s) { ... })
 WorldEventListener<EnemyKilled>(onEvent: (ctx, e) => shakeScore(ctx),
     child: const ScorePanel())                     // world events into UI;
                                                    //   widget-lifetime cleanup
-
-WorldOverlay(camera: rigCamera, children: [        // same camera as SceneView
-  WorldAnchors<Enemy>(offsetY: 2.2,                // one widget per matching
-      builder: (ctx, e) => EnemyHealthBar(e)),     //   entity, at its projected
-])                                                 //   3D position
 ```
+
+A widget *in* the 3D world (a health bar above an enemy) is not a
+framework concern: put a `flutter_scene` `WidgetComponent` on a child
+node — the scene graph positions, projects and occludes it.
 
 Write path: UI → `ButtonInput` / `game.emit`. Widgets never mutate
 components.
@@ -278,6 +277,9 @@ world.query<Health>().firstWhere((entity, h) => h.current < 10); // row or null
 world.query<Health>(require: const [Enemy]).isNotEmpty;          // existence
 world.query<Health>().count();                                   // O(n) scan
 
+world.single<Fighter>();       // THE one, unwrapped — component singletons
+world.singleOrNull<Fighter>(); //   (throws on duplicates; null on none)
+
 // already holding an Entity? skip the query — O(1) lookups:
 world.get<Health>(enemy);      // throws if absent
 world.tryGet<Health>(enemy);   // null if absent, despawned, or slot reused
@@ -330,6 +332,22 @@ List<Object> enemyBundle(Node node, {required Entity target}) => [
 `Stunned` is the transient kind — flipped at runtime, entering and
 leaving `exclude: [Stunned]` queries at the next frame boundary. Its full
 loop is in Events: `applyDamage` adds it, `recoverFromStun` removes it.
+
+```dart
+// observe: a feature reacts to a component appearing or disappearing on
+// any entity — explicit, per feature, at install time; onRemove gets the
+// still-live instance (despawn strips components, so it fires there too)
+game.observe<Stunned>(
+  onAdd: (world, entity, stunned) => world.add(entity, StunStars()),
+  onRemove: (world, entity, stunned) => world.remove<StunStars>(entity),
+);
+
+// removeAfter: the framework removes the component again on schedule —
+// fixed-step game time (pause and hitstop consume nothing), expiry fires
+// onRemove like any other removal; re-adding refreshes the deadline
+world.add(enemy, const Stunned(), removeAfter: 1.2);
+world.expiryOf<Stunned>(enemy);          // seconds left, or null
+```
 
 ```dart
 final sword = world.spawn(
@@ -494,6 +512,14 @@ final class Score { int value = 0; }
 
 game.world.insert(Score());              // once, in the owning feature
 world.resource<Score>().value += 10;     // read/write from any system
+
+// owns teardown? implement Disposable — the framework calls dispose():
+// game shutdown (reverse insertion order), a dropping reset, replacement.
+final class ScoreCubit extends Cubit<int> implements Disposable {
+  ScoreCubit() : super(0);
+  @override
+  void dispose() => close();             // blocs need nothing more
+}
 ```
 
 Framework state is promoted to members — `world.dt`, `world.clock`,
@@ -710,11 +736,11 @@ final grunt = world.spawn(
     [...enemyBundle(gruntNode, target: player), const Name('grunt-3')]);
 
 print(world.debugDescribe(grunt));
-// Entity(14 v2) 'grunt-3'
-//   Enemy, Stunned
-//   Health(28.0/40.0)
-//   Target(Entity(2 v1))
-//   EnemyAttack(windup 0.31/0.9)
+// Entity(14 v2) "grunt-3" [Enemy, SceneNode, Health, Target, EnemyAttack,
+//   DespawnOnExit, Name]     — one line; entries in store-registration order
+
+// a component that overrides toString renders its live value instead of
+// its type — a Machine owner prints e.g. `striking (0.12s)`
 ```
 
 ### Gizmo debug
@@ -735,6 +761,21 @@ void debugDrawCombat(World world) {
 world.gizmos.enabled = false;   // off = zero draw calls; calls stay in
                                 //   shipping code as early-return no-ops
 ```
+
+### Inspector
+
+```dart
+Stack(children: [
+  GameView(game: game),
+  InspectorOverlay(visible: showInspector),   // package: scene_dash_inspector
+])
+```
+
+Live entities (filter by `Name`, tap for component values), resources,
+system timings, event channels — read-only snapshots polled at 4 Hz,
+zero cost hidden. Debug builds also warn once per system when a query
+iterates inside another query's `each` (the accidental O(N×M) shape) —
+hoist the inner query (see the query rules above).
 
 ## Testing
 

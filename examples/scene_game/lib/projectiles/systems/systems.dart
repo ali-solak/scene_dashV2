@@ -4,6 +4,19 @@ part of '../projectiles.dart';
 final Vector3 _projectilePosition = Vector3.zero();
 final Vector3 _rockHitPosition = Vector3.zero();
 
+/// OnEnter(playing): decorate the player with a fresh [Blaster] — a
+/// feature attaching its component to an entity another feature spawned,
+/// with no cross-feature bundle import. Re-adding replaces the previous
+/// instance (S4), so every run starts ready; the old blaster-reset call
+/// died here. Headless boots have no player and simply skip.
+void attachBlaster(World world) {
+  final player = world
+      .entitiesWith(require: const [Player])
+      .firstWhere((entity) => true);
+  if (player == null) return;
+  world.add(player, Blaster());
+}
+
 /// Fires the blaster from the frame's input edges. Edges come from events
 /// (consumed once, even across several fixed steps in a frame); the held
 /// level comes from the `ButtonInput` resource. Gated to
@@ -23,7 +36,11 @@ void shootProjectiles(World world) {
     canceled = true;
   }
 
-  final blaster = world.resource<Blaster>();
+  final player = world
+      .query2<Blaster, SceneNode>(require: const [Player])
+      .firstOrNull;
+  if (player == null) return;
+  final (_, blaster, binding) = player;
   final shots = blaster.update(
     pressed: pressed,
     released: released,
@@ -33,9 +50,7 @@ void shootProjectiles(World world) {
   );
   if (shots.isEmpty) return;
 
-  final player = world.query<SceneNode>(require: const [Player]).firstOrNull;
-  if (player == null) return;
-  final base = player.$2.node.globalTransform.getTranslation()
+  final base = binding.node.globalTransform.getTranslation()
     ..y += playerBodyVisualRadius * 0.45
     ..z -= playerBodyVisualRadius + projectileRadius + 0.08;
 
@@ -52,19 +67,20 @@ void shootProjectiles(World world) {
   }
 }
 
-/// Projectiles reset their own state when a run (re)starts.
+/// Projectiles reset their own state when a run (re)starts; the blaster
+/// needs nothing here — [attachBlaster] replaces it with a fresh one.
 void resetProjectilesOnRunStart(World world) {
-  world.resource<Blaster>().reset();
   world.resource<ImpactVfx>().reset();
   world.resource<LockOnReticle>().reset();
 }
 
-/// Leaving the run aborts any in-flight charge. The shoot system is gated
-/// to `inState(GameStatus.playing)`, so it stops draining fire events here
-/// — any held-button edges sent on the lose screen simply expire unread,
+/// Leaving the run aborts any in-flight charge, so the charge VFX cannot
+/// linger on the lose screen. The shoot system is gated to
+/// `inState(GameStatus.playing)`, so it stops draining fire events here —
+/// any held-button edges sent on the lose screen simply expire unread,
 /// never firing into it.
 void stopBlasterOnRunEnd(World world) {
-  world.resource<Blaster>().reset();
+  world.singleOrNull<Blaster>()?.reset();
 }
 
 /// Flies each shot: spatial exits, rock knocks, hit bookkeeping. Lifetime

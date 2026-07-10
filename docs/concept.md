@@ -120,7 +120,7 @@ The same edge vocabulary at every scale:
   cadences): `tick(world.dt)`, `finished`, `justFinished` true for
   exactly one tick.
 - **`Machine<S>`** — an entity's *mode* (idle / charging / rolling):
-  `tick(world.dt)`, `inState`, `go`, with `justEntered`/`justExited`
+  `tick(world.dt)`, `elapsed`, `go`, with `justEntered`/`justExited`
   true for exactly one tick-window.
 - **Whole-game state machines** (`addState<S>`) — title / playing /
   lost: transitions applied at frame boundaries, `OnEnter`/`OnExit` as
@@ -130,6 +130,20 @@ Timers and machines are plain values ticked by their owner systems, so
 they pause, slow and freeze with the game and add nothing to the
 schedule; whole-game state is a framework machine because independent
 features must coordinate on it.
+
+### Where state lives — the doctrine
+
+An entity's condition is a component on that entity; an ongoing process
+is a component on its own process entity (run-scoped with
+`DespawnOnExit` like anything else); a resource is reserved for state
+where "two of them" is meaningless — score, indexes, input, shared
+pools. The test is "could there ever be two?" A singleton that names an
+entity's condition or a feature's process is a component in exile.
+
+`world.single<T>()`/`singleOrNull<T>()` make component-singletons as
+ergonomic as the resources they replace; observers and `removeAfter:`
+carry the lifecycle work (activation VFX, timed expiry) the resource
+version hand-rolled.
 
 ## Access metadata is diagnostic, not enforced
 

@@ -28,7 +28,7 @@ const double bufferWindow = 0.40;
 const double hitstopSeconds = 4 * fixedDt;
 
 /// The tick count on which a phase entered at tick zero first satisfies
-/// `inState >= seconds`, replaying the machine's accumulation order.
+/// `elapsed >= seconds`, replaying the machine's accumulation order.
 int ticksFor(double seconds) {
   var t = 0.0;
   var n = 0;
@@ -67,8 +67,8 @@ final class AttackState {
 
   bool get iFramed =>
       phase.state == CombatPhase.rolling &&
-      phase.inState >= iFrameStart &&
-      phase.inState < iFrameEnd;
+      phase.elapsed >= iFrameStart &&
+      phase.elapsed < iFrameEnd;
 }
 
 /// An incoming enemy hit against [target], sent by the test scenario.
@@ -103,15 +103,15 @@ void fighterDriver(World world) {
           phase.go(CombatPhase.rolling);
         }
       case CombatPhase.startup:
-        if (phase.inState >= startupSeconds) phase.go(CombatPhase.active);
+        if (phase.elapsed >= startupSeconds) phase.go(CombatPhase.active);
       case CombatPhase.active:
-        if (phase.inState >= activeSeconds) phase.go(CombatPhase.recovery);
+        if (phase.elapsed >= activeSeconds) phase.go(CombatPhase.recovery);
       case CombatPhase.recovery:
-        if (phase.inState >= recoverySeconds) phase.go(CombatPhase.idle);
+        if (phase.elapsed >= recoverySeconds) phase.go(CombatPhase.idle);
       case CombatPhase.rolling:
-        if (phase.inState >= rollSeconds) phase.go(CombatPhase.idle);
+        if (phase.elapsed >= rollSeconds) phase.go(CombatPhase.idle);
       case CombatPhase.staggered:
-        if (phase.inState >= staggerSeconds) phase.go(CombatPhase.idle);
+        if (phase.elapsed >= staggerSeconds) phase.go(CombatPhase.idle);
     }
   });
 }
@@ -246,7 +246,7 @@ void main() {
   test('i-frames block and lapse on the exact boundary ticks', () {
     final (game, fighter, log) = boot();
     game.world.buffer<CombatAction>().record(CombatAction.roll);
-    game.pumpFixed(steps: 1); // rolling entered, inState 0
+    game.pumpFixed(steps: 1); // rolling entered, elapsed 0
 
     // One tick before the window opens: a hit lands (and staggers).
     final (game2, fighter2, log2) = boot();
@@ -302,7 +302,7 @@ void main() {
         reason: 'the cleared roll did not fire after the stagger');
   });
 
-  test('hitstop stalls inState and shifts every subsequent boundary by '
+  test('hitstop stalls elapsed and shifts every subsequent boundary by '
       'exactly the frozen ticks', () {
     final (game, fighter, log) = boot();
     game.world.buffer<CombatAction>().record(CombatAction.attack);

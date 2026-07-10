@@ -21,21 +21,32 @@ part 'data/bundles.dart';
 part 'vfx/vfx.dart';
 part 'systems/systems.dart';
 
-/// Installs rolling shield pickups, the shield state, and the player's
-/// shield feedback and deflection VFX. The feature owns and inserts the
-/// [ShieldState]; the HUD reads it back through the world.
+/// Installs rolling shield pickups, the player's [Shielded] condition, and
+/// the shield feedback and deflection VFX. The shield has no resource and
+/// no tick system: pickup adds `Shielded` with `removeAfter:`, the
+/// framework expires it, and the HUD reads the deadline back through the
+/// world.
 void installCollectables(GameBuilder game) {
-  game.world
-    ..insert(ShieldState())
-    ..insert(CollectableSpawner())
-    ..insert(ShieldDeflectVfx());
+  // ShieldDeflectVfx stays a resource: a shared instanced pool is a
+  // world-level cache, not anyone's state.
+  game.world.insert(ShieldDeflectVfx());
   game
     ..registerTag<Collectable>()
     ..registerTag<ShieldPickup>()
+    ..registerComponent<Shielded>()
+    ..registerComponent<CollectableSpawner>()
+    // The bubble and badge follow the component's lifecycle — every
+    // removal path (expiry, run reset, a future dispel) hides the bubble.
+    ..observe<Shielded>(onAdd: shieldGained, onRemove: shieldLost)
+    ..addSystem(
+      OnEnter(GameStatus.playing),
+      spawnCollectableSpawner,
+      writes: {CollectableSpawner},
+    )
     ..addSystem(
       OnEnter(GameStatus.playing),
       resetCollectablesOnRunStart,
-      reads: const {},
+      writes: {Shielded},
     )
     // fixedUpdate so the body is mounted before the native step. The
     // spawn itself is deferred to the command boundary, so the declared
@@ -44,7 +55,7 @@ void installCollectables(GameBuilder game) {
     ..addSystem(
       Schedules.fixedUpdate,
       spawnShieldPickups,
-      writes: {Collectable, ShieldPickup},
+      writes: {Collectable, ShieldPickup, CollectableSpawner},
       runIf: inState(GameStatus.playing),
     )
     ..addSystem(
@@ -55,31 +66,25 @@ void installCollectables(GameBuilder game) {
     )
     ..addSystem(
       Schedules.update,
-      updateShieldState,
-      reads: const {},
-      inSet: GameSets.logic,
-      runIf: inState(GameStatus.playing),
-    )
-    ..addSystem(
-      Schedules.update,
       animateShieldPickups,
       writes: {ShieldPickupState, ShieldPickupVisuals},
     )
-    // After the shield tick so a fresh shield isn't ticked down this
-    // frame.
     ..addSystem(
       Schedules.update,
       collectShieldPickups,
       reads: {SceneNode},
+      writes: {Shielded},
       inSet: GameSets.logic,
-      after: [updateShieldState],
       runIf: inState(GameStatus.playing),
     )
+    // After collection so a fresh pickup's deadline is already tracked
+    // when the warning flash reads it.
     ..addSystem(
       Schedules.update,
       updateShieldVisuals,
+      reads: {Shielded},
       writes: {PlayerShieldVisuals},
-      after: [updateShieldState],
+      after: [collectShieldPickups],
     )
     ..addSystem(Schedules.update, cleanupPickups, reads: {SceneNode})
     ..addSystem(Schedules.update, updateShieldDeflectVfx, reads: const {});

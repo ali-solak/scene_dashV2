@@ -9,6 +9,7 @@ environment:
 workspace:
   - packages/scene_dash_v2_core
   - packages/scene_dash_v2
+  - packages/scene_dash_inspector
   - examples/headless_example
   - examples/scene_game
   - examples/scene_benchmark

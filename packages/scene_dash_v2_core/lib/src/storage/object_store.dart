@@ -14,10 +14,20 @@ final class ObjectComponentStore<T> extends ComponentStore {
     : _values = List<T?>.filled(denseCapacity, null, growable: false);
 
   /// Inserts or replaces the component [value] for [entityIndex].
+  ///
+  /// [onAdded] fires only on absent→present; replacing an existing value
+  /// swaps the payload silently (the S4 add-over-existing rule).
   void insert(int entityIndex, T value) {
+    final existing = denseIndexOf(entityIndex);
+    if (existing >= 0) {
+      _values[existing] = value;
+      bumpRevision();
+      return;
+    }
     final dense = putSlot(entityIndex);
     _values[dense] = value;
     bumpRevision();
+    onAdded?.call(entityIndex, value);
   }
 
   @override
@@ -32,6 +42,10 @@ final class ObjectComponentStore<T> extends ComponentStore {
     final dense = denseIndexOf(entityIndex);
     return dense < 0 ? null : _values[dense];
   }
+
+  @override
+  @protected
+  Object? payloadAt(int dense) => _values[dense];
 
   @override
   @protected

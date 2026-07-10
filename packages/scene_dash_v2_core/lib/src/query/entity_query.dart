@@ -37,6 +37,12 @@ typedef EntityQueryUntilCallback = bool Function(Entity entity);
 /// driver, honestly O(driver length) — cache it in a resource if you read it
 /// more than once per frame at scale).
 final class EntityQuery extends Query {
+  @override
+  String get debugLabel => 'queryEntities';
+
+  @override
+  int get debugRowEstimate => Query.chooseDriver(_withStores).length;
+
   final World _world;
   final List<ComponentStore> _withStores;
   final List<ComponentStore> _withoutStores;
@@ -50,7 +56,7 @@ final class EntityQuery extends Query {
   /// Invokes [callback] for every live entity that satisfies the filters.
   void each(EntityQueryCallback callback) {
     final driver = Query.chooseDriver(_withStores);
-    _world.beginQuery();
+    _world.beginQuery(this);
     try {
       for (var i = 0; i < driver.length; i++) {
         final entityIndex = driver.entityIndexAt(i);
@@ -71,7 +77,7 @@ final class EntityQuery extends Query {
   /// iteration order. Allocation-free.
   void eachUntil(EntityQueryUntilCallback callback) {
     final driver = Query.chooseDriver(_withStores);
-    _world.beginQuery();
+    _world.beginQuery(this);
     try {
       for (var i = 0; i < driver.length; i++) {
         final entityIndex = driver.entityIndexAt(i);
@@ -94,7 +100,7 @@ final class EntityQuery extends Query {
   /// variants this allocates nothing beyond the returned handle.
   Entity? firstWhere(EntityQueryUntilCallback predicate) {
     final driver = Query.chooseDriver(_withStores);
-    _world.beginQuery();
+    _world.beginQuery(this);
     try {
       for (var i = 0; i < driver.length; i++) {
         final entityIndex = driver.entityIndexAt(i);
@@ -140,7 +146,7 @@ final class EntityQuery extends Query {
   /// allocation-free.
   bool get isEmpty {
     final driver = Query.chooseDriver(_withStores);
-    _world.beginQuery();
+    _world.beginQuery(this);
     try {
       for (var i = 0; i < driver.length; i++) {
         final entityIndex = driver.entityIndexAt(i);
@@ -159,7 +165,7 @@ final class EntityQuery extends Query {
   int count() {
     final driver = Query.chooseDriver(_withStores);
     var matches = 0;
-    _world.beginQuery();
+    _world.beginQuery(this);
     try {
       for (var i = 0; i < driver.length; i++) {
         final entityIndex = driver.entityIndexAt(i);

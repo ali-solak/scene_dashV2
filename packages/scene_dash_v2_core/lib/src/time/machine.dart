@@ -22,7 +22,7 @@ library;
 /// // The owner system, each fixed step: tick first, then transition.
 /// attack.phase.tick(world.dt);
 /// switch (attack.phase.state) {
-///   case CombatPhase.startup when attack.phase.inState >= startupSeconds:
+///   case CombatPhase.startup when attack.phase.elapsed >= startupSeconds:
 ///     attack.phase.go(CombatPhase.active);
 ///   // ...
 /// }
@@ -39,11 +39,11 @@ library;
 /// and to the owner itself until its next tick. Several [go]s inside one
 /// window leave the final state's entry edge and the *last* exit;
 /// intermediate edges are not tracked. A same-state [go] is fully inert:
-/// no edges, and [inState] keeps accumulating.
+/// no edges, and [elapsed] keeps accumulating.
 final class Machine<S> {
   S _state;
   S _exited;
-  double _inState = 0;
+  double _elapsed = 0;
   bool _entered = false;
   bool _left = false;
 
@@ -57,25 +57,25 @@ final class Machine<S> {
   /// Seconds spent in the current state — scaled game time under the
   /// `world.dt` convention, so pause, slow motion and hitstop stretch it.
   /// [go] zeroes it.
-  double get inState => _inState;
+  double get elapsed => _elapsed;
 
   /// Advances the machine by [dt]: lowers any edge raised before this
-  /// tick, then adds [dt] to [inState]. The owner calls this once per
+  /// tick, then adds [dt] to [elapsed]. The owner calls this once per
   /// run, before its transition logic.
   void tick(double dt) {
     _entered = false;
     _left = false;
-    _inState += dt;
+    _elapsed += dt;
   }
 
-  /// Transitions to [next]: zeroes [inState], raises the entry edge for
+  /// Transitions to [next]: zeroes [elapsed], raises the entry edge for
   /// [next] and the exit edge for the state left. A same-state call is a
   /// no-op.
   void go(S next) {
     if (next == _state) return;
     _exited = _state;
     _state = next;
-    _inState = 0;
+    _elapsed = 0;
     _entered = true;
     _left = true;
   }
@@ -95,6 +95,6 @@ final class Machine<S> {
     final raw = '$_state';
     final dot = raw.indexOf('.');
     final label = dot >= 0 ? raw.substring(dot + 1) : raw;
-    return '$label (${_inState.toStringAsFixed(2)}s)';
+    return '$label (${_elapsed.toStringAsFixed(2)}s)';
   }
 }

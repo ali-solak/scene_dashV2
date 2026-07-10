@@ -31,19 +31,29 @@ part 'vfx/impact_vfx.dart';
 part 'vfx/reticle.dart';
 
 /// Installs the player's blaster, projectiles, charge/impact VFX and the
-/// lock-on reticle. The feature owns and inserts the [Blaster]; the HUD
-/// reads it back through the world (`world.resource<Blaster>()`) — nothing
-/// is constructed in `main` or threaded through parameters.
+/// lock-on reticle. The feature owns the [Blaster] *component* and
+/// attaches it to the player on every `OnEnter(playing)`; the HUD reads it
+/// back through the world (`world.singleOrNull<Blaster>()`) — nothing is
+/// constructed in `main` or threaded through parameters.
 void installProjectiles(GameBuilder game) {
   game.world
-    ..insert(Blaster())
     ..insert(ImpactVfx())
     ..insert(LockOnReticle());
   game
     ..registerComponent<Projectile>()
+    ..registerComponent<Blaster>()
     ..configureEvent<FirePressed>(retainedUpdates: null)
     ..configureEvent<FireReleased>(retainedUpdates: null)
     ..configureEvent<FireCanceled>(retainedUpdates: null)
+    // The attach is deferred (world.add), so the declared write is the
+    // feature-owned component; the player is found by tag, keeping this
+    // clear of the player feature's SceneNode writes in the same enter.
+    ..addSystem(
+      OnEnter(GameStatus.playing),
+      attachBlaster,
+      reads: {Player},
+      writes: {Blaster},
+    )
     ..addSystem(
       OnEnter(GameStatus.playing),
       resetProjectilesOnRunStart,
@@ -52,14 +62,14 @@ void installProjectiles(GameBuilder game) {
     ..addSystem(
       OnExit(GameStatus.playing),
       stopBlasterOnRunEnd,
-      reads: const {},
+      reads: {Blaster},
     )
     // Shooting reads the player position after the movement phase.
     ..addSystem(
       Schedules.fixedUpdate,
       shootProjectiles,
       reads: {SceneNode},
-      writes: {Projectile},
+      writes: {Projectile, Blaster},
       inSet: GameSets.actions,
       runIf: inState(GameStatus.playing),
     )
@@ -86,9 +96,15 @@ void installProjectiles(GameBuilder game) {
     ..addSystem(
       Schedules.update,
       updateChargeVisuals,
+      reads: {Blaster},
       writes: {PlayerChargeVisuals},
     )
     ..addSystem(Schedules.update, updateImpactVfx, reads: const {})
-    ..addSystem(Schedules.update, updateLockOnReticle, reads: {SceneNode})
-    ..addSystem(Schedules.shutdown, disposeLockOnReticle, reads: const {});
+    // No shutdown system for the reticle: [LockOnReticle] is [Disposable],
+    // so the framework disposes its model with the game.
+    ..addSystem(
+      Schedules.update,
+      updateLockOnReticle,
+      reads: {SceneNode, Blaster},
+    );
 }

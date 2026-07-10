@@ -40,12 +40,13 @@ void evaluateGameRules(World world) {
     playerCollisionRadius + hitPadding,
     color: GizmoColor.red,
   );
-  final knockback = world.resource<PlayerKnockback>();
-  final shield = world.resource<ShieldState>();
+  final playerEntity = player.$1;
+  final knockback = world.single<PlayerKnockback>();
   final deflectVfx = world.resource<ShieldDeflectVfx>();
-  // Captured once so the shield protects against every rock this frame, even
-  // if deflecting one drains the timer to zero.
-  final shielded = shield.active;
+  // Captured once so the shield protects against every rock this frame,
+  // even if deflecting one drains the remaining time to zero (the removal
+  // is deferred anyway — presence holds until the boundary).
+  final shielded = world.has<Shielded>(playerEntity);
   // The entity query re-checks the rock layer result-side and skips unbound
   // nodes, so no manual collider classification is needed here.
   world.physics.overlapSphereEntities(
@@ -62,13 +63,27 @@ void evaluateGameRules(World world) {
       final rockPos = _rockPos;
       if (shielded) {
         _deflectRock(hit.node, pos, rockPos, deflectVfx);
-        shield.absorbHit();
+        _absorbHit(world, playerEntity);
         return true; // deflect every overlapping rock this frame
       }
       knockback.pushFromRock(playerPosition: pos, rockPosition: rockPos);
       return false; // one unshielded hit is enough — stop scanning
     },
   );
+}
+
+/// Deflecting a rock consumes shield time: re-add [Shielded] with the
+/// reduced deadline (a refresh, S4), or remove it when the cost exceeds
+/// what is left.
+void _absorbHit(World world, Entity player) {
+  final remaining = world.expiryOf<Shielded>(player);
+  if (remaining == null) return;
+  final next = remaining - shieldDeflectTimeCost;
+  if (next <= 0) {
+    world.remove<Shielded>(player);
+  } else {
+    world.add(player, const Shielded(), removeAfter: next);
+  }
 }
 
 /// Throws a rock up and away from the player.

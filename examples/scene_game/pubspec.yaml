@@ -18,6 +18,10 @@ dependencies:
   flutter_bloc: ^9.0.0
   flutter_scene: ^0.18.1
   flutter_scene_rapier: ^0.2.1
+  # The in-app inspector overlay — optional tooling, wired behind the
+  # debug toggles.
+  scene_dash_inspector:
+    path: ../../packages/scene_dash_inspector
   scene_dash_v2:
     path: ../../packages/scene_dash_v2
   vector_math: ^2.4.0

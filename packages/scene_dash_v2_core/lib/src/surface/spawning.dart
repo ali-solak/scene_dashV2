@@ -112,17 +112,30 @@ final class SpawnQueue {
   /// lists, sweeps owned entities whose owner died (looping chains to a
   /// fixpoint) and reports aged parked parts. The frame driver calls this
   /// after every schedule's command flush.
+  ///
+  /// The settle loop also drains the world's deferred command buffer, so an
+  /// observer fired by an applied spawn part can `remove`/`despawn` and see
+  /// it land in the *same* boundary (S5) — the two queues reach a joint
+  /// fixpoint before the flush ends.
   void flush() {
-    var passes = 0;
-    do {
-      _applyPending();
-      passes++;
-      if (passes > 64) {
-        throw StateError(
-          'Spawns and owned despawns did not settle after 64 passes.',
-        );
-      }
-    } while (_sweepOwnedOnce() || _pending.isNotEmpty);
+    world.beginFlush();
+    try {
+      var passes = 0;
+      do {
+        world.commands.apply();
+        _applyPending();
+        passes++;
+        if (passes > 64) {
+          throw StateError(
+            'Spawns and owned despawns did not settle after 64 passes.',
+          );
+        }
+      } while (_sweepOwnedOnce() ||
+          _pending.isNotEmpty ||
+          !world.commands.isEmpty);
+    } finally {
+      world.endFlush();
+    }
     _advanceParkedReaders();
     _reportAgedParked();
   }
