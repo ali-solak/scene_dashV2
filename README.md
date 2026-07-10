@@ -4,7 +4,7 @@ An entity-component-system runtime for
 [`flutter_scene`](https://pub.dev/packages/flutter_scene).
 
 Entities are generational ids. Components are plain Dart objects held in
-sparse-set stores — dense arrays with O(1) insert, remove and lookup —
+sparse-set stores, dense arrays with O(1) insert, remove and lookup
 and are mutated in place, so steady-state frames allocate nothing and
 produce no GC pressure. Systems are plain functions scheduled on a fixed
 timestep and per-frame phases; structural changes (spawn, despawn,
