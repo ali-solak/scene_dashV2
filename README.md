@@ -701,7 +701,23 @@ final hit = world.physics.raycast(
     maxDistance: 1.1);
 ```
 
-## Debug gizmos
+## Debugging
+
+### Entity debug
+
+```dart
+final grunt = world.spawn(
+    [...enemyBundle(gruntNode, target: player), const Name('grunt-3')]);
+
+print(world.debugDescribe(grunt));
+// Entity(14 v2) 'grunt-3'
+//   Enemy, Stunned
+//   Health(28.0/40.0)
+//   Target(Entity(2 v1))
+//   EnemyAttack(windup 0.31/0.9)
+```
+
+### Gizmo debug
 
 ```dart
 features: [installGizmos(enabled: kDebugMode), ...]   // opt-in render layer
@@ -798,6 +814,7 @@ examples/scene_game/lib/
 
 Deeper docs: [architecture](docs/concept.md) ·
 [integration](docs/integration.md) 
+
 ## Development
 
 ```bash
