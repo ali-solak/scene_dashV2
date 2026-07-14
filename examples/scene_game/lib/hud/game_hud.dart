@@ -255,11 +255,14 @@ class _HoldButtonState extends State<_HoldButton> {
     return Semantics(
       label: widget.semanticLabel,
       button: true,
-      child: GestureDetector(
+      // A raw Listener, not GestureDetector: tap recognizers reject once the
+      // pointer drifts past the touch slop, releasing a held button under a
+      // moving thumb. The listener owns its pointer for the full press.
+      child: Listener(
         behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => _setHeld(true),
-        onTapUp: (_) => _setHeld(false),
-        onTapCancel: () => _setHeld(false),
+        onPointerDown: (_) => _setHeld(true),
+        onPointerUp: (_) => _setHeld(false),
+        onPointerCancel: (_) => _setHeld(false),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 90),
           width: 92,
