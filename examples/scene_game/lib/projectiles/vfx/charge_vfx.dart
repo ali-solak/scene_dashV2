@@ -1,8 +1,9 @@
 part of '../projectiles.dart';
 
-/// Drives the player's charge orb, beam and motes from the [Blaster], the sole
-/// source of charge truth. Mutates player-owned nodes and unique materials in
-/// place.
+/// Drives the player's charge orb, beam and orbiting motes from the
+/// [Blaster], the sole source of charge truth. Mutates player-owned nodes
+/// and unique materials in place. The motes spiral as a rising, converging
+/// vortex that tightens and quickens as the charge builds.
 void updateChargeVisuals(World world) {
   final visuals = world
       .query<PlayerChargeVisuals>(require: const [Player])
@@ -109,6 +110,9 @@ void _updateChargeBeam(
   );
 }
 
+/// The signature charge twirl: motes orbit the muzzle in a rising helix,
+/// wobbling as they climb the beam. Player-owned nodes, mutated in place;
+/// no scene resource needed, so it runs the same in a headless test.
 void _updateChargeMotes(
   PlayerChargeVisuals v, {
   required double c,

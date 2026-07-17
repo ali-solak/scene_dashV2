@@ -29,12 +29,12 @@ void spawnShieldPickups(World world) {
 /// Collectables reset their own state when a run (re)starts. The player
 /// survives the transition, so any shield carried out of the last run is
 /// removed here — the observer pair hides the bubble like on any other
-/// removal path.
+/// removal path. In-flight deflection bursts are run-scoped entities swept
+/// by `DespawnOnExit`; nothing to reset.
 void resetCollectablesOnRunStart(World world) {
   world.query<Shielded>().each((entity, shielded) {
     world.remove<Shielded>(entity);
   });
-  world.resource<ShieldDeflectVfx>().reset();
 }
 
 /// Pulses and bobs each pickup's glow child; the physics-driven root
@@ -153,36 +153,3 @@ void cleanupPickups(World world) {
   });
 }
 
-/// Startup: build the shared deflection pool. Gated on the scene at
-/// registration (`runIf: hasResource<Scene>()`), so headless boots skip it.
-void spawnShieldDeflectVfx(World world) {
-  world.resource<ShieldDeflectVfx>().pool = buildDeflectPool()
-    ..addTo(world.resource<Scene>());
-}
-
-void updateShieldDeflectVfx(World world) {
-  final vfx = world.resource<ShieldDeflectVfx>();
-  final pool = vfx.pool;
-  if (pool == null) return;
-  final dt = world.dt;
-  final scratch = pool.scratch;
-  for (var i = 0; i < vfx.age.length; i++) {
-    final a = vfx.age[i];
-    if (a >= _deflectDuration) continue;
-    final next = a + dt;
-    vfx.age[i] = next;
-    final t = (next / _deflectDuration).clamp(0.0, 1.0);
-    final ease = 1 - math.pow(1 - t, 2).toDouble();
-    final fade = 1 - t;
-    final s = (0.5 + 1.4 * ease) * fade;
-    scratch
-      ..setIdentity()
-      ..setTranslationRaw(
-        vfx.origin[i * 3],
-        vfx.origin[i * 3 + 1] + 0.6 * ease,
-        vfx.origin[i * 3 + 2],
-      )
-      ..scaleByDouble(s, s, s, 1);
-    pool.mesh.setInstanceTransform(i, scratch);
-  }
-}

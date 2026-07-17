@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:flutter_scene/scene.dart';
 import 'package:flutter_scene_rapier/flutter_scene_rapier.dart';
@@ -7,7 +6,8 @@ import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 
 import '../fx/anim.dart';
-import '../fx/instanced_pool.dart';
+import '../fx/particles.dart' as fx;
+import '../fx/particle_texture.dart';
 import '../game/game_state.dart';
 import '../game/physics_layers.dart';
 import '../game/sets.dart';
@@ -27,9 +27,6 @@ part 'systems/systems.dart';
 /// framework expires it, and the HUD reads the deadline back through the
 /// world.
 void installCollectables(GameBuilder game) {
-  // ShieldDeflectVfx stays a resource: a shared instanced pool is a
-  // world-level cache, not anyone's state.
-  game.world.insert(ShieldDeflectVfx());
   game
     ..registerTag<Collectable>()
     ..registerTag<ShieldPickup>()
@@ -59,12 +56,6 @@ void installCollectables(GameBuilder game) {
       runIf: inState(GameStatus.playing),
     )
     ..addSystem(
-      Schedules.startup,
-      spawnShieldDeflectVfx,
-      reads: const {},
-      runIf: hasResource<Scene>(),
-    )
-    ..addSystem(
       Schedules.update,
       animateShieldPickups,
       writes: {ShieldPickupState, ShieldPickupVisuals},
@@ -86,6 +77,5 @@ void installCollectables(GameBuilder game) {
       writes: {PlayerShieldVisuals},
       after: [collectShieldPickups],
     )
-    ..addSystem(Schedules.update, cleanupPickups, reads: {SceneNode})
-    ..addSystem(Schedules.update, updateShieldDeflectVfx, reads: const {});
+    ..addSystem(Schedules.update, cleanupPickups, reads: {SceneNode});
 }

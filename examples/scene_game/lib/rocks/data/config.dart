@@ -26,6 +26,12 @@ const double rockKillY = -25;
 
 const double rockHitReactionDuration = 0.34;
 
+/// Flame-trail emitter tuning (upstream particle system; see
+/// `vfx/vfx.dart`). The explicit seed keeps replays visually identical.
+const int rockTrailSeed = 11;
+const int rockTrailMaxParticles = 48;
+const double rockTrailEmberRate = 26;
+
 double stressRamp(double survived) {
   return (survived / rockSpawnRampSeconds).clamp(0, 1).toDouble();
 }

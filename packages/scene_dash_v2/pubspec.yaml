@@ -18,7 +18,7 @@ dependencies:
     path: ../scene_dash_v2_core
   # flutter_scene 0.18.x requires a recent Flutter master build (Flutter GPU /
   # Impeller) and `flutter run --enable-flutter-gpu`.
-  flutter_scene: ^0.18.1
+  flutter_scene: ^0.19.0
   vector_math: ^2.4.0
 
 dev_dependencies:

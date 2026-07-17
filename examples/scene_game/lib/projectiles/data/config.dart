@@ -47,6 +47,21 @@ const double chargedProjectileMaxSpin = 16;
 /// any charged shot strictly above it.
 const double minChargedCharge = 0.06;
 
+// --- Impact bursts (upstream particle emitters) ---
+//
+// Explicit seeds make replays visually identical; the entity lifetime is
+// the `DespawnAfter` on each burst entity and must cover the longest
+// particle life. (The charge-up VFX is the orbiting-mote vortex, not an
+// emitter — see PlayerChargeVisuals.)
+
+const int impactBurstSeed = 23;
+const int chargedImpactBurstSeed = 29;
+
+const int impactBurstCount = 14;
+const int chargedImpactBurstCount = 26;
+
+const double impactBurstEntityLifetime = 0.7;
+
 // --- Lock-on reticle ---
 
 /// A rock is a candidate target when its X is within this of the player's X.

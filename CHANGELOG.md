@@ -47,6 +47,58 @@
   with both query spellings and the row-count product. Tracking sits
   inside asserts; release builds compile it out.
 
+### The flutter_scene 0.19 unit (Unit 2.5, ride-alongs)
+
+- Gizmos render on upstream meshes (U7): the sphere pools moved to
+  0.19's geodesic `IcosphereGeometry` (one subdivision — 80 evenly
+  distributed triangles, rounder than the old low-segment UV sphere at
+  the same debug-grade cost). Line/ray gizmos deliberately stay
+  stretched instanced cuboids: 0.19's `LineSegmentsGeometry` bakes its
+  endpoints into a GPU buffer at construction with no update path, so an
+  immediate-mode layer would have to rebuild geometry (and allocate a
+  device buffer) every frame — breaking the layer's
+  no-per-frame-allocation contract. Revisit when upstream ships an
+  updatable segment batch (backlog). The public gizmo API is unchanged;
+  a new heavy-frame test pins staging at hundreds of shapes per frame.
+- scene_game's hand-rolled particle simulations are gone (U6): flaming
+  rock trails, impact flashes and shield-deflection bursts now render
+  through upstream `ParticleEmitterComponent`s — the `Flaming` observer
+  pair attaches/removes a trail emitter node (its real payload; the
+  `RockTrails` resource and per-frame re-lay system are deleted,
+  superseding the observers-era note that kept it as the doctrine
+  counter-example), and impacts and deflections spawn short-lived burst
+  entities cleaned up by `DespawnAfter` + `DespawnOnExit`. Every emitter
+  carries an explicit `seed:`, so replays are visually identical, and
+  emitters advance with the scene tick — sparks freeze under hitstop,
+  the clock guarantee demonstrated by the game. `ImpactVfx` and
+  `ShieldDeflectVfx` are deleted. The particle API is not yet in
+  flutter_scene's public barrel, so `fx/particles.dart` is the game's
+  single implementation-import surface (drops when upstream barrels it
+  — backlog).
+- Emitter sprites are textured with a shared soft radial-falloff dot
+  (`fx/particle_texture.dart`) so trail/impact/deflect particles read as
+  glowing orbs, not the hard squares an untextured `SpriteMaterial`
+  draws (the deliberate visual pass, U5).
+- The charge-up VFX stays a hand-animated node effect, not an emitter
+  (U5): a cone emitter read as a flat spray and lost the signature
+  swirl, so the charge keeps its original orbiting-mote twirl. Emitters
+  win for stochastic bursts and trails; deterministic, shaped motion
+  like this reads better hand-driven.
+- Hand-rolled meshes replaced by 0.19 primitives: the charge beam is a
+  real `CylinderGeometry` (the old file carried "0.18 has no cylinder
+  primitive"), and the hand-built impact ring geometry is deleted with
+  the pooled impact system (the burst look absorbs it).
+- **Device fix (Impeller Vulkan / Mali, e.g. Pixel 8):** the ambient
+  decor motes moved off a PBR `InstancedMesh` to individual PBR nodes.
+  A physically-based `InstancedMesh` drawn through the lit/shadow/IBL
+  passes device-loses the Impeller Vulkan backend on Mali GPUs (a
+  `pthread_mutex` abort in the driver's fence thread, surfacing as a
+  failed `ResolvePass` command-buffer submit); the same geometry as
+  discrete nodes — like every other PBR object in the scene — renders
+  fine. `fx/instanced_pool.dart` is deleted (decor was its last
+  consumer). Unlit `InstancedMesh` is unaffected, so the debug gizmo
+  pools keep instancing.
+
 ### The authoring surface (new)
 
 - Systems are stateless `void Function(World world)`; registration is

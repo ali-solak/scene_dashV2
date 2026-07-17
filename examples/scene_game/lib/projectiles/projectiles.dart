@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart' show Size;
 import 'package:flutter_scene/scene.dart';
@@ -8,7 +7,8 @@ import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 
 import '../fx/anim.dart';
-import '../fx/instanced_pool.dart';
+import '../fx/particles.dart' as fx;
+import '../fx/particle_texture.dart';
 import '../game/camera_rig.dart';
 import '../game/sets.dart';
 import '../game/game_state.dart';
@@ -36,9 +36,7 @@ part 'vfx/reticle.dart';
 /// back through the world (`world.singleOrNull<Blaster>()`) — nothing is
 /// constructed in `main` or threaded through parameters.
 void installProjectiles(GameBuilder game) {
-  game.world
-    ..insert(ImpactVfx())
-    ..insert(LockOnReticle());
+  game.world.insert(LockOnReticle());
   game
     ..registerComponent<Projectile>()
     ..registerComponent<Blaster>()
@@ -75,12 +73,6 @@ void installProjectiles(GameBuilder game) {
     )
     ..addSystem(
       Schedules.startup,
-      spawnImpactVfx,
-      reads: const {},
-      runIf: hasResource<Scene>(),
-    )
-    ..addSystem(
-      Schedules.startup,
       spawnLockOnReticle,
       reads: const {},
       runIf: hasResource<Scene>(),
@@ -99,7 +91,6 @@ void installProjectiles(GameBuilder game) {
       reads: {Blaster},
       writes: {PlayerChargeVisuals},
     )
-    ..addSystem(Schedules.update, updateImpactVfx, reads: const {})
     // No shutdown system for the reticle: [LockOnReticle] is [Disposable],
     // so the framework disposes its model with the game.
     ..addSystem(

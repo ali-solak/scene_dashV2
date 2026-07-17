@@ -6,17 +6,17 @@ import 'package:flutter_scene/scene.dart'
         AlphaMode,
         CuboidGeometry,
         Geometry,
+        IcosphereGeometry,
         InstancedMesh,
         InstancedMeshComponent,
         Node,
         Scene,
-        SphereGeometry,
         UnlitMaterial;
 import 'package:scene_dash_v2_core/advanced.dart';
 import 'package:vector_math/vector_math.dart';
 
-/// The fixed gizmo palette. `flutter_scene` 0.18 instancing is
-/// transform-only (no per-instance color), so each color is its own
+/// The fixed gizmo palette. `flutter_scene` instancing is transform-only
+/// (no per-instance color, still true in 0.19), so each color is its own
 /// instanced pool and arbitrary per-call colors are not offered.
 enum GizmoColor { green, red, blue, yellow }
 
@@ -350,14 +350,21 @@ final Matrix4 _hidden = Matrix4.diagonal3Values(0, 0, 0);
 /// One color's three instanced meshes.
 final class _GizmoPools {
   // Debug-grade tessellation: instanced draws pay vertex cost for the whole
-  // pool capacity (hidden zero-scale instances included), so the default
-  // 32x16 sphere (~1k triangles) turns thousands of gizmos into millions of
-  // debug triangles. 8x6 reads fine for hit radii and probes at ~10x less
-  // vertex work. This constructor is the single swap point for leaner
-  // upstream meshes when flutter_scene ships them.
+  // pool capacity (hidden zero-scale instances included), so a dense sphere
+  // turns thousands of gizmos into millions of debug triangles. The 0.19
+  // geodesic icosphere at one subdivision (80 triangles, evenly
+  // distributed) reads rounder than a low-segment UV sphere at the same
+  // vertex cost.
+  //
+  // Lines deliberately stay stretched unit cuboids rather than 0.19's
+  // LineSegmentsGeometry: that geometry bakes its endpoints into a GPU
+  // buffer at construction with no update path, so an immediate-mode layer
+  // would have to rebuild geometry (and allocate a device buffer) every
+  // frame — breaking this layer's no-per-frame-allocation contract.
+  // Revisit when upstream ships an updatable segment batch (backlog row).
   _GizmoPools(GizmoColor color, GizmoBucket bucket)
     : spheres = _pool(
-        SphereGeometry(radius: 1, segments: 8, rings: 6),
+        IcosphereGeometry(radius: 1, subdivisions: 1),
         color,
         bucket.sphereCapacity,
       ),

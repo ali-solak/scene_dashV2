@@ -40,3 +40,12 @@ const double shieldDeflectTimeCost = 0.4;
 const double shieldDeflectOutward = 16;
 const double shieldDeflectUp = 12;
 const double shieldDeflectSpin = 10;
+
+// --- Deflection burst (upstream particle emitter) ---
+//
+// The explicit seed keeps replays visually identical; the entity lifetime
+// is the burst entity's `DespawnAfter` and must cover the longest particle
+// life.
+const int deflectBurstSeed = 31;
+const int deflectBurstCount = 18;
+const double deflectBurstEntityLifetime = 0.6;

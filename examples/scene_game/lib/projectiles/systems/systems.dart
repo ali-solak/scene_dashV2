@@ -68,9 +68,9 @@ void shootProjectiles(World world) {
 }
 
 /// Projectiles reset their own state when a run (re)starts; the blaster
-/// needs nothing here — [attachBlaster] replaces it with a fresh one.
+/// needs nothing here — [attachBlaster] replaces it with a fresh one, and
+/// in-flight impact bursts are run-scoped entities swept by `DespawnOnExit`.
 void resetProjectilesOnRunStart(World world) {
-  world.resource<ImpactVfx>().reset();
   world.resource<LockOnReticle>().reset();
 }
 
@@ -115,7 +115,6 @@ void updateProjectiles(World world) {
 /// hit count.
 int _knockRocks(World world, Vector3 position, Projectile projectile) {
   final index = world.resource<SceneNodeIndex>();
-  final vfx = world.resource<ImpactVfx>();
   var hitCount = 0;
   world.physics.overlapSphereEntities(
     index,
@@ -149,7 +148,8 @@ int _knockRocks(World world, Vector3 position, Projectile projectile) {
         entity,
         RockHitReaction(strength: projectile.charge.clamp(0.0, 1.0).toDouble()),
       );
-      vfx.emit(_rockHitPosition, strength: projectile.charge);
+      // Deferred spawn of a run-scoped burst entity — safe inside the scan.
+      spawnImpactBurst(world, _rockHitPosition, strength: projectile.charge);
       hitCount++;
       return projectile.charged && hitCount < chargedProjectileMaxHits;
     },

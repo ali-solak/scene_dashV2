@@ -42,7 +42,6 @@ void evaluateGameRules(World world) {
   );
   final playerEntity = player.$1;
   final knockback = world.single<PlayerKnockback>();
-  final deflectVfx = world.resource<ShieldDeflectVfx>();
   // Captured once so the shield protects against every rock this frame,
   // even if deflecting one drains the remaining time to zero (the removal
   // is deferred anyway — presence holds until the boundary).
@@ -62,7 +61,7 @@ void evaluateGameRules(World world) {
       hit.node.globalTranslationInto(_rockPos);
       final rockPos = _rockPos;
       if (shielded) {
-        _deflectRock(hit.node, pos, rockPos, deflectVfx);
+        _deflectRock(world, hit.node, pos, rockPos);
         _absorbHit(world, playerEntity);
         return true; // deflect every overlapping rock this frame
       }
@@ -88,10 +87,10 @@ void _absorbHit(World world, Entity player) {
 
 /// Throws a rock up and away from the player.
 void _deflectRock(
+  World world,
   Node rockNode,
   Vector3 playerPos,
   Vector3 rockPos,
-  ShieldDeflectVfx vfx,
 ) {
   var dx = rockPos.x - playerPos.x;
   var dz = rockPos.z - playerPos.z;
@@ -118,7 +117,8 @@ void _deflectRock(
         nx.sign * shieldDeflectSpin,
       );
   }
-  vfx.emit(rockPos);
+  // Deferred spawn of a run-scoped burst entity — safe inside the scan.
+  spawnDeflectBurst(world, rockPos);
 }
 
 /// Camera follow: observes the latest player state after the rules pass.

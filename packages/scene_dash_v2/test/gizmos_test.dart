@@ -115,4 +115,55 @@ void main() {
       expect(s[15], 1);
     });
   });
+
+  group('heavy frame', () {
+    // Several hundred shapes submitted in one frame — the volume a fully
+    // instrumented scene produces. Staging must hold every submission
+    // without dropping (capacities sized for it) and clear back to empty;
+    // the GPU half of this path (pool writes riding 0.19's arena
+    // transients, which lifted the old ~1MB per-frame transient ceiling)
+    // is covered by the on-device smoke run.
+    test('hundreds of shapes in one frame stage without drops', () {
+      const perColor = 200;
+      final gizmos = Gizmos(
+        sphereCapacity: perColor,
+        lineCapacity: perColor,
+        cuboidCapacity: perColor,
+      );
+
+      for (var frame = 0; frame < 3; frame++) {
+        gizmos.clear();
+        for (final color in GizmoColor.values) {
+          for (var i = 0; i < perColor; i++) {
+            final d = i.toDouble();
+            gizmos.sphere(Vector3(d, d + 1, d + 2), 0.5 + i * 0.01,
+                color: color);
+            gizmos.line(Vector3(d, 0, 0), Vector3(d, d + 1, 0), color: color);
+            gizmos.cuboid(Vector3(0, d, 0), Vector3.all(0.25 + i * 0.01),
+                color: color);
+          }
+        }
+
+        expect(gizmos.droppedThisFrame, 0);
+        for (final bucket in gizmos.buckets) {
+          expect(bucket.sphereCount, perColor);
+          expect(bucket.lineCount, perColor);
+          expect(bucket.cuboidCount, perColor);
+        }
+      }
+
+      // Spot-check the last slot's packed floats survived the volume.
+      final last = gizmos.buckets[GizmoColor.yellow.index];
+      final base = (perColor - 1) * 4;
+      expect(last.spheres[base], (perColor - 1).toDouble());
+      expect(last.spheres[base + 3], closeTo(0.5 + (perColor - 1) * 0.01, 1e-6));
+
+      gizmos.clear();
+      for (final bucket in gizmos.buckets) {
+        expect(bucket.sphereCount, 0);
+        expect(bucket.lineCount, 0);
+        expect(bucket.cuboidCount, 0);
+      }
+    });
+  });
 }

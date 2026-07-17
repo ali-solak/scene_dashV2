@@ -98,8 +98,9 @@ final class PlayerVisuals {
   );
 }
 
-/// The player's charge orb, beam and motes — written only by the
-/// projectiles feature's charge VFX system.
+/// The player's charge orb, beam and orbiting motes — written only by the
+/// projectiles feature's charge VFX system. The motes orbit the muzzle in a
+/// rising helix (see `updateChargeVisuals`).
 final class PlayerChargeVisuals {
   PlayerChargeVisuals._({
     required this.chargeOrb,
@@ -159,6 +160,10 @@ final class PlayerChargeVisuals {
   final PhysicallyBasedMaterial chargeOrbMaterial;
   final Node chargeBeam;
   final PhysicallyBasedMaterial chargeBeamMaterial;
+
+  /// The vortex motes, orbited each frame by the charge VFX system. The
+  /// muzzle offset is baked into their motion, so they live on the player
+  /// root like the orb and beam.
   final List<Node> chargeMotes;
   final PhysicallyBasedMaterial chargeMoteMaterial;
 
@@ -181,11 +186,14 @@ final class PlayerChargeVisuals {
     segments: 8,
     rings: 6,
   );
-  // Scaled long in Y into a beam — flutter_scene 0.18 has no cylinder primitive.
-  static final _beamGeometry = SphereGeometry(
-    radius: 1,
-    segments: 12,
-    rings: 8,
+  // A real cylinder as of flutter_scene 0.19 (height 2 so the unit-Y
+  // scale in the charge VFX spans the same extent the old stretched
+  // sphere did).
+  static final _beamGeometry = CylinderGeometry(
+    bottomRadius: 1,
+    topRadius: 1,
+    height: 2,
+    radialSegments: 12,
   );
 }
 
