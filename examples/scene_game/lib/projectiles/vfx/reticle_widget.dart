@@ -109,6 +109,18 @@ class _ReticlePainter extends CustomPainter {
   static const Color _hot = Color(0xFFFFC83A); // locked amber
   static const Color _impact = Color(0xFFFF5A2C); // hit confirmation orange
 
+  /// flutter_scene 0.19 binds widget captures as GPU textures holding
+  /// *premultiplied* alpha, but the material shader treats sampled
+  /// textures as straight alpha and premultiplies again on output — every
+  /// partially transparent pixel darkens by an extra factor of its own
+  /// alpha, which turned the reticle blackish. Authoring sqrt(alpha)
+  /// cancels the double multiply, restoring the intended color at the
+  /// intended coverage. Remove once upstream honors the wrapped capture's
+  /// premultiplied encoding (0.18.x read captures back as straight RGBA
+  /// and needed no compensation).
+  static Color _shade(Color color, double alpha) =>
+      color.withValues(alpha: math.sqrt(alpha.clamp(0.0, 1.0)));
+
   @override
   void paint(Canvas canvas, Size size) {
     final o = model.opacity.clamp(0.0, 1.0);
@@ -127,17 +139,20 @@ class _ReticlePainter extends CustomPainter {
     var color = Color.lerp(_loose, _hot, locked ? 1.0 : t * t)!;
     color = Color.lerp(color, _impact, impact)!;
 
+    // Strokes are drawn heavy throughout: the capture is minified to
+    // roughly a third of its canvas size in gameplay, and thin strokes
+    // average into the transparent background and grey out.
     final ringPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.5
-      ..color = color.withValues(alpha: 0.8 * o);
+      ..strokeWidth = 6
+      ..color = _shade(color, 1.0 * o);
     canvas.drawCircle(center, r * 0.8, ringPaint);
 
     final tickPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.5
+      ..strokeWidth = 5
       ..strokeCap = StrokeCap.round
-      ..color = color.withValues(alpha: 1.0 * o);
+      ..color = _shade(color, 1.0 * o);
     const ticks = 12;
     for (var i = 0; i < ticks; i++) {
       final a = spinAngle + i / ticks * 2 * math.pi;
@@ -154,9 +169,9 @@ class _ReticlePainter extends CustomPainter {
     final bracketR = (r * (0.92 - 0.42 * t)) + model.firedFlash * r * 0.6;
     final bracketPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = locked ? 6 : 4.5
+      ..strokeWidth = locked ? 8 : 6
       ..strokeCap = StrokeCap.round
-      ..color = color.withValues(alpha: 1.0 * o);
+      ..color = _shade(color, 1.0 * o);
     final arc = locked ? 0.55 : 0.4; // radians half-span of each bracket
     for (var k = 0; k < 4; k++) {
       final mid = math.pi / 4 + k * math.pi / 2;
@@ -168,16 +183,12 @@ class _ReticlePainter extends CustomPainter {
       final pulse = 0.5 + 0.5 * math.sin(pulsePhase);
       final pulsePaint = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..color = _hot.withValues(alpha: 0.85 * pulse * o);
+        ..strokeWidth = 5
+        ..color = _shade(_hot, 0.85 * pulse * o);
       canvas.drawCircle(center, bracketR + 8 + pulse * 8, pulsePaint);
     }
 
-    canvas.drawCircle(
-      center,
-      3.5,
-      Paint()..color = color.withValues(alpha: 1.0 * o),
-    );
+    canvas.drawCircle(center, 5, Paint()..color = _shade(color, 1.0 * o));
 
     // Impact hit-confirmation rings.
     if (impact > 0.01) {
@@ -187,16 +198,16 @@ class _ReticlePainter extends CustomPainter {
         rExp,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 4 + impact * 5
-          ..color = _impact.withValues(alpha: impact * o),
+          ..strokeWidth = 6 + impact * 5
+          ..color = _shade(_impact, impact * o),
       );
       canvas.drawCircle(
         center,
         rExp * 0.62,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 3
-          ..color = _impact.withValues(alpha: impact * 0.75 * o),
+          ..strokeWidth = 5
+          ..color = _shade(_impact, impact * 0.75 * o),
       );
     }
   }

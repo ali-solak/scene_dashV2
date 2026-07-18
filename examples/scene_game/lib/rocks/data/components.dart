@@ -17,11 +17,6 @@ final class RockVisuals {
   RockVisuals(this.shell);
 
   final Node shell;
-
-  /// The flame-trail emitter node while the rock is [Flaming], attached
-  /// and removed by the `observe<Flaming>` pair. Null on plain rocks and
-  /// in headless worlds (emitters need a scene).
-  Node? trailEmitter;
 }
 
 /// Transient hit-reaction state, inserted when a projectile connects and

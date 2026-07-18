@@ -1,5 +1,20 @@
 part of '../rocks.dart';
 
+/// The single shared flame-trail emitter, owned by systems like the
+/// reticle: `spawnFlameTrailEmitter` fills it (startup, scene-gated),
+/// `updateFlameTrails` steers it. All fields stay null in headless worlds.
+final class FlameTrails {
+  /// The world-space emitter node at the scene root; parked at identity
+  /// and never moved (see [FlameTrailShape]).
+  Node? node;
+
+  /// The spawn shape carrying the flaming rocks' world positions.
+  FlameTrailShape? shape;
+
+  /// The emitter's spawner; its rate scales with the flaming-rock count.
+  fx.Spawner? spawner;
+}
+
 /// Spawn cadence plus RNG, injected as a resource.
 final class RockSpawner {
   final math.Random random;

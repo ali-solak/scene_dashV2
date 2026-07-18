@@ -1,19 +1,38 @@
 part of '../projectiles.dart';
 
-/// Drives the player's charge orb, beam and orbiting motes from the
+/// Drives the player's charge orb, plasma load and orbiting motes from the
 /// [Blaster], the sole source of charge truth. Mutates player-owned nodes
-/// and unique materials in place. The motes spiral as a rising, converging
-/// vortex that tightens and quickens as the charge builds.
+/// and unique materials in place. The plasma emitter spirals energy into
+/// the orb and the motes ride a rising, converging vortex that tightens
+/// and quickens as the charge builds.
 void updateChargeVisuals(World world) {
-  final visuals = world
-      .query<PlayerChargeVisuals>(require: const [Player])
+  final plasma = world.resource<ChargePlasma>();
+  final player = world
+      .query2<SceneNode, PlayerChargeVisuals>(require: const [Player])
       .firstOrNull;
-  if (visuals == null) return;
-  final v = visuals.$2;
   final blaster = world.singleOrNull<Blaster>();
-  if (blaster == null) return;
+  if (player == null || blaster == null) {
+    plasma.spawner?.rate = 0;
+    return;
+  }
+  final v = player.$3;
   final c = blaster.charge01;
   final charging = blaster.isCharging;
+
+  // The plasma emitter is a scene resource (null headless); parent it to
+  // the current player on first sight each run and let charge throttle it.
+  final plasmaNode = plasma.node;
+  if (plasmaNode != null) {
+    final root = player.$2.node;
+    if (plasmaNode.parent != root) {
+      plasmaNode.parent?.remove(plasmaNode);
+      root.add(plasmaNode);
+    }
+    plasma.spawner!.rate = charging
+        ? chargePlasmaRateMin +
+              (chargePlasmaRateMax - chargePlasmaRateMin) * c
+        : 0;
+  }
 
   v.chargePhase += world.dt * (6 + 10 * c);
   // Eased show factor so release/cancel shrinks the orb and beam cleanly.
@@ -33,7 +52,7 @@ void updateChargeVisuals(World world) {
   final beamBaseY = playerBodyVisualRadius * 1.05;
   final beamHeight = (0.25 + 1.45 * c) * show;
 
-  _updateChargeOrb(v, c: c, show: show, mix: mix, flash: flash);
+  _updateChargeOrb(v, c: c, show: show, mix: mix, flash: flash, pulse: pulse);
   _updateChargeBeam(
     v,
     c: c,
@@ -61,8 +80,16 @@ void _updateChargeOrb(
   required double show,
   required double mix,
   required double flash,
+  required double pulse,
 }) {
-  v.chargeOrb.setLocalUniform(0, 0, 0, 0);
+  // The orb is the plasma load's core: it swells with charge as the
+  // spiraling motes feed it, breathing with the shared pulse.
+  v.chargeOrb.setLocalUniform(
+    0,
+    0,
+    -(playerBodyVisualRadius + 0.55),
+    (0.14 + 0.3 * c) * show * pulse,
+  );
   v.chargeOrbMaterial.emissiveFactor = Vector4(
     (0.3 + 0.85 * mix) * flash,
     (0.9 - 0.35 * mix) * flash,
@@ -77,6 +104,8 @@ void _updateChargeOrb(
   );
 }
 
+/// The energy core: a slim bright column at the muzzle — kept crisp and
+/// thin so it reads as the plasma's spine, not the old wide cone.
 void _updateChargeBeam(
   PlayerChargeVisuals v, {
   required double c,
@@ -87,7 +116,7 @@ void _updateChargeBeam(
   required double beamBaseY,
   required double beamHeight,
 }) {
-  final beamThick = (0.06 + 0.08 * c) * show * pulse;
+  final beamThick = (0.035 + 0.05 * c) * show * pulse;
   v.chargeBeam.setLocalTRS(
     0,
     beamBaseY + beamHeight * 0.5,
@@ -97,16 +126,16 @@ void _updateChargeBeam(
     beamThick,
   );
   v.chargeBeamMaterial.emissiveFactor = Vector4(
-    (0.4 + 0.7 * mix) * flash,
-    (1.0 - 0.3 * mix) * flash,
-    (1.4 + 0.1 * mix) * flash,
+    (0.5 + 0.8 * mix) * flash,
+    (1.1 - 0.3 * mix) * flash,
+    (1.6 + 0.1 * mix) * flash,
     1,
   );
   v.chargeBeamMaterial.baseColorFactor = Vector4(
     0.45 + 0.4 * mix,
     0.88,
     1.0,
-    (0.5 + 0.4 * c) * show,
+    (0.6 + 0.35 * c) * show,
   );
 }
 

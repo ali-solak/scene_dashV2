@@ -42,6 +42,30 @@ void cleanupRocks(World world) {
   });
 }
 
+/// Feeds the shared flame-trail emitter: rewrites the spawn shape's rock
+/// positions from this frame's [Flaming] rocks and scales the spawn rate
+/// with their count (zero rocks ⇒ zero rate — outside runs the emitter
+/// just idles). The emitter node itself never moves; see [FlameTrailShape]
+/// for why that is the crux of the whole effect.
+void updateFlameTrails(World world) {
+  final trails = world.resource<FlameTrails>();
+  final shape = trails.shape;
+  final spawner = trails.spawner;
+  if (shape == null || spawner == null) return; // Headless: no emitter.
+  shape.origins.clear();
+  world.query<SceneNode>(require: const [Rock, Flaming]).each((
+    entity,
+    binding,
+  ) {
+    binding.node.globalTranslationInto(_rockScratch);
+    shape.origins
+      ..add(_rockScratch.x)
+      ..add(_rockScratch.y)
+      ..add(_rockScratch.z);
+  });
+  spawner.rate = (shape.origins.length ~/ 3) * rockTrailEmberRate;
+}
+
 /// `observe<RockHitReaction>` onRemove: no reaction ⇒ shell hidden, for
 /// *every* removal path — flash finished, rock despawned mid-flash, any
 /// future dispel — not just the animator's happy path.

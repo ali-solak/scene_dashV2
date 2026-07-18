@@ -37,6 +37,7 @@ part 'vfx/reticle.dart';
 /// constructed in `main` or threaded through parameters.
 void installProjectiles(GameBuilder game) {
   game.world.insert(LockOnReticle());
+  game.world.insert(ChargePlasma());
   game
     ..registerComponent<Projectile>()
     ..registerComponent<Blaster>()
@@ -77,6 +78,12 @@ void installProjectiles(GameBuilder game) {
       reads: const {},
       runIf: hasResource<Scene>(),
     )
+    ..addSystem(
+      Schedules.startup,
+      spawnChargePlasma,
+      reads: const {},
+      runIf: hasResource<Scene>(),
+    )
     // The rock-hit reaction insert is deferred (world.add applies at the
     // command boundary), so only the live Projectile mutation is a write.
     ..addSystem(
@@ -88,7 +95,7 @@ void installProjectiles(GameBuilder game) {
     ..addSystem(
       Schedules.update,
       updateChargeVisuals,
-      reads: {Blaster},
+      reads: {Blaster, SceneNode},
       writes: {PlayerChargeVisuals},
     )
     // No shutdown system for the reticle: [LockOnReticle] is [Disposable],

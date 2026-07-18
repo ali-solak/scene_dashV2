@@ -28,9 +28,15 @@ const double rockHitReactionDuration = 0.34;
 
 /// Flame-trail emitter tuning (upstream particle system; see
 /// `vfx/vfx.dart`). The explicit seed keeps replays visually identical.
+/// One shared world-space emitter serves every flaming rock, so the rate
+/// is *per rock* (the spawner gets rate × rock count) and `maxParticles`
+/// budgets the whole field: rocks travel ~15 u/s, so the per-rock rate
+/// sets the ember spacing along the trail (15 / rate ≈ 0.33 u), and the
+/// cap must cover rate × max lifetime × the most flaming rocks alive at
+/// the difficulty ceiling (~8).
 const int rockTrailSeed = 11;
-const int rockTrailMaxParticles = 48;
-const double rockTrailEmberRate = 26;
+const int rockTrailMaxParticles = 512;
+const double rockTrailEmberRate = 70;
 
 double stressRamp(double survived) {
   return (survived / rockSpawnRampSeconds).clamp(0, 1).toDouble();

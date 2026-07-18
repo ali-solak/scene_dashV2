@@ -1,5 +1,18 @@
 part of '../projectiles.dart';
 
+/// The single charge-plasma emitter, owned by systems like the reticle:
+/// `spawnChargePlasma` fills it (startup, scene-gated) and
+/// `updateChargeVisuals` attaches it to the current player and throttles
+/// its spawn rate with the charge. Fields stay null in headless worlds.
+final class ChargePlasma {
+  /// The emitter node, positioned at the muzzle orb offset; parented to
+  /// the live player's root while a run is on.
+  Node? node;
+
+  /// The emitter's spawner; rate 0 while idle.
+  fx.Spawner? spawner;
+}
+
 /// The single reused lock-on reticle: one [WidgetComponent] on one node,
 /// repositioned onto the current target each frame — never one node per rock.
 /// [model] bridges the ECS systems (writers) and [ReticleWidget] (painter).

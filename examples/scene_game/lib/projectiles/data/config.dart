@@ -51,16 +51,33 @@ const double minChargedCharge = 0.06;
 //
 // Explicit seeds make replays visually identical; the entity lifetime is
 // the `DespawnAfter` on each burst entity and must cover the longest
-// particle life. (The charge-up VFX is the orbiting-mote vortex, not an
-// emitter — see PlayerChargeVisuals.)
+// particle life. (The charge-up VFX is the plasma load — see below and
+// PlayerChargeVisuals.)
 
 const int impactBurstSeed = 23;
 const int chargedImpactBurstSeed = 29;
 
-const int impactBurstCount = 14;
-const int chargedImpactBurstCount = 26;
+const int impactBurstCount = 18;
+const int chargedImpactBurstCount = 36;
 
 const double impactBurstEntityLifetime = 0.7;
+
+// --- Charge plasma (the load-up emitter around the muzzle orb) ---
+//
+// One persistent scene-gated emitter, attached to the current player and
+// throttled by charge: motes spawn on a shell around the orb and spiral
+// inward, so a building charge reads as energy being drawn in.
+
+const int chargePlasmaSeed = 41;
+const int chargePlasmaMaxParticles = 96;
+
+/// Spawn rate at zero and at full charge (linearly interpolated).
+const double chargePlasmaRateMin = 40;
+const double chargePlasmaRateMax = 220;
+
+/// The spawn shell around the orb the plasma motes converge from.
+const double chargePlasmaShellRadiusMin = 0.5;
+const double chargePlasmaShellRadiusMax = 0.95;
 
 // --- Lock-on reticle ---
 

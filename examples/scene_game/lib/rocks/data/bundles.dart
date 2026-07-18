@@ -45,38 +45,26 @@ List<Object> rockBundle({required double x, bool flaming = false}) {
   ];
 }
 
-/// `observe<Flaming>` onAdd: give the rock the on-fire look and attach its
-/// trail emitter. Fires when the spawn list applies (the [SceneNode] part
-/// lands earlier in the same flush) and on any runtime
-/// `world.add(rock, const Flaming())`.
+/// `observe<Flaming>` onAdd: give the rock the on-fire look. Fires when
+/// the spawn list applies (the [SceneNode] part lands earlier in the same
+/// flush) and on any runtime `world.add(rock, const Flaming())`.
 ///
-/// The emitter is skipped headless (`hasResource<Scene>`): constructing an
-/// upstream emitter builds GPU-side billboard geometry, and the visual is
-/// scene-side anyway. Despawning the rock tears the child emitter down
-/// with the node — no separate cleanup path.
+/// The flame trail needs nothing here: the one shared world-space emitter
+/// (see [FlameTrailShape]) picks up the rock automatically because
+/// `updateFlameTrails` queries the [Flaming] tag each frame.
 void igniteRock(World world, Entity entity, Flaming flaming) {
   final node = world.tryGet<SceneNode>(entity)?.node;
   if (node == null) return;
   node.mesh = Mesh(_rockGeometry, _flamingMaterial);
-  if (!world.hasResource<Scene>()) return;
-  final visuals = world.tryGet<RockVisuals>(entity);
-  if (visuals == null || visuals.trailEmitter != null) return;
-  final trail = buildFlameTrailEmitter();
-  node.add(trail);
-  visuals.trailEmitter = trail;
 }
 
-/// `observe<Flaming>` onRemove: back to the plain rock look, trail gone.
+/// `observe<Flaming>` onRemove: back to the plain rock look. The shared
+/// trail emitter stops spawning on this rock the moment the tag is gone;
+/// its remaining embers just live out their fade.
 void extinguishRock(World world, Entity entity, Flaming flaming) {
   final node = world.tryGet<SceneNode>(entity)?.node;
   if (node == null) return;
   node.mesh = Mesh(_rockGeometry, _rockMaterial);
-  final visuals = world.tryGet<RockVisuals>(entity);
-  final trail = visuals?.trailEmitter;
-  if (trail != null) {
-    node.remove(trail);
-    visuals!.trailEmitter = null;
-  }
 }
 
 Node _makeShell() {

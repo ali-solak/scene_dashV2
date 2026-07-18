@@ -1,11 +1,12 @@
 part of '../projectiles.dart';
 
 /// Spawns one impact burst at [position]: a short-lived entity whose node
-/// carries an upstream particle emitter — velocity-stretched sparks from a
-/// point, cyan for pellets, violet and bigger for charged hits
-/// ([strength] > 0). The entity's [DespawnAfter] is the whole cleanup: the
-/// built-in ticker despawns it after the last particle dies, and the node
-/// (emitter included) unmounts with it. Run-scoped like every other spawn.
+/// carries an upstream particle emitter — crisp velocity-stretched sparks
+/// from a point with a white-hot first instant, deep blue for pellets,
+/// violet and bigger for charged hits ([strength] > 0). The entity's
+/// [DespawnAfter] is the whole cleanup: the built-in ticker despawns it
+/// after the last particle dies, and the node (emitter included) unmounts
+/// with it. Run-scoped like every other spawn.
 ///
 /// A no-op headless (`hasResource<Scene>`): emitter construction builds
 /// GPU-side billboard geometry, and the burst is scene-side anyway — the
@@ -33,8 +34,8 @@ void spawnImpactBurst(World world, Vector3 position, {double strength = 0}) {
         ? const fx.UniformFloat(0.2, 0.42)
         : const fx.UniformFloat(0.14, 0.26),
     startSpeed: charged
-        ? fx.UniformFloat(3.0 + 3.0 * s, 6.5 + 4.0 * s)
-        : const fx.UniformFloat(2.2, 4.5),
+        ? fx.UniformFloat(4.0 + 3.5 * s, 8.0 + 4.5 * s)
+        : const fx.UniformFloat(2.8, 5.5),
     startSize: charged
         ? fx.UniformFloat(0.16 + 0.12 * s, 0.3 + 0.2 * s)
         : const fx.UniformFloat(0.1, 0.2),
@@ -42,12 +43,12 @@ void spawnImpactBurst(World world, Vector3 position, {double strength = 0}) {
       fx.ColorGradient(
         charged
             ? [
-                fx.ColorStop(0, Vector4(0.85, 0.55, 1.0, 1)),
-                fx.ColorStop(1, Vector4(0.6, 0.35, 1.0, 1)),
+                fx.ColorStop(0, Vector4(0.8, 0.55, 1.0, 1)),
+                fx.ColorStop(1, Vector4(0.5, 0.3, 1.0, 1)),
               ]
             : [
-                fx.ColorStop(0, Vector4(0.56, 0.92, 1.0, 1)),
-                fx.ColorStop(1, Vector4(0.3, 0.7, 1.0, 1)),
+                fx.ColorStop(0, Vector4(0.5, 0.85, 1.0, 1)),
+                fx.ColorStop(1, Vector4(0.2, 0.5, 1.0, 1)),
               ],
       ),
     ),
@@ -58,7 +59,9 @@ void spawnImpactBurst(World world, Vector3 position, {double strength = 0}) {
       fx.ColorOverLifeModule(
         fx.GradientColor(
           fx.ColorGradient([
-            fx.ColorStop(0, Vector4(1, 1, 1, 1)),
+            // A brief white-hot pop, then the spark's own blue runs out.
+            fx.ColorStop(0, Vector4(1.8, 1.8, 1.8, 1)),
+            fx.ColorStop(0.2, Vector4(1, 1, 1, 1)),
             fx.ColorStop(1, Vector4(1, 1, 1, 0)),
           ]),
         ),
@@ -73,7 +76,7 @@ void spawnImpactBurst(World world, Vector3 position, {double strength = 0}) {
     material: softAdditiveSprite(),
   )
     ..facing = BillboardFacing.velocityStretched
-    ..velocityStretch = 0.04;
+    ..velocityStretch = 0.05;
   final node = Node(localTransform: Matrix4.translation(position))
     ..frustumCulled = false
     ..addComponent(emitter);
