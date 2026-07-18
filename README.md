@@ -364,7 +364,8 @@ abstract final class GameSets {
   static const combat = SystemSet('game.combat');
 }
 
-// main: order the phases once (Application setup, above);
+// main: order the phases once per schedule
+game.configureSets(Schedules.fixedUpdate, [GameSets.movement, GameSets.combat]);
 // features: join a phase; never import another feature's systems
 game.addSystem(Schedules.fixedUpdate, closeIn, inSet: GameSets.movement);
 // within a feature: order by function reference, so a rename is a compile error
