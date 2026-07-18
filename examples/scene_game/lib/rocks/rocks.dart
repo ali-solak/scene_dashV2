@@ -7,6 +7,7 @@ import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 
 import '../fx/particles.dart' as fx;
 import '../fx/particle_texture.dart';
+import '../game/bounds.dart';
 import '../game/game_state.dart';
 import '../game/physics_layers.dart';
 import 'data/config.dart';
@@ -25,11 +26,11 @@ part 'systems/systems.dart';
 /// `updateFlameTrails` feeds it the flaming rocks' positions and the scene
 /// advances the simulation.
 void installRocks(GameBuilder game) {
-  game.world.insert(FlameTrails());
   game
     ..registerTag<Rock>()
     ..registerTag<Flaming>()
     ..registerComponent<RockSpawner>()
+    ..registerComponent<FlameTrailEmitter>()
     // The tag is the single source of the flaming look; runtime ignition
     // is one `world.add(rock, const Flaming())`. The observers own the
     // full payload: material swap plus trail-emitter attach/detach.
@@ -42,24 +43,35 @@ void installRocks(GameBuilder game) {
       writes: {RockSpawner},
     )
     // The spawn itself is deferred to the command boundary, so the
-    // declared writes are the feature-owned types.
+    // declared writes are the feature-owned types. Scene-gated like
+    // spawnPlayer: the bundle builds GPU meshes, so headless boots skip
+    // the system (rock tests spawn their own stand-ins).
     ..addSystem(
       Schedules.fixedUpdate,
       spawnRocks,
       writes: {Rock, Flaming, RockSpawner},
-      runIf: inState(GameStatus.playing),
+      runIf: hasResource<Scene>().and(inState(GameStatus.playing)),
     )
-    ..addSystem(Schedules.update, cleanupRocks, reads: {SceneNode})
+    // Off-ramp cleanup is the bundle's DespawnOutside part (world feature).
+    // The spawn is deferred; the declared write is the feature-owned type.
     ..addSystem(
       Schedules.startup,
       spawnFlameTrailEmitter,
-      reads: const {},
+      writes: {FlameTrailEmitter},
       runIf: hasResource<Scene>(),
     )
-    ..addSystem(Schedules.update, updateFlameTrails, reads: {SceneNode})
+    ..addSystem(
+      Schedules.update,
+      updateFlameTrails,
+      reads: {SceneNode},
+      writes: {FlameTrailEmitter},
+    )
+    // The reaction itself is read-only here: its removeAfter deadline is
+    // the lifecycle, so the system never mutates or removes it.
     ..addSystem(
       Schedules.update,
       updateRockHitReactions,
-      writes: {RockHitReaction, RockVisuals},
+      reads: {RockHitReaction},
+      writes: {RockVisuals},
     );
 }

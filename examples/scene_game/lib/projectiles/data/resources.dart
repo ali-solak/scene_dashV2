@@ -1,26 +1,36 @@
 part of '../projectiles.dart';
 
-/// The single charge-plasma emitter, owned by systems like the reticle:
-/// `spawnChargePlasma` fills it (startup, scene-gated) and
+/// The single charge-plasma emitter — a component on a scene-scoped
+/// process entity spawned by `spawnChargePlasma` (startup, scene-gated);
 /// `updateChargeVisuals` attaches it to the current player and throttles
-/// its spawn rate with the charge. Fields stay null in headless worlds.
-final class ChargePlasma {
+/// its spawn rate with the charge. Headless worlds have no carrier;
+/// fields are non-null by construction.
+final class ChargePlasmaEmitter {
+  ChargePlasmaEmitter({required this.node, required this.spawner});
+
   /// The emitter node, positioned at the muzzle orb offset; parented to
-  /// the live player's root while a run is on.
-  Node? node;
+  /// the live player's root while a run is on (manual — reparenting under
+  /// the player is this feature's job, so no `SceneNode` mount).
+  final Node node;
 
   /// The emitter's spawner; rate 0 while idle.
-  fx.Spawner? spawner;
+  final fx.Spawner spawner;
 }
 
-/// The single reused lock-on reticle: one [WidgetComponent] on one node,
-/// repositioned onto the current target each frame — never one node per rock.
-/// [model] bridges the ECS systems (writers) and [ReticleWidget] (painter).
-final class LockOnReticle implements Disposable {
-  Node? node;
-  WidgetComponent? component;
+/// The single reused lock-on reticle — a component on a scene-scoped
+/// process entity: one [WidgetComponent] on one node, repositioned onto
+/// the current target each frame — never one node per rock. [model]
+/// bridges the ECS systems (writers) and [ReticleWidget] (painter).
+/// Headless worlds have no carrier; `singleOrNull` is the absence check
+/// and both fields are non-null by construction.
+final class LockOnReticle {
+  LockOnReticle({required this.node, required this.model});
 
-  final ReticleModel model = ReticleModel();
+  /// The reticle node; the entity's `SceneNode` mounts it at the scene
+  /// root, and `billboardAt`/`hideNode` steer it in place.
+  final Node node;
+
+  final ReticleModel model;
 
   double opacity = 0;
   double charge01 = 0;
@@ -50,7 +60,6 @@ final class LockOnReticle implements Disposable {
   /// transform in place (no allocation).
   void billboardAt(double tx, double ty, double tz, Vector3 camera) {
     final n = node;
-    if (n == null) return;
     _forward
       ..setValues(camera.x - tx, camera.y - ty, camera.z - tz)
       ..normalize();
@@ -83,7 +92,7 @@ final class LockOnReticle implements Disposable {
     n.visible = true;
   }
 
-  void hideNode() => node?.visible = false;
+  void hideNode() => node.visible = false;
 
   void reset() {
     opacity = 0;
@@ -95,8 +104,10 @@ final class LockOnReticle implements Disposable {
     hideNode();
   }
 
-  /// The resource owns [model]; the widget does not dispose it. The
-  /// framework calls this at game shutdown ([Disposable]).
-  @override
+  /// The component owns [model]; the widget does not dispose it. Fired by
+  /// the feature's `observe<LockOnReticle>` onRemove (any removal path)
+  /// and by the shutdown system — entities are not despawned at shutdown,
+  /// so the observer alone cannot cover it. The two paths cannot both
+  /// fire: a despawn empties the store before shutdown looks.
   void dispose() => model.dispose();
 }

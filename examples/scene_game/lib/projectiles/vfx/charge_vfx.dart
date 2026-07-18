@@ -6,29 +6,30 @@ part of '../projectiles.dart';
 /// the orb and the motes ride a rising, converging vortex that tightens
 /// and quickens as the charge builds.
 void updateChargeVisuals(World world) {
-  final plasma = world.resource<ChargePlasma>();
+  final plasma = world.singleOrNull<ChargePlasmaEmitter>();
   final player = world
       .query2<SceneNode, PlayerChargeVisuals>(require: const [Player])
       .firstOrNull;
   final blaster = world.singleOrNull<Blaster>();
   if (player == null || blaster == null) {
-    plasma.spawner?.rate = 0;
+    plasma?.spawner.rate = 0;
     return;
   }
   final v = player.$3;
   final c = blaster.charge01;
   final charging = blaster.isCharging;
 
-  // The plasma emitter is a scene resource (null headless); parent it to
-  // the current player on first sight each run and let charge throttle it.
-  final plasmaNode = plasma.node;
-  if (plasmaNode != null) {
+  // The plasma emitter rides a scene-gated process entity (absent
+  // headless); parent it to the current player on first sight each run
+  // and let charge throttle it.
+  if (plasma != null) {
     final root = player.$2.node;
+    final plasmaNode = plasma.node;
     if (plasmaNode.parent != root) {
       plasmaNode.parent?.remove(plasmaNode);
       root.add(plasmaNode);
     }
-    plasma.spawner!.rate = charging
+    plasma.spawner.rate = charging
         ? chargePlasmaRateMin +
               (chargePlasmaRateMax - chargePlasmaRateMin) * c
         : 0;

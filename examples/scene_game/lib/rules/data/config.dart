@@ -13,3 +13,8 @@ const double groundProbeDistance = 3;
 /// Grace period after (re)spawn before fall detection runs, so dropping onto
 /// the ramp at spawn is not mistaken for falling off, in seconds.
 const double startupGrace = 0.6;
+
+/// Game-clock scale while on the lose screen: rocks drift in slow motion
+/// behind the panel (the HUD runs on frame time and is unaffected).
+/// `startRun` restores full speed.
+const double loseSlowMoTimeScale = 0.35;

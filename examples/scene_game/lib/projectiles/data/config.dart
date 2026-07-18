@@ -1,6 +1,8 @@
 /// Projectile, blaster and lock-on reticle tuning for the scene game example.
 library;
 
+import '../../world/data/config.dart';
+
 // --- Blaster ---
 
 const int blasterBurstShots = 3;
@@ -23,6 +25,10 @@ const double projectileRadius = 0.18;
 const double projectileSpeed = 22;
 const double projectileLaunchUp = 3.2;
 const double projectileLifetime = 0.8;
+
+/// Shots despawn once below this Y or past the ramp's high (-Z) end.
+const double projectileKillY = -2;
+const double projectileExitZ = -rampLength * 0.5 - 2;
 const double projectileHitRadius = 1.05;
 const double projectileKnockback = 13;
 const double projectileLift = 4;

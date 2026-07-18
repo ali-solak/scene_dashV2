@@ -10,9 +10,7 @@ final Vector3 _rockHitPosition = Vector3.zero();
 /// instance (S4), so every run starts ready; the old blaster-reset call
 /// died here. Headless boots have no player and simply skip.
 void attachBlaster(World world) {
-  final player = world
-      .entitiesWith(require: const [Player])
-      .firstWhere((entity) => true);
+  final player = world.entitiesWith(require: const [Player]).firstOrNull;
   if (player == null) return;
   world.add(player, Blaster());
 }
@@ -23,18 +21,9 @@ void attachBlaster(World world) {
 /// `inState(GameStatus.playing)` at registration; the run-end cleanup
 /// lives in [stopBlasterOnRunEnd] on `OnExit`.
 void shootProjectiles(World world) {
-  var pressed = false;
-  var released = false;
-  var canceled = false;
-  for (final _ in world.events<FirePressed>()) {
-    pressed = true;
-  }
-  for (final _ in world.events<FireReleased>()) {
-    released = true;
-  }
-  for (final _ in world.events<FireCanceled>()) {
-    canceled = true;
-  }
+  final pressed = world.consumeAny<FirePressed>();
+  final released = world.consumeAny<FireReleased>();
+  final canceled = world.consumeAny<FireCanceled>();
 
   final player = world
       .query2<Blaster, SceneNode>(require: const [Player])
@@ -59,7 +48,7 @@ void shootProjectiles(World world) {
   if (charged != null) {
     final strength = math.max(charged, minChargedCharge);
     world.spawn(projectileBundle(position: base, charge: strength));
-    world.resource<LockOnReticle>().flashFired();
+    world.singleOrNull<LockOnReticle>()?.flashFired();
   } else {
     for (var i = 0; i < shots.burst; i++) {
       world.spawn(projectileBundle(position: base));
@@ -70,8 +59,9 @@ void shootProjectiles(World world) {
 /// Projectiles reset their own state when a run (re)starts; the blaster
 /// needs nothing here — [attachBlaster] replaces it with a fresh one, and
 /// in-flight impact bursts are run-scoped entities swept by `DespawnOnExit`.
+/// The reticle entity is absent headless, hence the null-aware reset.
 void resetProjectilesOnRunStart(World world) {
-  world.resource<LockOnReticle>().reset();
+  world.singleOrNull<LockOnReticle>()?.reset();
 }
 
 /// Leaving the run aborts any in-flight charge, so the charge VFX cannot
@@ -83,8 +73,8 @@ void stopBlasterOnRunEnd(World world) {
   world.singleOrNull<Blaster>()?.reset();
 }
 
-/// Flies each shot: spatial exits, rock knocks, hit bookkeeping. Lifetime
-/// expiry is the bundle's `DespawnAfter`.
+/// Flies each shot: rock knocks and hit bookkeeping. Lifetime expiry is
+/// the bundle's `DespawnAfter`; spatial exits are its `DespawnOutside`.
 void updateProjectiles(World world) {
   world.query2<Projectile, SceneNode>().each((entity, projectile, binding) {
     binding.node.globalTranslationInto(_projectilePosition);
@@ -95,13 +85,9 @@ void updateProjectiles(World world) {
       color: GizmoColor.blue,
     );
 
-    if (position.z < -rampLength * 0.5 - 2 || position.y < -2) {
-      return world.despawn(entity);
-    }
-
     final hitCount = _knockRocks(world, position, projectile);
     if (hitCount > 0) {
-      world.resource<LockOnReticle>().flashImpact();
+      world.singleOrNull<LockOnReticle>()?.flashImpact();
       if (!projectile.charged ||
           projectile.hitRocks.length >= chargedProjectileMaxHits) {
         world.despawn(entity);
@@ -147,6 +133,7 @@ int _knockRocks(World world, Vector3 position, Projectile projectile) {
       world.add(
         entity,
         RockHitReaction(strength: projectile.charge.clamp(0.0, 1.0).toDouble()),
+        removeAfter: rockHitReactionDuration,
       );
       // Deferred spawn of a run-scoped burst entity — safe inside the scan.
       spawnImpactBurst(world, _rockHitPosition, strength: projectile.charge);

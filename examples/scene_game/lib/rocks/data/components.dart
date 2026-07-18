@@ -19,11 +19,13 @@ final class RockVisuals {
   final Node shell;
 }
 
-/// Transient hit-reaction state, inserted when a projectile connects and
-/// removed when the flash finishes.
+/// Transient hit-reaction state, inserted when a projectile connects with
+/// `removeAfter: rockHitReactionDuration` — the framework drops it on
+/// schedule (firing the shell-clearing observer), and the flash system
+/// reads progress back through `expiryOf`. A second hit re-adds it, which
+/// replaces the instance and refreshes the deadline.
 final class RockHitReaction {
-  RockHitReaction({required this.strength});
+  const RockHitReaction({required this.strength});
 
-  final GameTimer flash = GameTimer(rockHitReactionDuration);
   final double strength;
 }

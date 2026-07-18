@@ -25,6 +25,7 @@ void installRules(GameBuilder game) {
     ..addSystem(Schedules.frameStart, requestRestart, reads: const {})
     // Runs once at startup and again on every restart transition.
     ..addSystem(OnEnter(GameStatus.playing), startRun, reads: const {})
+    ..addSystem(OnEnter(GameStatus.lost), slowMotionOnLoss, reads: const {})
     // The rules phase runs after the logic phase (see GameSets), so the
     // lose/deflect check sees this frame's collection and shield tick
     // without referencing the collectables feature's systems.

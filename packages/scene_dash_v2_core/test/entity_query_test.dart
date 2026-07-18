@@ -160,6 +160,23 @@ void main() {
       expect(query.firstWhere((entity) => false), isNull);
     });
 
+    test('firstOrNull returns the first match or null on an empty set', () {
+      final world = _worldWithStores();
+      final query = world.queryEntities(withTypes: const [Enemy]);
+      expect(query.firstOrNull, isNull);
+
+      final first = _spawn(world, enemy: true);
+      _spawn(world, enemy: true);
+      expect(query.firstOrNull, first);
+
+      final gated = world.queryEntities(
+        withTypes: const [Enemy],
+        withoutTypes: const [Stunned],
+      );
+      world.insertNow<Stunned>(first, const Stunned());
+      expect(gated.firstOrNull, isNot(first), reason: 'filters apply');
+    });
+
     test('any stops at the first hit and is false on an empty query', () {
       final world = _worldWithStores();
       final query = world.queryEntities(withTypes: const [Enemy]);

@@ -639,7 +639,7 @@ void fighterActions(World world) {
     case FighterPhase.idle
         when world.buffer<PlayerAction>().consume(PlayerAction.roll):
       phase.go(FighterPhase.rolling);
-    case FighterPhase.idle when _attackPressed(world):
+    case FighterPhase.idle when world.consumeAny<AttackPressed>():
       phase.go(FighterPhase.striking);
 
     // timed
@@ -658,12 +658,13 @@ void fighterActions(World world) {
     world.buffer<PlayerAction>().clear();      // stale intents die with the hit
   }
 }
+```
 
-bool _attackPressed(World world) {
-  var pressed = false;
-  for (final _ in world.events<AttackPressed>()) pressed = true;
-  return pressed;
-}
+```dart
+// cheatsheet: consumeAny — the boolean shape of world.events
+world.consumeAny<AttackPressed>();  // any since this system's last read?
+                                    //   true consumes them; same
+                                    //   per-registration cursor as events()
 ```
 
 The strike itself resolves in Physics, below, gated on

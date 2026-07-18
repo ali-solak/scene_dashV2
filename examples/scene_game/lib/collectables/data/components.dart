@@ -19,15 +19,15 @@ final class Shielded {
   const Shielded();
 }
 
-/// Per-pickup animation/lifetime state (only its age so far).
-final class ShieldPickupState {
-  double age = 0;
-}
-
-/// Direct references to a pickup's visual child nodes, animated in place.
+/// A pickup's visual state: node references plus the animation clock, one
+/// component because one system writes them together (composites beat
+/// fragments — fewer components per query, fewer sparse lookups).
 final class ShieldPickupVisuals {
-  const ShieldPickupVisuals(this.glow);
+  ShieldPickupVisuals(this.glow);
 
   /// The pulsing/bobbing glow child (the physics-driven root is left alone).
   final Node glow;
+
+  /// Seconds since spawn, driving the pulse and bob.
+  double age = 0;
 }

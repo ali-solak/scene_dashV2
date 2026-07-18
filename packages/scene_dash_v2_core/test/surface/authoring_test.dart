@@ -194,6 +194,36 @@ void main() {
       expect(seenA, [1, 2], reason: 'nothing new, nothing re-read');
     });
 
+    test('world.consumeAny<T>() reports pending events and drains the '
+        'cursor', () {
+      final results = <bool>[];
+      void reader(World world) {
+        results.add(world.consumeAny<Ping>());
+      }
+
+      final game = TestGame.headless(
+        features: [
+          (game) => game.addSystem(Schedules.update, reader),
+        ],
+      );
+      game.start();
+      game.pump(); // First run registers the cursor: nothing pending.
+      expect(results, [false]);
+
+      game
+        ..emit(const Ping(1))
+        ..emit(const Ping(2));
+      game.pump();
+      expect(results, [false, true]);
+
+      game.pump();
+      expect(
+        results,
+        [false, true, false],
+        reason: 'consumed: the cursor moved past both events',
+      );
+    });
+
     test('a system can emit for a later system in the same frame', () {
       final relayed = <int>[];
       void producer(World world) {

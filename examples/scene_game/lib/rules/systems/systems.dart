@@ -134,11 +134,7 @@ void playerView(World world) {
 /// `OnEnter(GameStatus.playing)`. Runs every frame in `frameStart`, so it
 /// never lags the event retention window.
 void requestRestart(World world) {
-  var requested = false;
-  for (final _ in world.events<RestartRequested>()) {
-    requested = true;
-  }
-  if (!requested) return;
+  if (!world.consumeAny<RestartRequested>()) return;
   if (world.state<GameStatus>() != GameStatus.lost) return;
   world.setState(GameStatus.playing);
 }
@@ -146,12 +142,21 @@ void requestRestart(World world) {
 /// Starts a run clean. Registered in `OnEnter(GameStatus.playing)`, so it
 /// runs once at startup and again on every restart.
 ///
-/// Rules only resets what it owns — the run clock and the camera. Every
-/// feature resets its own state in its own `OnEnter(GameStatus.playing)`
-/// system, and run-scoped entities (rocks, projectiles, pickups) carry
+/// Rules only resets what it owns — the run clock, the camera, and the
+/// game clock (undoing [slowMotionOnLoss]). Every feature resets its own
+/// state in its own `OnEnter(GameStatus.playing)` system, and run-scoped
+/// entities (rocks, projectiles, pickups) carry
 /// `DespawnOnExit(GameStatus.playing)` in their bundles, so the transition
 /// itself sweeps them.
 void startRun(World world) {
   world.resource<GameState>().reset();
   world.resource<CameraRig>().reset();
+  world.clock.timeScale = 1;
+}
+
+/// Losing drops the world into slow motion: physics, particles and the
+/// camera drift behind the game-over panel while the HUD (frame-time)
+/// stays crisp — the clock's whole-world guarantee, exercised.
+void slowMotionOnLoss(World world) {
+  world.clock.timeScale = loseSlowMoTimeScale;
 }

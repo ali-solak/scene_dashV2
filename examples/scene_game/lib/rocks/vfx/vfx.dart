@@ -39,17 +39,17 @@ final class FlameTrailShape extends fx.EmitterShape {
   }
 }
 
-/// Startup (scene-gated): build the single shared flame-trail emitter at
-/// the scene root and hand its steering points to the [FlameTrails]
-/// resource. One emitter serves every flaming rock — `updateFlameTrails`
-/// feeds it the rock positions and scales the spawn rate with the rock
-/// count; there is nothing to attach, detach, or tear down per rock.
+/// Startup (scene-gated): spawn the shared flame-trail emitter as a
+/// process entity — the mount adapter parents its node at the scene root
+/// (identity, never moved; see [FlameTrailShape]). One emitter serves
+/// every flaming rock — `updateFlameTrails` feeds it the rock positions
+/// and scales the spawn rate with the rock count; there is nothing to
+/// attach, detach, or tear down per rock.
 ///
 /// The emitter advances with the scene tick, so trails freeze under
 /// hitstop like everything else; the fixed [rockTrailSeed] keeps replays
 /// visually identical.
 void spawnFlameTrailEmitter(World world) {
-  final trails = world.resource<FlameTrails>();
   final shape = FlameTrailShape();
   final spawner = fx.Spawner(rate: 0);
   final system = fx.ParticleSystem(
@@ -104,9 +104,9 @@ void spawnFlameTrailEmitter(World world) {
   final node = Node()
     ..frustumCulled = false
     ..addComponent(emitter);
-  world.resource<Scene>().root.add(node);
-  trails
-    ..node = node
-    ..shape = shape
-    ..spawner = spawner;
+  world.spawn([
+    const Name('flame-trails'),
+    SceneNode(node),
+    FlameTrailEmitter(shape: shape, spawner: spawner),
+  ]);
 }

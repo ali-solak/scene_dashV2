@@ -4,26 +4,14 @@ part of '../collectables.dart';
 final Vector3 _playerScratch = Vector3.zero();
 final Vector3 _pickupScratch = Vector3.zero();
 
-/// OnEnter(playing): spawn the pickup spawner — a run-scoped process
-/// entity like the rock spawner. Respawning per run *is* the cadence
-/// reset, and `DespawnOnExit` sweeps it when the run ends.
-void spawnCollectableSpawner(World world) {
-  world.spawn([
-    const Name('collectable-spawner'),
-    CollectableSpawner(),
-    const DespawnOnExit(GameStatus.playing),
-  ]);
-}
-
-/// Spawns a shield pickup when none is active and the cadence is due; the
-/// entity query gate is the single source of "is a pickup active".
+/// Spawns a shield pickup when none is active; the entity query gate is
+/// the single source of "is a pickup active". The cadence is the
+/// registration's `every(shieldPickupInterval)` — no spawner entity, no
+/// timer to tick.
 void spawnShieldPickups(World world) {
   if (world.entitiesWith(require: const [ShieldPickup]).count() > 0) return;
-  world.query<CollectableSpawner>().each((entity, spawner) {
-    if (!spawner.tick(world.dt)) return;
-    // The bundle itself scopes the pickup to the run (DespawnOnExit part).
-    world.spawn(shieldPickupBundle(x: spawner.nextLane()));
-  });
+  // The bundle itself scopes the pickup to the run (DespawnOnExit part).
+  world.spawn(shieldPickupBundle(x: world.resource<PickupLanes>().nextLane()));
 }
 
 /// Collectables reset their own state when a run (re)starts. The player
@@ -41,16 +29,15 @@ void resetCollectablesOnRunStart(World world) {
 /// transform is left to Rapier.
 void animateShieldPickups(World world) {
   final dt = world.dt;
-  world
-      .query2<ShieldPickupState, ShieldPickupVisuals>(
-        require: const [ShieldPickup],
-      )
-      .each((entity, state, visuals) {
-        state.age += dt;
-        final pulse = 1 + 0.18 * math.sin(state.age * 6);
-        final bob = 0.12 * math.sin(state.age * 3);
-        visuals.glow.setLocalUniform(0, bob, 0, pulse);
-      });
+  world.query<ShieldPickupVisuals>(require: const [ShieldPickup]).each((
+    entity,
+    visuals,
+  ) {
+    visuals.age += dt;
+    final pulse = 1 + 0.18 * math.sin(visuals.age * 6);
+    final bob = 0.12 * math.sin(visuals.age * 3);
+    visuals.glow.setLocalUniform(0, bob, 0, pulse);
+  });
 }
 
 /// Collects a pickup when the player is close enough (a direct squared
@@ -142,14 +129,4 @@ void updateShieldVisuals(World world) {
   );
 }
 
-/// Despawns pickups that fell below the world or rolled past the ramp.
-void cleanupPickups(World world) {
-  world.query<SceneNode>(require: const [Collectable]).each((entity, binding) {
-    binding.node.globalTranslationInto(_pickupScratch);
-    if (_pickupScratch.y < collectableKillY ||
-        _pickupScratch.z > collectablePassZ) {
-      world.despawn(entity);
-    }
-  });
-}
 

@@ -25,11 +25,11 @@ List<Object> shieldPickupBundle({required double x}) {
   return [
     const Collectable(),
     const ShieldPickup(),
-    ShieldPickupState(),
     ShieldPickupVisuals(glow),
     SceneNode(_makePickupNode(x, glow)),
     const PhysicsDriven(),
     const DespawnOnExit(GameStatus.playing),
+    const DespawnOutside(minY: collectableKillY, maxZ: collectablePassZ),
   ];
 }
 

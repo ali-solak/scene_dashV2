@@ -8,6 +8,7 @@ import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 import '../fx/anim.dart';
 import '../fx/particles.dart' as fx;
 import '../fx/particle_texture.dart';
+import '../game/bounds.dart';
 import '../game/game_state.dart';
 import '../game/physics_layers.dart';
 import '../game/sets.dart';
@@ -27,19 +28,14 @@ part 'systems/systems.dart';
 /// framework expires it, and the HUD reads the deadline back through the
 /// world.
 void installCollectables(GameBuilder game) {
+  game.world.insert(PickupLanes());
   game
     ..registerTag<Collectable>()
     ..registerTag<ShieldPickup>()
     ..registerComponent<Shielded>()
-    ..registerComponent<CollectableSpawner>()
     // The bubble and badge follow the component's lifecycle — every
     // removal path (expiry, run reset, a future dispel) hides the bubble.
     ..observe<Shielded>(onAdd: shieldGained, onRemove: shieldLost)
-    ..addSystem(
-      OnEnter(GameStatus.playing),
-      spawnCollectableSpawner,
-      writes: {CollectableSpawner},
-    )
     ..addSystem(
       OnEnter(GameStatus.playing),
       resetCollectablesOnRunStart,
@@ -48,17 +44,23 @@ void installCollectables(GameBuilder game) {
     // fixedUpdate so the body is mounted before the native step. The
     // spawn itself is deferred to the command boundary, so the declared
     // writes are the feature-owned types, not the stores the bundle
-    // lands in later.
+    // lands in later. The cadence lives at registration: `.and` short-
+    // circuits, so the period elapses only while playing (it carries any
+    // leftover progress across runs, unlike the old per-run spawner
+    // entity — acceptable for a pickup). Scene-gated like spawnPlayer:
+    // the bundle builds GPU meshes, so headless boots skip the system.
     ..addSystem(
       Schedules.fixedUpdate,
       spawnShieldPickups,
-      writes: {Collectable, ShieldPickup, CollectableSpawner},
-      runIf: inState(GameStatus.playing),
+      writes: {Collectable, ShieldPickup},
+      runIf: hasResource<Scene>()
+          .and(inState(GameStatus.playing))
+          .and(every(shieldPickupInterval)),
     )
     ..addSystem(
       Schedules.update,
       animateShieldPickups,
-      writes: {ShieldPickupState, ShieldPickupVisuals},
+      writes: {ShieldPickupVisuals},
     )
     ..addSystem(
       Schedules.update,
@@ -76,6 +78,6 @@ void installCollectables(GameBuilder game) {
       reads: {Shielded},
       writes: {PlayerShieldVisuals},
       after: [collectShieldPickups],
-    )
-    ..addSystem(Schedules.update, cleanupPickups, reads: {SceneNode});
+    );
+  // Off-ramp cleanup is the bundle's DespawnOutside part (world feature).
 }

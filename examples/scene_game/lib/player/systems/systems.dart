@@ -12,9 +12,7 @@ void spawnPlayer(World world) {
 /// unshoved (the old knockback.reset() died here). Headless boots have no
 /// player and simply skip.
 void attachPlayerKnockback(World world) {
-  final player = world
-      .entitiesWith(require: const [Player])
-      .firstWhere((entity) => true);
+  final player = world.entitiesWith(require: const [Player]).firstOrNull;
   if (player == null) return;
   world.add(player, PlayerKnockback());
 }

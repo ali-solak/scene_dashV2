@@ -58,6 +58,21 @@ extension WorldSurface on World {
     return host.readerFor<E>(this).drain();
   }
 
+  /// Whether any [E] events arrived since this system's last read,
+  /// consuming them — the boolean shape of [events] for edge-like signals
+  /// where only "did one arrive?" matters, not the payloads.
+  ///
+  /// Same per-registration cursor, same channel semantics, same
+  /// outside-a-system guard: a `true` here drains the channel exactly like
+  /// a full [events] read.
+  bool consumeAny<E extends Object>() {
+    var any = false;
+    for (final _ in events<E>()) {
+      any = true;
+    }
+    return any;
+  }
+
   /// Queues a transition for the state machine of [S] — sugar for
   /// `NextState<S>.set`; applied at the frame boundary.
   void setState<S extends Object>(S value) =>

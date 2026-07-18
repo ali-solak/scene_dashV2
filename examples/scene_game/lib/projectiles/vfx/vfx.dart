@@ -60,13 +60,12 @@ final class PlasmaShape extends fx.EmitterShape {
   }
 }
 
-/// Startup (scene-gated): build the single charge-plasma emitter and park
-/// it in the [ChargePlasma] resource. `updateChargeVisuals` attaches it to
-/// the current player and throttles its rate with the charge; it idles at
-/// rate zero the rest of the time. Constructing it here keeps GPU-side
-/// billboard geometry out of headless boots, like the reticle.
+/// Startup (scene-gated): spawn the single charge-plasma emitter as a
+/// process entity. `updateChargeVisuals` attaches its node to the current
+/// player and throttles its rate with the charge; it idles at rate zero
+/// the rest of the time. Constructing it here keeps GPU-side billboard
+/// geometry out of headless boots, like the reticle.
 void spawnChargePlasma(World world) {
-  final plasma = world.resource<ChargePlasma>();
   final spawner = fx.Spawner(rate: 0);
   final system = fx.ParticleSystem(
     maxParticles: chargePlasmaMaxParticles,
@@ -111,7 +110,8 @@ void spawnChargePlasma(World world) {
   )
     ..frustumCulled = false
     ..addComponent(emitter);
-  plasma
-    ..node = node
-    ..spawner = spawner;
+  world.spawn([
+    const Name('charge-plasma'),
+    ChargePlasmaEmitter(node: node, spawner: spawner),
+  ]);
 }

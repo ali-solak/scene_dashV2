@@ -37,15 +37,16 @@ final _projectileTrailGeometry = CuboidGeometry(Vector3(0.07, 0.07, 0.78));
 /// A shot's spawn list: a fast trigger sphere with glow and trail children.
 ///
 /// Scoped to the run: exiting `playing` despawns shots in flight. Max flight
-/// time is the `DespawnAfter` part — the built-in ticker despawns the shot
-/// when it elapses, so the update system only handles hits and
-/// out-of-bounds.
+/// time is the `DespawnAfter` part and spatial exits are the
+/// `DespawnOutside` part (the world feature's shared sweep), so the update
+/// system only handles hits.
 List<Object> projectileBundle({required Vector3 position, double charge = 0}) {
   return [
     Projectile(charge: charge),
     SceneNode(_makeProjectileNode(position, charge)),
     const PhysicsDriven(),
     const DespawnOnExit(GameStatus.playing),
+    const DespawnOutside(minY: projectileKillY, minZ: projectileExitZ),
     DespawnAfter(projectileLifetime),
   ];
 }

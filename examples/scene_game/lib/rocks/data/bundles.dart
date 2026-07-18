@@ -39,6 +39,7 @@ List<Object> rockBundle({required double x, bool flaming = false}) {
     SceneNode(_makeRockNode(x, flaming, shell)),
     const PhysicsDriven(),
     const DespawnOnExit(GameStatus.playing),
+    const DespawnOutside(minY: rockKillY),
     const Rock(),
     if (flaming) const Flaming(),
     RockVisuals(shell),

@@ -116,6 +116,13 @@ final class EntityQuery extends Query {
     }
   }
 
+  /// The first matching entity, or `null` when nothing matches — the
+  /// entity-query counterpart of the record queries' `firstOrNull`.
+  /// Allocation-free (the predicate is a static tear-off).
+  Entity? get firstOrNull => firstWhere(_matchAll);
+
+  static bool _matchAll(Entity entity) => true;
+
   /// Whether any matching entity satisfies [predicate]. Stops at the first
   /// hit.
   ///

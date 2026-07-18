@@ -1,18 +1,19 @@
 part of '../rocks.dart';
 
-/// The single shared flame-trail emitter, owned by systems like the
-/// reticle: `spawnFlameTrailEmitter` fills it (startup, scene-gated),
-/// `updateFlameTrails` steers it. All fields stay null in headless worlds.
-final class FlameTrails {
-  /// The world-space emitter node at the scene root; parked at identity
-  /// and never moved (see [FlameTrailShape]).
-  Node? node;
+/// The single shared flame-trail emitter — a component on a scene-scoped
+/// process entity spawned by `spawnFlameTrailEmitter` (startup,
+/// scene-gated) and steered by `updateFlameTrails`. Headless worlds simply
+/// have no carrier: `singleOrNull` is the one absence check, and every
+/// field is non-null by construction (the state doctrine — a feature's
+/// process is a component, not a nullable-field resource).
+final class FlameTrailEmitter {
+  FlameTrailEmitter({required this.shape, required this.spawner});
 
   /// The spawn shape carrying the flaming rocks' world positions.
-  FlameTrailShape? shape;
+  final FlameTrailShape shape;
 
   /// The emitter's spawner; its rate scales with the flaming-rock count.
-  fx.Spawner? spawner;
+  final fx.Spawner spawner;
 }
 
 /// Spawn cadence plus RNG, injected as a resource.

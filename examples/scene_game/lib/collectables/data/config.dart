@@ -18,7 +18,7 @@ const double shieldPickupInterval = 9;
 
 /// Pickups despawn once they fall below this Y or roll past this Z.
 const double collectableKillY = -25;
-final double collectablePassZ = rampLength * 0.5 + 3;
+const double collectablePassZ = rampLength * 0.5 + 3;
 
 final double shieldCollectDistanceSq = _square(
   playerCollisionRadius + collectableRadius + 0.5,

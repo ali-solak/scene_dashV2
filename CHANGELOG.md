@@ -2,16 +2,27 @@
 
 ## Unreleased
 
+### Surface
+
+- `world.consumeAny<E>()`  the boolean shape of `world.events<E>()` for
+  edge-like signals: reports whether any events arrived since this
+  system's last read, consuming them (same per-registration cursor).
+  Driven by four call sites in the example game and the README's fighter;
+  logged in NOTES.md as the core-surface moratorium exception.
+- `EntityQuery.firstOrNull`  the entity-query counterpart of the record
+  queries' `firstOrNull`, replacing the `firstWhere((entity) => true)`
+  workaround (API-asymmetry repair).
+
 ### The "Now" campaign (work units on top of the v2 rewrite)
 
 - Component observers (surface tier): `GameBuilder.observe<T>({onAdd,
-  onRemove})` — explicit per-feature callbacks fired during the
+  onRemove})`  explicit per-feature callbacks fired during the
   command-boundary flush, immediately after the change applies; despawn
   fires `onRemove` per stripped component; add-over-existing fires
   nothing (no `onChange`, deliberately). Observer bodies may use the
   deferred verbs and `emit` (same flush) but not `events<T>()`.
 - Timed component removal (surface tier): `world.add(entity, component,
-  removeAfter: seconds)` — fixed-step game time (pause/hitstop consume
+  removeAfter: seconds)`  fixed-step game time (pause/hitstop consume
   nothing), deferred removal at the step's boundary, `expiryOf<T>` for
   the time remaining; re-add refreshes, manual remove cancels, despawn
   invalidates generationally. Plus `world.single<T>()`/
@@ -47,7 +58,7 @@
   with both query spellings and the row-count product. Tracking sits
   inside asserts; release builds compile it out.
 
-### The flutter_scene 0.19 unit (Unit 2.5, ride-alongs)
+### The flutter_sce
 
 - Gizmos render on upstream meshes (U7): the sphere pools moved to
   0.19's geodesic `IcosphereGeometry` (one subdivision — 80 evenly
