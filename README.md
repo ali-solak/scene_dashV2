@@ -51,6 +51,21 @@ WorldEventListener<EnemyKilled>(onEvent: (ctx, e) => shakeScore(ctx),
                                                    //   widget-lifetime cleanup
 ```
 
+When a feature spawned the entity (nothing in `main` holds the handle),
+`.matching` resolves it through the world instead:
+
+```dart
+EntityBuilder<Health, double>.matching(
+  require: const [Player],            // the first entity with Health + Player,
+  select: (h) => h.current,           //   re-resolved each frame — a respawned
+  builder: (context, hp) =>           //   player is picked up automatically
+      HealthBar(hp),
+  absent: const RespawnCountdown(),   // no match, dead, or Health gone
+)
+// resolving by one component while watching another stays the composition:
+// WorldBuilder<Entity?> (resolve) wrapping EntityBuilder (watch)
+```
+
 A widget *in* the 3D world (a health bar above an enemy) is not a
 framework concern: put a `flutter_scene` `WidgetComponent` on a child
 node and the scene graph positions, projects and occludes it.

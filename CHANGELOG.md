@@ -12,6 +12,14 @@
 - `EntityQuery.firstOrNull`  the entity-query counterpart of the record
   queries' `firstOrNull`, replacing the `firstWhere((entity) => true)`
   workaround (API-asymmetry repair).
+- `EntityBuilder.matching` (widget layer) — watches the first entity
+  carrying `T` + `require:` filters, re-resolved through the world each
+  frame: no `Entity` handle crosses into the widget tree, one `absent`
+  covers no-match/death/respawn, and a respawned entity is picked up
+  automatically. Replaces the nested `WorldBuilder<Entity?>` +
+  `EntityBuilder` resolve-then-watch at both existing call sites; the
+  composition remains only for resolving by one component while watching
+  another.
 
 ### The "Now" campaign (work units on top of the v2 rewrite)
 

@@ -62,28 +62,56 @@ abstract class _FrameTickState<W extends StatefulWidget> extends State<W> {
 ///
 /// ```dart
 /// EntityBuilder<Health, double>(
-///   entity: player,
-///   select: (h) => h.current,
+///   entity: player,                 // handle form: from a spawn return or
+///   select: (h) => h.current,       //   event data
 ///   builder: (context, hp) => HealthBar(hp),
+/// )
+///
+/// EntityBuilder<Health, double>.matching(
+///   require: const [Player],        // matching form: the first entity with
+///   select: (h) => h.current,       //   Health + Player, re-resolved through
+///   builder: (context, hp) =>       //   the world each frame — no handle
+///       HealthBar(hp),              //   crosses into the widget tree
 /// )
 /// ```
 ///
 /// Both type arguments usually infer from the closures. While the entity
-/// is dead or lacks [T], [absent] shows instead (default: nothing);
-/// selection resumes if the component comes back. [select] must return a
-/// value with meaningful `==` (numbers, strings, records) — returning the
-/// component itself would compare identical and never rebuild.
+/// is dead or lacks [T] — or, for `.matching`, nothing matches — [absent]
+/// shows instead (default: nothing); selection resumes when a match comes
+/// back, a *respawned* entity included. [select] must return a value with
+/// meaningful `==` (numbers, strings, records) — returning the component
+/// itself would compare identical and never rebuild. `.matching` is for
+/// match sets meant to be unique (THE player, THE boss); resolving by one
+/// component while watching another stays the `WorldBuilder<Entity?>` +
+/// `EntityBuilder` composition.
 class EntityBuilder<T extends Object, S> extends StatefulWidget {
   const EntityBuilder({
     super.key,
-    required this.entity,
+    required Entity this.entity,
     required this.select,
     required this.builder,
     this.absent,
-  });
+  }) : require = null,
+       exclude = null;
 
-  /// The entity to watch.
-  final Entity entity;
+  /// Watches the first entity carrying [T], every type in [require] and
+  /// none in [exclude] — resolved through the world each frame.
+  const EntityBuilder.matching({
+    super.key,
+    this.require = const <Type>[],
+    this.exclude = const <Type>[],
+    required this.select,
+    required this.builder,
+    this.absent,
+  }) : entity = null;
+
+  /// The entity to watch (handle form; null in `.matching` form).
+  final Entity? entity;
+
+  /// `.matching` filters (tags or components beside [T]); null in the
+  /// handle form.
+  final List<Type>? require;
+  final List<Type>? exclude;
 
   /// Selects the watched value from the component; compared with `==`.
   final S Function(T component) select;
@@ -116,7 +144,13 @@ class _EntityBuilderState<T extends Object, S>
   void frameTick() => _read(rebuild: true);
 
   void _read({required bool rebuild}) {
-    final component = game.world.tryGet<T>(widget.entity);
+    final require = widget.require;
+    final component = require == null
+        ? game.world.tryGet<T>(widget.entity!)
+        : game.world
+              .query<T>(require: require, exclude: widget.exclude!)
+              .firstOrNull
+              ?.$2;
     if (component == null) {
       if (_present && rebuild) setState(() => _present = false);
       _present = false;

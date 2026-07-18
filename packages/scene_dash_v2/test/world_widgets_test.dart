@@ -10,6 +10,10 @@ final class Health {
   final double max;
 }
 
+final class Marked implements Tag {
+  const Marked();
+}
+
 final class HitLanded {
   final int damage;
   const HitLanded(this.damage);
@@ -94,6 +98,63 @@ void main() {
     drive(game);
     await tester.pump();
     expect(find.text('dead'), findsOneWidget);
+  });
+
+  testWidgets('EntityBuilder.matching resolves through the world and '
+      'follows a respawn onto the new entity', (tester) async {
+    final game = await boot();
+    final first = game.world.spawn([Health(100)]);
+    drive(game);
+    await tester.pumpWidget(
+      GameScope(
+        game: game,
+        child: EntityBuilder<Health, double>.matching(
+          select: (h) => h.current,
+          builder: (context, hp) =>
+              Text('$hp', textDirection: TextDirection.ltr),
+          absent: const Text('none', textDirection: TextDirection.ltr),
+        ),
+      ),
+    );
+    expect(find.text('100.0'), findsOneWidget);
+
+    game.world.despawn(first);
+    drive(game);
+    await tester.pump();
+    expect(find.text('none'), findsOneWidget);
+
+    game.world.spawn([Health(40)]);
+    drive(game);
+    await tester.pump();
+    expect(find.text('40.0'), findsOneWidget,
+        reason: 'a fresh match is picked up without a new handle');
+  });
+
+  testWidgets('EntityBuilder.matching honours require filters',
+      (tester) async {
+    final game = await boot(features: [(game) => game.registerTag<Marked>()]);
+    game.world.spawn([Health(1)]); // unmarked: never a match
+    final marked = game.world.spawn([Health(2), const Marked()]);
+    drive(game);
+    await tester.pumpWidget(
+      GameScope(
+        game: game,
+        child: EntityBuilder<Health, double>.matching(
+          require: const [Marked],
+          select: (h) => h.current,
+          builder: (context, hp) =>
+              Text('$hp', textDirection: TextDirection.ltr),
+        ),
+      ),
+    );
+    expect(find.text('2.0'), findsOneWidget);
+    expect(find.text('1.0'), findsNothing);
+
+    game.world.despawn(marked);
+    drive(game);
+    await tester.pump();
+    expect(find.text('2.0'), findsNothing,
+        reason: 'default absent renders nothing');
   });
 
   testWidgets('WorldBuilder watches world-derived values (query counts)',

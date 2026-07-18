@@ -129,25 +129,15 @@ class _LiveStats extends StatelessWidget {
                   world.query<SceneNode>(require: const [Rock]).count(),
               builder: (context, rocks) => Text('rocks: $rocks'),
             ),
-            // Resolve the watched entity each frame, then watch one
-            // component on it; `absent` covers death and respawn gaps.
-            WorldBuilder<Entity?>(
-              select: (world) => world
-                  .query<SceneNode>(require: const [Player])
-                  .firstOrNull
-                  ?.$1,
-              builder: (context, player) => player == null
-                  ? const Text('player x: —')
-                  : EntityBuilder<SceneNode, String>(
-                      entity: player,
-                      select: (binding) => binding
-                          .node
-                          .localTransform
-                          .storage[12]
-                          .toStringAsFixed(1),
-                      builder: (context, x) => Text('player x: $x'),
-                      absent: const Text('player x: —'),
-                    ),
+            // The one watched entity, resolved through the world each
+            // frame — no handle crosses into the tree; `absent` covers
+            // death and respawn gaps in one place.
+            EntityBuilder<SceneNode, String>.matching(
+              require: const [Player],
+              select: (binding) =>
+                  binding.node.localTransform.storage[12].toStringAsFixed(1),
+              builder: (context, x) => Text('player x: $x'),
+              absent: const Text('player x: —'),
             ),
           ],
         ),
