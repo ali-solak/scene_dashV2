@@ -17,7 +17,7 @@ components onto them each frame. Rendering, cameras and physics remain
 native `flutter_scene`; the framework never constructs or wraps
 `SceneView`.
 
-The core has no Flutter dependency — gameplay runs headless under
+The core has no Flutter dependency, so gameplay runs headless under
 `dart test`. A widget layer reads the world reactively: widgets select a
 value and rebuild only when it changes.
 
@@ -37,7 +37,7 @@ EntityBuilder<Health, double>(
 )
 ```
 
-The siblings — same heartbeat, same select-and-compare:
+The siblings share the same heartbeat and the same select-and-compare:
 
 ```dart
 WorldBuilder<int>(select: (w) => w.query<Health>(require: const [Enemy]).count(),
@@ -53,7 +53,7 @@ WorldEventListener<EnemyKilled>(onEvent: (ctx, e) => shakeScore(ctx),
 
 A widget *in* the 3D world (a health bar above an enemy) is not a
 framework concern: put a `flutter_scene` `WidgetComponent` on a child
-node — the scene graph positions, projects and occludes it.
+node and the scene graph positions, projects and occludes it.
 
 Write path: UI → `ButtonInput` / `game.emit`. Widgets never mutate
 components.
@@ -172,7 +172,7 @@ runApp(GameScope(game: game, child: MyGameApp(game: game)));  // yours
 ## Features and systems
 
 A feature registers its systems; a system is a stateless
-`void Function(World)` — every type it touches appears in a query
+`void Function(World)`, and every type it touches appears in a query
 signature or on a `world.` call.
 
 ```dart
@@ -192,7 +192,7 @@ void installEnemies(GameBuilder game) {
         runIf: inState(GameStatus.playing));
 }
 
-// enemies advance on their target — one query, one mutation, world.dt
+// enemies advance on their target: one query, one mutation, world.dt
 void closeIn(World world) {
   world.query2<SceneTransform, Target>(
       require: const [Enemy], exclude: const [Stunned])   // stunned: frozen
@@ -208,12 +208,12 @@ void closeIn(World world) {
 ```
 
 ```dart
-// cheatsheet — every schedule slot
+// cheatsheet: every schedule slot
 game.addSystem(Schedules.startup, spawnArena);       // once, at boot
 game.addSystem(Schedules.frameStart, pollGamepad);   // each frame, before the
                                                      //   fixed steps
 game.addSystem(Schedules.fixedUpdate, closeIn);      // 0..N times per frame at
-                                                     //   the fixed timestep —
+                                                     //   the fixed timestep;
                                                      //   gameplay lives here
 game.addSystem(Schedules.postPhysics, readContacts); // after each physics step
 game.addSystem(Schedules.update, evaluateGameRules); // once per rendered frame
@@ -224,15 +224,15 @@ game.addSystem(OnEnter(GameStatus.playing), startRun);   // on the transition
 game.addSystem(OnExit(GameStatus.playing), stopMusic);   //   frame, one-shot
 ```
 
-Spawn/despawn/add/remove are deferred to the frame boundary — structural
-changes never break a running query.
+Spawn/despawn/add/remove are deferred to the frame boundary, so
+structural changes never break a running query.
 
 ## Queries
 
 `closeIn` already shows the whole iteration surface: `require:`/`exclude:`
 shape the match set; `.each` hands components to a callback,
 allocation-free (`return` = continue, `eachUntil` = break); and a held
-`Entity` — `Target.entity`, plain data on a component — resolves in O(1)
+`Entity` (`Target.entity`, plain data on a component) resolves in O(1)
 with `tryGet`, degrading to a safe `null` when the target despawned or
 its slot was reused.
 
@@ -244,7 +244,7 @@ final class Target {           // Entity is a value type: store it on
 ```
 
 ```dart
-// cheatsheet — building queries: four arities, each an iterable of
+// cheatsheet: building queries. Four arities, each an iterable of
 // (entity, components...) rows over entities that have ALL listed types
 world.query<Health>()
 world.query2<Health, SceneTransform>()
@@ -259,7 +259,7 @@ world.query2<Health, Target>(
 ```
 
 ```dart
-// cheatsheet — consuming queries
+// cheatsheet: consuming queries
 world.query2<Health, SceneTransform>()
     .each((entity, health, transform) { /* allocation-free; return=continue */ });
 world.query<Health>()
@@ -271,23 +271,23 @@ for (final (entity, health) in world.query<Health>().records) {}
 final row = world.query<Health>(require: const [Player]).firstOrNull;
 final (e, hp) = world.query<Health>(require: const [Player]).single;
                                                   // first/firstOrNull/single/
-                                                  //   singleOrNull — rows as records
+                                                  //   singleOrNull; rows as records
 world.query<Health>().any((entity, h) => h.current < 10);        // predicate
 world.query<Health>().firstWhere((entity, h) => h.current < 10); // row or null
 world.query<Health>(require: const [Enemy]).isNotEmpty;          // existence
 world.query<Health>().count();                                   // O(n) scan
 
-world.single<Fighter>();       // THE one, unwrapped — component singletons
+world.single<Fighter>();       // THE one, unwrapped: component singletons
 world.singleOrNull<Fighter>(); //   (throws on duplicates; null on none)
 
-// already holding an Entity? skip the query — O(1) lookups:
+// already holding an Entity? skip the query; O(1) lookups:
 world.get<Health>(enemy);      // throws if absent
 world.tryGet<Health>(enemy);   // null if absent, despawned, or slot reused
 world.has<Stunned>(enemy);
 ```
 
 ```dart
-// queries stop at four type parameters — state that changes together
+// queries stop at four type parameters: state that changes together
 // belongs in one component (fewer components per query = fewer lookups);
 // tags cost no slot; world.get covers one-off reads mid-loop. Split state
 // out only when it is flipped independently (Stunned) or filtered on.
@@ -317,33 +317,33 @@ List<Object> combatantBundle({required Node node, required double maxHealth}) =>
 List<Object> playerBundle(Node body) => [
   const Player(),                        // present for the whole lifetime
   ...combatantBundle(node: body, maxHealth: 100),
-  Fighter(),                             // the state machine — see Time
+  Fighter(),                             // the state machine (see Time)
 ];
 
 List<Object> enemyBundle(Node node, {required Entity target}) => [
   const Enemy(),                         // composition = spread
   ...combatantBundle(node: node, maxHealth: 40),
   Target(target),                        // who to advance on (closeIn)
-  EnemyAttack(),                         // the windup timer — see Time
-  const DespawnOnExit(GameStatus.playing),   // run-scoped — see States
+  EnemyAttack(),                         // the windup timer (see Time)
+  const DespawnOnExit(GameStatus.playing),   // run-scoped (see States)
 ];
 ```
 
-`Stunned` is the transient kind — flipped at runtime, entering and
+`Stunned` is the transient kind: flipped at runtime, entering and
 leaving `exclude: [Stunned]` queries at the next frame boundary. Its full
 loop is in Events: `applyDamage` adds it, `recoverFromStun` removes it.
 
 ```dart
 // observe: a feature reacts to a component appearing or disappearing on
-// any entity — explicit, per feature, at install time; onRemove gets the
+// any entity; explicit, per feature, at install time. onRemove gets the
 // still-live instance (despawn strips components, so it fires there too)
 game.observe<Stunned>(
   onAdd: (world, entity, stunned) => world.add(entity, StunStars()),
   onRemove: (world, entity, stunned) => world.remove<StunStars>(entity),
 );
 
-// removeAfter: the framework removes the component again on schedule —
-// fixed-step game time (pause and hitstop consume nothing), expiry fires
+// removeAfter: the framework removes the component again on schedule,
+// in fixed-step game time (pause and hitstop consume nothing); expiry fires
 // onRemove like any other removal; re-adding refreshes the deadline
 world.add(enemy, const Stunned(), removeAfter: 1.2);
 world.expiryOf<Stunned>(enemy);          // seconds left, or null
@@ -365,9 +365,9 @@ abstract final class GameSets {
 }
 
 // main: order the phases once (Application setup, above);
-// features: join a phase — never import another feature's systems —
+// features: join a phase; never import another feature's systems
 game.addSystem(Schedules.fixedUpdate, closeIn, inSet: GameSets.movement);
-// within a feature: order by function reference — a rename is a compile error
+// within a feature: order by function reference, so a rename is a compile error
 game.addSystem(Schedules.fixedUpdate, enemyAttacks, after: [closeIn]);
 ```
 
@@ -376,18 +376,18 @@ game.addSystem(Schedules.update, awardBounty,          // Events, below
     reads: const {},
     runIf: inState(GameStatus.playing).and(hasEvents<EnemyKilled>()));
 
-game.addSystem(Schedules.fixedUpdate, spawnEnemyWave,  // yours — a system
+game.addSystem(Schedules.fixedUpdate, spawnEnemyWave,  // yours: a system
     writes: {Enemy, Health, Target, EnemyAttack},      //   spawning enemyBundles
-    // every() is schedule-aware (fixed delta here, frame delta in update) —
+    // every() is schedule-aware (fixed delta here, frame delta in update);
     // periodicity lives at registration, never as a timer resource
     runIf: inState(GameStatus.playing).and(every(4.0)));
 
-game.addSystem(Schedules.startup, spawnArenaDecor,     // yours — visual only
+game.addSystem(Schedules.startup, spawnArenaDecor,     // yours: visual only
     reads: const {}, runIf: hasResource<Scene>());
     // gate on an optional capability: visual spawners skip on headless
     // boots, and the dependency sits in the manifest, not a guard
 
-// cheatsheet — every built-in condition, and composition
+// cheatsheet: every built-in condition, and composition
 runIf: inState(GameStatus.playing)          // state gate
 runIf: every(2.5)                           // periodic (schedule-aware)
 runIf: hasEvents<HitLanded>()               // only on frames carrying one
@@ -426,7 +426,7 @@ void applyDamage(World world) {
     final health = world.tryGet<Health>(hit.target);
     if (health == null) continue;
     health.current -= hit.damage;
-    world.clock.freezeFor(0.06);               // hitstop — see Time
+    world.clock.freezeFor(0.06);               // hitstop (see Time)
 
     if (health.current <= 0) {
       world.emit(EnemyKilled(10));             // auto-registers on first use
@@ -458,11 +458,11 @@ void awardBounty(World world) {
 }
 ```
 
-Events are retained for the emitting frame plus one — an every-frame
+Events are retained for the emitting frame plus one, so an every-frame
 reader never misses one; a gated reader skips older events (reported once
 by a diagnostic). `game.configureEvent<T>(retainedUpdates: null)` keeps
-them until every reader consumed them — right for input edges that must
-survive to a fixed step. `world.events` throws outside a running system;
+them until every reader consumed them, the right setting for input edges
+that must survive to a fixed step. `world.events` throws outside a running system;
 widgets use `WorldEventListener`.
 
 ## Input
@@ -490,7 +490,7 @@ final strafe = world.buttons<PlayerAction>()
 
 ```dart
 // buffered: a roll pressed during a strike must fire the instant the
-// strike ends — the fighter consumes it when its machine allows (Time)
+// strike ends; the fighter consumes it when its machine allows (Time)
 if (edge == ButtonEdge.pressed) {
   world.buffer<PlayerAction>().record(PlayerAction.roll);   // widget side
 }
@@ -513,7 +513,7 @@ final class Score { int value = 0; }
 game.world.insert(Score());              // once, in the owning feature
 world.resource<Score>().value += 10;     // read/write from any system
 
-// owns teardown? implement Disposable — the framework calls dispose():
+// owns teardown? implement Disposable; the framework calls dispose():
 // game shutdown (reverse insertion order), a dropping reset, replacement.
 final class ScoreCubit extends Cubit<int> implements Disposable {
   ScoreCubit() : super(0);
@@ -522,8 +522,8 @@ final class ScoreCubit extends Cubit<int> implements Disposable {
 }
 ```
 
-Framework state is promoted to members — `world.dt`, `world.clock`,
-`world.buttons`, `world.physics`, `world.gizmos` — so `resource<T>()` is
+Framework state is promoted to members (`world.dt`, `world.clock`,
+`world.buttons`, `world.physics`, `world.gizmos`), so `resource<T>()` is
 only ever the game's own singletons.
 
 ## States
@@ -547,28 +547,28 @@ void evaluateGameRules(World world) {
 }
 ```
 
-`enemyBundle` carries `DespawnOnExit(GameStatus.playing)` — leaving the
+`enemyBundle` carries `DespawnOnExit(GameStatus.playing)`: leaving the
 state despawns every enemy automatically; a run spawns freely and needs
 no cleanup system.
 
 ## Time
 
 ```dart
-// cheatsheet — the clock
+// cheatsheet: the clock
 world.dt            // schedule-aware: fixed delta in fixed schedules,
                     //   frame delta otherwise
 world.delta / world.fixedDelta       // the explicit pair
 
 world.clock.freezeFor(0.06);         // hitstop: 60ms of wall time
-world.clock.timeScale = 0.5;         // slow motion — physics, animation,
+world.clock.timeScale = 0.5;         // slow motion: physics, animation,
 world.clock.paused = true;           //   gameplay together; the fixed step
                                      //   never changes, so fixed-step
                                      //   gameplay stays deterministic
 // HUD / camera shake keep moving on FrameTime.unscaledDelta
 ```
 
-Durations live on components and tick with `world.dt` — they pause, slow
-and freeze with the game for free. The whole idiom is three lines:
+Durations live on components and tick with `world.dt`, so they pause,
+slow and freeze with the game for free. The whole idiom is three lines:
 
 ```dart
 final cooldown = GameTimer(0.8);                     // a field on a component
@@ -576,7 +576,7 @@ cooldown.tick(world.dt);                             // ticked by its system
 if (fireHeld && cooldown.finished) { fire(); cooldown.reset(); }
 ```
 
-In the game — the enemy's windup is one duration, so it is a `GameTimer`:
+In the game, the enemy's windup is one duration, so it is a `GameTimer`:
 
 ```dart
 const enemyWindupSeconds = 0.9;
@@ -603,10 +603,10 @@ void enemyAttacks(World world) {
 }
 ```
 
-The fighter has *modes*, so it is a `Machine` — `GameTimer`'s sibling:
+The fighter has *modes*, so it is a `Machine`, `GameTimer`'s sibling:
 `elapsed` is seconds in the current state (zeroed by `go`), and an edge
 (`justEntered`/`justExited`) is true from `go()` until the machine's next
-tick. Transitions come from anywhere — input, time, events:
+tick. Transitions can come from input, time, or events:
 
 ```dart
 enum FighterPhase { idle, striking, rolling, staggered }
@@ -634,7 +634,7 @@ void fighterActions(World world) {
   }
 
   switch (phase.state) {
-    // input-driven — `when` guards the case: it matches only while the
+    // input-driven; `when` guards the case: it matches only while the
     // condition also holds
     case FighterPhase.idle
         when world.buffer<PlayerAction>().consume(PlayerAction.roll):
@@ -666,15 +666,15 @@ bool _attackPressed(World world) {
 }
 ```
 
-The strike itself resolves in Physics, below — gated on
+The strike itself resolves in Physics, below, gated on
 `justEntered(striking)`.
 
 ```dart
-// cheatsheet — the timer family (all tick with world.dt)
+// cheatsheet: the timer family (all tick with world.dt)
 GameTimer(0.4)             // one-shot: finished / justFinished / reset()
-GameTimer.repeating(1.5)   // completionsThisTick — can be >1 after a hitch
+GameTimer.repeating(1.5)   // completionsThisTick, can be >1 after a hitch
 GameStopwatch()            // counts up: elapsed
-DespawnAfter(2.0)          // component — timed despawn (muzzle flash, corpse)
+DespawnAfter(2.0)          // component: timed despawn (muzzle flash, corpse)
 Machine<S>(initial)        // modes: state / elapsed / go / justEntered / justExited
 // system-level cadence → runIf: every(seconds), never a timer resource
 ```
@@ -690,7 +690,7 @@ final game = await SceneGame.boot(
 const strikeRange = 1.6;
 
 // the fighter's strike: a synchronous overlap the frame the machine
-// enters `striking` — emits the HitLanded that applyDamage (Events) consumes
+// enters `striking`; it emits the HitLanded that applyDamage (Events) consumes
 void playerStrikes(World world) {
   final row = world.query2<Fighter, SceneTransform>(
       require: const [Player]).firstOrNull;
@@ -711,12 +711,12 @@ void playerStrikes(World world) {
 
 ```dart
 // contact events arrive resolved to entities, one frame late
-// (flutter_scene's collision streams are async) — use the synchronous
+// (flutter_scene's collision streams are async); use the synchronous
 // overlap above when a hit must resolve NOW
 void bumpOnContact(World world) {
   for (final collision in world.events<EntityCollision>()) {
     if (collision.source is! CollisionBegan) continue;
-    // collision.a / collision.b are Entities — tryGet from here
+    // collision.a / collision.b are Entities; tryGet from here
   }
 }
 
@@ -737,10 +737,10 @@ final grunt = world.spawn(
 
 print(world.debugDescribe(grunt));
 // Entity(14 v2) "grunt-3" [Enemy, SceneNode, Health, Target, EnemyAttack,
-//   DespawnOnExit, Name]     — one line; entries in store-registration order
+//   DespawnOnExit, Name]     (one line; entries in store-registration order)
 
 // a component that overrides toString renders its live value instead of
-// its type — a Machine owner prints e.g. `striking (0.12s)`
+// its type; a Machine owner prints e.g. `striking (0.12s)`
 ```
 
 ### Gizmo debug
@@ -772,14 +772,14 @@ Stack(children: [
 ```
 
 Live entities (filter by `Name`, tap for component values), resources,
-system timings, event channels — read-only snapshots polled at 4 Hz,
+system timings, event channels: read-only snapshots polled at 4 Hz,
 zero cost hidden. Debug builds also warn once per system when a query
-iterates inside another query's `each` (the accidental O(N×M) shape) —
+iterates inside another query's `each` (the accidental O(N×M) shape);
 hoist the inner query (see the query rules above).
 
 ## Testing
 
-The fighter's i-frames, frame-exact — `TestGame` runs the exact device
+The fighter's i-frames, frame-exact: `TestGame` runs the exact device
 pipeline (schedule order, command boundaries, clock) with no scene, no
 GPU:
 
@@ -788,11 +788,11 @@ final game = TestGame.headless(features: [installPlayer, installEnemies]);
 final player = game.world.spawn([const Player(), Health(100), Fighter()]);
 
 game.world.buffer<PlayerAction>().record(PlayerAction.roll);
-game.pumpFixed(steps: 6);                    // 0.1s at 60Hz — inside the window
+game.pumpFixed(steps: 6);                    // 0.1s at 60Hz, inside the window
 final (_, fighter) = game.world.query<Fighter>().single;
 expect(fighter.iFramed, isTrue);
 
-game.pumpFixed(steps: 18);                   // 0.4s — window closed, roll over
+game.pumpFixed(steps: 18);                   // 0.4s: window closed, roll over
 expect(fighter.phase.state, FighterPhase.idle);
 
 // pump() = one rendered frame (accumulator-driven fixed steps);
@@ -802,14 +802,14 @@ expect(fighter.phase.state, FighterPhase.idle);
 ## The rendering bridge
 
 ```dart
-// the only bridge between world and scene — everything you see is a real Node
+// the only bridge between world and scene; everything you see is a real Node
 SceneNode(node)          // mounted into the scene automatically
 SceneTransform.zero()    // when present, synced onto the bound node per frame
 const PhysicsDriven()    // a physics body owns the transform instead
 // SceneNodeIndex maps a hit node back to its entity (playerStrikes, above)
 ```
 
-An entity's transform can also live on the node directly —
+An entity's transform can also live on the node directly;
 `NodeTransformOps` keeps per-frame mutation allocation-free:
 
 ```dart
@@ -834,7 +834,7 @@ void strafePlayer(World world) {
 | Path | Purpose |
 | --- | --- |
 | [`packages/scene_dash_v2_core`](packages/scene_dash_v2_core) | Pure-Dart ECS runtime, authoring surface, headless `TestGame`. |
-| [`packages/scene_dash_v2`](packages/scene_dash_v2) | `flutter_scene` integration: `SceneGame.boot`, mounting, transform sync, physics bridge, gizmos, widget layer. Re-exports core — one import. |
+| [`packages/scene_dash_v2`](packages/scene_dash_v2) | `flutter_scene` integration: `SceneGame.boot`, mounting, transform sync, physics bridge, gizmos, widget layer. Re-exports core, so one import covers both. |
 | [`examples/scene_game`](examples/scene_game) | Complete game: Rapier physics, one feature per folder. |
 | [`examples/headless_example`](examples/headless_example) | The core without Flutter. |
 | [`examples/scene_benchmark`](examples/scene_benchmark) | On-device render benchmark: static vs mount-only vs ECS vs instanced. |
@@ -842,8 +842,8 @@ void strafePlayer(World world) {
 
 ```text
 examples/scene_game/lib/
-├── player/          # each folder: one feature —
-├── projectiles/     #   components, bundles, systems, resources
+├── player/          # each folder: one feature
+├── projectiles/     #   (components, bundles, systems, resources)
 ├── rocks/
 ├── collectables/
 ├── rules/

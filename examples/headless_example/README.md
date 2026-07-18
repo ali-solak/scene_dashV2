@@ -1,6 +1,6 @@
 # Headless example
 
-The ECS core running without Flutter: a tiny "race" — a player and two
+The ECS core running without Flutter: a tiny "race" where a player and two
 boosted runners move down a track, a referee watches the finish line, and
 a run-state machine reports the result. Pure Dart, no scene, no GPU.
 

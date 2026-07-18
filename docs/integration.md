@@ -13,12 +13,12 @@ boot, it:
 - exposes the real `Scene` and `SceneCommands` as resources;
 - mounts entity-bound `SceneNode` nodes into the scene **before** the
   `update` phase (and once at startup), so a gameplay system never needs a
-  `node.parent == null` guard — a queried node is already in the scene;
+  `node.parent == null` guard: a queried node is already in the scene;
 - syncs optional `SceneTransform` components onto bound nodes;
-- exposes a `SceneNodeIndex` resource — the node → entity reverse lookup;
+- exposes a `SceneNodeIndex` resource, the node → entity reverse lookup;
 - attaches physics when the `physics:` parameter is given (below);
-- exposes `game.onTick` for **your** `SceneView` — the framework never
-  constructs one — and drives the scene tick on `GameClock`-scaled time,
+- exposes `game.onTick` for **your** `SceneView` (the framework never
+  constructs one) and drives the scene tick on `GameClock`-scaled time,
   so `timeScale`, `paused`, and `freezeFor` (hitstop) slow or halt physics
   stepping, animations, and gameplay together. Systems that keep moving
   while game time is stopped (HUD, camera shake) read
@@ -28,10 +28,10 @@ A mounted entity also gains an integration-managed `Mounted` tag (removed
 on unmount/despawn) for the rare system that wants to filter on
 scene-mounted entities; bundles never author it.
 
-`SceneGame.scene` is non-null — a `SceneGame` always owns a scene (D13);
+`SceneGame.scene` is non-null, a `SceneGame` always owns a scene (D13);
 a real `Scene` needs a Flutter GPU context, so this boot fails fast
-without one. A widget tree over a *scene-less* world — editor panels,
-widget-test harnesses — is a different type, `WorldGame.boot(...)`: same
+without one. A widget tree over a *scene-less* world (editor panels,
+widget-test harnesses) is a different type, `WorldGame.boot(...)`: same
 physics and gameplay wiring, same `onTick`-driven frames, no scene member
 at all. Pure-logic suites with no widget tree want the core package's
 `TestGame.headless` instead.
@@ -93,7 +93,7 @@ node.globalTranslationInto(scratch);     // world position, no allocation
 ```
 
 (The orbit example above edits translation *within* an existing rotation,
-so it uses `setTranslationRaw` + `markTransformDirty` directly —
+so it uses `setTranslationRaw` + `markTransformDirty` directly;
 `setLocalTRS` rebuilds the whole matrix.)
 
 ## ECS-owned transforms
@@ -116,7 +116,7 @@ complete gameplay API: translation (`setTranslation`, `translate`), scale
 `rotate`/`rotateX/Y/Z`), `lookAt`, copy/reset (`setFrom`, `setIdentity`),
 and a matrix escape hatch (`setFromMatrix`, `toMatrix`). Angles are
 radians; forward is −Z and up is +Y. The fields stay directly mutable, so
-there is no dirty tracking — helper calls and direct field mutation are
+there is no dirty tracking; helper calls and direct field mutation are
 equivalent.
 
 The integration writes it onto the bound node during
@@ -163,7 +163,7 @@ release:
 ### Scene-wide settings from a startup system
 
 ```dart
-// Registration: gate on the scene — headless boots skip the system.
+// Registration: gate on the scene so headless boots skip the system.
 game.addSystem(Schedules.startup, setupScene,
     reads: const {}, runIf: hasResource<Scene>());
 
@@ -230,7 +230,7 @@ for the full feature.
 
 ## Debug gizmos
 
-The gizmo render layer is opt-in — add it to the feature list:
+The gizmo render layer is opt-in; add it to the feature list:
 
 ```dart
 final game = await SceneGame.boot(
@@ -257,7 +257,7 @@ early-return no-ops while `gizmos.enabled` is `false`. The pools build
 lazily on the first *enabled* frame and hide when the flag goes off, so
 `enabled` is a true runtime toggle: a disabled layer costs zero draw calls
 and zero vertex work. Games that never install the layer still call
-`world.gizmos` safely — it falls back to a disabled recorder. The palette is a fixed
+`world.gizmos` safely; it falls back to a disabled recorder. The palette is a fixed
 four-color enum because 0.18 instancing is transform-only: each color is
 its own pool; per-call arbitrary colors would mean one draw per gizmo.
 Overflow past a shape's per-color capacity drops the shape and counts it
@@ -351,7 +351,7 @@ void meleeSwing(World world) {
 
 Semantics worth knowing:
 
-- Hits whose node (and ancestors) is not entity-bound are skipped — use
+- Hits whose node (and ancestors) is not entity-bound are skipped; use
   the raw `overlapSphere` when unmanaged geometry matters.
 - `layerMask` is passed to the backend *and* re-checked result-side
   against the abstract `Collider.collisionLayer`, covering backends that
@@ -392,13 +392,13 @@ void _hurt(World world, Entity? entity) {
 }
 ```
 
-Events arrive a frame late — a platform constraint, not a scheduling
+Events arrive a frame late, a platform constraint rather than a scheduling
 choice: `flutter_scene`'s collision streams are async, so a contact from
 frame N's physics is only readable in frame N+1.
 
 For larger games, treat raw collision data as a bridge boundary. Keep
-gameplay semantics in your own components and resources — layers, teams,
-sensors, hitboxes, damage — and translate physics events or query results
+gameplay semantics in your own components and resources (layers, teams,
+sensors, hitboxes, damage) and translate physics events or query results
 into game-specific events (`world.emit(HitLanded(...))`). That keeps the
 physics backend swappable: Scene-Dash owns scheduling, resources, events,
 and queries; `flutter_scene` and the selected backend own colliders,

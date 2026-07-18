@@ -1,10 +1,10 @@
-# Scene-Dash v2 — Concept and Architecture
+# Scene-Dash v2: Concept and Architecture
 
 Scene-Dash is an object-based ECS and feature layer for `flutter_scene`.
 
 It is primarily an ergonomics and architecture project. It does not assume
 an ECS or typed-array storage is automatically faster than straightforward
-object-oriented Dart — the [benchmarks](../benchmarks) exist to keep that
+object-oriented Dart; the [benchmarks](../benchmarks) exist to keep that
 claim honest.
 
 
@@ -33,7 +33,7 @@ Queries hand systems direct references to the stored objects, and systems
 mutate those objects in place. There is no per-result wrapper, copy, or
 record on the hot path.
 
-Tags implement the `Tag` marker and are stored as bitsets — filtering on
+Tags implement the `Tag` marker and are stored as bitsets: filtering on
 one is a bit test, and `require:`/`exclude:` never cost a query slot.
 
 ## Cache everything stable
@@ -48,7 +48,7 @@ Registration resolves stable handles once:
 
 A frame should not repeatedly perform service lookup, reflection, or
 channel registration. (One deliberate exception: a record query view is
-constructed per `world.query…()` call — it is a thin façade over the
+constructed per `world.query…()` call; it is a thin façade over the
 cached machinery, and the [benchmarks](../benchmarks) price it.)
 
 ## Allocate nothing per matching entity
@@ -63,8 +63,8 @@ world.query2<SceneTransform, Velocity>().each((entity, transform, velocity) {
 });
 ```
 
-`.each` is the primary spelling for exactly this reason. The record form —
-`for (final (e, t, v) in query.records)` — allocates one record per row
+`.each` is the primary spelling for exactly this reason. The record form,
+`for (final (e, t, v) in query.records)`, allocates one record per row
 and is the documented cold-path alternative, not the default.
 
 The same discipline runs through the integration: `NodeTransformOps`
@@ -98,14 +98,14 @@ networking, renderer independence, or headless simulation.
 
 ## Deferred by construction
 
-The structural verbs — `spawn`, `despawn`, `add`, `remove`, `ownedBy:` —
+The structural verbs (`spawn`, `despawn`, `add`, `remove`, `ownedBy:`)
 are command-buffered and flushed at frame boundaries, so despawning inside
 `.each` is safe by construction rather than by care. Owned-spawn chains
 resolve to a fixpoint in one boundary, and `DespawnOnExit`/`DespawnAfter`
 ride the same path. The immediate `*Now` variants exist for setup code and
 live in `advanced.dart` with their no-active-query asserts.
 
-## Components may bear logic — the boundary rule
+## Components may bear logic: the boundary rule
 
 Components may bear logic. The boundary: the object computes, the system
 performs world effects. A component method never holds or touches
@@ -116,27 +116,27 @@ systems spawn, emit and mutate on them.
 
 The same edge vocabulary at every scale:
 
-- **`GameTimer`** — durations inside gameplay (cooldowns, windups,
+- **`GameTimer`**: durations inside gameplay (cooldowns, windups,
   cadences): `tick(world.dt)`, `finished`, `justFinished` true for
   exactly one tick.
-- **`Machine<S>`** — an entity's *mode* (idle / charging / rolling):
+- **`Machine<S>`**: an entity's *mode* (idle / charging / rolling):
   `tick(world.dt)`, `elapsed`, `go`, with `justEntered`/`justExited`
   true for exactly one tick-window.
-- **Whole-game state machines** (`addState<S>`) — title / playing /
-  lost: transitions applied at frame boundaries, `OnEnter`/`OnExit` as
-  schedules, `inState(...)` as the run condition.
+- **Whole-game state machines** (`addState<S>`): title / playing /
+  lost, with transitions applied at frame boundaries, `OnEnter`/`OnExit`
+  as schedules, `inState(...)` as the run condition.
 
 Timers and machines are plain values ticked by their owner systems, so
 they pause, slow and freeze with the game and add nothing to the
 schedule; whole-game state is a framework machine because independent
 features must coordinate on it.
 
-### Where state lives — the doctrine
+### Where state lives: the doctrine
 
 An entity's condition is a component on that entity; an ongoing process
 is a component on its own process entity (run-scoped with
 `DespawnOnExit` like anything else); a resource is reserved for state
-where "two of them" is meaningless — score, indexes, input, shared
+where "two of them" is meaningless: score, indexes, input, shared
 pools. The test is "could there ever be two?" A singleton that names an
 entity's condition or a feature's process is a component in exile.
 
@@ -170,7 +170,7 @@ System execution can be measured per system and per schedule via
 `AppDiagnostics(profileSystems: true)`. Profiling is off by default and
 adds no per-system work when disabled. When enabled, the `SystemProfiler`
 resource keeps a reusable `SystemTiming` record per (system, schedule)
-pair — run count, total/latest/maximum duration, last frame — keyed by the
+pair (run count, total/latest/maximum duration, last frame), keyed by the
 system's identity (its function reference, or the `label:` override) plus
 the schedule it ran in, and can warn when a system exceeds a configured
 `slowSystemThreshold`.
