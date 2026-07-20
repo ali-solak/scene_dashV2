@@ -24,18 +24,6 @@ part 'data/config.dart';
 part 'data/resources.dart';
 part 'systems/systems.dart';
 
-/// Installs what points buy: three castable skills and the vitality
-/// upgrade.
-///
-/// Every skill deals its damage by emitting [HitLanded] — the same event
-/// a sword swing emits — so kills, scoring, knockback, hitstop and the
-/// death path are the rules feature's, unchanged. The casts run in
-/// `GameSets.actions`, one set ahead of resolution, so a skill's damage
-/// lands on the step it was cast.
-///
-/// The visuals (cone of flame, lava crust and embers, dust ring, the
-/// fire that rides a burning body) are all
-/// scene-gated, so the whole feature is testable headless.
 void installSkills(GameBuilder game) {
   game
     ..registerComponent<Burning>()
@@ -46,11 +34,7 @@ void installSkills(GameBuilder game) {
     ..world.insert(SkillBook())
     // frameStart, like the restart request: buying happens while the menu
     // has the world paused, so it must not sit behind a `fighting` gate.
-    ..addSystem(
-      Schedules.frameStart,
-      buyUpgrades,
-      writes: const {Health},
-    )
+    ..addSystem(Schedules.frameStart, buyUpgrades, writes: const {Health})
     ..addSystem(
       Schedules.fixedUpdate,
       castSkills,

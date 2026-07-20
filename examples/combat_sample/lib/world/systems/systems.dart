@@ -1,10 +1,5 @@
 part of '../world.dart';
 
-/// Configures the scene look directly on the `Scene` resource: gradient sky
-/// with a low-afternoon sun, shadows and IBL both derived from that same sky
-/// (`SunLight` aims the light, `SkyEnvironment` bakes the ambient), ground-
-/// hugging fog, subtle god rays, and scene_game's tone/post recipe. Runs
-/// once at startup; scene-gated, so headless games skip it.
 void setupWorld(World world) {
   final scene = world.resource<Scene>();
   final sky = GradientSkySource(

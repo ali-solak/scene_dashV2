@@ -1,12 +1,3 @@
-/// The procedural forest: stylized pines, rocks, and bushes built from
-/// flutter_scene primitives — no imported assets (the KayKit nature glTFs
-/// use Khronos extensions the 0.19 runtime importer rejects, and primitives
-/// keep the graybox-to-styled path in our hands).
-///
-/// Every archetype is a [LodComponent] over shared geometries: high detail
-/// near, low detail far, cull floor 0 so the treeline never opens holes in
-/// the fog. Geometries and materials are built once per kit and shared by
-/// every placement.
 library;
 
 import 'package:flutter_scene/scene.dart';
@@ -148,8 +139,7 @@ class ForestKit {
       material: rockMaterial,
       detailScreenSize: _propDetailScreenSize,
     );
-    node.localTransform = node.localTransform
-      ..scaleByDouble(1, squash, 1, 1);
+    node.localTransform = node.localTransform..scaleByDouble(1, squash, 1, 1);
     return Node(name: 'rock')..add(node);
   }
 
@@ -176,19 +166,16 @@ class ForestKit {
   }) {
     return Node(localTransform: Matrix4.translation(Vector3(0, y, 0)))
       ..addComponent(
-        LodComponent(
-          [
-            LodLevel(
-              geometry: hi,
-              material: material,
-              screenSize: detailScreenSize,
-            ),
-            // screenSize 0: the low level never culls — a vanished tree
-            // would open a hole in the treeline.
-            LodLevel(geometry: lo, material: material, screenSize: 0),
-          ],
-          blendRange: _lodBlendRange,
-        ),
+        LodComponent([
+          LodLevel(
+            geometry: hi,
+            material: material,
+            screenSize: detailScreenSize,
+          ),
+          // screenSize 0: the low level never culls — a vanished tree
+          // would open a hole in the treeline.
+          LodLevel(geometry: lo, material: material, screenSize: 0),
+        ], blendRange: _lodBlendRange),
       )
       ..shadowStatic = true;
   }
