@@ -1,0 +1,37 @@
+// The death dissolve (L3's flagship): a noise-threshold alpha cut driven
+// entirely from Dart — the framework's `removeAfter:` clock on a dying
+// barbarian's `Dissolving` component maps onto `progress` (0 intact → 1
+// gone), and the shader burns away along world-space noise with a hot rim
+// at the receding edge.
+// UNLIT so the burn reads regardless of scene lighting (the authored
+// color IS the rendered color; a lit swap on a skinned body was not
+// reading on device). The rim is baked straight into base_color.
+material {
+  name: "dissolve",
+  shading_model: unlit,
+  blending: opaque,
+  culling: none,
+  parameters: [
+    { type: float, name: progress, hint: range(0, 1, 0.01), default: 0.0 },
+    { type: vec3, name: base_color, default: [0.55, 0.16, 0.12] },
+    { type: vec3, name: edge_color, default: [1.4, 0.6, 0.18] },
+    { type: float, name: noise_scale, hint: range(0.5, 12, 0.1), default: 5.0 },
+  ],
+}
+fragment {
+  #include <noise.glsl>
+
+  void Surface(inout MaterialInputs material) {
+    float n = NoiseSimplex3(
+        GetWorldPosition() * material_params.noise_scale, 31) * 0.5 + 0.5;
+    // Slight overshoot so progress 1 clears every last fragment.
+    float threshold = material_params.progress * 1.15;
+    if (n < threshold) {
+      discard;
+    }
+    // A bright burning rim right where the surface is about to go.
+    float edge = 1.0 - smoothstep(threshold, threshold + 0.14, n);
+    vec3 color = mix(material_params.base_color, material_params.edge_color, edge);
+    material.base_color = vec4(color, 1.0);
+  }
+}

@@ -1,0 +1,85 @@
+// The shield's barrier: a bubble of rippling blue light around the
+// fighter, which flares and throws a ring outward from wherever a blow
+// lands on it.
+//
+// UNLIT for the same reason the ocean and the lava are — the shell emits
+// its own light, and a lit shader at these grazing angles Fresnels into a
+// mirror of the sky and reads as white glare (NOTES.md B7).
+//
+// `charge` is the barrier's own state, driven from Dart: it dims and
+// cools as blocks are spent, so a shell about to break looks like one.
+// `hit`/`hit_dir` are the block ripple — `hit` runs 1 -> 0 across the
+// flash window and the ring travels outward from `hit_dir` as it does,
+// so a block reads as the barrier ABSORBING something from a direction
+// rather than the whole sphere blinking as one lamp.
+material {
+  name: "barrier",
+  shading_model: unlit,
+  blending: alpha,
+  culling: back,
+  parameters: [
+    { type: float, name: time, default: 0.0 },
+    { type: float, name: charge, hint: range(0, 1, 0.01), default: 1.0 },
+    { type: float, name: hit, hint: range(0, 1, 0.01), default: 0.0 },
+    { type: vec3, name: hit_dir, default: [0.0, 0.0, 1.0] },
+    { type: vec3, name: cool_color, default: [0.16, 0.42, 0.95] },
+    { type: vec3, name: hot_color, default: [0.80, 0.96, 1.35] },
+  ],
+}
+fragment {
+  #include <noise.glsl>
+
+  void Surface(inout MaterialInputs material) {
+    vec3 n = normalize(GetWorldNormal());
+    vec3 v = normalize(GetViewDirection());
+    float t = material_params.time;
+
+    // Fresnel. A bubble is an EDGE, not a volume: nearly clear where it
+    // faces you, solid at grazing angles. Without this the sphere reads
+    // as a painted ball and hides the fighter inside it.
+    float facing = clamp(abs(dot(n, v)), 0.0, 1.0);
+    float rim = pow(1.0 - facing, 2.4);
+
+    // The ripple: two fbm fields crawling against each other, the same
+    // interference the lava uses. Sampled along the NORMAL rather than in
+    // world space, so the pattern rides the shell instead of the shell
+    // swimming through a fixed field as the fighter runs.
+    float a = NoiseFbm3(n * 3.1 + vec3(0.0, t * 0.33, 0.0), 131, 3, 2.0, 0.5);
+    float b = NoiseFbm3(n * 5.9 - vec3(t * 0.26, 0.0, t * 0.19), 137, 2, 2.0, 0.5);
+    float swirl = clamp((a + b * 0.6) * 0.5 + 0.5, 0.0, 1.0);
+
+    // Slow bands travelling up the shell — the "this is energy, not
+    // glass" read, warped by the swirl so they never look like stripes.
+    float bands = 0.5 + 0.5 * sin(n.y * 9.0 - t * 1.7 + swirl * 4.0);
+
+    // The block ripple: a ring expanding away from the impact. `hit`
+    // decays 1 -> 0, so `front` sweeps 0 -> pi radians away from
+    // `hit_dir` and the ring runs around the sphere and dies at the far
+    // side.
+    float angle = acos(clamp(dot(n, normalize(material_params.hit_dir)),
+                             -1.0, 1.0));
+    float front = (1.0 - material_params.hit) * 3.14159265;
+    float ring = smoothstep(0.5, 0.0, abs(angle - front)) * material_params.hit;
+
+    float energy = rim * (0.55 + 0.45 * bands) + swirl * 0.16 + ring * 1.7;
+
+    // Wearing down: the last charge is visibly the last one.
+    float wear = mix(0.4, 1.0, clamp(material_params.charge, 0.0, 1.0));
+
+    vec3 color = mix(material_params.cool_color, material_params.hot_color,
+                     clamp(rim * 0.65 + ring, 0.0, 1.0));
+
+    // MOSTLY CLEAR. The fighter inside is the thing you are actually
+    // playing, and a bubble solid enough to admire is a bubble you cannot
+    // read your own animations through. What carries the shell is the
+    // rim and the ripple, not the fill — so the flat term stays tiny, the
+    // energy term is halved, and the ceiling never approaches opaque.
+    //
+    // The block ring is deliberately exempt from that ceiling clamp being
+    // low: `energy` carries it at 1.7x, so a block still punches through
+    // as a bright arc against an otherwise near-invisible shell.
+    float alpha = clamp(0.03 + energy * wear * 0.45, 0.0, 0.58);
+
+    material.base_color = vec4(color * (0.75 + energy * 0.9), alpha);
+  }
+}

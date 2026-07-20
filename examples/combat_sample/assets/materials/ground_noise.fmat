@@ -1,0 +1,38 @@
+// The clearing floor: two earth tones blended by world-space fbm noise, so
+// the ground reads as mottled forest floor without a tiling texture. World
+// position (not UV) drives the noise, so the pattern never stretches or
+// seams regardless of the ground mesh's parameterization — the flat-world
+// equivalent of triplanar sampling; a slope axis can be added when the stage
+// ever gets one.
+material {
+  name: "ground_noise",
+  shading_model: lit,
+  blending: opaque,
+  culling: back,
+  parameters: [
+    // Rich forest-floor tones (linear): mossy green into warm earth brown.
+    { type: vec3, name: base_a, default: [0.10, 0.32, 0.06] },
+    { type: vec3, name: base_b, default: [0.34, 0.22, 0.09] },
+    { type: float, name: noise_scale, hint: range(0.01, 2, 0.01), default: 0.16 },
+    { type: float, name: detail_scale, hint: range(0.1, 8, 0.1), default: 1.6 },
+  ],
+}
+fragment {
+  #include <noise.glsl>
+
+  void Surface(inout MaterialInputs material) {
+    vec2 p = GetWorldPosition().xz;
+    // Broad patches pick the tone; fine detail breaks up the blend.
+    float patches =
+        NoiseFbm2(p * material_params.noise_scale, 19, 4, 2.0, 0.5);
+    float detail = NoiseSimplex2(p * material_params.detail_scale, 23);
+    vec3 base = mix(
+        material_params.base_a,
+        material_params.base_b,
+        clamp(patches * 0.5 + 0.5, 0.0, 1.0));
+    base *= 0.93 + 0.07 * detail;
+    material.base_color = vec4(base, 1.0);
+    material.roughness = 1.0;
+    material.metallic = 0.0;
+  }
+}

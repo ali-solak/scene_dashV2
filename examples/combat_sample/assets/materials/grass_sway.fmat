@@ -1,0 +1,51 @@
+// Wind-swaying, alpha-masked grass cards. One batched geometry holds every
+// card; the sway phase derives from world position, so cards de-sync without
+// per-instance data. The engine has no time uniform — `time`, `wind_strength`,
+// and `wind_dir` are parameters written from Dart each frame (the seam the
+// Phase-5 WindState resource drives).
+material {
+  name: "grass_sway",
+  shading_model: lit,
+  blending: opaque,
+  culling: back,
+  parameters: [
+    { type: sampler2d, name: blade_texture, hint: default_white },
+    { type: float, name: time, default: 0.0 },
+    { type: float, name: wind_strength, hint: range(0, 2, 0.01), default: 0.35 },
+    { type: vec2, name: wind_dir, default: [0.8, 0.6] },
+    { type: float, name: sway_scale, hint: range(0.01, 2, 0.01), default: 0.3 },
+  ],
+}
+vertex {
+  #include <noise.glsl>
+
+  void Vertex(inout VertexInputs vertex) {
+    // Uniform parameters are members of the generated material_params block;
+    // only samplers are bare identifiers.
+    float time = material_params.time;
+    vec2 wind = material_params.wind_dir;
+    // Roots pinned, tips free: uv.y is 1 at the root, 0 at the tip.
+    float bend = 1.0 - vertex.uv.y;
+    vec2 phase =
+        vertex.world_position.xz * material_params.sway_scale + wind * time * 0.9;
+    // Slow traveling gust plus a small fast flutter, both from the shared
+    // FastNoiseLite port so a Dart consumer can match the field exactly.
+    float gust = NoiseSimplex2(phase, 7);
+    float flutter = NoiseSimplex2(phase * 3.1 + vec2(0.0, time * 2.3), 13) * 0.25;
+    vertex.world_position.xz +=
+        wind * ((gust + flutter) * material_params.wind_strength * bend * bend);
+  }
+}
+fragment {
+  void Surface(inout MaterialInputs material) {
+    vec4 blade = texture(blade_texture, GetUV0());
+    if (blade.a < 0.5) {
+      discard;
+    }
+    // The card carries its tint in the vertex color (per-card variation baked
+    // at batch time); the texture contributes the blade silhouette + shading.
+    material.base_color = vec4(blade.rgb * GetVertexColor().rgb, 1.0);
+    material.roughness = 1.0;
+    material.metallic = 0.0;
+  }
+}

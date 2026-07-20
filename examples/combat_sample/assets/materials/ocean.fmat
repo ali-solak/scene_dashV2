@@ -1,0 +1,56 @@
+// The sea below the cliff: the grass material's recipe on water — a
+// traveling-noise vertex bob over a tessellated grid, fragment tones mixed
+// by slower fbm swell. UNLIT on purpose: a lit sea at clifftop grazing
+// angles Fresnels into a mirror of the bright sky and reads as white glare
+// no matter the roughness — unlit, the authored blue IS the rendered blue
+// (through tonemap/exposure only). The sun lives in the emissive-style
+// crest sparkle and a baked sun-side gradient. `time` is the same wind
+// clock Dart drives for the grass.
+material {
+  name: "ocean",
+  shading_model: unlit,
+  blending: opaque,
+  culling: none,
+  parameters: [
+    { type: float, name: time, default: 0.0 },
+    { type: float, name: wave_height, hint: range(0, 2, 0.01), default: 0.65 },
+    { type: float, name: wave_scale, hint: range(0.001, 0.5, 0.001), default: 0.045 },
+    { type: vec3, name: deep_color, default: [0.05, 0.17, 0.26] },
+    { type: vec3, name: swell_color, default: [0.12, 0.34, 0.40] },
+    { type: vec3, name: sparkle_color, default: [1.0, 0.95, 0.8] },
+  ],
+}
+vertex {
+  #include <noise.glsl>
+
+  void Vertex(inout VertexInputs vertex) {
+    vec2 p = vertex.world_position.xz * material_params.wave_scale;
+    float t = material_params.time;
+    // Two traveling trains moving on different headings and speeds — the
+    // interference is what reads as rolling water.
+    float swell = NoiseSimplex2(p + vec2(t * 0.22, t * 0.16), 41);
+    float chop = NoiseSimplex2(p * 2.6 - vec2(t * 0.34, t * 0.1), 43) * 0.45;
+    vertex.world_position.y += (swell + chop) * material_params.wave_height;
+  }
+}
+fragment {
+  #include <noise.glsl>
+
+  void Surface(inout MaterialInputs material) {
+    vec2 p = GetWorldPosition().xz * (material_params.wave_scale * 2.2);
+    float t = material_params.time;
+    // The color pattern scrolls faster than the vertex swell — at a
+    // distance this churn is most of the perceived motion.
+    float swell =
+        NoiseFbm2(p + vec2(t * 0.18, t * 0.13), 47, 3, 2.0, 0.5) * 0.5 + 0.5;
+    float flicker =
+        NoiseSimplex2(p * 3.4 - vec2(t * 0.5, t * 0.2), 53) * 0.5 + 0.5;
+    vec3 color = mix(
+        material_params.deep_color, material_params.swell_color, swell);
+    // Crest sparkle carries the sun on the unlit surface; the fast
+    // flicker term makes the glints wink instead of sitting still.
+    float crest = smoothstep(0.72, 0.92, swell) * (0.4 + 0.6 * flicker);
+    color += material_params.sparkle_color * crest * 0.4;
+    material.base_color = vec4(color, 1.0);
+  }
+}
