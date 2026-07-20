@@ -13,4 +13,5 @@ workspace:
   - examples/headless_example
   - examples/scene_game
   - examples/scene_benchmark
+  - examples/combat_sample
   - benchmarks

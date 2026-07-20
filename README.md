@@ -1,5 +1,7 @@
 # Scene-Dash v2
 
+![Scene-Dash v2 — the combat sample](combat_sample_game.gif)
+
 An entity-component-system runtime for
 [`flutter_scene`](https://pub.dev/packages/flutter_scene).
 
@@ -855,6 +857,7 @@ void strafePlayer(World world) {
 | [`examples/scene_game`](examples/scene_game) | Complete game: Rapier physics, one feature per folder. |
 | [`examples/headless_example`](examples/headless_example) | The core without Flutter. |
 | [`examples/scene_benchmark`](examples/scene_benchmark) | On-device render benchmark: static vs mount-only vs ECS vs instanced. |
+| [`examples/combat_sample`](examples/combat_sample) | Combat slice: KayKit knight against waves of barbarians lock-on, buyable skills, giants, Rapier ragdolls, authored `.fmat` materials. Gameplay pinned headless. |
 | [`benchmarks`](benchmarks) | Query, structural, and record-overhead benchmarks. |
 
 ```text
