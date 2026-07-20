@@ -47,12 +47,19 @@ void installPlayer(GameBuilder game) {
       spawnPlayer,
       writes: const {Player, Fighter, PlayerMotion},
     )
+    // Per frame rather than on a state entry, and for the same reason the
+    // enemies' attach is: the knight has to be standing in the clearing
+    // during the TITLE screen, because the opening push-in has to have
+    // something to arrive at. The system early-outs once bodied, so the
+    // steady-state cost is one query.
+    //
     // The attach is deferred (world.add), so no live write is declared —
     // the enemies' attach adds SceneNode to different entities in the same
-    // enter, and neither system touches the other's rows.
+    // frame, and neither system touches the other's rows.
     ..addSystem(
-      OnEnter(GameStatus.fighting),
+      Schedules.update,
       attachPlayerVisuals,
+      inSet: GameSets.logic,
       reads: const {Player},
       runIf: hasResource<Scene>(),
     )

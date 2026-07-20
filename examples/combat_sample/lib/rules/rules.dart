@@ -31,6 +31,7 @@ void installRules(GameBuilder game) {
     ..registerComponent<DespawnAfter>()
     ..registerComponent<DespawnOnExit>()
     ..world.insert(RunControl())
+    ..addSystem(Schedules.frameStart, requestStart, reads: const {})
     ..addSystem(Schedules.frameStart, requestRestart, reads: const {})
     ..addSystem(Schedules.frameStart, toggleSkillMenu, reads: const {})
     // The run owner drives every feature's reset from ONE system (boot and

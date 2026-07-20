@@ -9,8 +9,9 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform;
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:flutter_scene_rapier/flutter_scene_rapier.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
@@ -26,6 +27,7 @@ import 'game/game_state.dart';
 import 'game/inputs.dart';
 import 'game/sets.dart';
 import 'hud/game_hud.dart';
+import 'hud/ink.dart';
 import 'player/player.dart';
 import 'rules/rules.dart';
 import 'skills/skills.dart';
@@ -43,6 +45,84 @@ final bool _showTouchControls =
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (kIsWeb) {
+    await BrowserContextMenu.disableContextMenu();
+  }
+
+  runApp(const CombatBoot());
+}
+
+class CombatBoot extends StatefulWidget {
+  const CombatBoot({super.key});
+
+  @override
+  State<CombatBoot> createState() => _CombatBootState();
+}
+
+class _CombatBootState extends State<CombatBoot> {
+  _Booted? _booted;
+  Object? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _boot();
+  }
+
+  Future<void> _boot() async {
+    try {
+      final booted = await _bootGame();
+      if (mounted) setState(() => _booted = booted);
+    } on Object catch (error) {
+      if (mounted) setState(() => _error = error);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final booted = _booted;
+    if (booted == null) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          backgroundColor: Colors.black,
+          body: _LoadingScreen(error: _error),
+        ),
+      );
+    }
+    return GameScope(
+      game: booted.game,
+      child: CombatApp(
+        game: booted.game,
+        buttons: booted.buttons,
+        axes: booted.axes,
+        buffer: booted.buffer,
+        look: booted.look,
+        cameraRig: booted.cameraRig,
+      ),
+    );
+  }
+}
+
+class _Booted {
+  _Booted({
+    required this.game,
+    required this.buttons,
+    required this.axes,
+    required this.buffer,
+    required this.look,
+    required this.cameraRig,
+  });
+
+  final SceneGame game;
+  final ButtonInput<CombatAction> buttons;
+  final AxisInput<MoveAxis> axes;
+  final InputBuffer<CombatAction> buffer;
+  final LookInput look;
+  final CameraRig cameraRig;
+}
+
+Future<_Booted> _bootGame() async {
   await Scene.initializeStaticResources();
   await RapierWorld.ensureInitialized();
   final assets = await loadWorldAssets();
@@ -71,7 +151,9 @@ Future<void> main() async {
     features: [
       (game) {
         game
-          ..addState<GameStatus>(GameStatus.fighting)
+          // The run opens on the title screen: every gameplay system
+          // gates on `fighting`, so the clearing simply stands there.
+          ..addState<GameStatus>(GameStatus.title)
           ..configureSets(Schedules.fixedUpdate, [
             GameSets.movement,
             GameSets.enemyMovement,
@@ -97,19 +179,76 @@ Future<void> main() async {
     ],
   );
 
-  runApp(
-    GameScope(
-      game: game,
-      child: CombatApp(
-        game: game,
-        buttons: buttons,
-        axes: axes,
-        buffer: buffer,
-        look: look,
-        cameraRig: cameraRig,
-      ),
-    ),
+  return _Booted(
+    game: game,
+    buttons: buttons,
+    axes: axes,
+    buffer: buffer,
+    look: look,
+    cameraRig: cameraRig,
   );
+}
+
+/// Shown while the assets load and the world boots. Same inks as the rest
+/// of the interface, so the first frame the player sees already belongs to
+/// the game rather than to Flutter.
+class _LoadingScreen extends StatelessWidget {
+  const _LoadingScreen({this.error});
+
+  final Object? error;
+
+  @override
+  Widget build(BuildContext context) {
+    final failed = error != null;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'COMBAT SAMPLE',
+            style: TextStyle(
+              color: HudInk.bone,
+              fontSize: 30,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 12,
+              height: 1,
+            ),
+          ),
+          const SizedBox(height: 18),
+          if (!failed)
+            const SizedBox(
+              width: 150,
+              child: LinearProgressIndicator(
+                minHeight: 2,
+                backgroundColor: HudInk.ruleFaint,
+                color: HudInk.steel,
+              ),
+            )
+          else
+            // Named, not swallowed. A boot failure here is almost always
+            // the shader bundle (see world/data/assets.dart), and a blank
+            // window would send you looking in the wrong place.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                '$error',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: HudInk.ash, fontSize: 12),
+              ),
+            ),
+          const SizedBox(height: 14),
+          Text(
+            failed ? 'FAILED TO START' : 'LOADING',
+            style: const TextStyle(
+              color: HudInk.ash,
+              fontSize: 11,
+              letterSpacing: 4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class CombatApp extends StatefulWidget {
@@ -168,6 +307,8 @@ class _CombatAppState extends State<CombatApp> {
                 const Center(child: CircularProgressIndicator()),
           ),
           hud: GameHud(
+            onStart: () => widget.game.emit(const GameStarted()),
+            onCast: (skill) => widget.game.emit(SkillCast(skill)),
             onRestart: () => widget.game.emit(const RestartRequested()),
             onToggleMenu: () => widget.game.emit(const SkillMenuToggled()),
             onBuySkill: (skill) =>

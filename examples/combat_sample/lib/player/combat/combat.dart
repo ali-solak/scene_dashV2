@@ -97,6 +97,21 @@ final class Fighter {
 
   Stance stance = Stance.free;
 
+  /// Seconds since the last blow that cost this fighter health. Starts
+  /// spent; ticked by [fighterDriver], zeroed by the damage path.
+  ///
+  /// Poise means an ordinary swing does NOT stagger you, and the animator
+  /// only ever played its hit clip off the staggered phase — so a normal
+  /// hit produced no reaction from the body at all. This is the flinch
+  /// the mapper reads: a render input, never a gate on anything here.
+  ///
+  /// Lives on [Fighter] rather than on the motion component for a
+  /// mechanical reason as much as a conceptual one: the damage path
+  /// already writes `Fighter`, so this needs no new access declaration.
+  /// On `PlayerMotion` it collided with the camera rig, which reads that
+  /// component in the same system set.
+  double sinceHurt = double.infinity;
+
   bool get iFramed =>
       phase.state == CombatPhase.rolling &&
       phase.elapsed >= iFrameStart &&
@@ -149,6 +164,7 @@ void fighterDriver(World world) {
   final buffer = world.buffer<CombatAction>();
   final held = world.buttons<CombatAction>().pressed(CombatAction.attack);
   world.query<Fighter>().each((entity, fighter) {
+    fighter.sinceHurt += world.dt;
     final phase = fighter.phase..tick(world.dt);
     switch (phase.state) {
       case CombatPhase.idle:

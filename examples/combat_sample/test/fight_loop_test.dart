@@ -12,6 +12,7 @@ import 'package:combat_sample/game/game_state.dart';
 import 'package:combat_sample/game/inputs.dart';
 import 'package:combat_sample/game/score.dart';
 import 'package:combat_sample/player/player.dart';
+import 'package:combat_sample/rules/rules.dart' show playerPoiseThreshold;
 import 'package:combat_sample/waves/waves.dart';
 import 'package:combat_sample/world/data/resources.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -90,6 +91,60 @@ void main() {
     // `playerPoiseThreshold`) breaks through.
     expect(sawStagger, isFalse,
         reason: 'ordinary swings do not stagger the player');
+  });
+
+  test('an ordinary swing marks the flinch without spending poise', () {
+    final game = boot();
+    final world = game.world;
+    final player = playerOf(world);
+    final fighter = world.get<Fighter>(player);
+
+    expect(fighter.sinceHurt, double.infinity, reason: 'unhurt to start');
+
+    // A blow UNDER the poise threshold: it hurts, it does not cancel.
+    game.emit(HitLanded(player, playerPoiseThreshold - 1, stagger: false));
+    game.pumpFixed(steps: 1);
+
+    expect(
+      fighter.sinceHurt,
+      lessThan(flinchSeconds),
+      reason: 'the animator has something to react to',
+    );
+    expect(
+      fighter.phase.state,
+      isNot(CombatPhase.staggered),
+      reason: 'the flinch is a VISUAL, not a stagger by another name',
+    );
+
+    // And it expires on its own rather than latching. Bounded rather
+    // than counted: the blow's own hitstop freezes the clock the flinch
+    // ages on, so an exact step count is really a bet on how many frames
+    // the freeze ate.
+    for (var i = 0; i < ticksFor(flinchSeconds) * 4; i++) {
+      if (fighter.sinceHurt > flinchSeconds) break;
+      game.pumpFixed(steps: 1);
+    }
+    expect(fighter.sinceHurt, greaterThan(flinchSeconds));
+  });
+
+  test('the flinch never interrupts a swing already in flight', () {
+    final game = boot();
+    final world = game.world;
+    final player = playerOf(world);
+
+    // Commit to an attack, then take a non-staggering blow mid-windup.
+    world.buffer<CombatAction>().record(CombatAction.attack);
+    game.pumpFixed(steps: 2);
+    expect(world.get<Fighter>(player).phase.state, CombatPhase.startup);
+
+    game.emit(HitLanded(player, playerPoiseThreshold - 1, stagger: false));
+    game.pumpFixed(steps: 1);
+
+    expect(
+      world.get<Fighter>(player).phase.state,
+      anyOf(CombatPhase.startup, CombatPhase.active),
+      reason: 'poise: the swing wins',
+    );
   });
 
   test('staggering the holder returns the token, and nobody attacks '

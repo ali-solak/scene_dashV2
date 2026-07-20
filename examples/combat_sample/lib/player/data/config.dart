@@ -58,6 +58,16 @@ const double lookPitchSensitivity = 0.0045;
 /// How fast a heavy hit's camera kick settles.
 const double cameraKickDecay = 7;
 
+/// How long the flinch reads for after a blow that did not stagger.
+/// Short: it is a wince, and a long one would look like a stagger the
+/// fighter can act out of, which is exactly the wrong message.
+const double flinchSeconds = 0.28;
+
+/// The camera's own reaction to the player being hit. Smaller than a
+/// heavy connect's kick — TAKING a blow should read, but the screen must
+/// not lurch harder for being hit than for landing one.
+const double hurtCameraKick = 0.4;
+
 /// How far the locked camera's focus slides from the player toward the
 /// midpoint of the two fighters (0 = player only, 1 = pure midpoint).
 const double lockedCameraBias = 0.5;
@@ -68,6 +78,27 @@ const double lockedCameraBias = 0.5;
 /// fight and just points at it.
 const double lockedDistanceGain = 0.55;
 const double maxLockedCameraDistance = 16;
+
+// --- Title framing (the shot behind the start menu) ---
+
+/// Far enough out to read as "here is the place you will fight in", high
+/// enough to show the clearing rather than the knight's back.
+const double titleCameraDistance = 26;
+const double titleCameraPitch = 0.42;
+
+/// Radians per second the title shot drifts around the clearing. Slow —
+/// it should read as a held shot breathing, not as a turntable.
+const double titleOrbitRate = 0.08;
+
+/// The opening push-in when the run starts: how long the camera takes to
+/// travel from the title framing down onto the fighter, and the (much
+/// slower than gameplay) blend it flies on while it does.
+///
+/// Both are needed. Dropping the desired framing alone would let the
+/// normal `cameraPositionSharpness` of 14 snap the camera in over about
+/// three frames, which reads as a cut, not as an arrival.
+const double introZoomSeconds = 1.6;
+const double introCameraSharpness = 2.2;
 
 // --- Graybox body (fallback when character assets are absent) ---
 

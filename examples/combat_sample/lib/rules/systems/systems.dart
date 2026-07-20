@@ -12,6 +12,16 @@ void checkPlayerDeath(World world) {
   }
 }
 
+/// Leaves the title screen (frameStart, alongside the other intents).
+/// `resetPending` is already true at boot, so the run starts clean
+/// through the same `startRun` path a restart uses.
+void requestStart(World world) {
+  if (!world.consumeAny<GameStarted>()) return;
+  if (world.state<GameStatus>() != GameStatus.title) return;
+  world.resource<CameraRig>().intro = introZoomSeconds;
+  world.setState(GameStatus.fighting);
+}
+
 /// Consumes the restart intent (frameStart, so it never lags the event
 /// retention window): while lost, a restart request returns the world to
 /// `fighting`; each feature's `OnEnter(fighting)` does the actual reset.
@@ -35,7 +45,8 @@ void toggleSkillMenu(World world) {
     case GameStatus.skillMenu:
       world.setState(GameStatus.fighting);
     case GameStatus.lost:
-      break;
+    case GameStatus.title:
+      break; // the death panel and the title screen own their screens
   }
 }
 
@@ -207,6 +218,16 @@ void applyDamage(World world) {
     // Poise: only a blow heavy enough breaks the player's action.
     if (hit.stagger) fighter?.phase.go(CombatPhase.staggered);
 
+    // The flinch. Poise deliberately lets an ordinary swing through
+    // without cancelling you — but the fighter still has to LOOK hit, or
+    // the only sign you took a blow is a bar moving in the corner. Visual
+    // only: the animator plays it when idle and drops it the moment you
+    // act, so nothing here touches the machine.
+    if (fighter != null && hit.damage > 0) {
+      fighter.sinceHurt = 0;
+      if (hit.impact) _kickCamera(world, hurtCameraKick);
+    }
+
     final brawler = world.tryGet<Brawler>(hit.target);
     if (brawler != null && wasAlive) {
       if (health != null && !health.alive) {
@@ -236,7 +257,7 @@ void applyDamage(World world) {
     world.clock.freezeFor(
       hit.heavy ? heavyHitstopSeconds : lightHitstopSeconds,
     );
-    if (hit.heavy) world.resource<CameraRig>().kick = heavyCameraKick;
+    if (hit.heavy) _kickCamera(world, heavyCameraKick);
   }
 }
 
@@ -262,6 +283,18 @@ void driveWind(World world) {
       ? 1.0
       : (telegraphing ? windCalmStrength : windGustStrength);
   wind.strength += (target - wind.strength) * (1 - math.exp(-windEaseRate * dt));
+}
+
+/// Punches the camera, keeping whatever bigger kick is already riding.
+///
+/// Resource-guarded: the lifted combat reference suite boots a MINIMAL
+/// world with no camera at all, and a hit resolving there must not throw.
+/// The heavy-connect kick carried this hazard unguarded for a long time
+/// and only got away with it because that suite never sent a heavy.
+void _kickCamera(World world, double amount) {
+  if (!world.hasResource<CameraRig>()) return;
+  final rig = world.resource<CameraRig>();
+  rig.kick = math.max(rig.kick, amount);
 }
 
 /// The world-space shove a connect delivers: straight out along

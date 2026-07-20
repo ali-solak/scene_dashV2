@@ -6,10 +6,11 @@ void spawnPlayer(World world) {
   world.spawn(playerBundle());
 }
 
-/// OnEnter(fighting), scene-gated: give the player the Knight (clips bound
-/// by node name, mapper attached) — or the graybox capsule when character
-/// assets are absent. Deferred adds; found by tag (the spawn flushed
-/// between startup and OnEnter).
+/// Per frame, scene-gated: give the player the Knight (clips bound by
+/// node name, mapper attached) — or the graybox capsule when character
+/// assets are absent. Skips anyone already bodied, so this is one query
+/// once the knight exists. Runs from the title screen on, so the fighter
+/// is standing in the clearing before the run begins.
 void attachPlayerVisuals(World world) {
   final player = world.entitiesWith(require: const [Player]).firstOrNull;
   if (player == null) return;
@@ -85,7 +86,8 @@ void resetPlayerRun(World world) {
   fighter.phase.go(CombatPhase.idle);
   fighter
     ..heavy = false
-    ..stance = Stance.free;
+    ..stance = Stance.free
+    ..sinceHurt = double.infinity;
   motion
     ..facing = math.pi
     ..velocity.setZero();
@@ -405,6 +407,23 @@ void updateCameraRig(World world) {
   final position = transform.translation;
   final dt = world.dt;
 
+  // The title shot: a wide, slowly drifting orbit of the whole clearing.
+  // It frames the PLACE, not the fighter — the push-in when the run
+  // starts is what introduces him.
+  if (world.state<GameStatus>() == GameStatus.title) {
+    rig
+      ..yaw += titleOrbitRate * dt
+      ..pitch = titleCameraPitch;
+    rig.target.setValues(0, cameraFocusHeight, 0);
+    final horizontal = titleCameraDistance * math.cos(rig.pitch);
+    rig.position.setValues(
+      rig.target.x - math.sin(rig.yaw) * horizontal,
+      rig.target.y + titleCameraDistance * math.sin(rig.pitch),
+      rig.target.z - math.cos(rig.yaw) * horizontal,
+    );
+    return;
+  }
+
   if (targetTransform != null) {
     // The lock owns the framing; manual look is discarded, not banked.
     look.takeYawDelta();
@@ -466,7 +485,15 @@ void updateCameraRig(World world) {
   // rig.target.y already carries cameraFocusHeight.
   final desiredY = rig.target.y + distance * math.sin(rig.pitch) + rig.kick;
   final desiredZ = rig.target.z - math.cos(rig.yaw) * horizontal;
-  final positionBlend = 1 - math.exp(-cameraPositionSharpness * dt);
+  // The opening push-in rides the smoothing that already exists: the
+  // desired framing is the gameplay one from the first frame of the run,
+  // and only the RATE differs while the intro clock runs.
+  var sharpness = cameraPositionSharpness;
+  if (rig.intro > 0) {
+    rig.intro = math.max(0, rig.intro - dt);
+    sharpness = introCameraSharpness;
+  }
+  final positionBlend = 1 - math.exp(-sharpness * dt);
   rig.position.setValues(
     rig.position.x + (desiredX - rig.position.x) * positionBlend,
     rig.position.y + (desiredY - rig.position.y) * positionBlend,

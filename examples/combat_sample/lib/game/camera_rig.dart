@@ -22,4 +22,10 @@ class CameraRig {
   /// Impulse set by heavy connects (rules); the camera system rides and
   /// decays it.
   double kick = 0;
+
+  /// Seconds left of the opening push-in from the title framing onto the
+  /// fighter. Set when the run starts; counted down by the camera system,
+  /// which flies on a slower blend while it runs so the arrival reads as
+  /// a move rather than a cut.
+  double intro = 0;
 }

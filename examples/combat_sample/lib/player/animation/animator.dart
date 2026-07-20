@@ -33,7 +33,12 @@ final class PlayerAnimator {
       case CombatPhase.staggered:
         desired = PlayerShot.hit;
       case CombatPhase.idle:
-        desired = null;
+        // The flinch: a blow that did not stagger still gets a reaction,
+        // but only while the fighter is doing nothing else. It lives in
+        // the `idle` arm ALONE on purpose — that is what makes it visual
+        // rather than a stagger by another name. Swing through a hit and
+        // the swing wins, exactly as poise promises.
+        desired = fighter.sinceHurt < flinchSeconds ? PlayerShot.hit : null;
     }
 
     // THROWN. The stagger is much shorter than the arc a giant's blow

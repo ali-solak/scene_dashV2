@@ -16,38 +16,22 @@ import '../game/score.dart';
 import '../player/player.dart';
 import '../skills/skills.dart';
 import '../waves/waves.dart';
-
-/// One palette, so the HUD reads as a set rather than as whatever colour
-/// each widget reached for. Cold steel against the world's greens and the
-/// fight's reds: the UI stays legible over grass, fire and blood without
-/// competing with any of them.
-abstract final class _Ink {
-  static const scrim = Color(0xE60B0C0D);
-  static const panel = Color(0xFF141618);
-
-  /// Text: bone for what matters, ash for what supports it.
-  static const bone = Color(0xFFE8E3D9);
-  static const ash = Color(0xFF8F8A80);
-
-  /// Live/affordable/ready. The one accent.
-  static const steel = Color(0xFF8FB6C6);
-
-  /// Already yours.
-  static const jade = Color(0xFF7E9E7A);
-
-  /// Hairlines and frames.
-  static const rule = Color(0x33E8E3D9);
-  static const ruleFaint = Color(0x18E8E3D9);
-}
+import 'fps.dart';
+import 'ink.dart';
 
 class GameHud extends StatelessWidget {
   const GameHud({
     super.key,
+    required this.onStart,
     required this.onRestart,
     required this.onToggleMenu,
     required this.onBuySkill,
     required this.onBuyVitality,
+    required this.onCast,
   });
+
+  /// Emits [GameStarted] — leaves the title screen.
+  final VoidCallback onStart;
 
   /// Emits [RestartRequested] (the shell owns the game handle).
   final VoidCallback onRestart;
@@ -60,18 +44,167 @@ class GameHud extends StatelessWidget {
   final void Function(Skill skill) onBuySkill;
   final VoidCallback onBuyVitality;
 
+  /// Emits [SkillCast] — the skill bar's slots are BUTTONS, not just a
+  /// readout. Without this there is no way to cast at all on a device
+  /// with no keyboard: the number keys are the only other route in.
+  final void Function(Skill skill) onCast;
+
   @override
   Widget build(BuildContext context) {
-    return GameStateBuilder<GameStatus>(
-      builder: (context, status) => switch (status) {
-        GameStatus.fighting => _FightHud(onOpenMenu: onToggleMenu),
+    // The readout sits OUTSIDE the state switch: a frame rate you can
+    // only see while fighting is no use for the two screens most likely
+    // to be hiding a stall (the title orbit and the death slow-mo).
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        GameStateBuilder<GameStatus>(builder: _screenFor),
+        const Align(
+          alignment: Alignment.topRight,
+          child: SafeArea(
+            child: Padding(
+              padding: EdgeInsets.only(top: 18, right: 58),
+              child: FpsCounter(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _screenFor(BuildContext context, GameStatus status) =>
+      switch (status) {
+        GameStatus.fighting => _FightHud(
+            onOpenMenu: onToggleMenu,
+            onCast: onCast,
+          ),
         GameStatus.skillMenu => _SkillMenu(
             onClose: onToggleMenu,
             onBuySkill: onBuySkill,
             onBuyVitality: onBuyVitality,
           ),
         GameStatus.lost => _DeathPanel(onRestart: onRestart),
-      },
+        GameStatus.title => _TitleMenu(onStart: onStart),
+      };
+}
+
+/// The start screen. Same panel, rules and inks as the skill menu — it is
+/// the same interface seen earlier, not a separate title treatment.
+///
+/// Deliberately NOT a full-bleed scrim: the clearing is the point of this
+/// screen, so the panel sits over it and lets the camera's slow orbit
+/// carry the background.
+class _TitleMenu extends StatelessWidget {
+  const _TitleMenu({required this.onStart});
+
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0x660B0C0D),
+      alignment: Alignment.center,
+      child: Container(
+        width: 460,
+        decoration: BoxDecoration(
+          color: HudInk.panel,
+          border: Border.all(color: HudInk.rule),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 16),
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: HudInk.rule)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'COMBAT',
+                    style: TextStyle(
+                      color: HudInk.bone,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 12,
+                      height: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Hold the clearing.',
+                    style: TextStyle(
+                      color: HudInk.ash,
+                      fontSize: 13,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const _ControlLine(keys: 'WASD', action: 'move'),
+            const _ControlLine(keys: 'RMB / swipe', action: 'camera'),
+            const _ControlLine(keys: 'LMB', action: 'strike · hold for heavy'),
+            const _ControlLine(keys: 'SPACE', action: 'roll'),
+            const _ControlLine(keys: 'TAB / MMB', action: 'lock on'),
+            const _ControlLine(keys: 'Q', action: 'cycle target'),
+            const _ControlLine(keys: '1-4', action: 'skills'),
+            const _ControlLine(keys: 'ESC', action: 'skill menu'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 15, 18, 17),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  _BracketAction(label: 'START', onPressed: onStart),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One control, in the skill menu's ledger shape: the binding out in the
+/// margin like a verse number, what it does beside it.
+class _ControlLine extends StatelessWidget {
+  const _ControlLine({required this.keys, required this.action});
+
+  final String keys;
+  final String action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(22, 9, 22, 9),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: HudInk.ruleFaint)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              keys,
+              style: const TextStyle(
+                color: HudInk.steel,
+                fontSize: 12,
+                letterSpacing: 1.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              action,
+              style: const TextStyle(color: HudInk.ash, fontSize: 12),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -125,7 +258,7 @@ class _RunBanner extends StatelessWidget {
             Text(
               breather > 0 ? 'WAVE ${wave + 1} IN $breather' : 'WAVE $wave',
               style: const TextStyle(
-                color: _Ink.bone,
+                color: HudInk.bone,
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 3,
@@ -134,7 +267,7 @@ class _RunBanner extends StatelessWidget {
             Text(
               '$points pts',
               style: const TextStyle(
-                color: _Ink.steel,
+                color: HudInk.steel,
                 fontSize: 16,
                 letterSpacing: 1.5,
               ),
@@ -148,9 +281,10 @@ class _RunBanner extends StatelessWidget {
 }
 
 class _FightHud extends StatelessWidget {
-  const _FightHud({required this.onOpenMenu});
+  const _FightHud({required this.onOpenMenu, required this.onCast});
 
   final VoidCallback onOpenMenu;
+  final void Function(Skill skill) onCast;
 
   @override
   Widget build(BuildContext context) {
@@ -205,15 +339,108 @@ class _FightHud extends StatelessWidget {
               ),
             ),
           ),
-          const Align(
+          Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
-              padding: EdgeInsets.only(bottom: 20),
-              child: _SkillBar(),
+              padding: const EdgeInsets.only(bottom: 20),
+              child: _SkillBar(onCast: onCast),
             ),
           ),
+          const Positioned.fill(child: IgnorePointer(child: _HurtFlash())),
         ],
       ),
+    );
+  }
+}
+
+/// A red bloom in from the screen edges whenever health drops.
+///
+/// The third leg of the hit reaction, with the fighter's flinch and the
+/// camera's kick. It exists because poise means most blows do NOT stagger
+/// you, and without something at the screen level the only evidence you
+/// were hit was a bar moving in a corner you were not looking at.
+///
+/// A vignette rather than a full-screen wash: it has to be unmissable in
+/// peripheral vision without covering the fight you are trying to read.
+class _HurtFlash extends StatefulWidget {
+  const _HurtFlash();
+
+  @override
+  State<_HurtFlash> createState() => _HurtFlashState();
+}
+
+class _HurtFlashState extends State<_HurtFlash>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _flash = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 420),
+  );
+
+  @override
+  void dispose() {
+    _flash.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // The same trick the skill slots use for the cast pop: watch a value
+    // that can only fall for one reason, rather than plumbing an event
+    // from the world into the widget tree.
+    return WorldBuilder<double>(
+      select: (world) {
+        final health =
+            world.query<Health>(require: const [Player]).firstOrNull?.$2;
+        if (health == null) return 1;
+        return (health.current / health.max).clamp(0.0, 1.0);
+      },
+      builder: (context, hp) => _Flash(controller: _flash, hp: hp),
+    );
+  }
+}
+
+/// Split out so `didUpdateWidget` sees the previous fraction — a drop is
+/// only visible by comparing frames.
+class _Flash extends StatefulWidget {
+  const _Flash({required this.controller, required this.hp});
+
+  final AnimationController controller;
+  final double hp;
+
+  @override
+  State<_Flash> createState() => _FlashState();
+}
+
+class _FlashState extends State<_Flash> {
+  @override
+  void didUpdateWidget(_Flash old) {
+    super.didUpdateWidget(old);
+    // Only downward. Healing between waves must not flash you red.
+    if (widget.hp < old.hp) widget.controller.forward(from: 0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: widget.controller,
+      builder: (context, _) {
+        final t = widget.controller.value;
+        if (t == 0) return const SizedBox.shrink();
+        // Punch in, ease out: the strike is instant, the ache lingers.
+        final intensity = (1 - t) * (1 - t);
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              radius: 0.95,
+              colors: [
+                const Color(0x00E0483C),
+                Color.fromRGBO(224, 72, 60, 0.62 * intensity),
+              ],
+              stops: const [0.55, 1],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -257,7 +484,9 @@ _SkillSlots _selectSkills(World world) {
 }
 
 class _SkillBar extends StatelessWidget {
-  const _SkillBar();
+  const _SkillBar({required this.onCast});
+
+  final void Function(Skill skill) onCast;
 
   @override
   Widget build(BuildContext context) {
@@ -277,6 +506,7 @@ class _SkillBar extends StatelessWidget {
                 charges: Skill.values[i] == Skill.shield
                     ? state.barrierCharges
                     : 0,
+                onCast: () => onCast(Skill.values[i]),
               ),
             ),
         ],
@@ -297,6 +527,7 @@ class _SkillSlot extends StatefulWidget {
     required this.skill,
     required this.level,
     required this.readiness,
+    required this.onCast,
     this.charges = 0,
   });
 
@@ -304,6 +535,10 @@ class _SkillSlot extends StatefulWidget {
   final Skill skill;
   final int level;
   final double readiness;
+
+  /// Tapping the slot casts it. The number keys are the desktop route in;
+  /// this is the only one a touch device has.
+  final VoidCallback onCast;
 
   /// Live charges on a skill that holds some (the shield's barrier);
   /// 0 for everything else, and for a barrier that is down.
@@ -350,7 +585,17 @@ class _SkillSlotState extends State<_SkillSlot>
         final swell = 1 + 0.34 * math.sin(t * math.pi) * (1 - t * 0.35);
         return Transform.scale(scale: swell, child: child);
       },
-      child: _build(context),
+      // The slot IS the button. It was a readout before, which meant a
+      // touch device could see every skill it had bought and cast none of
+      // them — the number keys were the only way in.
+      //
+      // Opaque so the tap lands on the slot rather than falling through
+      // to the scene listener underneath, which would read it as a strike.
+      child: GestureDetector(
+        onTap: widget.onCast,
+        behavior: HitTestBehavior.opaque,
+        child: _build(context),
+      ),
     );
   }
 
@@ -375,7 +620,7 @@ class _SkillSlotState extends State<_SkillSlot>
           // is not "ready", it is WORKING, and that has to look different
           // from a slot on cooldown.
           color: Color.lerp(
-            ready || holding ? _Ink.steel : _Ink.ruleFaint,
+            ready || holding ? HudInk.steel : HudInk.ruleFaint,
             Colors.white,
             flash,
           )!,
@@ -400,7 +645,7 @@ class _SkillSlotState extends State<_SkillSlot>
                         width: 5,
                         height: 5,
                         margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                        color: _Ink.steel,
+                        color: HudInk.steel,
                       ),
                   ],
                 ),
@@ -419,7 +664,7 @@ class _SkillSlotState extends State<_SkillSlot>
             child: Text(
               '$index',
               style: TextStyle(
-                color: unlocked ? _Ink.bone : _Ink.ash.withValues(alpha: 0.5),
+                color: unlocked ? HudInk.bone : HudInk.ash.withValues(alpha: 0.5),
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -427,7 +672,7 @@ class _SkillSlotState extends State<_SkillSlot>
           ),
           if (!unlocked)
             const Center(
-              child: Icon(Icons.lock, size: 16, color: _Ink.ash),
+              child: Icon(Icons.lock, size: 16, color: HudInk.ash),
             )
           else
             // The level, so an upgrade is visible without opening the
@@ -439,7 +684,7 @@ class _SkillSlotState extends State<_SkillSlot>
                 child: Text(
                   '$level',
                   style: TextStyle(
-                    color: level >= maxSkillLevel ? _Ink.jade : _Ink.steel,
+                    color: level >= maxSkillLevel ? HudInk.jade : HudInk.steel,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
@@ -501,7 +746,7 @@ class _SkillMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: _Ink.scrim,
+      color: HudInk.scrim,
       alignment: Alignment.center,
       child: WorldBuilder<_MenuState>(
         select: _selectMenu,
@@ -514,8 +759,8 @@ class _SkillMenu extends StatelessWidget {
               child: Container(
                 width: 520,
                 decoration: BoxDecoration(
-                  color: _Ink.panel,
-                  border: Border.all(color: _Ink.rule),
+                  color: HudInk.panel,
+                  border: Border.all(color: HudInk.rule),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -570,7 +815,7 @@ class _MenuHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(22, 20, 22, 15),
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: _Ink.rule)),
+        border: Border(bottom: BorderSide(color: HudInk.rule)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -579,7 +824,7 @@ class _MenuHeader extends StatelessWidget {
             child: Text(
               'SKILLS',
               style: TextStyle(
-                color: _Ink.bone,
+                color: HudInk.bone,
                 fontSize: 26,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 10,
@@ -593,7 +838,7 @@ class _MenuHeader extends StatelessWidget {
               Text(
                 '$points',
                 style: const TextStyle(
-                  color: _Ink.steel,
+                  color: HudInk.steel,
                   fontSize: 26,
                   fontWeight: FontWeight.w600,
                   height: 1,
@@ -602,7 +847,7 @@ class _MenuHeader extends StatelessWidget {
               const Text(
                 'POINTS',
                 style: TextStyle(
-                  color: _Ink.ash,
+                  color: HudInk.ash,
                   fontSize: 10,
                   letterSpacing: 3,
                 ),
@@ -629,7 +874,7 @@ class _MenuFooter extends StatelessWidget {
         children: [
           const Text(
             'ESC',
-            style: TextStyle(color: _Ink.ash, fontSize: 11, letterSpacing: 3),
+            style: TextStyle(color: HudInk.ash, fontSize: 11, letterSpacing: 3),
           ),
           _BracketAction(label: 'BACK TO THE FIGHT', onPressed: onClose),
         ],
@@ -670,7 +915,7 @@ class _MenuRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(22, 15, 22, 15),
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: _Ink.ruleFaint)),
+        border: Border(bottom: BorderSide(color: HudInk.ruleFaint)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -681,7 +926,7 @@ class _MenuRow extends StatelessWidget {
             child: Text(
               slot,
               style: TextStyle(
-                color: owned ? _Ink.jade : _Ink.ash,
+                color: owned ? HudInk.jade : HudInk.ash,
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
               ),
@@ -697,7 +942,7 @@ class _MenuRow extends StatelessWidget {
                     Text(
                       title,
                       style: const TextStyle(
-                        color: _Ink.bone,
+                        color: HudInk.bone,
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 3,
@@ -708,7 +953,7 @@ class _MenuRow extends StatelessWidget {
                       Text(
                         'I' * rank,
                         style: const TextStyle(
-                          color: _Ink.jade,
+                          color: HudInk.jade,
                           fontSize: 13,
                           letterSpacing: 2,
                         ),
@@ -720,7 +965,7 @@ class _MenuRow extends StatelessWidget {
                 Text(
                   blurb,
                   style: const TextStyle(
-                    color: _Ink.ash,
+                    color: HudInk.ash,
                     fontSize: 12,
                     height: 1.35,
                   ),
@@ -738,7 +983,7 @@ class _MenuRow extends StatelessWidget {
                 Text(
                   '$cost PTS',
                   style: TextStyle(
-                    color: affordable ? _Ink.steel : _Ink.ash,
+                    color: affordable ? HudInk.steel : HudInk.ash,
                     fontSize: 13,
                     letterSpacing: 1.5,
                     fontWeight: FontWeight.w600,
@@ -749,7 +994,7 @@ class _MenuRow extends StatelessWidget {
                   Text(
                     ownedLabel,
                     style: const TextStyle(
-                      color: _Ink.jade,
+                      color: HudInk.jade,
                       fontSize: 11,
                       letterSpacing: 2,
                     ),
@@ -760,7 +1005,7 @@ class _MenuRow extends StatelessWidget {
                   Text(
                     '${cost - points} SHORT',
                     style: TextStyle(
-                      color: _Ink.ash.withValues(alpha: 0.7),
+                      color: HudInk.ash.withValues(alpha: 0.7),
                       fontSize: 11,
                       letterSpacing: 1.5,
                     ),
@@ -792,7 +1037,7 @@ class _BracketAction extends StatelessWidget {
         child: Text(
           '[ $label ]',
           style: const TextStyle(
-            color: _Ink.steel,
+            color: HudInk.steel,
             fontSize: 12,
             letterSpacing: 2,
             fontWeight: FontWeight.w600,

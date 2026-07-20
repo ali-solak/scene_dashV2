@@ -21,7 +21,7 @@ import 'package:scene_dash_v2/scene_dash_v2.dart';
 import '../hud/touch_controls.dart';
 import '../player/player.dart' show CombatAction;
 import '../skills/skills.dart' show Skill, SkillCast;
-import 'game_state.dart' show SkillMenuToggled;
+import 'game_state.dart' show GameStatus, SkillMenuToggled;
 import 'inputs.dart';
 
 /// A touch that barely moved and released quickly is a lock press, not a
@@ -277,16 +277,25 @@ class _GameControlsState extends State<GameControls>
               behavior: HitTestBehavior.opaque,
               child: widget.scene,
             ),
+            // Only while there is a fight to steer: the stick and the
+            // attack button over a title screen or a death panel are
+            // controls for something that is not happening.
             if (widget.showTouchControls)
-              TouchControls(
-                onMove: (x, y) => widget.axes
-                  ..setValue(MoveAxis.x, x)
-                  ..setValue(MoveAxis.y, y),
-                onAttackChanged: (held) {
-                  _pointerAttack = held;
-                  _syncAttack();
-                },
-                onRoll: () => widget.buffer.record(CombatAction.roll),
+              GameStateBuilder<GameStatus>(
+                builder: (context, status) =>
+                    status == GameStatus.fighting
+                        ? TouchControls(
+                            onMove: (x, y) => widget.axes
+                              ..setValue(MoveAxis.x, x)
+                              ..setValue(MoveAxis.y, y),
+                            onAttackChanged: (held) {
+                              _pointerAttack = held;
+                              _syncAttack();
+                            },
+                            onRoll: () =>
+                                widget.buffer.record(CombatAction.roll),
+                          )
+                        : const SizedBox.shrink(),
               ),
             widget.hud,
           ],
