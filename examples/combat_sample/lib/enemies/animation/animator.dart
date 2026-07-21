@@ -44,8 +44,11 @@ final class EnemyAnimator {
       }
       final fade = dt / brawlerOneShotFadeSeconds;
       for (final other in shots.values) {
-        other.weight =
-            _approach(other.weight, identical(other, clip) ? 1 : 0, fade);
+        other.weight = _approach(
+          other.weight,
+          identical(other, clip) ? 1 : 0,
+          fade,
+        );
       }
       for (final loop in locomotion.values) {
         loop.weight = _approach(loop.weight, 0, fade);
@@ -102,8 +105,11 @@ final class EnemyAnimator {
       final fade = dt / brawlerOneShotFadeSeconds;
       final activeClip = shots[active]!;
       for (final clip in shots.values) {
-        clip.weight =
-            _approach(clip.weight, identical(clip, activeClip) ? 1 : 0, fade);
+        clip.weight = _approach(
+          clip.weight,
+          identical(clip, activeClip) ? 1 : 0,
+          fade,
+        );
       }
       for (final clip in locomotion.values) {
         clip.weight = _approach(clip.weight, 0, fade);
@@ -183,8 +189,9 @@ final class EnemyAnimator {
   }
 
   void _stride(BrawlerLoco key, double speed, double strideSpeed) {
-    locomotion[key]!.playbackTimeScale =
-        (speed / strideSpeed).clamp(0.5, 1.8).toDouble();
+    locomotion[key]!.playbackTimeScale = (speed / strideSpeed)
+        .clamp(0.5, 1.8)
+        .toDouble();
   }
 
   static double _approach(double value, double target, double step) {
@@ -215,8 +222,11 @@ EnemyAnimator buildEnemyAnimator(CharacterAssets assets, Node model) {
   };
   const attackWindow = telegraphSeconds + swingSeconds + recoverSeconds;
   final shots = <BrawlerShot, AnimationClip>{
-    BrawlerShot.attack:
-        shot('Melee_2H_Attack_Chop', chopClipSeconds, attackWindow),
+    BrawlerShot.attack: shot(
+      'Melee_2H_Attack_Chop',
+      chopClipSeconds,
+      attackWindow,
+    ),
     BrawlerShot.hit: shot('Hit_B', hitBClipSeconds, brawlStaggerSeconds),
     // The fall plays in real time; the corpse then lies through the
     // dissolve delay.

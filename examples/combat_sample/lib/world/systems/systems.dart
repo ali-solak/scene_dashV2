@@ -16,8 +16,12 @@ void setupWorld(World world) {
     )
     ..toneMapping = ToneMappingMode.aces
     ..exposure = sceneExposure
-    ..antiAliasingMode = AntiAliasingMode.auto
-    ..renderScale = 1.0;
+    ..antiAliasingMode = AntiAliasingMode.auto;
+  // renderScale / SSAO / god rays are the quality preset's to own (they
+  // are what the pause menu actually trades), so boot goes through the
+  // same path a menu change does rather than setting them twice.
+  final boot = qualityPresets[defaultQualityLevel];
+  scene.renderScale = boot.renderScale;
   scene.fog
     ..enabled = false
     ..mode = FogMode.exponential
@@ -28,7 +32,7 @@ void setupWorld(World world) {
     ..maxOpacity = fogMaxOpacity
     ..cutoffDistance = fogCutoffDistance;
   scene.godRays
-    ..enabled = true
+    ..enabled = boot.godRays
     ..intensity = godRaysIntensity
     ..density = godRaysDensity
     ..maxDistance = godRaysMaxDistance;
@@ -43,7 +47,7 @@ void setupWorld(World world) {
     ..radius = sceneVignetteRadius
     ..smoothness = sceneVignetteSmoothness;
   scene.ambientOcclusion
-    ..enabled = true
+    ..enabled = boot.ambientOcclusion
     ..intensity = 1.1
     ..radius = 0.4;
 }
@@ -271,15 +275,31 @@ Node _buildGrass(WorldAssets assets) {
       ..baseColorFactor = Vector4(0.35, 0.5, 0.2, 1)
       ..roughnessFactor = 1;
   }
+  // Deliberately NOT shadowStatic: the sway is a vertex displacement, and
+  // cached shadow tiles would not follow it.
+  final node = Node(name: 'grass');
+  _bakeGrass(node, material, qualityPresets[defaultQualityLevel].cards);
+  return node;
+}
+
+/// Bakes [cards] worth of field onto [node].
+///
+/// Zero is a real setting, not a degenerate one: `MeshGeometry.fromArrays`
+/// with empty buffers is not worth finding out about, so the node is
+/// simply hidden instead.
+void _bakeGrass(Node node, Material material, int cards) {
+  if (cards <= 0) {
+    node.visible = false;
+    return;
+  }
   final field = buildGrassField(
-    grassCardCount,
+    cards,
     radius: grassFieldRadius,
     falloffStart: grassFalloffStart,
     seed: grassFieldSeed,
   );
-  // Deliberately NOT shadowStatic: the sway is a vertex displacement, and
-  // cached shadow tiles would not follow it.
-  return Node(name: 'grass')
+  node
+    ..visible = true
     ..mesh = Mesh(
       MeshGeometry.fromArrays(
         positions: field.positions,
@@ -290,4 +310,50 @@ Node _buildGrass(WorldAssets assets) {
       ),
       material,
     );
+}
+
+/// Applies `qualityPresets[level]` to the live scene.
+///
+/// The grass re-bake is the expensive half (a full vertex-buffer upload),
+/// so it is skipped when the new preset asks for the same card count —
+/// HIGH and ULTRA differ only in grass, LOW and MED only in post.
+void _applyQuality(Scene scene, Node? grass, int fromLevel, int toLevel) {
+  final preset = qualityPresets[toLevel];
+  // Everything here is a flag flip except the render scale, which
+  // reallocates the swapchain — and doing that mid-session is a hard
+  // crash on mobile (see `runtimeRenderScaleIsSafe`).
+  if (runtimeRenderScaleIsSafe) scene.renderScale = preset.renderScale;
+  scene
+    ..ambientOcclusion.enabled = preset.ambientOcclusion
+    ..godRays.enabled = preset.godRays;
+
+  if (grass == null) return;
+  if (qualityPresets[fromLevel].cards == preset.cards) return;
+  final material = grass.mesh?.primitives.first.material;
+  if (material == null) return;
+  _bakeGrass(grass, material, preset.cards);
+}
+
+/// Serves the pause menu's quality choice.
+///
+/// Polled on `update` rather than triggered, because there is no
+/// event-triggered scheduling — `world.events` needs a running system.
+/// The drain is free on the frames nobody asked.
+///
+/// Not state-gated: the setting is changed from the PAUSE menu, so this
+/// has to run while the world is stopped or the change would not land
+/// until the fight resumed.
+void applyGraphicsQuality(World world) {
+  var level = -1;
+  for (final request in world.events<QualityRequested>()) {
+    level = request.level;
+  }
+  if (level < 0 || level >= qualityPresets.length) return;
+
+  final quality = world.resource<GraphicsQuality>();
+  if (level == quality.level) return;
+
+  final grass = world.query<SceneNode>(require: const [Grass]).firstOrNull;
+  _applyQuality(world.resource<Scene>(), grass?.$2.node, quality.level, level);
+  quality.level = level; // what the menu reads back
 }

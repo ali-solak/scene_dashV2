@@ -63,7 +63,10 @@ GrassField buildGrassField(
     final t = rng.nextDouble();
     if (falloffStart != null && r > falloffStart) {
       // Smoothstep acceptance from 1 at falloffStart to 0 at the rim.
-      final edge = ((r - falloffStart) / (radius - falloffStart)).clamp(0.0, 1.0);
+      final edge = ((r - falloffStart) / (radius - falloffStart)).clamp(
+        0.0,
+        1.0,
+      );
       final keep = 1 - edge * edge * (3 - 2 * edge);
       if (rng.nextDouble() >= keep) continue;
     }

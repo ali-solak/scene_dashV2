@@ -3,10 +3,7 @@ part of '../rules.dart';
 /// The player is dead when its health hits zero: drop the world into
 /// `lost`. `OnEnter(lost)` slows time; the HUD shows the restart prompt.
 void checkPlayerDeath(World world) {
-  final health = world
-      .query<Health>(require: const [Player])
-      .firstOrNull
-      ?.$2;
+  final health = world.query<Health>(require: const [Player]).firstOrNull?.$2;
   if (health != null && !health.alive) {
     world.setState(GameStatus.lost);
   }
@@ -88,9 +85,11 @@ void resolveStrikes(World world) {
   if (fighter.phase.justEntered(CombatPhase.active)) {
     final damage = fighter.heavy ? heavyDamage : lightDamage;
     final push = fighter.heavy ? heavyKnockback : lightKnockback;
-    world
-        .query2<Health, SceneTransform>(require: const [Enemy])
-        .each((enemy, health, enemyTransform) {
+    world.query2<Health, SceneTransform>(require: const [Enemy]).each((
+      enemy,
+      health,
+      enemyTransform,
+    ) {
       if (!health.alive) return;
       if (_inArc(
         from: playerTransform,
@@ -99,19 +98,23 @@ void resolveStrikes(World world) {
         reach: playerReach,
         halfArc: playerStrikeHalfArc,
       )) {
-        world.emit(HitLanded(
-          enemy,
-          damage,
-          heavy: fighter.heavy,
-          knockback: _shove(playerTransform, enemyTransform, push),
-        ));
+        world.emit(
+          HitLanded(
+            enemy,
+            damage,
+            heavy: fighter.heavy,
+            knockback: _shove(playerTransform, enemyTransform, push),
+          ),
+        );
       }
     });
   }
 
-  world
-      .query2<Brawler, SceneTransform>(require: const [Enemy])
-      .each((enemy, brawler, enemyTransform) {
+  world.query2<Brawler, SceneTransform>(require: const [Enemy]).each((
+    enemy,
+    brawler,
+    enemyTransform,
+  ) {
     if (brawler.phase.justEntered(BrawlPhase.swing) &&
         _inArc(
           from: enemyTransform,
@@ -128,14 +131,16 @@ void resolveStrikes(World world) {
       );
       // A giant doesn't shove you — it sends you FLYING.
       if (brawler.giant) shove.y = giantLaunchSpeed;
-      world.emit(HitLanded(
-        player,
-        damage,
-        knockback: shove,
-        // Poise: an ordinary swing hurts and shoves but does not cancel
-        // what you were doing; a giant's blow does.
-        stagger: damage >= playerPoiseThreshold,
-      ));
+      world.emit(
+        HitLanded(
+          player,
+          damage,
+          knockback: shove,
+          // Poise: an ordinary swing hurts and shoves but does not cancel
+          // what you were doing; a giant's blow does.
+          stagger: damage >= playerPoiseThreshold,
+        ),
+      );
     }
   });
 }
@@ -282,7 +287,8 @@ void driveWind(World world) {
   final target = !anyLiving
       ? 1.0
       : (telegraphing ? windCalmStrength : windGustStrength);
-  wind.strength += (target - wind.strength) * (1 - math.exp(-windEaseRate * dt));
+  wind.strength +=
+      (target - wind.strength) * (1 - math.exp(-windEaseRate * dt));
 }
 
 /// Punches the camera, keeping whatever bigger kick is already riding.

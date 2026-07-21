@@ -51,6 +51,7 @@ const double rollSeconds = 0.45;
 const double iFrameStart = 0.05;
 const double iFrameEnd = 0.32;
 const double staggerSeconds = 0.35;
+
 /// Must comfortably outlast the LONGEST recovery ([heavyRecoverySeconds]).
 ///
 /// At 0.40 it did not: once recovery grew to fit the swing clips, an
@@ -185,8 +186,7 @@ void fighterDriver(World world) {
       case CombatPhase.active:
         if (phase.elapsed >= activeSeconds) phase.go(CombatPhase.recovery);
       case CombatPhase.recovery:
-        final tail =
-            fighter.heavy ? heavyRecoverySeconds : recoverySeconds;
+        final tail = fighter.heavy ? heavyRecoverySeconds : recoverySeconds;
         if (phase.elapsed >= tail) phase.go(CombatPhase.idle);
       case CombatPhase.rolling:
         if (phase.elapsed >= rollSeconds) phase.go(CombatPhase.idle);
@@ -207,7 +207,7 @@ void clearBufferOnStagger(World world) {
 
 /// The buffer ages on wall time, so hitstop cannot extend the press window.
 void ageCombatBuffer(World world) {
-  world
-      .resource<InputBuffer<CombatAction>>()
-      .advance(world.resource<FrameTime>().unscaledDelta);
+  world.resource<InputBuffer<CombatAction>>().advance(
+    world.resource<FrameTime>().unscaledDelta,
+  );
 }

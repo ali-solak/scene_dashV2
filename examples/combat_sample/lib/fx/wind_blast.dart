@@ -24,9 +24,7 @@ void spawnWindBlast(World world, Vector3 position) {
     // A zero-radius sphere emits uniformly in every direction; the drag
     // and the near-zero gravity flatten it into a ground-hugging ring.
     shape: const fx.SphereShape(radius: 0),
-    spawner: fx.Spawner(
-      bursts: [fx.ParticleBurst(time: 0, count: _dustCount)],
-    ),
+    spawner: fx.Spawner(bursts: [fx.ParticleBurst(time: 0, count: _dustCount)]),
     looping: false,
     duration: 0.1,
     lifetime: const fx.UniformFloat(0.6, 1.15),
@@ -45,10 +43,10 @@ void spawnWindBlast(World world, Vector3 position) {
       fx.SizeOverLifeModule(
         fx.CurveFloat(fx.ParticleCurve.linear(from: 0.6, to: 3.0)),
       ),
-    // NOTE: ColorOverLifeModule REPLACES the particle colour outright —
-    // it does not modulate `startColor`. A white curve here renders white
-    // no matter what `startColor` says, which is why every effect in this
-    // directory once looked like grey mist. Carry the real colour here.
+      // NOTE: ColorOverLifeModule REPLACES the particle colour outright —
+      // it does not modulate `startColor`. A white curve here renders white
+      // no matter what `startColor` says, which is why every effect in this
+      // directory once looked like grey mist. Carry the real colour here.
       fx.ColorOverLifeModule(
         fx.GradientColor(
           fx.ColorGradient([
@@ -65,24 +63,25 @@ void spawnWindBlast(World world, Vector3 position) {
     seed: 89,
   );
 
-  final node = Node(
-    localTransform: Matrix4.translation(
-      Vector3(position.x, position.y + 0.35, position.z),
-    ),
-  )
-    ..frustumCulled = false
-    ..addComponent(
-      fx.ParticleEmitterComponent(
-        system: system,
-        // Alpha, not additive: kicked-up earth blocks light, it does not
-        // emit it. Additive dust is what "glowing white cloud" is made of.
-        material: softAlphaSprite(),
-      )
-        // Stretched along travel, so the ring reads as a gust driving
-        // outward rather than a puff sitting still.
-        ..facing = BillboardFacing.velocityStretched
-        ..velocityStretch = 0.05,
-    );
+  final node =
+      Node(
+          localTransform: Matrix4.translation(
+            Vector3(position.x, position.y + 0.35, position.z),
+          ),
+        )
+        ..frustumCulled = false
+        ..addComponent(
+          fx.ParticleEmitterComponent(
+              system: system,
+              // Alpha, not additive: kicked-up earth blocks light, it does not
+              // emit it. Additive dust is what "glowing white cloud" is made of.
+              material: softAlphaSprite(),
+            )
+            // Stretched along travel, so the ring reads as a gust driving
+            // outward rather than a puff sitting still.
+            ..facing = BillboardFacing.velocityStretched
+            ..velocityStretch = 0.05,
+        );
 
   // No DespawnOnExit: leaving `fighting` is routine (the skill menu is a
   // state), and a pause must not wipe what is on screen. The DespawnAfter

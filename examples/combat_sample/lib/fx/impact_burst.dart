@@ -60,10 +60,10 @@ void spawnImpactBurst(World world, Vector3 position, {bool heavy = false}) {
       fx.SizeOverLifeModule(
         fx.CurveFloat(fx.ParticleCurve.linear(from: 1, to: 0.2)),
       ),
-    // NOTE: ColorOverLifeModule REPLACES the particle colour outright —
-    // it does not modulate `startColor`. A white curve here renders white
-    // no matter what `startColor` says, which is why every effect in this
-    // directory once looked like grey mist. Carry the real colour here.
+      // NOTE: ColorOverLifeModule REPLACES the particle colour outright —
+      // it does not modulate `startColor`. A white curve here renders white
+      // no matter what `startColor` says, which is why every effect in this
+      // directory once looked like grey mist. Carry the real colour here.
       fx.ColorOverLifeModule(
         fx.GradientColor(
           fx.ColorGradient([
@@ -80,17 +80,15 @@ void spawnImpactBurst(World world, Vector3 position, {bool heavy = false}) {
     gravity: Vector3(0, -6, 0),
     seed: heavy ? 47 : 23,
   );
-  final emitter = fx.ParticleEmitterComponent(
-    system: system,
-    material: softAdditiveSprite(),
-  )
-    ..facing = BillboardFacing.velocityStretched
-    ..velocityStretch = 0.06;
+  final emitter =
+      fx.ParticleEmitterComponent(
+          system: system,
+          material: softAdditiveSprite(),
+        )
+        ..facing = BillboardFacing.velocityStretched
+        ..velocityStretch = 0.06;
   final node = Node(localTransform: Matrix4.translation(position))
     ..frustumCulled = false
     ..addComponent(emitter);
-  world.spawn([
-    SceneNode(node),
-    DespawnAfter(_burstEntityLifetime),
-  ]);
+  world.spawn([SceneNode(node), DespawnAfter(_burstEntityLifetime)]);
 }

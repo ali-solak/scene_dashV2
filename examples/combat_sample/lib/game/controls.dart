@@ -282,20 +282,18 @@ class _GameControlsState extends State<GameControls>
             // controls for something that is not happening.
             if (widget.showTouchControls)
               GameStateBuilder<GameStatus>(
-                builder: (context, status) =>
-                    status == GameStatus.fighting
-                        ? TouchControls(
-                            onMove: (x, y) => widget.axes
-                              ..setValue(MoveAxis.x, x)
-                              ..setValue(MoveAxis.y, y),
-                            onAttackChanged: (held) {
-                              _pointerAttack = held;
-                              _syncAttack();
-                            },
-                            onRoll: () =>
-                                widget.buffer.record(CombatAction.roll),
-                          )
-                        : const SizedBox.shrink(),
+                builder: (context, status) => status == GameStatus.fighting
+                    ? TouchControls(
+                        onMove: (x, y) => widget.axes
+                          ..setValue(MoveAxis.x, x)
+                          ..setValue(MoveAxis.y, y),
+                        onAttackChanged: (held) {
+                          _pointerAttack = held;
+                          _syncAttack();
+                        },
+                        onRoll: () => widget.buffer.record(CombatAction.roll),
+                      )
+                    : const SizedBox.shrink(),
               ),
             widget.hud,
           ],

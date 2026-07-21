@@ -24,12 +24,12 @@ class WorldAssets {
   /// The headless stand-in: no materials. Scene-gated systems never touch
   /// it.
   WorldAssets.none()
-      : groundMaterial = null,
-        grassMaterial = null,
-        dissolveMaterial = null,
-        oceanMaterial = null,
-        lavaMaterial = null,
-        barrierMaterial = null;
+    : groundMaterial = null,
+      grassMaterial = null,
+      dissolveMaterial = null,
+      oceanMaterial = null,
+      lavaMaterial = null,
+      barrierMaterial = null;
 
   /// The authored `.fmat` materials, or null when the DataAssets bundle is
   /// unavailable (consumers fall back to plain PBR and the stage still

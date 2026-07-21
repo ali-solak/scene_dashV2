@@ -152,8 +152,10 @@ const double shieldFlashSeconds = 0.22;
 /// face   +Z -> slot +Y -> rig +Z   (pointing where the fighter looks)
 /// height +Y -> slot +Z -> rig +Y   (upright)
 /// ```
-final Quaternion shieldMountRotation =
-    Quaternion.axisAngle(Vector3(0, 1, 1).normalized(), math.pi);
+final Quaternion shieldMountRotation = Quaternion.axisAngle(
+  Vector3(0, 1, 1).normalized(),
+  math.pi,
+);
 
 /// Charges the barrier can hold at [maxSkillLevel], for the HUD's pips.
 const int shieldMaxCharges =

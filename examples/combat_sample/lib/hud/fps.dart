@@ -13,7 +13,10 @@ import 'package:flutter/scheduler.dart' show Ticker;
 import 'ink.dart';
 
 class FpsCounter extends StatefulWidget {
-  const FpsCounter({super.key, this.window = const Duration(milliseconds: 500)});
+  const FpsCounter({
+    super.key,
+    this.window = const Duration(milliseconds: 500),
+  });
 
   /// The rolling sample window. Long enough that the number is readable
   /// rather than flickering, short enough that a stall shows up while it

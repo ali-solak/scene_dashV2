@@ -78,8 +78,11 @@ void _fieldWave(World world, int wave) {
     );
     // The giant walks in normal-sized and swells on the transform clip.
     if (giant) {
-      world.add(entity, const Transforming(),
-          removeAfter: giantTransformSeconds);
+      world.add(
+        entity,
+        const Transforming(),
+        removeAfter: giantTransformSeconds,
+      );
     }
   }
 }

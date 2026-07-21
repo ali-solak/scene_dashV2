@@ -7,7 +7,15 @@ part of '../player.dart';
 /// never look at it, and no timing here feeds back into combat.
 enum PlayerLoco { idle, walk, run, strafeLeft, strafeRight, backpedal }
 
-enum PlayerShot { strike, heavy, rollForward, rollBack, rollLeft, rollRight, hit }
+enum PlayerShot {
+  strike,
+  heavy,
+  rollForward,
+  rollBack,
+  rollLeft,
+  rollRight,
+  hit,
+}
 
 final class PlayerAnimator {
   PlayerAnimator({required this.locomotion, required this.shots});
@@ -49,7 +57,8 @@ final class PlayerAnimator {
     if (motion.downed) desired = PlayerShot.hit;
 
     if (desired != active) {
-      final promoted = active == PlayerShot.strike &&
+      final promoted =
+          active == PlayerShot.strike &&
           desired == PlayerShot.heavy &&
           phase == CombatPhase.startup;
       active = desired;
@@ -82,13 +91,18 @@ final class PlayerAnimator {
       // otherwise the visual contact plays before the hit exists (the
       // "weirdly clippy" strike).
       if (phase == CombatPhase.startup) {
-        final windupEnd = (fighter.heavy ? heavyStartupSeconds : startupSeconds) *
+        final windupEnd =
+            (fighter.heavy ? heavyStartupSeconds : startupSeconds) *
             activeClip.playbackTimeScale;
         if (activeClip.playbackTime > windupEnd) activeClip.seek(windupEnd);
       }
       final fade = dt / oneShotFadeSeconds;
       for (final clip in shots.values) {
-        clip.weight = _approach(clip.weight, identical(clip, activeClip) ? 1 : 0, fade);
+        clip.weight = _approach(
+          clip.weight,
+          identical(clip, activeClip) ? 1 : 0,
+          fade,
+        );
       }
       for (final clip in locomotion.values) {
         clip.weight = _approach(clip.weight, 0, fade);
@@ -188,8 +202,9 @@ final class PlayerAnimator {
   }
 
   void _stride(PlayerLoco key, double speed, double strideSpeed) {
-    locomotion[key]!.playbackTimeScale =
-        (speed / strideSpeed).clamp(0.5, 1.8).toDouble();
+    locomotion[key]!.playbackTimeScale = (speed / strideSpeed)
+        .clamp(0.5, 1.8)
+        .toDouble();
   }
 
   PlayerShot _rollShot(PlayerMotion motion) {
@@ -221,10 +236,11 @@ final class PlayerAnimator {
 /// Instantiates the knight's clips against [model] (channels bind by node
 /// name) with playback scaled so each one-shot spans its machine window.
 PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
-  AnimationClip loop(String name) => model.createAnimationClip(assets.clip(name))
-    ..loop = true
-    ..weight = 0
-    ..play();
+  AnimationClip loop(String name) =>
+      model.createAnimationClip(assets.clip(name))
+        ..loop = true
+        ..weight = 0
+        ..play();
   // The windows in combat.dart are sized so clip/window lands at or under
   // `maxOneShotPlaybackScale` — so a swing plays slightly brisk and
   // FINISHES, instead of being fast-forwarded or cut off mid
@@ -234,8 +250,10 @@ PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
       model.createAnimationClip(assets.clip(name))
         ..loop = false
         ..weight = 0
-        ..playbackTimeScale =
-            math.min(maxOneShotPlaybackScale, clipSeconds / windowSeconds);
+        ..playbackTimeScale = math.min(
+          maxOneShotPlaybackScale,
+          clipSeconds / windowSeconds,
+        );
 
   final locomotion = <PlayerLoco, AnimationClip>{
     // Two-handed guard: the sword is up, ready — reads as a fighter.
@@ -250,22 +268,40 @@ PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
   const heavyWindow =
       heavyStartupSeconds + activeSeconds + heavyRecoverySeconds;
   final shots = <PlayerShot, AnimationClip>{
-    PlayerShot.strike:
-        shot('Melee_2H_Attack_Slice', strikeClipSeconds, lightWindow),
-    PlayerShot.heavy:
-        shot('Melee_2H_Attack_Chop', heavyClipSeconds, heavyWindow),
+    PlayerShot.strike: shot(
+      'Melee_2H_Attack_Slice',
+      strikeClipSeconds,
+      lightWindow,
+    ),
+    PlayerShot.heavy: shot(
+      'Melee_2H_Attack_Chop',
+      heavyClipSeconds,
+      heavyWindow,
+    ),
     // The packs ship no true roll — the dodges are it (Phase-0 inventory).
     // Played SNAPPY (not stretched over the whole 0.5 s window, which read
     // as a slide): the hop lands early and the clamped landing pose rides
     // out the i-frame tail.
-    PlayerShot.rollForward:
-        shot('Dodge_Forward', rollClipSeconds, rollClipSeconds / rollPlaybackScale),
-    PlayerShot.rollBack:
-        shot('Dodge_Backward', rollClipSeconds, rollClipSeconds / rollPlaybackScale),
-    PlayerShot.rollLeft:
-        shot('Dodge_Left', rollClipSeconds, rollClipSeconds / rollPlaybackScale),
-    PlayerShot.rollRight:
-        shot('Dodge_Right', rollClipSeconds, rollClipSeconds / rollPlaybackScale),
+    PlayerShot.rollForward: shot(
+      'Dodge_Forward',
+      rollClipSeconds,
+      rollClipSeconds / rollPlaybackScale,
+    ),
+    PlayerShot.rollBack: shot(
+      'Dodge_Backward',
+      rollClipSeconds,
+      rollClipSeconds / rollPlaybackScale,
+    ),
+    PlayerShot.rollLeft: shot(
+      'Dodge_Left',
+      rollClipSeconds,
+      rollClipSeconds / rollPlaybackScale,
+    ),
+    PlayerShot.rollRight: shot(
+      'Dodge_Right',
+      rollClipSeconds,
+      rollClipSeconds / rollPlaybackScale,
+    ),
     PlayerShot.hit: shot('Hit_A', hitClipSeconds, staggerSeconds),
   };
   return PlayerAnimator(locomotion: locomotion, shots: shots);

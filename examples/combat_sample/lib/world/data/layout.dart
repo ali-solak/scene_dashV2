@@ -59,13 +59,15 @@ List<PropPlacement> layoutClearing({int seed = clearingSeed}) {
     // Even angular spacing with jitter keeps the ring closed.
     final theta =
         (i + (rng.nextDouble() - 0.5) * 0.7) * (2 * math.pi / treeCount);
-    final r = treeRingInner + rng.nextDouble() * (treeRingOuter - treeRingInner);
+    final r =
+        treeRingInner + rng.nextDouble() * (treeRingOuter - treeRingInner);
     place(PropKind.tree, theta, r);
   }
   for (var i = 0; i < underbrushCount; i++) {
     final theta =
         (i + (rng.nextDouble() - 0.5) * 0.8) * (2 * math.pi / underbrushCount);
-    final r = underbrushRadius + (rng.nextDouble() - 0.5) * 2 * underbrushJitter;
+    final r =
+        underbrushRadius + (rng.nextDouble() - 0.5) * 2 * underbrushJitter;
     place(PropKind.bush, theta, r);
   }
   for (var i = 0; i < rockCount; i++) {
@@ -87,7 +89,8 @@ PropPlacement _placement(
   double theta,
   double r,
 ) {
-  final jitter = propScaleJitterMin +
+  final jitter =
+      propScaleJitterMin +
       rng.nextDouble() * (propScaleJitterMax - propScaleJitterMin);
   return PropPlacement(
     kind: kind,

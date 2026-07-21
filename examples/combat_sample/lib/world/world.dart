@@ -28,6 +28,7 @@ Feature installWorld(WorldAssets assets) => (game) {
     ..world.insert(assets)
     ..world.insert(GrassWind())
     ..world.insert(WindState())
+    ..world.insert(GraphicsQuality(defaultQualityLevel))
     ..addSystem(
       Schedules.startup,
       setupWorld,
@@ -45,6 +46,12 @@ Feature installWorld(WorldAssets assets) => (game) {
       Schedules.update,
       updateWindMaterials,
       reads: const {Grass, Ocean, SceneNode},
+      runIf: hasResource<Scene>(),
+    )
+    ..addSystem(
+      Schedules.update,
+      applyGraphicsQuality,
+      reads: const {Grass, SceneNode},
       runIf: hasResource<Scene>(),
     );
 };

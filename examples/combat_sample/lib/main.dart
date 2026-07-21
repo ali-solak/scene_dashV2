@@ -49,6 +49,21 @@ Future<void> main() async {
     await BrowserContextMenu.disableContextMenu();
   }
 
+  // Landscape pair only, and NOT for taste: rotating the phone resizes the
+  // swapchain, and flutter_scene frees the old attachments while a frame is
+  // still in flight — the next `RenderPass.begin` hands the driver a dead
+  // attachment and the app takes a SIGSEGV inside vkCmdBeginRenderPass.
+  //
+  // landscapeLeft <-> landscapeRight is the same pixel size, so the resize
+  // branch never runs and the crash cannot fire. Portrait would change the
+  // size, so it stays off the list until the engine bug is fixed.
+  if (!kIsWeb && isMobile) {
+    await SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+
   runApp(const CombatBoot());
 }
 
@@ -306,15 +321,7 @@ class _CombatAppState extends State<CombatApp> {
             loadingBuilder: (context, progress) =>
                 const Center(child: CircularProgressIndicator()),
           ),
-          hud: GameHud(
-            onStart: () => widget.game.emit(const GameStarted()),
-            onCast: (skill) => widget.game.emit(SkillCast(skill)),
-            onRestart: () => widget.game.emit(const RestartRequested()),
-            onToggleMenu: () => widget.game.emit(const SkillMenuToggled()),
-            onBuySkill: (skill) =>
-                widget.game.emit(SkillUpgradeRequested(skill)),
-            onBuyVitality: () => widget.game.emit(const VitalityRequested()),
-          ),
+          hud: const GameHud(),
         ),
       ),
     );

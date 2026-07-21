@@ -16,8 +16,7 @@ import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart'
     show Matrix4, Vector2, Vector3, Vector4;
 
-import '../skills/skills.dart'
-    show lavaPitLift, lavaPitRadius, lavaPitSeconds;
+import '../skills/skills.dart' show lavaPitLift, lavaPitRadius, lavaPitSeconds;
 import 'lava_texture.dart';
 import 'particle_texture.dart';
 import 'particles.dart' as fx;
@@ -38,13 +37,15 @@ Node buildLavaPitNode({
   required PreprocessedMaterial? material,
   required Vector2 center,
 }) {
-  final crust = Node(
-    name: 'lava-crust',
-    localTransform: Matrix4.translation(Vector3(0, lavaPitLift, 0)),
-  )..mesh = Mesh(
-      DiscGeometry(radius: lavaPitRadius, segments: 48),
-      material ?? _fallbackCrust(),
-    );
+  final crust =
+      Node(
+          name: 'lava-crust',
+          localTransform: Matrix4.translation(Vector3(0, lavaPitLift, 0)),
+        )
+        ..mesh = Mesh(
+          DiscGeometry(radius: lavaPitRadius, segments: 48),
+          material ?? _fallbackCrust(),
+        );
 
   // The crust shades from world position, so it has to be told where the
   // pit is. Safe to set on the shared material instance: the lava
@@ -55,13 +56,14 @@ Node buildLavaPitNode({
       ..setVec2('center', center);
   }
 
-  final node = Node(
-    name: 'lava-pit',
-    localTransform: Matrix4.translation(Vector3(center.x, 0, center.y)),
-  )
-    ..frustumCulled = false
-    ..add(crust)
-    ..addComponent(_globs());
+  final node =
+      Node(
+          name: 'lava-pit',
+          localTransform: Matrix4.translation(Vector3(center.x, 0, center.y)),
+        )
+        ..frustumCulled = false
+        ..add(crust)
+        ..addComponent(_globs());
   return node;
 }
 
@@ -69,8 +71,12 @@ Node buildLavaPitNode({
 /// (no parameters to drive) — the pit still reads as alive there through
 /// the globs.
 void setLavaPitHeat(Node node, {required double time, required double heat}) {
-  final material =
-      node.getChildByName('lava-crust')?.mesh?.primitives.first.material;
+  final material = node
+      .getChildByName('lava-crust')
+      ?.mesh
+      ?.primitives
+      .first
+      .material;
   if (material is! PreprocessedMaterial) return; // the PBR fallback
   material.parameters
     ..setFloat('time', time)
@@ -192,10 +198,7 @@ void spawnLavaEruption(World world, Vector3 position) {
   final node = Node(localTransform: Matrix4.translation(position))
     ..frustumCulled = false
     ..addComponent(
-      fx.ParticleEmitterComponent(
-        system: system,
-        material: crispAlphaSprite(),
-      ),
+      fx.ParticleEmitterComponent(system: system, material: crispAlphaSprite()),
     );
   world.spawn([SceneNode(node), DespawnAfter(_eruptionLifetime)]);
 }

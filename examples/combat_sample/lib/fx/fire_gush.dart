@@ -109,34 +109,32 @@ void spawnFireGush(World world, Vector3 position, double facing) {
     seed: 83,
   );
 
-  final node = Node(
-    localTransform: Matrix4.compose(
-      position,
-      // The cone shape emits along its local axis; yaw it onto the
-      // player's facing, then tip it to point at the horizon.
-      Quaternion.axisAngle(Vector3(0, 1, 0), facing) *
-          Quaternion.axisAngle(Vector3(1, 0, 0), math.pi / 2),
-      Vector3.all(1),
-    ),
-  )
-    ..frustumCulled = false
-    ..addComponent(
-      fx.ParticleEmitterComponent(
-        system: system,
-        // Tongues, not dots.
-        material: flameAdditiveSprite(),
-      )
-        // Stretched along travel: round sprites read as a cloud of balls,
-        // stretched ones read as tongues of flame licking outward.
-        ..facing = BillboardFacing.velocityStretched
-        // Hard stretch: this is what turns a dot into a dart. The higher
-        // this is, the more the cone reads as spitting sparks instead of
-        // exhaling smoke.
-        ..velocityStretch = 0.3,
-    );
+  final node =
+      Node(
+          localTransform: Matrix4.compose(
+            position,
+            // The cone shape emits along its local axis; yaw it onto the
+            // player's facing, then tip it to point at the horizon.
+            Quaternion.axisAngle(Vector3(0, 1, 0), facing) *
+                Quaternion.axisAngle(Vector3(1, 0, 0), math.pi / 2),
+            Vector3.all(1),
+          ),
+        )
+        ..frustumCulled = false
+        ..addComponent(
+          fx.ParticleEmitterComponent(
+              system: system,
+              // Tongues, not dots.
+              material: flameAdditiveSprite(),
+            )
+            // Stretched along travel: round sprites read as a cloud of balls,
+            // stretched ones read as tongues of flame licking outward.
+            ..facing = BillboardFacing.velocityStretched
+            // Hard stretch: this is what turns a dot into a dart. The higher
+            // this is, the more the cone reads as spitting sparks instead of
+            // exhaling smoke.
+            ..velocityStretch = 0.3,
+        );
 
-  world.spawn([
-    SceneNode(node),
-    DespawnAfter(_entityLifetime),
-  ]);
+  world.spawn([SceneNode(node), DespawnAfter(_entityLifetime)]);
 }

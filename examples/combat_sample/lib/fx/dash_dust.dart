@@ -27,9 +27,7 @@ void spawnDashDust(World world, Vector3 position, Vector3 heading) {
     maxParticles: _clodCount,
     // A shallow cone: the spray fans out low rather than fountaining.
     shape: const fx.ConeShape(angle: 0.85, radius: 0.45),
-    spawner: fx.Spawner(
-      bursts: [fx.ParticleBurst(time: 0, count: _clodCount)],
-    ),
+    spawner: fx.Spawner(bursts: [fx.ParticleBurst(time: 0, count: _clodCount)]),
     looping: false,
     duration: 0.1,
     lifetime: const fx.UniformFloat(0.45, 1.0),
@@ -47,10 +45,10 @@ void spawnDashDust(World world, Vector3 position, Vector3 heading) {
       fx.SizeOverLifeModule(
         fx.CurveFloat(fx.ParticleCurve.linear(from: 1, to: 0.35)),
       ),
-    // NOTE: ColorOverLifeModule REPLACES the particle colour outright —
-    // it does not modulate `startColor`. A white curve here renders white
-    // no matter what `startColor` says, which is why every effect in this
-    // directory once looked like grey mist. Carry the real colour here.
+      // NOTE: ColorOverLifeModule REPLACES the particle colour outright —
+      // it does not modulate `startColor`. A white curve here renders white
+      // no matter what `startColor` says, which is why every effect in this
+      // directory once looked like grey mist. Carry the real colour here.
       fx.ColorOverLifeModule(
         fx.GradientColor(
           fx.ColorGradient([
@@ -69,22 +67,23 @@ void spawnDashDust(World world, Vector3 position, Vector3 heading) {
   // Point the cone back along the dash and tip it up off the ground, so
   // the spray trails the dodge.
   final yaw = math.atan2(-heading.x, -heading.z);
-  final node = Node(
-    localTransform: Matrix4.compose(
-      Vector3(position.x, position.y + 0.15, position.z),
-      Quaternion.axisAngle(Vector3(0, 1, 0), yaw) *
-          Quaternion.axisAngle(Vector3(1, 0, 0), math.pi * 0.34),
-      Vector3.all(1),
-    ),
-  )
-    ..frustumCulled = false
-    ..addComponent(
-      fx.ParticleEmitterComponent(
-        system: system,
-        // The soft dot, NOT additive fire: dirt occludes, it does not glow.
-        material: softAlphaSprite(),
-      ),
-    );
+  final node =
+      Node(
+          localTransform: Matrix4.compose(
+            Vector3(position.x, position.y + 0.15, position.z),
+            Quaternion.axisAngle(Vector3(0, 1, 0), yaw) *
+                Quaternion.axisAngle(Vector3(1, 0, 0), math.pi * 0.34),
+            Vector3.all(1),
+          ),
+        )
+        ..frustumCulled = false
+        ..addComponent(
+          fx.ParticleEmitterComponent(
+            system: system,
+            // The soft dot, NOT additive fire: dirt occludes, it does not glow.
+            material: softAlphaSprite(),
+          ),
+        );
 
   world.spawn([SceneNode(node), DespawnAfter(_entityLifetime)]);
 }

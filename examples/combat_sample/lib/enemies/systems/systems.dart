@@ -34,9 +34,8 @@ void attachEnemyVisuals(World world) {
     final lent = assets?.takeBarbarian();
     if (assets != null && lent != null) {
       final model = assets.barbarians[lent];
-      final bodyScale = characterScale * (brawler?.giant ?? false
-          ? giantScale
-          : 1.0);
+      final bodyScale =
+          characterScale * (brawler?.giant ?? false ? giantScale : 1.0);
       // Each instance gets its own axe on the animated hand-slot joint.
       final axe = assets.axe;
       if (axe != null) {
@@ -77,10 +76,7 @@ void attachEnemyVisuals(World world) {
     final root = Node(name: 'enemy')..add(body);
     _attachHealthBar(world, enemy, root, giant: brawler?.giant ?? false);
     world.add(enemy, SceneNode(root));
-    world.add(
-      enemy,
-      BrawlerVisuals(bodyRoot: body, capsuleMaterial: material),
-    );
+    world.add(enemy, BrawlerVisuals(bodyRoot: body, capsuleMaterial: material));
   });
 }
 
@@ -155,9 +151,12 @@ void releaseEnemyModel(World world, Entity entity, ModelSlot slot) {
 /// simulation owns the fall, and the mapper freezes the skeleton so the
 /// physics orientation IS the body's pose. Runs once per death.
 void launchRagdolls(World world) {
-  world
-      .query3<Brawler, Knockback, SceneNode>(require: const [Enemy])
-      .each((enemy, brawler, knockback, ref) {
+  world.query3<Brawler, Knockback, SceneNode>(require: const [Enemy]).each((
+    enemy,
+    brawler,
+    knockback,
+    ref,
+  ) {
     if (brawler.phase.state != BrawlPhase.dying) return;
     if (world.tryGet<Ragdoll>(enemy) != null) return; // already launched
 
@@ -240,8 +239,9 @@ void updateGiantGrowth(World world) {
     if (!brawler.giant) return;
     final remaining = world.expiryOf<Transforming>(enemy);
     if (remaining == null) return; // done: the base transform IS giant
-    final progress =
-        (1 - remaining / giantTransformSeconds).clamp(0.0, 1.0).toDouble();
+    final progress = (1 - remaining / giantTransformSeconds)
+        .clamp(0.0, 1.0)
+        .toDouble();
     // Start at normal size (1 / giantScale of the giant base) and swell.
     final factor = (1 / giantScale) + (1 - 1 / giantScale) * progress;
     visuals.applyGrowth(factor);

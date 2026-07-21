@@ -39,17 +39,9 @@ class TouchControls extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                _ActionButton(
-                  label: 'ROLL',
-                  size: 64,
-                  onPressed: onRoll,
-                ),
+                _ActionButton(label: 'ROLL', size: 64, onPressed: onRoll),
                 const SizedBox(height: 16),
-                _HoldButton(
-                  label: 'ATK',
-                  size: 84,
-                  onChanged: onAttackChanged,
-                ),
+                _HoldButton(label: 'ATK', size: 84, onChanged: onAttackChanged),
               ],
             ),
           ],

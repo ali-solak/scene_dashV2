@@ -68,15 +68,12 @@ Node buildBurnFlame() {
   );
 
   return Node(
-    name: 'burn-flame',
-    localTransform: Matrix4.translation(Vector3(0, _bodyHeight, 0)),
-  )
+      name: 'burn-flame',
+      localTransform: Matrix4.translation(Vector3(0, _bodyHeight, 0)),
+    )
     ..frustumCulled = false
     ..addComponent(
-      fx.ParticleEmitterComponent(
-        system: system,
-        material: puffAlphaSprite(),
-      )
+      fx.ParticleEmitterComponent(system: system, material: puffAlphaSprite())
         ..facing = BillboardFacing.velocityStretched
         ..velocityStretch = 0.1,
     );

@@ -9,11 +9,42 @@ import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform;
 import 'package:vector_math/vector_math.dart' show Vector2, Vector3;
 
-/// Heavy atmospherics (fog, god rays) measured too expensive on some mobile
-/// GPUs without a visible payoff yet — desktop-only until tuned on device.
-final bool heavyAtmospherics =
-    defaultTargetPlatform != TargetPlatform.android &&
-    defaultTargetPlatform != TargetPlatform.iOS;
+/// Phone or tablet: the platforms that cannot afford native-resolution
+/// full-screen passes, and the ones that crash on a swapchain resize
+/// (see `main` and [runtimeRenderScaleIsSafe]).
+final bool isMobile =
+    defaultTargetPlatform == TargetPlatform.android ||
+    defaultTargetPlatform == TargetPlatform.iOS;
+
+/// Whether the platform can afford the expensive full-screen passes
+/// (god rays, SSAO) at native resolution. False on phones: measured too
+/// expensive on mobile GPUs without a visible payoff.
+///
+/// This is the boot default only — it picks the starting rung on
+/// [qualityPresets], and the pause menu overrides it either way.
+final bool heavyAtmospherics = !isMobile;
+
+/// Whether [QualityPreset.renderScale] may be changed while the game is
+/// running.
+///
+/// False on mobile, and this one is a workaround, not a preference.
+/// Changing the render scale resizes the swapchain, and flutter_scene
+/// frees the old attachments while a frame is still in flight; the next
+/// `RenderPass.begin` hands the driver a dangling attachment and the app
+/// dies inside `vkCmdBeginRenderPass`:
+///
+/// ```
+/// E/Surface: 1 buffers were freed while being dequeued!
+/// F/libc   : Fatal signal 11 (SIGSEGV) ... null pointer dereference
+///   #00 libGLES_mali.so  vulkan::command_buffer::begin_renderpass(...)
+///   #06 libflutter.so    InternalFlutterGpu_RenderPass_Begin
+/// ```
+///
+/// BOOT is safe — the first allocation has nothing in flight behind it —
+/// so a phone still gets its rung's render scale, it just keeps it for
+/// the session. The rest of the preset (SSAO, god rays, grass) switches
+/// freely. Lift this the moment the engine resizes safely.
+final bool runtimeRenderScaleIsSafe = !isMobile;
 
 // --- World units ---
 
@@ -185,6 +216,74 @@ const double sceneVignetteSmoothness = 0.6;
 /// against vertex cost rather than draw calls (see `vfx/grass_field.dart`
 /// for why it is not instanced).
 const int grassCardCount = 8000;
+
+/// The quality steps the pause menu offers, coarse enough that each one
+/// is a visible difference rather than a slider nobody can read.
+///
+/// Grass is in here but it is NOT the reason this setting exists.
+/// Measured: turning the field off entirely buys 2-3 fps, because the
+/// field is one draw call and the frame is spent on FRAGMENTS, not
+/// vertices. The knobs that move it are [renderScale] (every pixel of
+/// every pass), SSAO and god rays (two full-screen passes) — so the
+/// preset drives those, and takes the grass down with it.
+typedef QualityPreset = ({
+  String label,
+  int cards,
+  double renderScale,
+  bool ambientOcclusion,
+  bool godRays,
+});
+
+///
+/// The rungs step [renderScale] and the full-screen passes together,
+/// because those are what actually cost — grass rides along rather than
+/// leading. ULTRA is the authored look and nothing else touches it.
+const List<QualityPreset> qualityPresets = [
+  (
+    label: 'LOW',
+    cards: 0,
+    renderScale: 0.6,
+    ambientOcclusion: false,
+    godRays: false,
+  ),
+  (
+    label: 'MED',
+    cards: 4000,
+    renderScale: 0.75,
+    ambientOcclusion: false,
+    godRays: false,
+  ),
+  // The mobile boot rung: keeps the ambient occlusion that gives the
+  // clearing its depth, drops the god rays (the most expensive pass for
+  // the least read at phone size) and renders a notch under native.
+  (
+    label: 'HIGH',
+    cards: 6000,
+    renderScale: 0.85,
+    ambientOcclusion: true,
+    godRays: false,
+  ),
+  (
+    label: 'ULTRA',
+    cards: grassCardCount,
+    renderScale: 1.0,
+    ambientOcclusion: true,
+    godRays: true,
+  ),
+];
+
+/// Everything but a phone boots at ULTRA
+///
+/// Phones boot one rung down, at HIGH. Not because the phone is expected
+/// to cope with ULTRA, but because the thing a phone cannot afford is
+/// FRAGMENTS: [renderScale] multiplies on top of a device pixel ratio
+/// that is routinely 3, so native resolution means ~3x the pixels of the
+/// logical size — through the shadow pass, the main pass, SSAO, god rays
+/// and post.
+///
+/// A starting rung, not a ceiling: the pause menu moves in both
+/// directions, and a phone that can hold ULTRA is welcome to it.
+final int defaultQualityLevel = heavyAtmospherics ? 3 : 2;
 
 /// The field extends under the treeline and thins with distance: full
 /// density inside [grassFalloffStart], zero at [grassFieldRadius].

@@ -65,6 +65,7 @@ const double brawlerAttackRange = 2.6;
 const double telegraphSeconds = 0.6;
 const double swingSeconds = 0.18;
 const double recoverSeconds = 0.75;
+
 /// Long enough that a thrown barbarian is still on the floor for a beat
 /// after it lands, rather than bouncing straight up into a swing.
 const double brawlStaggerSeconds = 0.8;

@@ -5,7 +5,15 @@ final class Enemy implements Tag {
   const Enemy();
 }
 
-enum BrawlPhase { approach, circle, telegraph, swing, recover, staggered, dying }
+enum BrawlPhase {
+  approach,
+  circle,
+  telegraph,
+  swing,
+  recover,
+  staggered,
+  dying,
+}
 
 /// The barbarian's brain: one [Machine] owns the mode (the readability
 /// contract lives in its timings — a fixed telegraph always precedes a
@@ -109,7 +117,7 @@ final class Dissolving {
 /// the highlight system).
 final class BrawlerVisuals {
   BrawlerVisuals({required this.bodyRoot, this.capsuleMaterial})
-      : _baseTransform = bodyRoot.localTransform.clone();
+    : _baseTransform = bodyRoot.localTransform.clone();
 
   /// The scaled model wrapper (character) or the capsule body node.
   final Node bodyRoot;

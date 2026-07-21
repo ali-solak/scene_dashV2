@@ -91,19 +91,17 @@ void _castFireGush(
     )) {
       return;
     }
-    world.emit(HitLanded(
-      enemy,
-      fireGushDamage * power,
-      knockback: _away(origin, at, fireGushKnockback),
-      // A gush is not a hammer: it burns, it does not interrupt.
-      stagger: false,
-    ));
-    // Re-applying refreshes the clock instead of stacking a second fire.
-    world.add(
-      enemy,
-      Burning(burnTickDamage * power),
-      removeAfter: burnSeconds,
+    world.emit(
+      HitLanded(
+        enemy,
+        fireGushDamage * power,
+        knockback: _away(origin, at, fireGushKnockback),
+        // A gush is not a hammer: it burns, it does not interrupt.
+        stagger: false,
+      ),
     );
+    // Re-applying refreshes the clock instead of stacking a second fire.
+    world.add(enemy, Burning(burnTickDamage * power), removeAfter: burnSeconds);
   });
   spawnFireGush(
     world,
@@ -171,12 +169,14 @@ void tickBurning(World world) {
     burning.sinceTick -= burnTickSeconds;
     // No knockback and no stagger: a burn should never yank a barbarian
     // out of the fight you are having with it.
-    world.emit(HitLanded(
-      entity,
-      burning.damage,
-      stagger: false,
-      impact: false, // a burn tick, not a blow
-    ));
+    world.emit(
+      HitLanded(
+        entity,
+        burning.damage,
+        stagger: false,
+        impact: false, // a burn tick, not a blow
+      ),
+    );
   });
 }
 
@@ -206,12 +206,14 @@ void tickLavaPits(World world) {
     ) {
       if (!health.alive) return;
       if (_distanceTo(at, standing) > lavaPitRadius) return;
-      world.emit(HitLanded(
-        enemy,
-        pit.damage,
-        stagger: false,
-        impact: false, // standing in lava is not a hit to freeze on
-      ));
+      world.emit(
+        HitLanded(
+          enemy,
+          pit.damage,
+          stagger: false,
+          impact: false, // standing in lava is not a hit to freeze on
+        ),
+      );
       // Alight. This is what puts real fire on a body standing in the
       // pit — the flame is driven off [Burning], so without this the
       // lava cooked people without ever visibly lighting them. Never

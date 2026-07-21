@@ -97,9 +97,5 @@ void installRules(GameBuilder game) {
     )
     // Wind dramaturgy: reads the barbarians' phases, writes the WindState
     // resource the grass material reads (no component write to declare).
-    ..addSystem(
-      Schedules.update,
-      driveWind,
-      reads: const {Enemy, Brawler},
-    );
+    ..addSystem(Schedules.update, driveWind, reads: const {Enemy, Brawler});
 }

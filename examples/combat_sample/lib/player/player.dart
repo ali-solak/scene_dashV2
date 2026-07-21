@@ -113,7 +113,14 @@ void installPlayer(GameBuilder game) {
       Schedules.fixedUpdate,
       lockOnSystem,
       inSet: GameSets.actions,
-      reads: const {Player, Enemy, Health, PlayerMotion, SceneTransform, Target},
+      reads: const {
+        Player,
+        Enemy,
+        Health,
+        PlayerMotion,
+        SceneTransform,
+        Target,
+      },
       writes: const {Fighter},
       // `spawnPlayerFx` only READS Fighter (for the roll edge) and this
       // writes it, which the entity-blind detector calls a conflict even
@@ -138,7 +145,6 @@ void installPlayer(GameBuilder game) {
       writes: const {PlayerAnimator},
       runIf: hasResource<Scene>(),
     )
-
     ..addSystem(
       Schedules.update,
       updatePlayerGhost,

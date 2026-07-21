@@ -16,38 +16,13 @@ import '../game/score.dart';
 import '../player/player.dart';
 import '../skills/skills.dart';
 import '../waves/waves.dart';
+import '../world/data/config.dart' show qualityPresets;
+import '../world/data/resources.dart' show GraphicsQuality, QualityRequested;
 import 'fps.dart';
 import 'ink.dart';
 
 class GameHud extends StatelessWidget {
-  const GameHud({
-    super.key,
-    required this.onStart,
-    required this.onRestart,
-    required this.onToggleMenu,
-    required this.onBuySkill,
-    required this.onBuyVitality,
-    required this.onCast,
-  });
-
-  /// Emits [GameStarted] — leaves the title screen.
-  final VoidCallback onStart;
-
-  /// Emits [RestartRequested] (the shell owns the game handle).
-  final VoidCallback onRestart;
-
-  /// Emits [SkillMenuToggled] — opens and closes the pause.
-  final VoidCallback onToggleMenu;
-
-  /// Emits [SkillUpgradeRequested] / [VitalityRequested]. The widgets only
-  /// ask; `buyUpgrades` decides whether the points are there.
-  final void Function(Skill skill) onBuySkill;
-  final VoidCallback onBuyVitality;
-
-  /// Emits [SkillCast] — the skill bar's slots are BUTTONS, not just a
-  /// readout. Without this there is no way to cast at all on a device
-  /// with no keyboard: the number keys are the only other route in.
-  final void Function(Skill skill) onCast;
+  const GameHud({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -73,18 +48,78 @@ class GameHud extends StatelessWidget {
 
   Widget _screenFor(BuildContext context, GameStatus status) =>
       switch (status) {
-        GameStatus.fighting => _FightHud(
-            onOpenMenu: onToggleMenu,
-            onCast: onCast,
-          ),
-        GameStatus.skillMenu => _SkillMenu(
-            onClose: onToggleMenu,
-            onBuySkill: onBuySkill,
-            onBuyVitality: onBuyVitality,
-          ),
-        GameStatus.lost => _DeathPanel(onRestart: onRestart),
-        GameStatus.title => _TitleMenu(onStart: onStart),
+        GameStatus.fighting => const _FightHud(),
+        GameStatus.skillMenu => const _SkillMenu(),
+        GameStatus.lost => const _DeathPanel(),
+        GameStatus.title => const _TitleMenu(),
       };
+}
+
+class _MenuShell extends StatelessWidget {
+  const _MenuShell({
+    required this.child,
+    this.footer,
+    this.scrim = HudInk.scrim,
+    this.maxWidth = 520,
+    this.panelled = true,
+  });
+
+  /// The scrolling part.
+  final Widget child;
+
+  /// PINNED below [child], never scrolled away.
+  ///
+  /// This is what makes the menus usable in landscape. A phone on its
+  /// side has roughly 320dp of usable height and the title panel wants
+  /// ~440dp, so with everything in one scroll view the START button sat
+  /// below the fold with nothing to suggest it was there. The action a
+  /// screen exists for must not be the thing you have to discover.
+  final Widget? footer;
+
+  final Color scrim;
+
+  /// A CEILING, not a width: the panel shrinks below this on a narrow
+  /// screen instead of overflowing it.
+  final double maxWidth;
+
+  /// Draws the bordered panel. The death screen is bare text on a scrim.
+  final bool panelled;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: scrim,
+      child: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: DecoratedBox(
+                decoration: panelled
+                    ? BoxDecoration(
+                        color: HudInk.panel,
+                        border: Border.all(color: HudInk.rule),
+                      )
+                    : const BoxDecoration(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Flexible, not Expanded: the panel still hugs its
+                    // content when there is room, and only starts
+                    // scrolling once there is not.
+                    Flexible(child: SingleChildScrollView(child: child)),
+                    ?footer,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// The start screen. Same panel, rules and inks as the skill menu — it is
@@ -94,75 +129,80 @@ class GameHud extends StatelessWidget {
 /// screen, so the panel sits over it and lets the camera's slow orbit
 /// carry the background.
 class _TitleMenu extends StatelessWidget {
-  const _TitleMenu({required this.onStart});
-
-  final VoidCallback onStart;
+  const _TitleMenu();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0x660B0C0D),
-      alignment: Alignment.center,
-      child: Container(
-        width: 460,
-        decoration: BoxDecoration(
-          color: HudInk.panel,
-          border: Border.all(color: HudInk.rule),
+    return _MenuShell(
+      // Lighter than the other screens': the clearing behind this one is
+      // the point, so the panel sits over it rather than blacking it out.
+      scrim: const Color(0x660B0C0D),
+      maxWidth: 460,
+      // START is PINNED. In landscape the control list is taller than the
+      // screen, and with everything in one scroll view the button sat
+      // below the fold with nothing to suggest it existed.
+      footer: Container(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: HudInk.rule)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        padding: const EdgeInsets.fromLTRB(22, 8, 12, 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(22, 22, 22, 16),
-              decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: HudInk.rule)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'COMBAT',
-                    style: TextStyle(
-                      color: HudInk.bone,
-                      fontSize: 30,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 12,
-                      height: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Hold the clearing.',
-                    style: TextStyle(
-                      color: HudInk.ash,
-                      fontSize: 13,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const _ControlLine(keys: 'WASD', action: 'move'),
-            const _ControlLine(keys: 'RMB / swipe', action: 'camera'),
-            const _ControlLine(keys: 'LMB', action: 'strike · hold for heavy'),
-            const _ControlLine(keys: 'SPACE', action: 'roll'),
-            const _ControlLine(keys: 'TAB / MMB', action: 'lock on'),
-            const _ControlLine(keys: 'Q', action: 'cycle target'),
-            const _ControlLine(keys: '1-4', action: 'skills'),
-            const _ControlLine(keys: 'ESC', action: 'skill menu'),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 15, 18, 17),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  _BracketAction(label: 'START', onPressed: onStart),
-                ],
-              ),
+            _BracketAction(
+              label: 'START',
+              onPressed: () => GameScope.of(context).emit(const GameStarted()),
             ),
           ],
         ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(22, 22, 22, 16),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: HudInk.rule)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Barb Slapper',
+                  style: TextStyle(
+                    color: HudInk.bone,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 12,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Hold the clearing.',
+                  style: TextStyle(
+                    color: HudInk.ash,
+                    fontSize: 13,
+                    letterSpacing: 2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const _ControlLine(keys: 'WASD', action: 'move'),
+          const _ControlLine(keys: 'RMB / swipe', action: 'camera'),
+          const _ControlLine(keys: 'LMB', action: 'strike · hold for heavy'),
+          const _ControlLine(keys: 'SPACE', action: 'roll'),
+          const _ControlLine(keys: 'TAB / MMB', action: 'lock on'),
+          const _ControlLine(keys: 'Q', action: 'cycle target'),
+          const _ControlLine(keys: '1-4', action: 'skills'),
+          const _ControlLine(
+            keys: 'ESC',
+            action: 'skill menu / button top right',
+          ),
+        ],
       ),
     );
   }
@@ -186,7 +226,8 @@ class _ControlLine extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 110,
+            // Narrow enough to leave room for the action on a phone.
+            width: 96,
             child: Text(
               keys,
               style: const TextStyle(
@@ -214,8 +255,9 @@ class _ControlLine extends StatelessWidget {
 typedef _HudState = (double hp, double charge, bool heavy);
 
 _HudState _selectHud(World world) {
-  final row =
-      world.query2<Fighter, Health>(require: const [Player]).firstOrNull;
+  final row = world
+      .query2<Fighter, Health>(require: const [Player])
+      .firstOrNull;
   if (row == null) return (1, 0, false);
   final (_, fighter, health) = row;
   final hp = (health.current / health.max).clamp(0.0, 1.0);
@@ -281,10 +323,7 @@ class _RunBanner extends StatelessWidget {
 }
 
 class _FightHud extends StatelessWidget {
-  const _FightHud({required this.onOpenMenu, required this.onCast});
-
-  final VoidCallback onOpenMenu;
-  final void Function(Skill skill) onCast;
+  const _FightHud();
 
   @override
   Widget build(BuildContext context) {
@@ -332,7 +371,8 @@ class _FightHud extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: IconButton(
-                onPressed: onOpenMenu,
+                onPressed: () =>
+                    GameScope.of(context).emit(const SkillMenuToggled()),
                 icon: const Icon(Icons.auto_awesome),
                 color: Colors.white70,
                 tooltip: 'Skills (Esc)',
@@ -343,7 +383,7 @@ class _FightHud extends StatelessWidget {
             alignment: Alignment.bottomCenter,
             child: Padding(
               padding: const EdgeInsets.only(bottom: 20),
-              child: _SkillBar(onCast: onCast),
+              child: const _SkillBar(),
             ),
           ),
           const Positioned.fill(child: IgnorePointer(child: _HurtFlash())),
@@ -389,8 +429,10 @@ class _HurtFlashState extends State<_HurtFlash>
     // from the world into the widget tree.
     return WorldBuilder<double>(
       select: (world) {
-        final health =
-            world.query<Health>(require: const [Player]).firstOrNull?.$2;
+        final health = world
+            .query<Health>(require: const [Player])
+            .firstOrNull
+            ?.$2;
         if (health == null) return 1;
         return (health.current / health.max).clamp(0.0, 1.0);
       },
@@ -475,8 +517,7 @@ final class _SkillSlots {
 
 _SkillSlots _selectSkills(World world) {
   final book = world.resource<SkillBook>();
-  final barrier =
-      world.query<Barrier>(require: const [Player]).firstOrNull?.$2;
+  final barrier = world.query<Barrier>(require: const [Player]).firstOrNull?.$2;
   return _SkillSlots([
     for (final skill in Skill.values)
       (book.levelOf(skill), book.readinessOf(skill)),
@@ -484,9 +525,7 @@ _SkillSlots _selectSkills(World world) {
 }
 
 class _SkillBar extends StatelessWidget {
-  const _SkillBar({required this.onCast});
-
-  final void Function(Skill skill) onCast;
+  const _SkillBar();
 
   @override
   Widget build(BuildContext context) {
@@ -506,7 +545,8 @@ class _SkillBar extends StatelessWidget {
                 charges: Skill.values[i] == Skill.shield
                     ? state.barrierCharges
                     : 0,
-                onCast: () => onCast(Skill.values[i]),
+                onCast: () =>
+                    GameScope.of(context).emit(SkillCast(Skill.values[i])),
               ),
             ),
         ],
@@ -664,16 +704,16 @@ class _SkillSlotState extends State<_SkillSlot>
             child: Text(
               '$index',
               style: TextStyle(
-                color: unlocked ? HudInk.bone : HudInk.ash.withValues(alpha: 0.5),
+                color: unlocked
+                    ? HudInk.bone
+                    : HudInk.ash.withValues(alpha: 0.5),
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
           if (!unlocked)
-            const Center(
-              child: Icon(Icons.lock, size: 16, color: HudInk.ash),
-            )
+            const Center(child: Icon(Icons.lock, size: 16, color: HudInk.ash))
           else
             // The level, so an upgrade is visible without opening the
             // menu — the bar is where you look mid-fight.
@@ -702,7 +742,7 @@ class _SkillSlotState extends State<_SkillSlot>
 /// [_SkillSlots] is one.
 @immutable
 final class _MenuState {
-  const _MenuState(this.points, this.vitality, this.levels);
+  const _MenuState(this.points, this.vitality, this.levels, this.quality);
 
   final int points;
   final int vitality;
@@ -710,96 +750,84 @@ final class _MenuState {
   /// Level per skill, in `Skill.values` order. 0 = not bought.
   final List<int> levels;
 
+  /// Live quality preset index, so the active chip reads as selected.
+  final int quality;
+
   @override
   bool operator ==(Object other) =>
       other is _MenuState &&
       points == other.points &&
       vitality == other.vitality &&
+      quality == other.quality &&
       listEquals(levels, other.levels);
 
   @override
-  int get hashCode => Object.hash(points, vitality, Object.hashAll(levels));
+  int get hashCode =>
+      Object.hash(points, vitality, quality, Object.hashAll(levels));
 }
 
 _MenuState _selectMenu(World world) {
   final book = world.resource<SkillBook>();
-  return _MenuState(
-    world.resource<Score>().points,
-    book.vitalityLevel,
-    [for (final skill in Skill.values) book.levelOf(skill)],
-  );
+  return _MenuState(world.resource<Score>().points, book.vitalityLevel, [
+    for (final skill in Skill.values) book.levelOf(skill),
+  ], world.resource<GraphicsQuality>().level);
 }
 
 /// The pause screen: spend what the run has earned. The world is frozen
 /// behind it — the menu is a [GameStatus], not an overlay with a flag.
 class _SkillMenu extends StatelessWidget {
-  const _SkillMenu({
-    required this.onClose,
-    required this.onBuySkill,
-    required this.onBuyVitality,
-  });
-
-  final VoidCallback onClose;
-  final void Function(Skill skill) onBuySkill;
-  final VoidCallback onBuyVitality;
+  const _SkillMenu();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: HudInk.scrim,
-      alignment: Alignment.center,
-      child: WorldBuilder<_MenuState>(
-        select: _selectMenu,
-        builder: (context, state) {
-          final points = state.points;
-          final vitality = state.vitality;
-          return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(vertical: 32),
-            child: Center(
-              child: Container(
-                width: 520,
-                decoration: BoxDecoration(
-                  color: HudInk.panel,
-                  border: Border.all(color: HudInk.rule),
+    // The shell owns the scrim, the SafeArea and the scrolling.
+    return WorldBuilder<_MenuState>(
+      select: _selectMenu,
+      builder: (context, state) {
+        final points = state.points;
+        final vitality = state.vitality;
+        return _MenuShell(
+          // BACK TO THE FIGHT stays reachable however long the list is.
+          footer: const _MenuFooter(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _MenuHeader(points: points),
+              for (var i = 0; i < Skill.values.length; i++)
+                _MenuRow(
+                  slot: '${i + 1}',
+                  title: Skill.values[i].label,
+                  rank: state.levels[i],
+                  blurb: Skill.values[i].blurb,
+                  cost: Skill.values[i].costAt(state.levels[i]),
+                  owned: state.levels[i] >= maxSkillLevel,
+                  ownedLabel: 'MAX',
+                  points: points,
+                  onBuy: () => GameScope.of(
+                    context,
+                  ).emit(SkillUpgradeRequested(Skill.values[i])),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _MenuHeader(points: points),
-                    for (var i = 0; i < Skill.values.length; i++)
-                      _MenuRow(
-                        slot: '${i + 1}',
-                        title: Skill.values[i].label,
-                        rank: state.levels[i],
-                        blurb: Skill.values[i].blurb,
-                        cost: Skill.values[i].costAt(state.levels[i]),
-                        owned: state.levels[i] >= maxSkillLevel,
-                        ownedLabel: 'MAX',
-                        points: points,
-                        onBuy: () => onBuySkill(Skill.values[i]),
-                      ),
-                    _MenuRow(
-                      slot: '+',
-                      title: 'VITALITY',
-                      rank: vitality,
-                      blurb: 'Raises your health by '
-                          '${vitalityHealthPerLevel.toStringAsFixed(0)} '
-                          'and heals you for it now.',
-                      cost: vitalityCost(vitality),
-                      owned: vitality >= maxVitalityLevel,
-                      ownedLabel: 'MAX',
-                      points: points,
-                      onBuy: onBuyVitality,
-                    ),
-                    _MenuFooter(onClose: onClose),
-                  ],
-                ),
+              _MenuRow(
+                slot: '+',
+                title: 'VITALITY',
+                rank: vitality,
+                blurb:
+                    'Raises your health by '
+                    '${vitalityHealthPerLevel.toStringAsFixed(0)} '
+                    'and heals you for it now.',
+                cost: vitalityCost(vitality),
+                owned: vitality >= maxVitalityLevel,
+                ownedLabel: 'MAX',
+                points: points,
+                onBuy: () =>
+                    GameScope.of(context).emit(const VitalityRequested()),
               ),
-            ),
-          );
-        },
-      ),
+              _QualityRow(level: state.quality),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -861,9 +889,7 @@ class _MenuHeader extends StatelessWidget {
 }
 
 class _MenuFooter extends StatelessWidget {
-  const _MenuFooter({required this.onClose});
-
-  final VoidCallback onClose;
+  const _MenuFooter();
 
   @override
   Widget build(BuildContext context) {
@@ -876,7 +902,11 @@ class _MenuFooter extends StatelessWidget {
             'ESC',
             style: TextStyle(color: HudInk.ash, fontSize: 11, letterSpacing: 3),
           ),
-          _BracketAction(label: 'BACK TO THE FIGHT', onPressed: onClose),
+          _BracketAction(
+            label: 'BACK TO THE FIGHT',
+            onPressed: () =>
+                GameScope.of(context).emit(const SkillMenuToggled()),
+          ),
         ],
       ),
     );
@@ -1032,8 +1062,12 @@ class _BracketAction extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onPressed,
+      // 48dp minimum touch target. The text stays the same size; only
+      // the tappable area grows — on a phone these are START, BUY and
+      // BACK TO THE FIGHT, and a 20dp-tall target is a miss waiting to
+      // happen.
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
         child: Text(
           '[ $label ]',
           style: const TextStyle(
@@ -1090,37 +1124,138 @@ class _Bar extends StatelessWidget {
 }
 
 class _DeathPanel extends StatelessWidget {
-  const _DeathPanel({required this.onRestart});
-
-  final VoidCallback onRestart;
+  const _DeathPanel();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0x88000000),
-      alignment: Alignment.center,
+    return _MenuShell(
+      scrim: const Color(0x88000000),
+      maxWidth: 420,
+      panelled: false,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            'YOU DIED',
-            style: TextStyle(
-              color: Color(0xFFE0483C),
-              fontSize: 52,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 6,
+          // Shrinks rather than clipping: at 52pt with this letter
+          // spacing the word is ~300px, which a narrow phone does not
+          // have once the shell's padding is taken out.
+          const FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              'YOU DIED',
+              style: TextStyle(
+                color: Color(0xFFE0483C),
+                fontSize: 52,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 6,
+              ),
             ),
           ),
           const SizedBox(height: 24),
           FilledButton(
-            onPressed: onRestart,
+            onPressed: () =>
+                GameScope.of(context).emit(const RestartRequested()),
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF2A2A2A),
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              // Comfortably past the 48dp minimum touch target.
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
             ),
             child: const Text('RESTART', style: TextStyle(letterSpacing: 2)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The grass density dial, under the ledger.
+///
+/// Not a purchase, so it deliberately does not use [_MenuRow]: no cost
+/// column, no rank, and the options read as a set of states rather than
+/// as something you buy once.
+class _QualityRow extends StatelessWidget {
+  const _QualityRow({required this.level});
+
+  final int level;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(22, 15, 22, 15),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: HudInk.rule)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'QUALITY',
+            style: TextStyle(
+              color: HudInk.bone,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 2),
+          const Text(
+            'Render resolution, ambient occlusion, god rays and grass. '
+            'Turn it down if the frame rate is low',
+            style: TextStyle(color: HudInk.ash, fontSize: 12, height: 1.35),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (var i = 0; i < qualityPresets.length; i++)
+                _PresetChip(
+                  label: qualityPresets[i].label,
+                  selected: i == level,
+                  onTap: () => GameScope.of(context).emit(QualityRequested(i)),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PresetChip extends StatelessWidget {
+  const _PresetChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      // 48dp touch target, same as the other menu actions.
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0x228FB6C6) : null,
+          border: Border.all(
+            color: selected ? HudInk.steel : HudInk.ruleFaint,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? HudInk.steel : HudInk.ash,
+            fontSize: 12,
+            letterSpacing: 2,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

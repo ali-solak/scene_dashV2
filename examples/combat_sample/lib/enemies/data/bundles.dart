@@ -12,15 +12,15 @@ List<Object> enemyBundle(
   double power = 1,
   bool giant = false,
 }) => [
-      const Enemy(),
-      Health(health ?? enemyMaxHealth),
-      Knockback(),
-      Brawler(
-        slot: index,
-        circleDirection: index.isEven ? 1 : -1,
-        wobbleSeed: index * 2.4,
-        power: power,
-        giant: giant,
-      ),
-      SceneTransform(x, 0, z),
-    ];
+  const Enemy(),
+  Health(health ?? enemyMaxHealth),
+  Knockback(),
+  Brawler(
+    slot: index,
+    circleDirection: index.isEven ? 1 : -1,
+    wobbleSeed: index * 2.4,
+    power: power,
+    giant: giant,
+  ),
+  SceneTransform(x, 0, z),
+];

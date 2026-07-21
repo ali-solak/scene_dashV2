@@ -31,7 +31,8 @@ void spawnLeaves(World world) {
 
     field.fall[i] =
         _fallSlowest + random.nextDouble() * (_fallFastest - _fallSlowest);
-    field.tumble[i] = (_tumbleSlowest +
+    field.tumble[i] =
+        (_tumbleSlowest +
             random.nextDouble() * (_tumbleFastest - _tumbleSlowest)) *
         (random.nextBool() ? 1 : -1);
     field.sway[i] =
@@ -49,9 +50,8 @@ void spawnLeaves(World world) {
     field.axis[i * 3 + 1] = ay / length;
     field.axis[i * 3 + 2] = az / length;
 
-    final node = Node(
-      mesh: Mesh(geometry, materials[i % materials.length]),
-    )..frustumCulled = false;
+    final node = Node(mesh: Mesh(geometry, materials[i % materials.length]))
+      ..frustumCulled = false;
     field.leaves.add(node);
     scene.add(node);
   }
@@ -144,8 +144,7 @@ MeshGeometry _leafQuad() {
   );
 }
 
-Material _leafMaterial(Vector4 tint) => UnlitMaterial(
-      colorTexture: leafTexture(),
-    )
-  ..baseColorFactor = tint
-  ..alphaMode = AlphaMode.blend;
+Material _leafMaterial(Vector4 tint) =>
+    UnlitMaterial(colorTexture: leafTexture())
+      ..baseColorFactor = tint
+      ..alphaMode = AlphaMode.blend;
