@@ -75,6 +75,29 @@ node and the scene graph positions, projects and occludes it.
 Write path: UI → `ButtonInput` / `game.emit`. Widgets never mutate
 components.
 
+### GameScope
+
+One `InheritedWidget` over the tree; every widget below it reaches the
+game from its own `context`, so nothing is threaded through constructors:
+
+```dart
+runApp(GameScope(game: game, child: const MyGameApp()));
+
+class PauseButton extends StatelessWidget {                 // const: no
+  const PauseButton({super.key});                           //   callbacks in
+
+  @override
+  Widget build(BuildContext context) => TextButton(
+    onPressed: () => GameScope.of(context).emit(const PauseRequested()),
+    child: Text('score ${context.world.resource<Score>().value}'),
+  );                             // context.world / context.game: the same
+}                                //   lookup, one-off reads (not reactive —
+                                 //   for that use the builders above)
+```
+
+`GameScope.of(context)` is the whole API. `GameHost` is the same widget
+plus the hot-reload hook.
+
 ## A complete game in one file
 
 ```dart
@@ -183,7 +206,8 @@ final game = await SceneGame.boot(
   ],
 );
 
-runApp(GameScope(game: game, child: MyGameApp(game: game)));  // yours
+runApp(GameScope(game: game, child: const MyGameApp()));  // yours; the
+                            // subtree reaches `game` through GameScope.of
 ```
 
 ## Features and systems
@@ -421,7 +445,26 @@ bool anyEnemiesLeft(World world) =>
 
 ## Events
 
-Both ends of every loop: `applyDamage` consumes what the fighter's strike
+A system (or a widget) emits; any number of systems read. Sender and
+reader never reference each other:
+
+```dart
+final class EnemyKilled { final int bounty; EnemyKilled(this.bounty); }
+
+world.emit(EnemyKilled(10));                  // anywhere: a system,
+game.emit(const PauseRequested());            //   a widget (game.emit)
+
+void awardBounty(World world) {
+  for (final event in world.events<EnemyKilled>()) {   // only what THIS
+    score.value += event.bounty;                       //   system has not
+  }                                                    //   read yet
+}
+
+WorldEventListener<EnemyKilled>(              // and in the UI
+    onEvent: (context, event) => confetti(), child: const ScorePanel())
+```
+
+The longer version — both ends of every loop: `applyDamage` consumes what the fighter's strike
 emits (Physics, below) and produces what `awardBounty` and
 `recoverFromStun` consume.
 
@@ -525,12 +568,21 @@ final x = world.axes<GameAxis>().value(GameAxis.moveX);  // 0.0 if never written
 
 ## Resources
 
+One instance per world, keyed by type — the game's singletons (score,
+wave number, settings). Any system reaches one without a query:
+
 ```dart
 final class Score { int value = 0; }
 
 game.world.insert(Score());              // once, in the owning feature
 world.resource<Score>().value += 10;     // read/write from any system
 
+WorldBuilder<int>(                       // reactive read in the UI:
+    select: (w) => w.resource<Score>().value,   //   rebuilds on change
+    builder: (context, score) => Text('$score'))
+```
+
+```dart
 // owns teardown? implement Disposable; the framework calls dispose():
 // game shutdown (reverse insertion order), a dropping reset, replacement.
 final class ScoreCubit extends Cubit<int> implements Disposable {
@@ -541,8 +593,7 @@ final class ScoreCubit extends Cubit<int> implements Disposable {
 ```
 
 Framework state is promoted to members (`world.dt`, `world.clock`,
-`world.buttons`, `world.physics`, `world.gizmos`), so `resource<T>()` is
-only ever the game's own singletons.
+`world.buttons`, `world.physics`, `world.gizmos`) — never `resource<T>()`.
 
 ## States
 
