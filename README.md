@@ -211,7 +211,7 @@ runApp(GameScope(game: game, child: const MyGameApp()));  // yours; the
 ```
 
 `SceneGame.boot` is async, so `runApp`-after-`await` shows nothing until
-it returns. `GameBootstrap` moves the boot inside the tree — a loading
+it returns. `GameBootstrap` moves the boot inside the tree. A loading
 frame while it runs, then the game under a `GameScope`, shut down on
 dispose (a boot that finishes after dispose is shut down too, never
 leaked):
