@@ -43,15 +43,22 @@ abstract interface class EventChannelMaintenance {
 /// paused, for example) would otherwise pin the buffer forever. Each event is
 /// therefore kept for at most [retainedUpdates] maintenance passes: readers
 /// that lag further behind skip the dropped events instead of leaking memory.
-/// With the default of `2` and one [update] per frame, an event sent during
-/// frame `N` stays readable through frames `N` and `N + 1` — the same window
-/// Bevy's double-buffered events provide. Systems that read their channels
-/// every frame never miss anything. Pass `null` to retain events until every
-/// reader has consumed them, however long that takes.
+///
+/// The default of `8` is deliberately wider than Bevy's two-frame window,
+/// because maintenance runs once per RENDER frame while fixed-step systems
+/// only run when the fixed accumulator fills: at high refresh rates a render
+/// frame can carry ZERO fixed steps, and under a two-pass window an input
+/// edge could expire before its fixed-step reader ever got a turn — a cast
+/// key that "sometimes needs two presses" on a 144 Hz desktop and never
+/// fails on a slow phone. Eight passes keeps events alive across the
+/// zero-step frames of any realistic display while still expiring what
+/// nobody reads. Systems that read their channels every frame never miss
+/// anything at any setting. Pass `null` to retain events until every reader
+/// has consumed them, however long that takes.
 final class EventChannel<T> implements EventChannelMaintenance {
   /// Creates a channel that keeps unread events for at most [retainedUpdates]
   /// calls to [update], or indefinitely when [retainedUpdates] is `null`.
-  EventChannel({this.retainedUpdates = 2})
+  EventChannel({this.retainedUpdates = 8})
     : assert(
         retainedUpdates == null || retainedUpdates >= 1,
         'retainedUpdates must be at least 1 (or null for unbounded).',
@@ -86,9 +93,9 @@ final class EventChannel<T> implements EventChannelMaintenance {
 
   /// Whether the channel currently buffers any events. An event stays
   /// buffered until every reader has consumed it, capped by the retention
-  /// window (see [EventChannel] docs) — under the default retention, at most
-  /// the frame it was sent plus the following one. The `hasEvents` run
-  /// condition keys off this.
+  /// window (see [EventChannel] docs) — at most [retainedUpdates]
+  /// maintenance passes after it was sent. The `hasEvents` run condition
+  /// keys off this.
   bool get isNotEmpty => _events.isNotEmpty;
 
   /// Whether the channel buffers no events. See [isNotEmpty].

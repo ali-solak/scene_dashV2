@@ -54,7 +54,7 @@ void main() {
   });
 
   test('hasEvents tracks the channel buffer', () {
-    world.registerEvent<String>();
+    world.registerEvent<String>(retainedUpdates: 2);
     final condition = hasEvents<String>();
 
     expect(condition(world), isFalse);
@@ -71,10 +71,11 @@ void main() {
   });
 
   test('hasEvents holds unread events through the retention window', () {
-    world.registerEvent<String>();
-    // A registered reader that does not drain: the event survives the pass
-    // for the frame it was sent plus one more (default retention of 2),
-    // then expires.
+    world.registerEvent<String>(retainedUpdates: 2);
+    // A registered reader that does not drain: with a two-pass window the
+    // event survives the pass for the frame it was sent plus one more, then
+    // expires. (Explicit retention: the DEFAULT window is wider, so
+    // fixed-step readers survive zero-step frames at high refresh.)
     world.eventChannel<String>().reader();
     final condition = hasEvents<String>();
 

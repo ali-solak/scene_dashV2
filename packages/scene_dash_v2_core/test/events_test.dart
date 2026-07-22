@@ -66,7 +66,7 @@ void main() {
     });
 
     test('a stalled reader is skipped past the retention window', () {
-      final channel = EventChannel<Pinged>(); // retainedUpdates: 2
+      final channel = EventChannel<Pinged>(retainedUpdates: 2);
       final stalled = channel.reader();
 
       channel.send(const Pinged(1));
@@ -98,7 +98,7 @@ void main() {
     });
 
     test('update reports how many unread events a lagging reader lost', () {
-      final channel = EventChannel<Pinged>();
+      final channel = EventChannel<Pinged>(retainedUpdates: 2);
       channel.reader(); // never drains
 
       channel.send(const Pinged(1));
@@ -108,18 +108,20 @@ void main() {
       expect(channel.update(), 0, reason: 'nothing new to lose');
     });
 
-    test('null retainedUpdates keeps events until every reader consumed them',
-        () {
-      final channel = EventChannel<Pinged>(retainedUpdates: null);
-      final slow = channel.reader();
+    test(
+      'null retainedUpdates keeps events until every reader consumed them',
+      () {
+        final channel = EventChannel<Pinged>(retainedUpdates: null);
+        final slow = channel.reader();
 
-      channel.send(const Pinged(1));
-      channel.update();
-      channel.update();
-      channel.update();
+        channel.send(const Pinged(1));
+        channel.update();
+        channel.update();
+        channel.update();
 
-      expect(slow.drain().map((e) => e.id), <int>[1]);
-    });
+        expect(slow.drain().map((e) => e.id), <int>[1]);
+      },
+    );
 
     test('retainedUpdates of 1 expires unread events every pass', () {
       final channel = EventChannel<Pinged>(retainedUpdates: 1);
@@ -152,20 +154,46 @@ void main() {
       expect(reader.hasUnread, isFalse);
     });
 
-    test('a reader that only drains on fixed steps loses a default-retention '
+    test('a reader that only drains on fixed steps loses a narrow-retention '
         'event across a zero-step frame', () {
-      // Reproduces the blaster fire-drop: an edge is sent between frames, but
-      // the reader consumes only in fixedPrePhysics. Each frame's updateEvents
-      // is a channel.update(); a frame that runs no fixed step is an update()
-      // with no intervening drain — after two, the default window expires it.
-      final channel = EventChannel<Pinged>(); // retainedUpdates: 2
+      // The hazard the wide default exists for: an edge is sent between
+      // frames, but the reader consumes only on fixed steps. Each frame's
+      // updateEvents is a channel.update(); a frame that runs no fixed step
+      // is an update() with no intervening drain — under a two-pass window
+      // the edge expires before its reader ever gets a turn (the blaster
+      // fire-drop; the combat sample's cast keys and wind leap at 144 Hz).
+      final channel = EventChannel<Pinged>(retainedUpdates: 2);
       final reader = channel.reader();
       channel.send(const Pinged(1)); // dispatched from a widget between frames
 
       channel.update(); // frame N+1 frameStart — but no fixed step this frame
       channel.update(); // frame N+2 frameStart
-      expect(reader.consume(), isFalse,
-          reason: 'expired before any fixed step read it');
+      expect(
+        reader.consume(),
+        isFalse,
+        reason: 'expired before any fixed step read it',
+      );
+    });
+
+    test('the default retention survives zero-step frames at high refresh', () {
+      // The DEFAULT window is several frames wide precisely so a fixed-step
+      // reader outlives the zero-step render frames of a high-refresh
+      // display: an unread event survives seven maintenance passes and only
+      // expires on the eighth.
+      final channel = EventChannel<Pinged>();
+      final reader = channel.reader();
+      channel.send(const Pinged(1));
+
+      for (var pass = 1; pass <= 7; pass++) {
+        channel.update();
+        expect(
+          reader.hasUnread,
+          isTrue,
+          reason: 'still readable after pass $pass',
+        );
+      }
+      channel.update(); // pass 8: window exceeded
+      expect(reader.consume(), isFalse, reason: 'expired unread at pass 8');
     });
 
     test('null retention keeps an edge until the fixed-step reader takes it', () {
@@ -240,26 +268,31 @@ void main() {
       expect(world.eventChannel<Pinged>, throwsStateError);
     });
 
-    test('app reports a lagging reader through onDiagnostic, once per type',
-        () {
-      final messages = <String>[];
-      final app = App(onDiagnostic: messages.add)..addEvent<Pinged>();
-      app.start();
-      app.world.eventChannel<Pinged>().reader(); // never drains
+    test(
+      'app reports a lagging reader through onDiagnostic, once per type',
+      () {
+        final messages = <String>[];
+        // Explicit two-pass window so the loss (and its report) lands on the
+        // second maintenance pass rather than the default window's eighth.
+        final app = App(onDiagnostic: messages.add)
+          ..addEvent<Pinged>(retainedUpdates: 2);
+        app.start();
+        app.world.eventChannel<Pinged>().reader(); // never drains
 
-      app.world.eventChannel<Pinged>().send(const Pinged(1));
-      app.updateEvents();
-      expect(messages, isEmpty, reason: 'still within the window');
+        app.world.eventChannel<Pinged>().send(const Pinged(1));
+        app.updateEvents();
+        expect(messages, isEmpty, reason: 'still within the window');
 
-      app.updateEvents();
-      expect(messages, hasLength(1));
-      expect(messages.single, contains('Pinged'));
+        app.updateEvents();
+        expect(messages, hasLength(1));
+        expect(messages.single, contains('Pinged'));
 
-      app.world.eventChannel<Pinged>().send(const Pinged(2));
-      app.updateEvents();
-      app.updateEvents();
-      expect(messages, hasLength(1), reason: 'reported once per event type');
-    });
+        app.world.eventChannel<Pinged>().send(const Pinged(2));
+        app.updateEvents();
+        app.updateEvents();
+        expect(messages, hasLength(1), reason: 'reported once per event type');
+      },
+    );
   });
 
   group('World.sendEvent (runtime-type routing)', () {

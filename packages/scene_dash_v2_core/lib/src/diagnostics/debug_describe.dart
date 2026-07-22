@@ -34,8 +34,7 @@ extension WorldDebugDescribe on World {
       if (!store.containsIndex(index)) continue;
       if (!first) buffer.write(', ');
       first = false;
-      final value =
-          store is ObjectComponentStore ? store.valueOf(index) : null;
+      final value = store is ObjectComponentStore ? store.valueOf(index) : null;
       final text = value?.toString();
       if (text == null || text.startsWith("Instance of '")) {
         buffer.write(type);

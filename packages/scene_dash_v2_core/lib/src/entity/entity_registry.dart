@@ -24,9 +24,9 @@ final class EntityRegistry {
   int _count = 0;
 
   EntityRegistry({int initialCapacity = 64})
-      : _generations = Uint32List(initialCapacity),
-        _alive = Uint8List(initialCapacity),
-        _freeIndices = Uint32List(initialCapacity);
+    : _generations = Uint32List(initialCapacity),
+      _alive = Uint8List(initialCapacity),
+      _freeIndices = Uint32List(initialCapacity);
 
   /// Number of slots currently occupied by live entities.
   int get aliveCount => _count - _freeCount;
@@ -122,8 +122,11 @@ final class EntityRegistry {
     _alive = newAlive;
   }
 
-  static Uint32List _grow32(Uint32List source, int needed,
-      {bool exact = false}) {
+  static Uint32List _grow32(
+    Uint32List source,
+    int needed, {
+    bool exact = false,
+  }) {
     var newCap = exact ? needed : (source.isEmpty ? 64 : source.length);
     if (!exact) {
       while (newCap < needed) {

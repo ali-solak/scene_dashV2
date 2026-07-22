@@ -27,17 +27,19 @@ void main() {
       expect(resources.get<Config>().seed, 2);
     });
 
-    test('getOrInsert returns the existing resource without calling orElse',
-        () {
-      final resources = Resources()..insert(const Config(1));
-      var called = false;
-      final config = resources.getOrInsert<Config>(() {
-        called = true;
-        return const Config(2);
-      });
-      expect(config.seed, 1);
-      expect(called, isFalse);
-    });
+    test(
+      'getOrInsert returns the existing resource without calling orElse',
+      () {
+        final resources = Resources()..insert(const Config(1));
+        var called = false;
+        final config = resources.getOrInsert<Config>(() {
+          called = true;
+          return const Config(2);
+        });
+        expect(config.seed, 1);
+        expect(called, isFalse);
+      },
+    );
 
     test('getOrInsert inserts and returns orElse() when absent', () {
       final resources = Resources();

@@ -149,12 +149,9 @@ void main() {
       expect(log, <String>['always', 'gated', 'always', 'always']);
     });
 
-    test('runIf works through addSystem descriptors and with the profiler',
-        () {
+    test('runIf works through addSystem descriptors and with the profiler', () {
       final log = <String>[];
-      final app = App(
-        diagnostics: const AppDiagnostics(profileSystems: true),
-      )
+      final app = App(diagnostics: const AppDiagnostics(profileSystems: true))
         ..addSystemAdapter(
           RecordingAdapter('never', log),
           schedule: Schedules.update,
@@ -172,29 +169,31 @@ void main() {
       );
     });
 
-    test('shutdown runs schedule then async cleanups once in reverse order',
-        () async {
-      final log = <String>[];
-      final app = App()
-        ..addSystemAdapter(
-          RecordingAdapter('shutdown', log),
-          schedule: Schedules.shutdown,
-          label: const SystemLabel('shutdown.probe'),
-        )
-        ..addCleanup(() async {
-          await Future<void>.delayed(Duration.zero);
-          log.add('cleanup-a');
-        })
-        ..addCleanup(() {
-          log.add('cleanup-b');
-        });
+    test(
+      'shutdown runs schedule then async cleanups once in reverse order',
+      () async {
+        final log = <String>[];
+        final app = App()
+          ..addSystemAdapter(
+            RecordingAdapter('shutdown', log),
+            schedule: Schedules.shutdown,
+            label: const SystemLabel('shutdown.probe'),
+          )
+          ..addCleanup(() async {
+            await Future<void>.delayed(Duration.zero);
+            log.add('cleanup-a');
+          })
+          ..addCleanup(() {
+            log.add('cleanup-b');
+          });
 
-      app.start();
-      await app.shutdown();
-      await app.shutdown();
+        app.start();
+        await app.shutdown();
+        await app.shutdown();
 
-      expect(log, <String>['shutdown', 'cleanup-b', 'cleanup-a']);
-    });
+        expect(log, <String>['shutdown', 'cleanup-b', 'cleanup-a']);
+      },
+    );
   });
 
   group('addSystems (batch registration)', () {
@@ -279,8 +278,10 @@ void main() {
         );
       app.start();
       app.runSchedule(Schedules.update);
-      expect(log, <String>['a', 'z'],
-          reason: 'first still orders before last across the empty phase');
+      expect(log, <String>[
+        'a',
+        'z',
+      ], reason: 'first still orders before last across the empty phase');
     });
 
     test('set membership without configuration is inert', () {
@@ -325,11 +326,10 @@ void main() {
       final gate = _Gate();
       final app = App()
         ..insertResource<_Gate>(gate)
-        ..addSystems(
-          Schedules.update,
-          [descriptor('a', log), descriptor('b', log)],
-          runIf: (world) => world.resource<_Gate>().open,
-        );
+        ..addSystems(Schedules.update, [
+          descriptor('a', log),
+          descriptor('b', log),
+        ], runIf: (world) => world.resource<_Gate>().open);
       app.start();
       app.runSchedule(Schedules.update);
       expect(log, isEmpty);

@@ -56,16 +56,18 @@ void main() {
       expect(app.world.isAlive(entity), isTrue);
     });
 
-    test('game time drives the countdown: a zero delta does not advance it',
-        () {
-      final entity = spawnWithLifetime(0.1);
+    test(
+      'game time drives the countdown: a zero delta does not advance it',
+      () {
+        final entity = spawnWithLifetime(0.1);
 
-      tick(0); // paused / hitstop frame
-      tick(0);
-      expect(app.world.isAlive(entity), isTrue);
-      tick(0.2);
-      expect(app.world.isAlive(entity), isFalse);
-    });
+        tick(0); // paused / hitstop frame
+        tick(0);
+        expect(app.world.isAlive(entity), isTrue);
+        tick(0.2);
+        expect(app.world.isAlive(entity), isFalse);
+      },
+    );
 
     test('throws when DespawnAfter is used without a FrameTime resource', () {
       final bare = App()..start();
@@ -78,14 +80,13 @@ void main() {
       );
     });
 
-    test('the built-in system is inert while no entity carries the component',
-        () {
-      final bare = App()..start();
-      // No FrameTime resource either: the empty-store early return must win.
-      expect(
-        () => bare.runSchedule(Schedules.update),
-        returnsNormally,
-      );
-    });
+    test(
+      'the built-in system is inert while no entity carries the component',
+      () {
+        final bare = App()..start();
+        // No FrameTime resource either: the empty-store early return must win.
+        expect(() => bare.runSchedule(Schedules.update), returnsNormally);
+      },
+    );
   });
 }

@@ -93,10 +93,13 @@ final class App implements AppBuilder {
         if (!_reportedEventSkips.add(type)) return;
         sink(
           'An EventReader<$type> fell behind: $skipped unread event(s) '
-          'expired past the channel retention window. Readers that read '
-          'every frame never miss events; pass retainedUpdates: null to '
-          'addEvent<$type>() to keep events until every reader consumes '
-          'them. (Reported once per event type.)',
+          'expired past the channel retention window. This means a reader '
+          'went longer than the window without a turn — usually a system '
+          'gated by runIf, or a FIXED-step reader at a refresh rate high '
+          'enough that render frames carry zero fixed steps. Widen the '
+          'window with addEvent<$type>(retainedUpdates: ...) or pass null '
+          'to retain events until every reader consumes them. (Reported '
+          'once per event type.)',
         );
       };
     }
@@ -242,7 +245,7 @@ final class App implements AppBuilder {
   }
 
   @override
-  AppBuilder addEvent<T>({int? retainedUpdates = 2}) {
+  AppBuilder addEvent<T>({int? retainedUpdates = 8}) {
     _assertOpen();
     world.registerEvent<T>(retainedUpdates: retainedUpdates);
     return this;

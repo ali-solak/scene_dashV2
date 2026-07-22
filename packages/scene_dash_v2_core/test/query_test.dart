@@ -63,8 +63,11 @@ void main() {
   group('Query2', () {
     test('matches only entities having both components', () {
       final world = _worldWithStores();
-      final both =
-          _spawn(world, position: Position(1, 1), velocity: Velocity(1, 0));
+      final both = _spawn(
+        world,
+        position: Position(1, 1),
+        velocity: Velocity(1, 0),
+      );
       _spawn(world, position: Position(2, 2)); // no velocity
       _spawn(world, velocity: Velocity(9, 9)); // no position
 
@@ -100,10 +103,12 @@ void main() {
       ); // not a Player
 
       final matched = <Entity>[];
-      world.query2<Position, Velocity>(
-        withTypes: const [Player],
-        withoutTypes: const [Frozen],
-      ).each((entity, p, v) => matched.add(entity));
+      world
+          .query2<Position, Velocity>(
+            withTypes: const [Player],
+            withoutTypes: const [Frozen],
+          )
+          .each((entity, p, v) => matched.add(entity));
 
       expect(matched, <Entity>[activePlayer]);
     });
@@ -114,10 +119,16 @@ void main() {
       for (var i = 0; i < 50; i++) {
         _spawn(world, position: Position(i.toDouble(), 0));
       }
-      final a =
-          _spawn(world, position: Position(100, 0), velocity: Velocity(1, 0));
-      final b =
-          _spawn(world, position: Position(200, 0), velocity: Velocity(2, 0));
+      final a = _spawn(
+        world,
+        position: Position(100, 0),
+        velocity: Velocity(1, 0),
+      );
+      final b = _spawn(
+        world,
+        position: Position(200, 0),
+        velocity: Velocity(2, 0),
+      );
 
       final matched = <Entity>{};
       world.query2<Position, Velocity>().each((e, p, v) => matched.add(e));
@@ -172,8 +183,11 @@ void main() {
 
     test('Query2.get invokes the callback with both components', () {
       final world = _worldWithStores();
-      final e =
-          _spawn(world, position: Position(1, 1), velocity: Velocity(5, 0));
+      final e = _spawn(
+        world,
+        position: Position(1, 1),
+        velocity: Velocity(5, 0),
+      );
       _spawn(world, position: Position(2, 2)); // no velocity
 
       var calls = 0;
@@ -192,9 +206,10 @@ void main() {
       final e = _spawn(world, position: Position(1, 1)); // no velocity
 
       var called = false;
-      final matched = world
-          .query2<Position, Velocity>()
-          .get(e, (entity, p, v) => called = true);
+      final matched = world.query2<Position, Velocity>().get(
+        e,
+        (entity, p, v) => called = true,
+      );
       expect(matched, isFalse);
       expect(called, isFalse);
     });
@@ -265,8 +280,11 @@ void main() {
       for (var i = 0; i < 50; i++) {
         _spawn(world, position: Position(i.toDouble(), 0));
       }
-      final both =
-          _spawn(world, position: Position(100, 0), velocity: Velocity(1, 0));
+      final both = _spawn(
+        world,
+        position: Position(100, 0),
+        velocity: Velocity(1, 0),
+      );
 
       final seen = <Entity>[];
       world.query2<Position, Velocity>().eachUntil((entity, p, v) {
@@ -294,10 +312,7 @@ void main() {
       final world = _worldWithStores();
       _spawn(world, position: Position(0, 0));
       world.query1<Position>().eachUntil((entity, position) => false);
-      expect(
-        () => _spawn(world, position: Position(1, 1)),
-        returnsNormally,
-      );
+      expect(() => _spawn(world, position: Position(1, 1)), returnsNormally);
     });
   });
 
@@ -307,8 +322,7 @@ void main() {
       _spawn(world, position: Position(1, 0));
       final wanted = _spawn(world, position: Position(5, 0));
 
-      final match =
-          world.query1<Position>().firstWhere((entity, p) => p.x > 3);
+      final match = world.query1<Position>().firstWhere((entity, p) => p.x > 3);
       expect(match, isNotNull);
       expect(match!.$1, wanted);
       expect(match.$2.x, 5);
@@ -350,12 +364,15 @@ void main() {
 
     test('Query2.firstWhere returns the full component record', () {
       final world = _worldWithStores();
-      final e =
-          _spawn(world, position: Position(1, 2), velocity: Velocity(3, 4));
+      final e = _spawn(
+        world,
+        position: Position(1, 2),
+        velocity: Velocity(3, 4),
+      );
 
-      final match = world
-          .query2<Position, Velocity>()
-          .firstWhere((entity, p, v) => v.x == 3);
+      final match = world.query2<Position, Velocity>().firstWhere(
+        (entity, p, v) => v.x == 3,
+      );
       expect(match, isNotNull);
       final (entity, p, v) = match!;
       expect(entity, e);
@@ -409,8 +426,11 @@ void main() {
 
     test('Query2.components returns both components or null', () {
       final world = _worldWithStores();
-      final both =
-          _spawn(world, position: Position(1, 2), velocity: Velocity(3, 4));
+      final both = _spawn(
+        world,
+        position: Position(1, 2),
+        velocity: Velocity(3, 4),
+      );
       final positionOnly = _spawn(world, position: Position(9, 9));
 
       final query = world.query2<Position, Velocity>();
@@ -430,9 +450,7 @@ void main() {
       world.despawnNow(dead);
 
       expect(
-        world
-            .query1<Position>(withoutTypes: const [Frozen])
-            .components(frozen),
+        world.query1<Position>(withoutTypes: const [Frozen]).components(frozen),
         isNull,
       );
       expect(world.query1<Position>().components(dead), isNull);

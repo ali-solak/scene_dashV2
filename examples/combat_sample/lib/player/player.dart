@@ -34,8 +34,6 @@ part 'systems/systems.dart';
 /// lock-on with the rig-driven camera.
 void installPlayer(GameBuilder game) {
   game
-    ..configureEvent<LockPressed>(retainedUpdates: 8)
-    ..configureEvent<LockCycled>(retainedUpdates: 8)
     ..registerTag<Player>()
     ..registerComponent<Fighter>()
     ..registerComponent<PlayerMotion>()
@@ -49,15 +47,6 @@ void installPlayer(GameBuilder game) {
       spawnPlayer,
       writes: const {Player, Fighter, PlayerMotion},
     )
-    // Per frame rather than on a state entry, and for the same reason the
-    // enemies' attach is: the knight has to be standing in the clearing
-    // during the TITLE screen, because the opening push-in has to have
-    // something to arrive at. The system early-outs once bodied, so the
-    // steady-state cost is one query.
-    //
-    // The attach is deferred (world.add), so no live write is declared —
-    // the enemies' attach adds SceneNode to different entities in the same
-    // frame, and neither system touches the other's rows.
     ..addSystem(
       Schedules.update,
       attachPlayerVisuals,
@@ -83,10 +72,6 @@ void installPlayer(GameBuilder game) {
       writes: const {Fighter},
       runIf: inState(GameStatus.fighting),
     )
-    // Fixed step, not update: it reads `justEntered(rolling)`, and a
-    // machine edge is raised by `go` and lowered on the next tick — the
-    // update schedule can miss it entirely. Deferred spawn only, so no
-    // live write is declared.
     ..addSystem(
       Schedules.fixedUpdate,
       spawnPlayerFx,
@@ -95,11 +80,6 @@ void installPlayer(GameBuilder game) {
       after: const [fighterDriver],
       runIf: hasResource<Scene>(),
     )
-    // Fixed step, with the fighters: a per-FRAME sampler chasing
-    // per-fixed-step bones records the same rung several times over at
-    // high frame rates, which bunches the ribbon at its head. In
-    // `actions` rather than `resolution` so set order alone keeps it off
-    // `applyDamage`, which writes the Fighter it reads.
     ..addSystem(
       Schedules.fixedUpdate,
       updateBladeTrail,

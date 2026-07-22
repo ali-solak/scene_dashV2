@@ -170,9 +170,9 @@ void recordTrace(World world) {
 
 /// The buffer ages on wall time, so hitstop cannot extend it.
 void ageBuffer(World world) {
-  world
-      .resource<InputBuffer<CombatAction>>()
-      .advance(world.resource<FrameTime>().unscaledDelta);
+  world.resource<InputBuffer<CombatAction>>().advance(
+    world.resource<FrameTime>().unscaledDelta,
+  );
 }
 
 void installFighter(GameBuilder game) {
@@ -182,14 +182,30 @@ void installFighter(GameBuilder game) {
   game
     ..addSystem(Schedules.frameStart, ageBuffer, reads: const {})
     ..addSystem(Schedules.fixedUpdate, fighterDriver, writes: {AttackState})
-    ..addSystem(Schedules.fixedUpdate, applyIncomingHits,
-        writes: {AttackState}, after: [fighterDriver])
-    ..addSystem(Schedules.fixedUpdate, clearBufferOnStagger,
-        reads: {AttackState}, after: [applyIncomingHits])
-    ..addSystem(Schedules.fixedUpdate, hitboxSystem,
-        reads: {AttackState}, after: [clearBufferOnStagger])
-    ..addSystem(Schedules.fixedUpdate, recordTrace,
-        reads: {AttackState}, after: [hitboxSystem]);
+    ..addSystem(
+      Schedules.fixedUpdate,
+      applyIncomingHits,
+      writes: {AttackState},
+      after: [fighterDriver],
+    )
+    ..addSystem(
+      Schedules.fixedUpdate,
+      clearBufferOnStagger,
+      reads: {AttackState},
+      after: [applyIncomingHits],
+    )
+    ..addSystem(
+      Schedules.fixedUpdate,
+      hitboxSystem,
+      reads: {AttackState},
+      after: [clearBufferOnStagger],
+    )
+    ..addSystem(
+      Schedules.fixedUpdate,
+      recordTrace,
+      reads: {AttackState},
+      after: [hitboxSystem],
+    );
 }
 
 (TestGame, Entity, CombatLog) boot() {
@@ -233,8 +249,11 @@ void main() {
     game.world.buffer<CombatAction>().record(CombatAction.attack);
     game.pumpFixed(steps: 1 + startupTicks + activeTicks + recoveryTicks + 5);
     expect(log.swings, 1, reason: 'one swing, one land');
-    expect(log.hitboxTicks, activeTicks,
-        reason: 'open for exactly the active window');
+    expect(
+      log.hitboxTicks,
+      activeTicks,
+      reason: 'open for exactly the active window',
+    );
     expect(log.hitboxOpen, isFalse);
 
     game.world.buffer<CombatAction>().record(CombatAction.attack);
@@ -276,8 +295,11 @@ void main() {
     game.pumpFixed(steps: recoveryTicks);
     expect(log.trace.last, CombatPhase.idle, reason: 'recovery just ended');
     game.pumpFixed(steps: 1);
-    expect(log.trace.last, CombatPhase.rolling,
-        reason: 'the buffered roll fires on the first idle tick');
+    expect(
+      log.trace.last,
+      CombatPhase.rolling,
+      reason: 'the buffered roll fires on the first idle tick',
+    );
   });
 
   test('justEntered(staggered) clears the buffer: intent recorded before '
@@ -298,8 +320,11 @@ void main() {
     pumpMachineTicks(game, log, 1);
     expect(log.trace.last, CombatPhase.idle);
     pumpMachineTicks(game, log, 5);
-    expect(log.trace.last, CombatPhase.idle,
-        reason: 'the cleared roll did not fire after the stagger');
+    expect(
+      log.trace.last,
+      CombatPhase.idle,
+      reason: 'the cleared roll did not fire after the stagger',
+    );
   });
 
   test('hitstop stalls elapsed and shifts every subsequent boundary by '
@@ -315,11 +340,17 @@ void main() {
     // stalls for exactly the pump count the clock's arithmetic dictates.
     final frozen = frozenPumpsFor(hitstopSeconds);
     game.pumpFixed(steps: frozen);
-    expect(log.steps, stepsAtFreeze,
-        reason: 'frozen frames run no fixed steps: the machine stalls');
+    expect(
+      log.steps,
+      stepsAtFreeze,
+      reason: 'frozen frames run no fixed steps: the machine stalls',
+    );
     game.pumpFixed(steps: 1);
-    expect(log.steps, stepsAtFreeze + 1,
-        reason: 'resumes on the very next pump: shift == frozen frames');
+    expect(
+      log.steps,
+      stepsAtFreeze + 1,
+      reason: 'resumes on the very next pump: shift == frozen frames',
+    );
 
     // The stagger still serves its full duration in machine ticks — every
     // boundary after the freeze lands the frozen count later in wall

@@ -73,9 +73,9 @@ void applyHits(World world) {
 
 /// The buffer ages on wall time, so hitstop cannot extend it.
 void ageBuffer(World world) {
-  world
-      .resource<InputBuffer<CombatAction>>()
-      .advance(world.resource<FrameTime>().unscaledDelta);
+  world.resource<InputBuffer<CombatAction>>().advance(
+    world.resource<FrameTime>().unscaledDelta,
+  );
 }
 
 void installCombat(GameBuilder game) {
@@ -85,17 +85,22 @@ void installCombat(GameBuilder game) {
   game
     ..addState(RunMode.playing)
     ..addSystem(Schedules.frameStart, ageBuffer, reads: const {})
-    ..addSystem(Schedules.fixedUpdate, fighterSystem,
-        writes: {Fighter}, runIf: inState(RunMode.playing))
-    ..addSystem(Schedules.fixedUpdate, applyHits,
-        writes: {Fighter}, after: [fighterSystem]);
+    ..addSystem(
+      Schedules.fixedUpdate,
+      fighterSystem,
+      writes: {Fighter},
+      runIf: inState(RunMode.playing),
+    )
+    ..addSystem(
+      Schedules.fixedUpdate,
+      applyHits,
+      writes: {Fighter},
+      after: [fighterSystem],
+    );
 }
 
 TestGame boot() {
-  final game = TestGame.headless(
-    fixedDt: 1 / 64,
-    features: [installCombat],
-  );
+  final game = TestGame.headless(fixedDt: 1 / 64, features: [installCombat]);
   game.world.spawn([Fighter()]);
   game.start();
   return game;
@@ -165,8 +170,8 @@ void main() {
     expect(fighter.hitsTaken, 1);
     // Press strike during the freeze: buffered (wall-time window 6/64).
     game.world.resource<InputBuffer<CombatAction>>().record(
-          CombatAction.strike,
-        );
+      CombatAction.strike,
+    );
     game.pumpFixed(steps: 3); // frozen frames
     expect(fighter.strikesLanded, 0);
     game.pumpFixed(steps: 1); // first live step: buffered strike fires
@@ -174,8 +179,8 @@ void main() {
 
     // A press left to age past the window fires nothing.
     game.world.resource<InputBuffer<CombatAction>>().record(
-          CombatAction.strike,
-        );
+      CombatAction.strike,
+    );
     game.clock.paused = true; // fixed steps stop; wall time keeps aging
     game.pumpFixed(steps: 8); // 8/64 wall seconds > 6/64 window
     game.clock.paused = false;
@@ -197,8 +202,7 @@ void main() {
       game.pumpFixed(steps: 25);
       game.emit(HitLanded(game.world.query<Fighter>().single.$1));
       game.pumpFixed(steps: 30);
-      return (fighter.x, fighter.stepsSeen, fighter.iFrames,
-          fighter.hitsTaken);
+      return (fighter.x, fighter.stepsSeen, fighter.iFrames, fighter.hitsTaken);
     }
 
     expect(run(), run());

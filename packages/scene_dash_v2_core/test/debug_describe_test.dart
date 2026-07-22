@@ -32,11 +32,11 @@ void main() {
       world.insertNow<Position>(e, Position(1));
       world.insertNow<Enemy>(e, const Enemy());
 
-      expect(
-        world.debugComponentsOf(e),
-        <Type>[Position, Health, Enemy],
-        reason: 'registration order, not insertion order',
-      );
+      expect(world.debugComponentsOf(e), <Type>[
+        Position,
+        Health,
+        Enemy,
+      ], reason: 'registration order, not insertion order');
     });
 
     test('is empty for entities with no components and for stale handles', () {

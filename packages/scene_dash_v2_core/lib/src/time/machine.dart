@@ -47,9 +47,7 @@ final class Machine<S> {
   bool _entered = false;
   bool _left = false;
 
-  Machine(S initial)
-      : _state = initial,
-        _exited = initial;
+  Machine(S initial) : _state = initial, _exited = initial;
 
   /// The current state.
   S get state => _state;

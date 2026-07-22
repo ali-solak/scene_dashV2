@@ -91,19 +91,19 @@ void main() {
 
       final collector = SnapshotCollector(game.world);
       final snapshot = collector.collect();
-      expect(_Tattling.toStringCalls, 0,
-          reason: 'collect must not touch component toString');
       expect(
-        snapshot.entities.single.componentTypes,
-        contains('_Tattling'),
+        _Tattling.toStringCalls,
+        0,
+        reason: 'collect must not touch component toString',
       );
+      expect(snapshot.entities.single.componentTypes, contains('_Tattling'));
 
-      final detail = collector.describeEntity(
-        entity.index,
-        entity.generation,
+      final detail = collector.describeEntity(entity.index, entity.generation);
+      expect(
+        _Tattling.toStringCalls,
+        1,
+        reason: 'detail renders values, on selection only',
       );
-      expect(_Tattling.toStringCalls, 1,
-          reason: 'detail renders values, on selection only');
       expect(detail.lines, contains('tattled'));
     });
 
@@ -122,17 +122,17 @@ void main() {
       final plain = snapshot.resources.singleWhere(
         (resource) => resource.type == '_PlainResource',
       );
-      expect(plain.value, isNull,
-          reason: 'default Instance-of toString is filtered, as in M6');
+      expect(
+        plain.value,
+        isNull,
+        reason: 'default Instance-of toString is filtered, as in M6',
+      );
     });
 
-    test('systems: label, schedule, last and average ms from the profiler',
-        () {
+    test('systems: label, schedule, last and average ms from the profiler', () {
       final game = TestGame.headless(
         diagnostics: const AppDiagnostics(profileSystems: true),
-        features: [
-          (game) => game.addSystem(Schedules.update, moverSystem),
-        ],
+        features: [(game) => game.addSystem(Schedules.update, moverSystem)],
       );
       game.world.spawn([_Pos()]);
       game.pump();
@@ -141,8 +141,9 @@ void main() {
       final snapshot = SnapshotCollector(game.world).collect();
 
       // The D11 label carries the registration disambiguator (`@0`).
-      final mover =
-          snapshot.systems.where((s) => s.label.startsWith('moverSystem'));
+      final mover = snapshot.systems.where(
+        (s) => s.label.startsWith('moverSystem'),
+      );
       expect(mover, isNotEmpty, reason: 'profiled system appears by label');
       final timing = mover.first;
       expect(timing.schedule, isNotEmpty);
@@ -186,14 +187,18 @@ void main() {
       ]);
       game.pump(); // flush the deferred spawn
 
-      final detail = SnapshotCollector(game.world)
-          .describeEntity(boss.index, boss.generation);
+      final detail = SnapshotCollector(
+        game.world,
+      ).describeEntity(boss.index, boss.generation);
 
       expect(detail.stale, isFalse);
       expect(detail.name, 'Boss');
       expect(detail.lines, contains('hp 75/100'));
-      expect(detail.lines, contains('_Pos'),
-          reason: 'no toString override falls back to the type name');
+      expect(
+        detail.lines,
+        contains('_Pos'),
+        reason: 'no toString override falls back to the type name',
+      );
     });
 
     test('a stale handle reports stale with no lines', () {
@@ -202,8 +207,9 @@ void main() {
       game.pump(); // flush the deferred spawn
       game.world.despawnNow(entity);
 
-      final detail = SnapshotCollector(game.world)
-          .describeEntity(entity.index, entity.generation);
+      final detail = SnapshotCollector(
+        game.world,
+      ).describeEntity(entity.index, entity.generation);
 
       expect(detail.stale, isTrue);
       expect(detail.lines, isEmpty);

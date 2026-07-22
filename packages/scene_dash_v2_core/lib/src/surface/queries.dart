@@ -80,8 +80,7 @@ final class QueryView1<A extends Object> {
 
   /// Invokes [callback] once per match — the primary, zero-allocation
   /// spelling. `return` inside the callback continues with the next match.
-  void each(void Function(Entity entity, A a) callback) =>
-      _core.each(callback);
+  void each(void Function(Entity entity, A a) callback) => _core.each(callback);
 
   /// Like [each], but stops as soon as [callback] returns `false` — the
   /// break-capable form.
@@ -239,8 +238,9 @@ final class QueryView3<A extends Object, B extends Object, C extends Object> {
   bool any(bool Function(Entity entity, A a, B b, C c) test) => _core.any(test);
 
   /// The first match satisfying [test] as a record, or `null`.
-  (Entity, A, B, C)? firstWhere(bool Function(Entity entity, A a, B b, C c) test) =>
-      _core.firstWhere(test);
+  (Entity, A, B, C)? firstWhere(
+    bool Function(Entity entity, A a, B b, C c) test,
+  ) => _core.firstWhere(test);
 
   /// The matches as records, in iteration order — the for-loop spelling;
   /// allocates one record per row.
@@ -274,7 +274,12 @@ final class QueryView3<A extends Object, B extends Object, C extends Object> {
 }
 
 /// A 4-type record query; see the library docs for the surface contract.
-final class QueryView4<A extends Object, B extends Object, C extends Object, D extends Object> {
+final class QueryView4<
+  A extends Object,
+  B extends Object,
+  C extends Object,
+  D extends Object
+> {
   final Query4<A, B, C, D> _core;
 
   QueryView4._(this._core);
@@ -311,11 +316,13 @@ final class QueryView4<A extends Object, B extends Object, C extends Object, D e
       _core.eachUntil(callback);
 
   /// Whether any match satisfies [test]. Stops at the first hit.
-  bool any(bool Function(Entity entity, A a, B b, C c, D d) test) => _core.any(test);
+  bool any(bool Function(Entity entity, A a, B b, C c, D d) test) =>
+      _core.any(test);
 
   /// The first match satisfying [test] as a record, or `null`.
-  (Entity, A, B, C, D)? firstWhere(bool Function(Entity entity, A a, B b, C c, D d) test) =>
-      _core.firstWhere(test);
+  (Entity, A, B, C, D)? firstWhere(
+    bool Function(Entity entity, A a, B b, C c, D d) test,
+  ) => _core.firstWhere(test);
 
   /// The matches as records, in iteration order — the for-loop spelling;
   /// allocates one record per row.
@@ -326,7 +333,8 @@ final class QueryView4<A extends Object, B extends Object, C extends Object, D e
   }
 
   /// The first match, or `null` when nothing matches.
-  (Entity, A, B, C, D)? get firstOrNull => _core.firstWhere((_, _, _, _, _) => true);
+  (Entity, A, B, C, D)? get firstOrNull =>
+      _core.firstWhere((_, _, _, _, _) => true);
 
   /// The first match; throws when nothing matches.
   (Entity, A, B, C, D) get first => firstOrNull ?? _noMatch('query4().first');
@@ -336,7 +344,8 @@ final class QueryView4<A extends Object, B extends Object, C extends Object, D e
   (Entity, A, B, C, D)? get singleOrNull => _core.singleOrNull();
 
   /// The single match; throws when zero or several match.
-  (Entity, A, B, C, D) get single => singleOrNull ?? _noMatch('query4().single');
+  (Entity, A, B, C, D) get single =>
+      singleOrNull ?? _noMatch('query4().single');
 
   /// Whether no entity matches. Stops at the first hit; allocation-free.
   bool get isEmpty => _core.isEmpty;
@@ -354,29 +363,29 @@ extension WorldRecordQueries on World {
   QueryView1<A> query<A extends Object>({
     List<Type> require = const <Type>[],
     List<Type> exclude = const <Type>[],
-  }) =>
-      QueryView1<A>(this, require: require, exclude: exclude);
+  }) => QueryView1<A>(this, require: require, exclude: exclude);
 
   /// A record query over two component types; see [QueryView2].
   QueryView2<A, B> query2<A extends Object, B extends Object>({
     List<Type> require = const <Type>[],
     List<Type> exclude = const <Type>[],
-  }) =>
-      QueryView2<A, B>(this, require: require, exclude: exclude);
+  }) => QueryView2<A, B>(this, require: require, exclude: exclude);
 
   /// A record query over three component types; see [QueryView3].
   QueryView3<A, B, C>
-      query3<A extends Object, B extends Object, C extends Object>({
+  query3<A extends Object, B extends Object, C extends Object>({
     List<Type> require = const <Type>[],
     List<Type> exclude = const <Type>[],
-  }) =>
-          QueryView3<A, B, C>(this, require: require, exclude: exclude);
+  }) => QueryView3<A, B, C>(this, require: require, exclude: exclude);
 
   /// A record query over four component types; see [QueryView4].
-  QueryView4<A, B, C, D> query4<A extends Object, B extends Object,
-          C extends Object, D extends Object>({
+  QueryView4<A, B, C, D> query4<
+    A extends Object,
+    B extends Object,
+    C extends Object,
+    D extends Object
+  >({
     List<Type> require = const <Type>[],
     List<Type> exclude = const <Type>[],
-  }) =>
-      QueryView4<A, B, C, D>(this, require: require, exclude: exclude);
+  }) => QueryView4<A, B, C, D>(this, require: require, exclude: exclude);
 }

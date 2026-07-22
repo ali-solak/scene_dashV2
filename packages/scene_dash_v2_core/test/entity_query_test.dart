@@ -54,7 +54,10 @@ void main() {
 
       final seen = <Entity>{};
       world
-          .queryEntities(withTypes: const [Enemy], withoutTypes: const [Stunned])
+          .queryEntities(
+            withTypes: const [Enemy],
+            withoutTypes: const [Stunned],
+          )
           .each(seen.add);
       expect(seen, {free});
     });
@@ -124,7 +127,10 @@ void main() {
 
       final seen = <Entity>[];
       world
-          .queryEntities(withTypes: const [Enemy], withoutTypes: const [Stunned])
+          .queryEntities(
+            withTypes: const [Enemy],
+            withoutTypes: const [Stunned],
+          )
           .eachUntil((entity) {
             seen.add(entity);
             return true;

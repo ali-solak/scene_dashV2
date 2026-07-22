@@ -125,8 +125,7 @@ int _deliverEntityHits(
     final hit = hits[i];
     if (layerMask != _allLayers) {
       final collider = hit.collider;
-      if (collider is! Collider ||
-          (collider.collisionLayer & layerMask) == 0) {
+      if (collider is! Collider || (collider.collisionLayer & layerMask) == 0) {
         continue;
       }
     }

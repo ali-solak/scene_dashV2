@@ -281,8 +281,7 @@ class WorldEventListener<E extends Object> extends StatefulWidget {
   final Widget child;
 
   @override
-  State<WorldEventListener<E>> createState() =>
-      _WorldEventListenerState<E>();
+  State<WorldEventListener<E>> createState() => _WorldEventListenerState<E>();
 }
 
 class _WorldEventListenerState<E extends Object>

@@ -1,7 +1,7 @@
-import 'package:flutter/foundation.dart' show Listenable;
+import 'package:flutter/foundation.dart'
+    show Listenable, debugPrint, kDebugMode;
 import 'package:flutter_scene/scene.dart' show Node, Scene;
 import 'package:scene_dash_v2_core/advanced.dart';
-
 
 import 'frame_tick.dart';
 import 'scene_commands.dart';
@@ -122,7 +122,7 @@ final class Game {
        _extraFrameEnd = onFrameEnd,
        app = App(
          accessConflictPolicy: accessConflictPolicy,
-         onDiagnostic: onDiagnostic,
+         onDiagnostic: onDiagnostic ?? _defaultDiagnosticSink,
          diagnostics: diagnostics,
        );
 
@@ -144,9 +144,21 @@ final class Game {
        _extraFrameEnd = onFrameEnd,
        app = App(
          accessConflictPolicy: accessConflictPolicy,
-         onDiagnostic: onDiagnostic,
+         onDiagnostic: onDiagnostic ?? _defaultDiagnosticSink,
          diagnostics: diagnostics,
        );
+
+  /// The debug default for the app's diagnostic sink: a silent diagnostic is
+  /// one nobody acts on, and the app's warnings (an event reader losing
+  /// unread events to the retention window, a nested-query shape) exist
+  /// precisely for the bugs that read as platform-dependent ghosts. Debug
+  /// builds print them through [debugPrint]; release builds stay silent.
+  /// Pass your own sink to redirect them — or `(_) {}` to silence debug too.
+  static void Function(String message)? get _defaultDiagnosticSink =>
+      kDebugMode ? _printDiagnostic : null;
+
+  static void _printDiagnostic(String message) =>
+      debugPrint('scene_dash_v2: $message');
 
   final void Function()? _extraCommandBoundary;
   final void Function()? _extraFrameEnd;

@@ -126,7 +126,7 @@ final class GameBuilder {
   /// Tunes the event channel for [T] before boot — the carried
   /// `addEvent(retainedUpdates:)`. Channels otherwise auto-register with
   /// the default retention on first `emit`/`events<T>()`.
-  void configureEvent<T extends Object>({int? retainedUpdates = 2}) =>
+  void configureEvent<T extends Object>({int? retainedUpdates = 8}) =>
       world.registerEvent<T>(retainedUpdates: retainedUpdates);
 
   /// Declares the order of [sets] within [schedule], once per schedule —
@@ -169,8 +169,7 @@ final class GameBuilder {
   void observe<T extends Object>({
     ComponentObserver<T>? onAdd,
     ComponentObserver<T>? onRemove,
-  }) =>
-      ObserverRegistry.of(world).observe<T>(onAdd: onAdd, onRemove: onRemove);
+  }) => ObserverRegistry.of(world).observe<T>(onAdd: onAdd, onRemove: onRemove);
 
   /// Registers the component store for [T] up front, for types that only
   /// ever appear in spawn lists (never queried). Idempotent.
@@ -235,8 +234,7 @@ base class _FunctionSystem implements SystemAdapter, EventCursorHost {
   final WorldSystem _system;
   final SystemLabel _label;
   final bool _fixed;
-  final Map<Type, EventReader<Object>> _readers =
-      <Type, EventReader<Object>>{};
+  final Map<Type, EventReader<Object>> _readers = <Type, EventReader<Object>>{};
   World? _world;
 
   _FunctionSystem(this._system, this._label, this._fixed);

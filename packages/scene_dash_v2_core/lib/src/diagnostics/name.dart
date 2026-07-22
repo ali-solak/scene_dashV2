@@ -1,4 +1,3 @@
-
 /// A human-readable label for an entity: `Name('Boss')`, `Name('Checkpoint 3')`.
 ///
 /// Plain data with no framework behavior — nothing looks entities up by name

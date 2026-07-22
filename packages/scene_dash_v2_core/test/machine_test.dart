@@ -56,12 +56,21 @@ void main() {
       m.go(Phase.startup);
       m.go(Phase.active);
       expect(m.justEntered(Phase.active), isTrue);
-      expect(m.justEntered(Phase.startup), isFalse,
-          reason: 'intermediate entry lost');
-      expect(m.justExited(Phase.startup), isTrue,
-          reason: 'the LAST exit (startup -> active)');
-      expect(m.justExited(Phase.idle), isFalse,
-          reason: 'the earlier exit is not tracked');
+      expect(
+        m.justEntered(Phase.startup),
+        isFalse,
+        reason: 'intermediate entry lost',
+      );
+      expect(
+        m.justExited(Phase.startup),
+        isTrue,
+        reason: 'the LAST exit (startup -> active)',
+      );
+      expect(
+        m.justExited(Phase.idle),
+        isFalse,
+        reason: 'the earlier exit is not tracked',
+      );
     });
 
     test('justExited pairs with the state most recently left', () {

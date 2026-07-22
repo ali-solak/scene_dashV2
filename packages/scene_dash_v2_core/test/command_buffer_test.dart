@@ -34,12 +34,11 @@ void main() {
       world.commands.insert<Health>(entity, const Health(100));
 
       expect(
-          world.stores.object<Health>().containsIndex(entity.index), isFalse);
-      world.commands.apply();
-      expect(
-        world.stores.object<Health>().valueOf(entity.index)?.value,
-        100,
+        world.stores.object<Health>().containsIndex(entity.index),
+        isFalse,
       );
+      world.commands.apply();
+      expect(world.stores.object<Health>().valueOf(entity.index)?.value, 100);
     });
 
     test('remove and despawn are deferred until apply', () {
@@ -53,7 +52,9 @@ void main() {
 
       expect(world.entities.isAlive(entity), isFalse);
       expect(
-          world.stores.object<Health>().containsIndex(entity.index), isFalse);
+        world.stores.object<Health>().containsIndex(entity.index),
+        isFalse,
+      );
     });
 
     test('two despawns of the same entity in one flush are idempotent', () {
@@ -116,8 +117,11 @@ void main() {
           .entity;
 
       world.commands.apply();
-      expect(world.get<Health>(entity).value, 99,
-          reason: 'the chained insert overrides the bundle component');
+      expect(
+        world.get<Health>(entity).value,
+        99,
+        reason: 'the chained insert overrides the bundle component',
+      );
     });
 
     test('stale command targets assert when applied in debug mode', () {

@@ -121,29 +121,31 @@ App _appWithStores() {
 
 void main() {
   group('App integration (no code generation)', () {
-    test('startup spawns, deferred commands apply, update integrates motion',
-        () {
-      final app = _appWithStores()..addPlugin(const DemoPlugin());
-      app.start(); // runs startup; spawn commands flushed afterwards
+    test(
+      'startup spawns, deferred commands apply, update integrates motion',
+      () {
+        final app = _appWithStores()..addPlugin(const DemoPlugin());
+        app.start(); // runs startup; spawn commands flushed afterwards
 
-      // After startup, exactly one player exists at the origin.
-      final afterStartup = <Position>[];
-      app.world.query1<Position>().each((e, p) => afterStartup.add(p));
-      expect(afterStartup, hasLength(1));
-      expect(afterStartup.single.x, 0);
+        // After startup, exactly one player exists at the origin.
+        final afterStartup = <Position>[];
+        app.world.query1<Position>().each((e, p) => afterStartup.add(p));
+        expect(afterStartup, hasLength(1));
+        expect(afterStartup.single.x, 0);
 
-      app.runSchedule(Schedules.update);
+        app.runSchedule(Schedules.update);
 
-      final moved = <Position>[];
-      app.world.query1<Position>().each((e, p) => moved.add(p));
-      expect(moved.single.x, closeTo(0.5, 1e-9));
-      expect(moved.single.y, closeTo(1.0, 1e-9));
+        final moved = <Position>[];
+        app.world.query1<Position>().each((e, p) => moved.add(p));
+        expect(moved.single.x, closeTo(0.5, 1e-9));
+        expect(moved.single.y, closeTo(1.0, 1e-9));
 
-      app.runSchedule(Schedules.update);
-      final moved2 = <Position>[];
-      app.world.query1<Position>().each((e, p) => moved2.add(p));
-      expect(moved2.single.x, closeTo(1.0, 1e-9));
-    });
+        app.runSchedule(Schedules.update);
+        final moved2 = <Position>[];
+        app.world.query1<Position>().each((e, p) => moved2.add(p));
+        expect(moved2.single.x, closeTo(1.0, 1e-9));
+      },
+    );
 
     test('plugin dependencies are validated', () {
       final missing = _appWithStores();

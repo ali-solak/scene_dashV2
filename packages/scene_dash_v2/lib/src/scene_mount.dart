@@ -30,10 +30,8 @@ import 'scene_node.dart';
 final class SceneNodeMountAdapter
     implements SystemAdapter, SystemAccessProvider {
   @override
-  SystemAccess get access => const SystemAccess(
-        reads: <Type>{SceneNode},
-        writes: <Type>{Mounted},
-      );
+  SystemAccess get access =>
+      const SystemAccess(reads: <Type>{SceneNode}, writes: <Type>{Mounted});
 
   final SceneCommands _sceneCommands;
 

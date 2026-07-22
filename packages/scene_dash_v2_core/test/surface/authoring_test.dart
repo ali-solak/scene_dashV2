@@ -32,18 +32,20 @@ void main() {
       final log = <String>[];
       void first(World world) => log.add('first');
       void second(World world) => log.add('second');
-      final game = TestGame.headless(features: [
-        (game) {
-          game.addSystem(Schedules.update, second, reads: const {});
-          // Registered later, ordered earlier.
-          game.addSystem(
-            Schedules.update,
-            first,
-            reads: const {},
-            before: [second],
-          );
-        },
-      ]);
+      final game = TestGame.headless(
+        features: [
+          (game) {
+            game.addSystem(Schedules.update, second, reads: const {});
+            // Registered later, ordered earlier.
+            game.addSystem(
+              Schedules.update,
+              first,
+              reads: const {},
+              before: [second],
+            );
+          },
+        ],
+      );
       game.pump();
       expect(log, ['first', 'second']);
     });
@@ -52,31 +54,31 @@ void main() {
       void a(World world) {}
       void b(World world) {}
       expect(
-        () => TestGame.headless(features: [
-          (game) => game.addSystem(Schedules.update, a, after: [b]),
-        ]),
+        () => TestGame.headless(
+          features: [
+            (game) => game.addSystem(Schedules.update, a, after: [b]),
+          ],
+        ),
         throwsA(
-          isA<StateError>().having(
-            (e) => e.message,
-            'message',
-            contains('b'),
-          ),
+          isA<StateError>().having((e) => e.message, 'message', contains('b')),
         ),
       );
     });
 
     test('runIf gates on the carried conditions (inState)', () {
       var runs = 0;
-      final game = TestGame.headless(features: [
-        (game) {
-          game.addState(RunMode.title);
-          game.addSystem(
-            Schedules.update,
-            (world) => runs++,
-            runIf: inState(RunMode.playing),
-          );
-        },
-      ]);
+      final game = TestGame.headless(
+        features: [
+          (game) {
+            game.addState(RunMode.title);
+            game.addSystem(
+              Schedules.update,
+              (world) => runs++,
+              runIf: inState(RunMode.playing),
+            );
+          },
+        ],
+      );
       game.pump();
       expect(runs, 0);
       game.world.setState(RunMode.playing);
@@ -90,9 +92,7 @@ void main() {
       expect(
         () => TestGame.headless(
           strictAccess: true,
-          features: [
-            (game) => game.addSystem(Schedules.update, undeclared),
-          ],
+          features: [(game) => game.addSystem(Schedules.update, undeclared)],
         ),
         throwsA(
           isA<StateError>().having(
@@ -111,23 +111,27 @@ void main() {
       void undeclared(World world) {}
       // Two unordered writers of the same type: boot throws (policy error).
       expect(
-        () => TestGame.headless(features: [
-          (game) {
-            game
-              ..addSystem(Schedules.update, writerA, writes: {Position})
-              ..addSystem(Schedules.update, writerB, writes: {Position});
-          },
-        ]).start(),
+        () => TestGame.headless(
+          features: [
+            (game) {
+              game
+                ..addSystem(Schedules.update, writerA, writes: {Position})
+                ..addSystem(Schedules.update, writerB, writes: {Position});
+            },
+          ],
+        ).start(),
         throwsStateError,
       );
       // The same pair with one undeclared: excluded, no conflict.
-      TestGame.headless(features: [
-        (game) {
-          game
-            ..addSystem(Schedules.update, writerA, writes: {Position})
-            ..addSystem(Schedules.update, undeclared);
-        },
-      ]).start();
+      TestGame.headless(
+        features: [
+          (game) {
+            game
+              ..addSystem(Schedules.update, writerA, writes: {Position})
+              ..addSystem(Schedules.update, undeclared);
+          },
+        ],
+      ).start();
     });
 
     test('debug drift check: a query naming an undeclared type reports '
@@ -202,9 +206,7 @@ void main() {
       }
 
       final game = TestGame.headless(
-        features: [
-          (game) => game.addSystem(Schedules.update, reader),
-        ],
+        features: [(game) => game.addSystem(Schedules.update, reader)],
       );
       game.start();
       game.pump(); // First run registers the cursor: nothing pending.
@@ -217,11 +219,11 @@ void main() {
       expect(results, [false, true]);
 
       game.pump();
-      expect(
-        results,
-        [false, true, false],
-        reason: 'consumed: the cursor moved past both events',
-      );
+      expect(results, [
+        false,
+        true,
+        false,
+      ], reason: 'consumed: the cursor moved past both events');
     });
 
     test('a system can emit for a later system in the same frame', () {
@@ -238,13 +240,15 @@ void main() {
         }
       }
 
-      final game = TestGame.headless(features: [
-        (game) {
-          game
-            ..addSystem(Schedules.fixedUpdate, producer)
-            ..addSystem(Schedules.update, consumer);
-        },
-      ]);
+      final game = TestGame.headless(
+        features: [
+          (game) {
+            game
+              ..addSystem(Schedules.fixedUpdate, producer)
+              ..addSystem(Schedules.update, consumer);
+          },
+        ],
+      );
       game.start();
       game.emit(const Ping(1));
       game.pumpFixed(steps: 1);
@@ -346,15 +350,17 @@ void main() {
     test('OnEnter/OnExit registration + DespawnOnExit scoping through the '
         'sugar', () {
       final log = <String>[];
-      final game = TestGame.headless(features: [
-        (game) {
-          game
-            ..registerComponent<Position>()
-            ..addState(RunMode.playing)
-            ..addSystem(OnEnter(RunMode.playing), (w) => log.add('enter'))
-            ..addSystem(OnExit(RunMode.playing), (w) => log.add('exit'));
-        },
-      ]);
+      final game = TestGame.headless(
+        features: [
+          (game) {
+            game
+              ..registerComponent<Position>()
+              ..addState(RunMode.playing)
+              ..addSystem(OnEnter(RunMode.playing), (w) => log.add('enter'))
+              ..addSystem(OnExit(RunMode.playing), (w) => log.add('exit'));
+          },
+        ],
+      );
       final scoped = game.world.spawn([
         Position(0),
         const DespawnOnExit(RunMode.playing),
@@ -370,14 +376,16 @@ void main() {
 
     test('hasResource gates a system on an optional capability', () {
       final log = <String>[];
-      final game = TestGame.headless(features: [
-        (game) => game.addSystem(
-              Schedules.update,
-              (w) => log.add('ran'),
-              reads: const {},
-              runIf: hasResource<_Capability>(),
-            ),
-      ]);
+      final game = TestGame.headless(
+        features: [
+          (game) => game.addSystem(
+            Schedules.update,
+            (w) => log.add('ran'),
+            reads: const {},
+            runIf: hasResource<_Capability>(),
+          ),
+        ],
+      );
       game.pump();
       expect(log, isEmpty, reason: 'resource absent: the system is skipped');
       game.world.insert(_Capability());

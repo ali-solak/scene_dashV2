@@ -73,8 +73,9 @@ void main() {
       _spawn(world, a: 1, b: 1, c: 1); // not tagged → excluded by requires
 
       final matched = <Entity>[];
-      world.query3<A, B, C>(
-          withTypes: const [Tagged]).each((e, a, b, c) => matched.add(e));
+      world
+          .query3<A, B, C>(withTypes: const [Tagged])
+          .each((e, a, b, c) => matched.add(e));
       expect(matched, <Entity>[ok]);
     });
   });
@@ -99,8 +100,9 @@ void main() {
       final kept = _spawn(world, a: 1, b: 1, c: 1, d: 1);
 
       final matched = <Entity>[];
-      world.query4<A, B, C, D>(
-          withoutTypes: const [Tagged]).each((e, a, b, c, d) => matched.add(e));
+      world
+          .query4<A, B, C, D>(withoutTypes: const [Tagged])
+          .each((e, a, b, c, d) => matched.add(e));
       expect(matched, <Entity>[kept]);
     });
   });
@@ -141,8 +143,9 @@ void main() {
       _spawn(world, a: 1, b: 1, c: 1);
       final wanted = _spawn(world, a: 7, b: 8, c: 9);
 
-      final match =
-          world.query3<A, B, C>().firstWhere((e, a, b, c) => a.v == 7);
+      final match = world.query3<A, B, C>().firstWhere(
+        (e, a, b, c) => a.v == 7,
+      );
       expect(match, isNotNull);
       final (entity, a, b, c) = match!;
       expect(entity, wanted);
@@ -196,10 +199,7 @@ void main() {
 
     test('Query4.any stops at the first hit and honours empty queries', () {
       final world = _world();
-      expect(
-        world.query4<A, B, C, D>().any((e, a, b, c, d) => true),
-        isFalse,
-      );
+      expect(world.query4<A, B, C, D>().any((e, a, b, c, d) => true), isFalse);
 
       for (var i = 0; i < 3; i++) {
         _spawn(world, a: i, b: i, c: i, d: i);
@@ -259,10 +259,7 @@ void main() {
       });
       expect(matched, isTrue);
       expect(sum, 6);
-      expect(
-        world.query3<A, B, C>().get(missing, (e, a, b, c) {}),
-        isFalse,
-      );
+      expect(world.query3<A, B, C>().get(missing, (e, a, b, c) {}), isFalse);
     });
 
     test('Query3.get honours filters', () {
@@ -281,9 +278,10 @@ void main() {
       final missing = _spawn(world, a: 1, b: 2, c: 3); // no D
 
       var sum = 0;
-      final matched = world
-          .query4<A, B, C, D>()
-          .get(all, (e, a, b, c, d) => sum = a.v + b.v + c.v + d.v);
+      final matched = world.query4<A, B, C, D>().get(
+        all,
+        (e, a, b, c, d) => sum = a.v + b.v + c.v + d.v,
+      );
       expect(matched, isTrue);
       expect(sum, 10);
       expect(
@@ -296,10 +294,7 @@ void main() {
       final world = _world();
       final e = _spawn(world, a: 1, b: 1, c: 1, d: 1);
       world.despawnNow(e);
-      expect(
-        world.query4<A, B, C, D>().get(e, (en, a, b, c, d) {}),
-        isFalse,
-      );
+      expect(world.query4<A, B, C, D>().get(e, (en, a, b, c, d) {}), isFalse);
     });
   });
 }

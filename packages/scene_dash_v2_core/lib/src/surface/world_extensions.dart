@@ -117,9 +117,10 @@ extension WorldSurface on World {
         this,
       ).track(entity, component.runtimeType, removeAfter);
     } else {
-      resources
-          .tryGet<RemoveAfterTracker>()
-          ?.cancel(entity, component.runtimeType);
+      resources.tryGet<RemoveAfterTracker>()?.cancel(
+        entity,
+        component.runtimeType,
+      );
     }
   }
 
@@ -209,6 +210,5 @@ extension WorldSurface on World {
   EntityQuery entitiesWith({
     required List<Type> require,
     List<Type> exclude = const <Type>[],
-  }) =>
-      queryEntities(withTypes: require, withoutTypes: exclude);
+  }) => queryEntities(withTypes: require, withoutTypes: exclude);
 }

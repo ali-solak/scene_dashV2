@@ -5,23 +5,14 @@ import '../world/world.dart';
 import 'query.dart';
 
 /// Callback invoked once per matching entity for a three-component query.
-typedef Query3Callback<A, B, C> = void Function(
-  Entity entity,
-  A a,
-  B b,
-  C c,
-);
+typedef Query3Callback<A, B, C> = void Function(Entity entity, A a, B b, C c);
 
 /// Callback for [Query3.eachUntil]: return `true` to keep iterating, `false`
 /// to stop. The same shape doubles as the predicate of [Query3.firstWhere]
 /// and [Query3.any], where `true` instead means "this row matches" — each
 /// method documents which meaning applies.
-typedef Query3UntilCallback<A, B, C> = bool Function(
-  Entity entity,
-  A a,
-  B b,
-  C c,
-);
+typedef Query3UntilCallback<A, B, C> =
+    bool Function(Entity entity, A a, B b, C c);
 
 /// A cached query over three object components [A], [B] and [C], with optional
 /// `requires`/`excludes` filters.

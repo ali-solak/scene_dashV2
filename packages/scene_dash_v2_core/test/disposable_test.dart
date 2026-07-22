@@ -39,8 +39,11 @@ void main() {
         ..insert(_C(log));
       game.start();
       await game.app.shutdown();
-      expect(log, ['C', 'B', 'A'],
-          reason: 'dependents (inserted later) die before dependencies');
+      expect(log, [
+        'C',
+        'B',
+        'A',
+      ], reason: 'dependents (inserted later) die before dependencies');
     });
   });
 
@@ -50,8 +53,11 @@ void main() {
       final world = World()..resources.insert(_A(log));
       world.reset();
       expect(log, isEmpty);
-      expect(world.resources.tryGet<_A>(), isNotNull,
-          reason: 'survivors stay registered and undisposed');
+      expect(
+        world.resources.tryGet<_A>(),
+        isNotNull,
+        reason: 'survivors stay registered and undisposed',
+      );
     });
 
     test('keepResources: false disposes the dropped resources in reverse '

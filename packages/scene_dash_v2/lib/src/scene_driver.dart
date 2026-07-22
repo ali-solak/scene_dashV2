@@ -2,7 +2,6 @@ import 'package:flutter_scene/scene.dart' show Component, PhysicsWorld;
 
 import 'package:scene_dash_v2_core/advanced.dart';
 
-
 /// The single internal `flutter_scene` [Component] that drives Scene-Dash from
 /// the scene lifecycle. Attached to the scene root by [Game.start].
 ///

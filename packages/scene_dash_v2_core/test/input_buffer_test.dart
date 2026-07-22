@@ -41,18 +41,21 @@ void main() {
       expect(buffer.consume(_Action.attack), isFalse);
     });
 
-    test('consume removes only the matched action, leaving others in place', () {
-      final buffer = InputBuffer<_Action>(window: 1.0);
-      buffer.record(_Action.attack);
-      buffer.record(_Action.roll);
-      buffer.record(_Action.attack);
+    test(
+      'consume removes only the matched action, leaving others in place',
+      () {
+        final buffer = InputBuffer<_Action>(window: 1.0);
+        buffer.record(_Action.attack);
+        buffer.record(_Action.roll);
+        buffer.record(_Action.attack);
 
-      expect(buffer.consume(_Action.roll), isTrue);
-      expect(buffer.has(_Action.roll), isFalse);
-      expect(buffer.consume(_Action.attack), isTrue);
-      expect(buffer.consume(_Action.attack), isTrue);
-      expect(buffer.consume(_Action.attack), isFalse);
-    });
+        expect(buffer.consume(_Action.roll), isTrue);
+        expect(buffer.has(_Action.roll), isFalse);
+        expect(buffer.consume(_Action.attack), isTrue);
+        expect(buffer.consume(_Action.attack), isTrue);
+        expect(buffer.consume(_Action.attack), isFalse);
+      },
+    );
 
     test('consumeAny returns the oldest entry across the given actions', () {
       final buffer = InputBuffer<_Action>(window: 1.0);
@@ -119,8 +122,10 @@ void main() {
 
       expect(buffer.has(_Action.attack), isFalse);
       expect(buffer.has(_Action.roll), isFalse);
-      expect(buffer.consumeAny(<_Action>{_Action.attack, _Action.roll}),
-          isNull);
+      expect(
+        buffer.consumeAny(<_Action>{_Action.attack, _Action.roll}),
+        isNull,
+      );
 
       // The buffer stays usable after a clear.
       buffer.record(_Action.attack);

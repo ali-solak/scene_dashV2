@@ -113,7 +113,7 @@ final class World {
   /// [retainedUpdates] bounds how many maintenance passes an unread event
   /// survives (see [EventChannel.retainedUpdates]); `null` retains events until
   /// every reader has consumed them. Ignored if the channel already exists.
-  void registerEvent<T>({int? retainedUpdates = 2}) {
+  void registerEvent<T>({int? retainedUpdates = 8}) {
     if (_eventChannels.containsKey(T)) return;
     final channel = EventChannel<T>(retainedUpdates: retainedUpdates);
     _eventChannels[T] = channel;

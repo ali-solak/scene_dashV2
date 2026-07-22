@@ -54,8 +54,11 @@ void main() {
     game.pump();
 
     final nested = _nested(messages);
-    expect(nested, hasLength(1),
-        reason: 'reported once per system, not once per frame or per row');
+    expect(
+      nested,
+      hasLength(1),
+      reason: 'reported once per system, not once per frame or per row',
+    );
     expect(
       nested.single,
       'Nested query in nestedSystem: query<_Enemy> iterated inside '
@@ -68,9 +71,7 @@ void main() {
     final messages = <String>[];
     final game = TestGame.headless(
       onDiagnostic: messages.add,
-      features: [
-        (game) => game.addSystem(Schedules.update, sequentialSystem),
-      ],
+      features: [(game) => game.addSystem(Schedules.update, sequentialSystem)],
     );
     game.world
       ..spawn([_PA()])

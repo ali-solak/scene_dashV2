@@ -6,8 +6,8 @@ import 'scene_node.dart';
 
 /// Extracts a node-local translation `(x, y, z)` from a game transform
 /// component of type [T].
-typedef NodeTranslation<T> = (double x, double y, double z) Function(
-    T transform);
+typedef NodeTranslation<T> =
+    (double x, double y, double z) Function(T transform);
 
 /// Writes a game transform component [source] into [target], the bound node's
 /// mutable local transform matrix.
@@ -46,7 +46,7 @@ final class SyncSceneNodesAdapter<T extends Object>
   int lastRunWrites = 0;
 
   SyncSceneNodesAdapter(NodeTranslation<T> translationOf)
-      : _writeTransform = _writerFromTranslation(translationOf);
+    : _writeTransform = _writerFromTranslation(translationOf);
 
   SyncSceneNodesAdapter.full(this._writeTransform);
 
@@ -56,9 +56,7 @@ final class SyncSceneNodesAdapter<T extends Object>
       ..ensureObjectStore<T>()
       ..ensureObjectStore<SceneNode>()
       ..ensureTagStore<PhysicsDriven>();
-    _query = world.query2<T, SceneNode>(
-      withoutTypes: const [PhysicsDriven],
-    );
+    _query = world.query2<T, SceneNode>(withoutTypes: const [PhysicsDriven]);
   }
 
   @override

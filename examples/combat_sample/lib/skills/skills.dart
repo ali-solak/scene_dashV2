@@ -27,18 +27,12 @@ part 'systems/systems.dart';
 
 void installSkills(GameBuilder game) {
   game
-    // Both edges below are read by FIXED-step systems, and the default
-    // two-frame retention assumes a reader that runs every frame. At high
-    // refresh a render frame can carry ZERO fixed steps, so the edge expired
-    // unread — cast keys silently dropped on desktop, and the wind gust
-    // fired without its leap (the gust rides a component, the leap rode
-    // this event). A window several frames wide survives any realistic
-    // display's zero-step frames, while a key pressed with the fight paused
-    // behind the menu still expires instead of firing on resume.
-    ..configureEvent<SkillCast>(retainedUpdates: 8)
-    // Internal to the fight (castSkills → fighterDriver, both gated on
-    // fighting, one fixed step apart): unbounded, so the leap can never be
-    // dropped — not even by a pause opened the same instant as the cast.
+    // castSkills → fighterDriver, both fighting-gated fixed systems one
+    // step apart: unbounded retention so the leap can never be dropped —
+    // not even by a pause opened the same instant as the cast. (The input
+    // edges — SkillCast, the lock presses — ride the framework's default
+    // retention, which is wide enough for fixed-step readers at any
+    // realistic refresh rate.)
     ..configureEvent<CastLeap>(retainedUpdates: null)
     ..registerComponent<Burning>()
     ..registerComponent<BurnFlame>()

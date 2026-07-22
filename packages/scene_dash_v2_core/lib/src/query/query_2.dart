@@ -34,13 +34,7 @@ final class Query2<A, B> extends Query {
     ..._withStores,
   ];
 
-  Query2(
-    this._world,
-    this._a,
-    this._b,
-    this._withStores,
-    this._withoutStores,
-  );
+  Query2(this._world, this._a, this._b, this._withStores, this._withoutStores);
 
   /// Invokes [callback] for every live entity that has both [A] and [B] and
   /// satisfies the filters.

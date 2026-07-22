@@ -34,14 +34,16 @@ final class RunAdapter implements SystemAdapter {
 
 void main() {
   group('addState', () {
-    test('inserts CurrentState and NextState resources at the initial value',
-        () {
-      final app = App()..addState<GamePhase>(GamePhase.title);
-      final current = app.world.resources.get<CurrentState<GamePhase>>();
-      expect(current.value, GamePhase.title);
-      expect(current.previous, isNull);
-      expect(app.world.resources.contains<NextState<GamePhase>>(), isTrue);
-    });
+    test(
+      'inserts CurrentState and NextState resources at the initial value',
+      () {
+        final app = App()..addState<GamePhase>(GamePhase.title);
+        final current = app.world.resources.get<CurrentState<GamePhase>>();
+        expect(current.value, GamePhase.title);
+        expect(current.previous, isNull);
+        expect(app.world.resources.contains<NextState<GamePhase>>(), isTrue);
+      },
+    );
 
     test('rejects a duplicate machine for the same type', () {
       final app = App()..addState<GamePhase>(GamePhase.title);
@@ -51,8 +53,7 @@ void main() {
       );
     });
 
-    test('start throws for OnEnter systems with no covering state machine',
-        () {
+    test('start throws for OnEnter systems with no covering state machine', () {
       final app = App()
         ..addSystemAdapter(
           RecordingAdapter('orphan', <String>[]),
@@ -88,9 +89,9 @@ void main() {
       app
         ..addSystemAdapter(
           RunAdapter(
-            (world) => world.resources
-                .get<NextState<GamePhase>>()
-                .set(GamePhase.overworld),
+            (world) => world.resources.get<NextState<GamePhase>>().set(
+              GamePhase.overworld,
+            ),
           ),
           schedule: OnEnter(GamePhase.title),
           label: const SystemLabel('skipTitle'),
@@ -198,9 +199,9 @@ void main() {
       app
         ..addSystemAdapter(
           RunAdapter(
-            (world) => world.resources
-                .get<NextState<GamePhase>>()
-                .set(GamePhase.dungeon),
+            (world) => world.resources.get<NextState<GamePhase>>().set(
+              GamePhase.dungeon,
+            ),
           ),
           schedule: OnEnter(GamePhase.overworld),
           label: const SystemLabel('overworldToDungeon'),
@@ -227,18 +228,18 @@ void main() {
       app
         ..addSystemAdapter(
           RunAdapter(
-            (world) => world.resources
-                .get<NextState<GamePhase>>()
-                .set(GamePhase.dungeon),
+            (world) => world.resources.get<NextState<GamePhase>>().set(
+              GamePhase.dungeon,
+            ),
           ),
           schedule: OnEnter(GamePhase.overworld),
           label: const SystemLabel('aToB'),
         )
         ..addSystemAdapter(
           RunAdapter(
-            (world) => world.resources
-                .get<NextState<GamePhase>>()
-                .set(GamePhase.overworld),
+            (world) => world.resources.get<NextState<GamePhase>>().set(
+              GamePhase.overworld,
+            ),
           ),
           schedule: OnEnter(GamePhase.dungeon),
           label: const SystemLabel('bToA'),
@@ -284,14 +285,14 @@ void main() {
   group('DespawnOnExit', () {
     Entity spawnScoped(App app, Object value) {
       final entity = app.world.entities.spawn();
-      app.world
-          .ensureObjectStore<DespawnOnExit>()
-          .insert(entity.index, DespawnOnExit(value));
+      app.world.ensureObjectStore<DespawnOnExit>().insert(
+        entity.index,
+        DespawnOnExit(value),
+      );
       return entity;
     }
 
-    test('despawns entities scoped to the exited value, after OnExit runs',
-        () {
+    test('despawns entities scoped to the exited value, after OnExit runs', () {
       final app = App()..addState<GamePhase>(GamePhase.overworld);
       late Entity overworldScoped;
       late bool aliveDuringExit;
@@ -329,20 +330,24 @@ void main() {
       expect(app.world.isAlive(phaseScoped), isTrue);
     });
 
-    test('addState registers the store, so commands.insert works untouched',
-        () {
-      final app = App()..addState<GamePhase>(GamePhase.overworld);
-      app.start();
+    test(
+      'addState registers the store, so commands.insert works untouched',
+      () {
+        final app = App()..addState<GamePhase>(GamePhase.overworld);
+        app.start();
 
-      final entity = app.world.entities.spawn();
-      app.world.commands
-          .insert<DespawnOnExit>(entity, const DespawnOnExit(GamePhase.overworld));
-      app.world.commands.apply();
+        final entity = app.world.entities.spawn();
+        app.world.commands.insert<DespawnOnExit>(
+          entity,
+          const DespawnOnExit(GamePhase.overworld),
+        );
+        app.world.commands.apply();
 
-      app.world.resources.get<NextState<GamePhase>>().set(GamePhase.dungeon);
-      app.applyStateTransitions();
-      expect(app.world.isAlive(entity), isFalse);
-    });
+        app.world.resources.get<NextState<GamePhase>>().set(GamePhase.dungeon);
+        app.applyStateTransitions();
+        expect(app.world.isAlive(entity), isFalse);
+      },
+    );
 
     test('sweeps each hop of a chained transition', () {
       final app = App()..addState<GamePhase>(GamePhase.title);

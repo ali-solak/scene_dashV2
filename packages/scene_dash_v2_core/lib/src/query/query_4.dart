@@ -5,25 +5,15 @@ import '../world/world.dart';
 import 'query.dart';
 
 /// Callback invoked once per matching entity for a four-component query.
-typedef Query4Callback<A, B, C, D> = void Function(
-  Entity entity,
-  A a,
-  B b,
-  C c,
-  D d,
-);
+typedef Query4Callback<A, B, C, D> =
+    void Function(Entity entity, A a, B b, C c, D d);
 
 /// Callback for [Query4.eachUntil]: return `true` to keep iterating, `false`
 /// to stop. The same shape doubles as the predicate of [Query4.firstWhere]
 /// and [Query4.any], where `true` instead means "this row matches" — each
 /// method documents which meaning applies.
-typedef Query4UntilCallback<A, B, C, D> = bool Function(
-  Entity entity,
-  A a,
-  B b,
-  C c,
-  D d,
-);
+typedef Query4UntilCallback<A, B, C, D> =
+    bool Function(Entity entity, A a, B b, C c, D d);
 
 /// A cached query over four object components [A], [B], [C] and [D], with
 /// optional `requires`/`excludes` filters.

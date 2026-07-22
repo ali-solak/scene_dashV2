@@ -1,5 +1,4 @@
-import 'package:scene_dash_v2_core/advanced.dart'
-    hide ClassicWorldQueries;
+import 'package:scene_dash_v2_core/advanced.dart' hide ClassicWorldQueries;
 import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
 import 'package:test/test.dart';
 

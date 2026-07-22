@@ -63,8 +63,7 @@ void main() {
       var key = false;
       var touch = false;
 
-      ButtonEdge sync() =>
-          input.setPressed(_Action.fire, key || touch);
+      ButtonEdge sync() => input.setPressed(_Action.fire, key || touch);
 
       key = true;
       expect(sync(), ButtonEdge.pressed);

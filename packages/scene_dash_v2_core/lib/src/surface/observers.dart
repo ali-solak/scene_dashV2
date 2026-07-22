@@ -66,15 +66,16 @@ final class ObserverRegistry {
     final store = _storeFor<T>();
     final entry = _byType.putIfAbsent(T, _TypeObservers.new);
     if (onAdd != null) {
-      entry.onAdd.add((world, entity, value) => onAdd(world, entity, value as T));
+      entry.onAdd.add(
+        (world, entity, value) => onAdd(world, entity, value as T),
+      );
     }
     if (onRemove != null) {
       entry.onRemove.add(
         (world, entity, value) => onRemove(world, entity, value as T),
       );
     }
-    store.onAdded ??= (index, payload) =>
-        _fire(T, entry.onAdd, index, payload);
+    store.onAdded ??= (index, payload) => _fire(T, entry.onAdd, index, payload);
     store.onRemoved ??= (index, payload) =>
         _fire(T, entry.onRemove, index, payload);
   }

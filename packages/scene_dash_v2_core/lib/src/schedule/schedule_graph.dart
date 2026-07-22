@@ -154,7 +154,9 @@ abstract final class ScheduleGraph {
 
     // reachable[s][t] == true if there is a directed path s -> ... -> t.
     final reachable = List<List<bool>>.generate(
-        count, (_) => List<bool>.filled(count, false));
+      count,
+      (_) => List<bool>.filled(count, false),
+    );
     for (var s = 0; s < count; s++) {
       final seen = reachable[s];
       final stack = <int>[...edges[s]];
@@ -198,33 +200,39 @@ abstract final class ScheduleGraph {
 
         for (final component in ai.writes) {
           if (aj.writes.contains(component)) {
-            conflicts.add(AccessConflict(
-              schedule: scheduleLabel,
-              a: labelA,
-              b: labelB,
-              component: component,
-              kind: ConflictKind.writeWrite,
-            ));
+            conflicts.add(
+              AccessConflict(
+                schedule: scheduleLabel,
+                a: labelA,
+                b: labelB,
+                component: component,
+                kind: ConflictKind.writeWrite,
+              ),
+            );
           } else if (aj.reads.contains(component)) {
-            conflicts.add(AccessConflict(
-              schedule: scheduleLabel,
-              a: labelA,
-              b: labelB,
-              component: component,
-              kind: ConflictKind.readWrite,
-            ));
+            conflicts.add(
+              AccessConflict(
+                schedule: scheduleLabel,
+                a: labelA,
+                b: labelB,
+                component: component,
+                kind: ConflictKind.readWrite,
+              ),
+            );
           }
         }
         for (final component in aj.writes) {
           // Only the read/write direction not already covered above.
           if (!ai.writes.contains(component) && ai.reads.contains(component)) {
-            conflicts.add(AccessConflict(
-              schedule: scheduleLabel,
-              a: labelA,
-              b: labelB,
-              component: component,
-              kind: ConflictKind.readWrite,
-            ));
+            conflicts.add(
+              AccessConflict(
+                schedule: scheduleLabel,
+                a: labelA,
+                b: labelB,
+                component: component,
+                kind: ConflictKind.readWrite,
+              ),
+            );
           }
         }
       }

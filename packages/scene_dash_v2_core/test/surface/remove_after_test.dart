@@ -46,12 +46,18 @@ void main() {
       expect(game.world.expiryOf<Shield>(entity), duration);
 
       game.pumpFixed(steps: ticks - 1);
-      expect(game.world.has<Shield>(entity), isTrue,
-          reason: 'alive through tick ${ticks - 1}');
+      expect(
+        game.world.has<Shield>(entity),
+        isTrue,
+        reason: 'alive through tick ${ticks - 1}',
+      );
 
       game.pumpFixed(steps: 1);
-      expect(game.world.has<Shield>(entity), isFalse,
-          reason: 'gone after tick $ticks\'s boundary');
+      expect(
+        game.world.has<Shield>(entity),
+        isFalse,
+        reason: 'gone after tick $ticks\'s boundary',
+      );
       expect(game.world.expiryOf<Shield>(entity), isNull);
     });
 
@@ -64,8 +70,11 @@ void main() {
       game.clock.paused = true;
       game.pumpFixed(steps: 30);
       expect(game.world.has<Shield>(entity), isTrue);
-      expect(game.world.expiryOf<Shield>(entity), 4 * dt,
-          reason: 'no fixed step ran, so nothing was consumed');
+      expect(
+        game.world.expiryOf<Shield>(entity),
+        4 * dt,
+        reason: 'no fixed step ran, so nothing was consumed',
+      );
 
       game.clock.paused = false;
       game.pumpFixed(steps: ticksFor(4 * dt, dt));
@@ -101,8 +110,11 @@ void main() {
       expect(game.world.expiryOf<Shield>(entity), duration);
 
       game.pumpFixed(steps: ticks - 1);
-      expect(game.world.has<Shield>(entity), isTrue,
-          reason: 'the refresh restarted the countdown');
+      expect(
+        game.world.has<Shield>(entity),
+        isTrue,
+        reason: 'the refresh restarted the countdown',
+      );
       game.pumpFixed(steps: 1);
       expect(game.world.has<Shield>(entity), isFalse);
     });
@@ -118,8 +130,11 @@ void main() {
       expect(game.world.expiryOf<Shield>(entity), isNull);
 
       game.pumpFixed(steps: 30);
-      expect(game.world.has<Shield>(entity), isTrue,
-          reason: 'the latest add carried no lifetime');
+      expect(
+        game.world.has<Shield>(entity),
+        isTrue,
+        reason: 'the latest add carried no lifetime',
+      );
     });
 
     test('manual remove cancels the tracker', () {
@@ -150,21 +165,30 @@ void main() {
       // Reuse the freed slot with a fresh entity carrying the same type.
       final reused = game.world.spawn([const Shield()]);
       game.pump();
-      expect(reused.index, doomed.index,
-          reason: 'the test needs the slot actually reused');
+      expect(
+        reused.index,
+        doomed.index,
+        reason: 'the test needs the slot actually reused',
+      );
       expect(game.world.expiryOf<Shield>(reused), isNull);
 
       game.pumpFixed(steps: 30);
-      expect(game.world.has<Shield>(reused), isTrue,
-          reason: 'the stale deadline must not remove from the reused slot');
+      expect(
+        game.world.has<Shield>(reused),
+        isTrue,
+        reason: 'the stale deadline must not remove from the reused slot',
+      );
     });
 
     test('expiryOf counts down per fixed step and is null when untracked', () {
       final game = boot();
       final entity = game.world.spawn([const Shield(), const Other()]);
       game.pump();
-      expect(game.world.expiryOf<Shield>(entity), isNull,
-          reason: 'spawned without removeAfter');
+      expect(
+        game.world.expiryOf<Shield>(entity),
+        isNull,
+        reason: 'spawned without removeAfter',
+      );
 
       game.world.add(entity, const Shield(), removeAfter: 10 * dt);
       game.pumpFixed(steps: 3);

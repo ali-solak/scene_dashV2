@@ -12,7 +12,7 @@ final class AccessAdapter implements SystemAdapter, SystemAccessProvider {
   final SystemAccess access;
 
   AccessAdapter({Set<Type> reads = const {}, Set<Type> writes = const {}})
-      : access = SystemAccess(reads: reads, writes: writes);
+    : access = SystemAccess(reads: reads, writes: writes);
 
   @override
   void initialize(World world) {}
@@ -67,8 +67,12 @@ void main() {
     test('no conflict when systems are ordered', () {
       final app = _app();
       _add(app, 'x', AccessAdapter(writes: {A}));
-      _add(app, 'y', AccessAdapter(writes: {A}),
-          after: const [SystemLabel('x')]);
+      _add(
+        app,
+        'y',
+        AccessAdapter(writes: {A}),
+        after: const [SystemLabel('x')],
+      );
       app.start();
 
       expect(app.accessConflicts, isEmpty);
@@ -95,8 +99,12 @@ void main() {
     test('conflicts are per-schedule', () {
       final app = _app();
       _add(app, 'x', AccessAdapter(writes: {A}), schedule: Schedules.update);
-      _add(app, 'y', AccessAdapter(writes: {A}),
-          schedule: Schedules.fixedPrePhysics);
+      _add(
+        app,
+        'y',
+        AccessAdapter(writes: {A}),
+        schedule: Schedules.fixedPrePhysics,
+      );
       app.start();
 
       expect(app.accessConflicts, isEmpty);
@@ -152,11 +160,14 @@ void main() {
       expect({c.a.id, c.b.id}, contains(DespawnAfterSystem.label.id));
     });
 
-    test('ordering against DespawnAfterSystem.label resolves the conflict',
-        () {
+    test('ordering against DespawnAfterSystem.label resolves the conflict', () {
       final app = _app();
-      _add(app, 'powerUp', AccessAdapter(writes: {DespawnAfter}),
-          after: const [DespawnAfterSystem.label]);
+      _add(
+        app,
+        'powerUp',
+        AccessAdapter(writes: {DespawnAfter}),
+        after: const [DespawnAfterSystem.label],
+      );
       app.start();
 
       expect(app.accessConflicts, isEmpty);
