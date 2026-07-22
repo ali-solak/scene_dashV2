@@ -145,7 +145,7 @@ class _LoadingScreen extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const Text(
-            'COMBAT SAMPLE',
+            'Defend the isle',
             style: TextStyle(
               color: HudInk.bone,
               fontSize: 30,

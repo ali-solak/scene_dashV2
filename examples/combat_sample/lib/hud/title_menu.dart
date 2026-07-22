@@ -54,7 +54,7 @@ class TitleMenu extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
-                  'Barb Slapper',
+                  'Defend the isle',
                   style: TextStyle(
                     color: HudInk.bone,
                     fontSize: 30,
