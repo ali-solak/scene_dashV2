@@ -6,8 +6,12 @@ final class Enemy implements Tag {
 }
 
 enum BrawlPhase {
+  /// Climbing out of the ground on spawn (the floor-rise). Held still and
+  /// harmless-looking until it finishes, then straight to [approach].
+  rising,
   approach,
   circle,
+  taunting,
   telegraph,
   swing,
   recover,
@@ -25,7 +29,12 @@ final class Brawler {
     required this.wobbleSeed,
     this.power = 1,
     this.giant = false,
-  });
+  }) : // Giants do not climb out of the ground — they walk in normal-sized
+       // and swell on the transform clip, so a giant starts already up
+       // (`approach`) and the awaken rise is for ordinary barbarians only.
+       phase = Machine<BrawlPhase>(
+         giant ? BrawlPhase.approach : BrawlPhase.rising,
+       );
 
   /// Spawn index within the wave (drives the circle direction and wobble).
   final int slot;
@@ -36,7 +45,18 @@ final class Brawler {
   /// A giant: bigger, tougher, and its blows launch the player.
   final bool giant;
 
-  final phase = Machine<BrawlPhase>(BrawlPhase.approach);
+  final Machine<BrawlPhase> phase;
+
+  /// Seconds spent circling since the last taunt — the mid-fight taunt
+  /// fires off this (see `brawlerDriver`), so the pack heckles on a timer
+  /// instead of every frame.
+  double sinceTaunt = 0;
+
+  /// Seconds since the last connect that did not stagger — a fire-gush or
+  /// lava tick. The mapper reads it for a brief flinch (mirrors the
+  /// player's [Fighter.sinceHurt]); it gates nothing, so a body on fire
+  /// still circles and swings. Starts spent.
+  double sinceHurt = double.infinity;
 
   /// +1 or -1: which way this one circles the player.
   final double circleDirection;
@@ -60,6 +80,12 @@ final class Brawler {
   /// `Knockback.incapacitated` for the animation mapper.
   bool downed = false;
 
+  /// Still in the air (a subset of [downed]): true through the wind-blast
+  /// arc, false once it lands. The mapper falls on this and lies on the
+  /// landing beat — a real airborne pose instead of the death clip held
+  /// stiff with its legs apart.
+  bool airborne = false;
+
   /// Mirror of the coordinator's grant (single writer: [coordinateAggro]).
   /// The holder closes in and may telegraph; everyone else circles.
   bool hasToken = false;
@@ -67,6 +93,11 @@ final class Brawler {
   /// World-space velocity this step (written by movement, read by the
   /// animation mapper — L2's "machine + velocity" inputs).
   final Vector3 velocity = Vector3.zero();
+}
+
+/// slow down enemies in lava pit
+final class Mired {
+  const Mired();
 }
 
 /// A barbarian's in-world health bar (task 17): a `WidgetComponent`
@@ -77,6 +108,13 @@ final class EnemyHealthBar {
 
   final ValueNotifier<double> fraction;
   final Node node;
+
+  /// Last fraction pushed — a DROP means a hit, which starts the punch.
+  double lastFraction = 1;
+
+  /// Seconds since the last hit, driving the scale-pop-and-tilt in
+  /// [updateHealthBars]. Starts spent so a fresh bar sits still.
+  double sinceHit = double.infinity;
 }
 
 /// The process entity's token: at most one barbarian holds the right to

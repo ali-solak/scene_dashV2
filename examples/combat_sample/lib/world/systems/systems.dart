@@ -65,6 +65,9 @@ void spawnClearing(World world) {
 
   clearing.add(_buildGround(assets));
   _spawnForestRing(clearing);
+  // Big wet boulders massed at the foot of the cliff in the treeline gap,
+  // where the surf breaks against them.
+  clearing.add(buildCliffRocks());
   // Pipeline pre-warm: the dissolve material's first appearance is a mid-
   // fight death, and compiling its pipeline then hitches the frame. A tiny
   // cube buried inside the plateau body draws it (occluded) from boot, so
@@ -78,6 +81,23 @@ void spawnClearing(World world) {
       )..mesh = Mesh(CuboidGeometry(Vector3.all(0.3)), dissolve),
     );
   }
+  // Same pre-warm for the shield bubble: the first raise is the first draw
+  // of a BLENDED sphere, and compiling that pipeline mid-fight hitches the
+  // frame the barrier goes up (the second raise is smooth — the pipeline is
+  // cached by then). A tiny occluded sphere on the exact material the cast
+  // uses — the authored `.fmat`, or the same unlit-blend fallback
+  // `buildBarrierSphere` falls back to — compiles it from boot instead.
+  clearing.add(
+    Node(
+        name: 'barrier-warmup',
+        localTransform: Matrix4.translation(Vector3(0, -3, 0)),
+      )
+      ..mesh = Mesh(
+        SphereGeometry(radius: 0.3, segments: 32, rings: 16),
+        assets.barrierMaterial ??
+            (UnlitMaterial()..alphaMode = AlphaMode.blend),
+      ),
+  );
   scene.root.add(clearing);
 
   // The mount adapter parents these at the scene root.
@@ -115,24 +135,48 @@ void updateWindMaterials(World world) {
   });
 }
 
-/// The forest as primitives: an evenly-spaced jittered pine ring with rocks
-/// and bushes scattered up to the treeline, every archetype a [LodComponent]
-/// (see `vfx/forest.dart`). Placement comes from the pure [layoutClearing].
+/// Breaks a wave against the cliff every [waveCrashInterval]-ish seconds at
+/// a random point along the treeline gap. Pure theatre, so it gates on the
+/// SCENE, not the fight — the surf runs on the title screen too. Game-time,
+/// so it pauses behind the menu with everything else.
+void crashWaves(World world) {
+  final clock = world.resource<WaveClock>();
+  clock.until -= world.dt;
+  if (clock.until > 0) return;
+  clock.until = waveCrashInterval + clock.rng.nextDouble() * waveCrashJitter;
+  final theta =
+      cliffAzimuth + (clock.rng.nextDouble() - 0.5) * 2 * cliffHalfAngle * 0.85;
+  final radius = groundIslandRadius + (clock.rng.nextDouble() - 0.5) * 2.5;
+  // Every break is a different size, and re-rolls its own spread, so the
+  // surf never sparks the same twice — a wide range so a small lap and a
+  // big wall are obviously different.
+  final intensity = 0.45 + clock.rng.nextDouble() * 1.25;
+  spawnWaveCrash(
+    world,
+    Vector3(
+      math.sin(theta) * radius,
+      oceanLevel + waveCrashRise,
+      math.cos(theta) * radius,
+    ),
+    intensity: intensity,
+    seed: clock.rng.nextInt(1 << 30),
+  );
+  // The break gusts the grass, harder for a bigger one. `driveWind` (rules)
+  // eases the strength back toward its target every frame, so this reads as
+  // a gust that swells with the crash and settles — the surf and the grass
+  // moving as one. Capped so a quick run of breaks cannot pile into a gale.
+  final wind = world.resource<WindState>();
+  wind.strength = math.min(
+    waveGustCap,
+    wind.strength + waveGustBoost * intensity,
+  );
+}
+
+/// The forest: an evenly-spaced jittered pine ring with rocks and bushes
+/// scattered up to the treeline, all STATICALLY BATCHED into one mesh (see
+/// `vfx/forest.dart` for why). Placement comes from the pure [layoutClearing].
 void _spawnForestRing(Node clearing) {
-  final kit = ForestKit.build();
-  for (final placement in layoutClearing()) {
-    final node = switch (placement.kind) {
-      PropKind.tree => kit.tree(placement.variantRoll),
-      PropKind.rock => kit.rock(placement.variantRoll),
-      PropKind.bush => kit.bush(placement.variantRoll),
-    };
-    node.localTransform = Matrix4.compose(
-      Vector3(placement.x, 0, placement.z),
-      Quaternion.axisAngle(Vector3(0, 1, 0), placement.yaw),
-      Vector3.all(placement.scale),
-    );
-    clearing.add(node);
-  }
+  clearing.add(buildForestBatch(layoutClearing()));
 }
 
 /// The plateau the clearing sits on: a grass-topped disc with a cliff

@@ -15,6 +15,8 @@ enum PlayerShot {
   rollLeft,
   rollRight,
   hit,
+  fall,
+  windCast,
 }
 
 final class PlayerAnimator {
@@ -41,20 +43,26 @@ final class PlayerAnimator {
       case CombatPhase.staggered:
         desired = PlayerShot.hit;
       case CombatPhase.idle:
-        // The flinch: a blow that did not stagger still gets a reaction,
-        // but only while the fighter is doing nothing else. It lives in
-        // the `idle` arm ALONE on purpose — that is what makes it visual
-        // rather than a stagger by another name. Swing through a hit and
-        // the swing wins, exactly as poise promises.
-        desired = fighter.sinceHurt < flinchSeconds ? PlayerShot.hit : null;
+        // The leap that throws the wind gust, then the flinch: both a blow
+        // that did not stagger and a cast reaction live in the `idle` arm
+        // ALONE, so they stay visual — swing through either and the swing
+        // wins, exactly as poise promises. The leap outranks the flinch.
+        if (fighter.sinceCast < windCastSeconds) {
+          desired = PlayerShot.windCast;
+        } else {
+          desired = fighter.sinceHurt < flinchSeconds ? PlayerShot.hit : null;
+        }
     }
 
     // THROWN. The stagger is much shorter than the arc a giant's blow
     // sends you through, so the machine returns to idle while the body is
     // still metres up — the fighter starts running on air. Being thrown
     // outranks the phase, and it holds through the landing beat too, so
-    // you lie where you fell instead of bouncing upright.
-    if (motion.downed) desired = PlayerShot.hit;
+    // you lie where you fell instead of bouncing upright. A falling pose
+    // while airborne, then the hit pose (flat on the floor) on the landing.
+    if (motion.downed) {
+      desired = motion.airborne ? PlayerShot.fall : PlayerShot.hit;
+    }
 
     if (desired != active) {
       final promoted =
@@ -256,7 +264,7 @@ PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
         );
 
   final locomotion = <PlayerLoco, AnimationClip>{
-    // Two-handed guard: the sword is up, ready — reads as a fighter.
+    // Two-handed guard: the axe is up, ready — reads as a fighter.
     PlayerLoco.idle: loop('Melee_2H_Idle')..weight = 1,
     PlayerLoco.walk: loop('Walking_A'),
     PlayerLoco.run: loop('Running_A'),
@@ -266,15 +274,18 @@ PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
   };
   const lightWindow = startupSeconds + activeSeconds + recoverySeconds;
   const heavyWindow =
-      heavyStartupSeconds + activeSeconds + heavyRecoverySeconds;
+      heavyStartupSeconds + heavyActiveSeconds + heavyRecoverySeconds;
   final shots = <PlayerShot, AnimationClip>{
+    // Normal is a quick horizontal slice — fast and wide, for a snappy
+    // ground game; heavy is the big spin sweep. Both cover the wide strike
+    // arc (the hit test is the same for both).
     PlayerShot.strike: shot(
       'Melee_2H_Attack_Slice',
       strikeClipSeconds,
       lightWindow,
     ),
     PlayerShot.heavy: shot(
-      'Melee_2H_Attack_Chop',
+      'Melee_2H_Attack_Spin',
       heavyClipSeconds,
       heavyWindow,
     ),
@@ -303,6 +314,18 @@ PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
       rollClipSeconds / rollPlaybackScale,
     ),
     PlayerShot.hit: shot('Hit_A', hitClipSeconds, staggerSeconds),
+    // The mid-air hang, held while a giant's blow carries the fighter
+    // through its arc (see the `downed`/`airborne` split in `update`). It
+    // LOOPS: a launch can outlast the clip, and a finished one-shot drops
+    // to the bind pose — the T-pose in the air.
+    PlayerShot.fall: loop('Jump_Idle'),
+    // The leap that throws the wind gust — a full jump, played brisk so it
+    // reads as a quick hop rather than a committed leap.
+    PlayerShot.windCast: shot(
+      'Jump_Full_Short',
+      windCastClipSeconds,
+      windCastSeconds,
+    ),
   };
   return PlayerAnimator(locomotion: locomotion, shots: shots);
 }

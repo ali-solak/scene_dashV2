@@ -32,10 +32,9 @@ Animation clipOf(String name, String node, List<Quaternion> keys) {
           nodeName: node,
           property: AnimationProperty.rotation,
         ),
-        resolver: PropertyResolver.makeRotationTimeline(
-          [for (var i = 0; i < keys.length; i++) i * 0.1],
-          keys,
-        ),
+        resolver: PropertyResolver.makeRotationTimeline([
+          for (var i = 0; i < keys.length; i++) i * 0.1,
+        ], keys),
       ),
     ],
   );
@@ -63,10 +62,7 @@ void main() {
     final a = clipOf('idle', 'spine', [upright.clone()]);
     final b = clipOf('swing', 'spine', [flipped.clone()]);
     expect(
-      dot(
-        keysOf(a).first,
-        keysOf(b).first,
-      ),
+      dot(keysOf(a).first, keysOf(b).first),
       lessThan(0),
       reason: 'the setup really is antipodal',
     );
@@ -74,10 +70,7 @@ void main() {
     harmoniseRotationHemispheres([a, b]);
 
     expect(
-      dot(
-        keysOf(a).first,
-        keysOf(b).first,
-      ),
+      dot(keysOf(a).first, keysOf(b).first),
       greaterThanOrEqualTo(0),
       reason: 'slerp between these now takes the short path',
     );

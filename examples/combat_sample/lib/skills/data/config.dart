@@ -24,6 +24,11 @@ const double fireGushRange = 8.5;
 const double fireGushHalfArc = 0.55; // ~63° wide
 const double fireGushDamage = 26;
 const double fireGushKnockback = 2.5;
+
+/// The muzzle recoil: casting the gush shoves the player a little BACKWARD
+/// (a decaying knockback, opposite the cone), so the blast has weight —
+/// like a slight roll-back you can still walk out of.
+const double fireGushRecoil = 5.5;
 const double fireGushCooldownSeconds = 7;
 const int fireGushCost = 30;
 const int fireGushCostStep = 22;
@@ -69,6 +74,12 @@ const double lavaBurnSeconds = 2.2;
 /// Kept under [burnTickDamage] so the tail is a consequence of the pit
 /// rather than a second pit.
 const double lavaBurnTickDamage = 3;
+
+/// How long a body stays bogged after leaving the pit. The pit re-adds the
+/// mire every step someone stands in it (with this `removeAfter`), so it
+/// clears a short beat after they wade out — a "pulling free" tail, the
+/// movement echo of the burn's fire tail.
+const double lavaMireLinger = 0.35;
 
 /// How long the pit takes to swell to full heat, and how long before it
 /// closes it starts crusting over — the visual bookends of its life.

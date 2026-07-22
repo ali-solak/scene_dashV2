@@ -49,8 +49,11 @@ void main() {
     final health = world.get<Health>(enemy);
     expect(health.current, enemyMaxHealth - lightDamage);
     game.pumpFixed(steps: ticksFor(activeSeconds) + 2);
-    expect(health.current, enemyMaxHealth - lightDamage,
-        reason: 'the active window connects exactly once');
+    expect(
+      health.current,
+      enemyMaxHealth - lightDamage,
+      reason: 'the active window connects exactly once',
+    );
   });
 
   test('a heavy connect does heavy damage and kicks the camera', () {
@@ -60,6 +63,47 @@ void main() {
     landPlayerStrike(game, enemy, heavy: true);
     expect(world.get<Health>(enemy).current, enemyMaxHealth - heavyDamage);
     expect(world.resource<CameraRig>().kick, greaterThan(0));
+  });
+
+  test('the heavy spin connects several times over its sweep', () {
+    final game = boot();
+    final world = game.world;
+    world.entitiesWith(require: const [Enemy]).each(world.despawn);
+    game.pumpFixed(steps: 1);
+
+    // A barbarian planted in the arc, with enough health to survive the
+    // whole spin so every tap is counted rather than ending on a kill.
+    final player = playerOf(world);
+    final at = world.get<SceneTransform>(player).translation;
+    final facing = world.get<PlayerMotion>(player).facing;
+    final enemy = world.spawn(
+      enemyBundle(
+        at.x + math.sin(facing) * 2,
+        at.z + math.cos(facing) * 2,
+        index: 0,
+        health: 999,
+      ),
+    );
+    game.pumpFixed(steps: 1);
+    final health = world.get<Health>(enemy);
+    final before = health.current;
+
+    // Commit a heavy (hold past the threshold) and pin the enemy in the arc
+    // for the length of the sweep.
+    world.buttons<CombatAction>().setPressed(CombatAction.attack, true);
+    world.buffer<CombatAction>().record(CombatAction.attack);
+    pumpHolding(
+      game,
+      enemy,
+      steps: ticksFor(heavyStartupSeconds) + ticksFor(heavyActiveSeconds) + 4,
+    );
+
+    final taps = ((before - health.current) / heavyDamage).round();
+    expect(
+      taps,
+      greaterThanOrEqualTo(3),
+      reason: 'the spin lands each time the axe comes around',
+    );
   });
 
   test('the brawl loop damages and staggers the player, and never two '
@@ -80,17 +124,26 @@ void main() {
     var sawStagger = false;
     for (var tick = 0; tick < 600; tick++) {
       game.pumpFixed(steps: 1);
-      expect(attackersOf(world), lessThanOrEqualTo(1),
-          reason: 'the token keeps the fight one-at-a-time');
+      expect(
+        attackersOf(world),
+        lessThanOrEqualTo(1),
+        reason: 'the token keeps the fight one-at-a-time',
+      );
       if (fighter.phase.state == CombatPhase.staggered) sawStagger = true;
     }
-    expect(playerHealth.current, lessThan(playerMaxHealth),
-        reason: 'swings connect');
+    expect(
+      playerHealth.current,
+      lessThan(playerMaxHealth),
+      reason: 'swings connect',
+    );
     // Poise: an ordinary barbarian swing hurts and shoves but must NOT
     // cancel what the player was doing — only a heavy blow (over
     // `playerPoiseThreshold`) breaks through.
-    expect(sawStagger, isFalse,
-        reason: 'ordinary swings do not stagger the player');
+    expect(
+      sawStagger,
+      isFalse,
+      reason: 'ordinary swings do not stagger the player',
+    );
   });
 
   test('an ordinary swing marks the flinch without spending poise', () {
@@ -176,8 +229,11 @@ void main() {
     // Nobody may attack until the cooldown has cooled.
     for (var tick = 0; tick < ticksFor(aggroCooldownSeconds) - 2; tick++) {
       game.pumpFixed(steps: 1);
-      expect(attackersOf(world), 0,
-          reason: 'the regrant waits out the cooldown');
+      expect(
+        attackersOf(world),
+        0,
+        reason: 'the regrant waits out the cooldown',
+      );
     }
   });
 
@@ -218,15 +274,17 @@ void main() {
     // The kill's hitstop freezes a few pumps first; the lock system runs
     // on the next real fixed step.
     game.pumpFixed(steps: 6);
-    expect(world.tryGet<Target>(player), isNull, reason: 'death drops the lock');
+    expect(
+      world.tryGet<Target>(player),
+      isNull,
+      reason: 'death drops the lock',
+    );
     expect(world.get<Fighter>(player).stance, Stance.free);
 
     // The corpse lies through the delay, dissolves, and the death clock
     // expires with the entity — waves own the field now, so a corpse is
     // gone for good and its model slot returns to the pool.
-    game.pumpFixed(
-      steps: ticksFor(dissolveDelaySeconds + dissolveSeconds) + 8,
-    );
+    game.pumpFixed(steps: ticksFor(dissolveDelaySeconds + dissolveSeconds) + 8);
     expect(world.tryGet<Health>(enemy), isNull, reason: 'the corpse despawns');
   });
 

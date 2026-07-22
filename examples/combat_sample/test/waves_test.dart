@@ -130,7 +130,9 @@ void main() {
     expect(world.get<SceneTransform>(entity).translation, home);
     expect(brawler.phase.state, isNot(BrawlPhase.swing));
 
-    // Clock done: it drops the tag and joins the fight.
+    // Clock done: it drops the tag and joins the fight. A giant does not
+    // do the spawn rise — it walked in already upright and merely swelled —
+    // so it starts moving as soon as the transform releases it.
     game.pumpFixed(steps: 8);
     expect(world.expiryOf<Transforming>(entity), isNull);
     game.pumpFixed(steps: 20);

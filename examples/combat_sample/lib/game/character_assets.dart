@@ -1,13 +1,7 @@
-/// The characters and their clips, loaded once in `main` before boot (the
-/// 0.19 runtime importer is async; systems are not) and inserted as a
-/// resource. KayKit characters carry no animations — every clip lives in
-/// the shared `Rig_Medium_*.glb` carriers and binds onto a character's
-/// skeleton by node name (docs/asset_inventory.md).
-///
-/// Headless games never insert this; the attach systems fall back to the
-/// graybox capsules when it is absent.
 library;
 
+import 'dart:async' show unawaited;
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show debugPrint;
@@ -49,7 +43,20 @@ class CharacterAssets {
   final Node knight;
   final List<Node> barbarians;
 
-  late final List<bool> _lent = List<bool>.filled(barbarians.length, false);
+  late final List<bool> _lent = List<bool>.filled(
+    barbarians.length,
+    false,
+    growable: true,
+  );
+
+  /// Appends a background-loaded model to the pool. [loadCharacterAssets]
+  /// warms a few barbarians at boot and fills the rest across the title
+  /// screen through this, so the loading screen no longer freezes on ten
+  /// glTF imports.
+  void addBarbarian(Node node) {
+    barbarians.add(node);
+    _lent.add(false);
+  }
 
   /// Lends a free model index, or null when the pool is exhausted (the
   /// caller falls back to a graybox capsule).
@@ -71,8 +78,10 @@ class CharacterAssets {
     barbarians[index].detach();
   }
 
-  /// Weapon templates for the `handslot.r` joint (null when their glTFs
-  /// fail to import — the fight goes bare-handed, not down).
+  /// Weapon templates for the `handslot.r` joint (each wielder clones its
+  /// own). The player carries the [sword]; every barbarian carries the
+  /// [axe]. Null when the glTF fails to import — the fight goes bare-handed,
+  /// not down.
   final Node? sword;
   final Node? axe;
 
@@ -93,12 +102,20 @@ class CharacterAssets {
   }
 }
 
+/// Barbarians warmed synchronously at boot before the rest of the pool
+/// streams in behind the title screen. Early waves are small
+/// ([baseWaveEnemies]), so this covers the opening even if the player
+/// starts at once; a later wave that outruns the fill just borrows graybox
+/// capsules for a beat.
+const int _warmBarbarians = 4;
+
 Future<CharacterAssets> loadCharacterAssets({
   required int barbarianCount,
 }) async {
   final knight = await Node.fromGlbAsset('assets/characters/Knight.glb');
+  final warm = math.min(_warmBarbarians, barbarianCount);
   final barbarians = <Node>[
-    for (var i = 0; i < barbarianCount; i++)
+    for (var i = 0; i < warm; i++)
       await Node.fromGlbAsset('assets/characters/Barbarian.glb'),
   ];
   final clips = <String, Animation>{};
@@ -113,17 +130,37 @@ Future<CharacterAssets> loadCharacterAssets({
   // This is what lets the fades below be real crossfades instead of the
   // hard snap the pancake forced (see anim/hemisphere.dart).
   harmoniseRotationHemispheres(clips.values);
-  return CharacterAssets(
+  final assets = CharacterAssets(
     knight: knight,
     barbarians: barbarians,
     clips: clips,
-    // Two-handed: a longer blade sells the reach and the heavy swings.
+    // Two-handed: the player's sword, the barbarians' axe. The reach sells
+    // the wide swings.
     sword: await _loadWeapon('sword_2handed'),
     axe: await _loadWeapon('axe_2handed'),
     // The coloured variant: the plain one is untextured white, which
     // reads as a missing material rather than as a shield.
     shield: await _loadWeapon('shield_square_color'),
   );
+  // The remaining pool fills in the BACKGROUND — one import per turn of the
+  // event loop, so a frame renders between each and the surf/title animate
+  // instead of the loading screen freezing on all ten imports up front.
+  unawaited(_fillBarbarianPool(assets, barbarianCount - warm));
+  return assets;
+}
+
+/// Streams [remaining] more barbarians into [assets]' pool, yielding between
+/// each so the load never blocks a frame.
+Future<void> _fillBarbarianPool(CharacterAssets assets, int remaining) async {
+  for (var i = 0; i < remaining; i++) {
+    try {
+      final node = await Node.fromGlbAsset('assets/characters/Barbarian.glb');
+      assets.addBarbarian(node);
+    } on Object catch (error) {
+      debugPrint('combat_sample: background barbarian load failed: $error');
+      return;
+    }
+  }
 }
 
 Future<Uint8List> _weaponBytes(String uri) async {

@@ -107,16 +107,36 @@ void installFighter(GameBuilder game) {
     ..registerComponent<Fighter>()
     ..addSystem(Schedules.frameStart, ageCombatBuffer, reads: const {})
     ..addSystem(Schedules.fixedUpdate, fighterDriver, writes: {Fighter})
-    ..addSystem(Schedules.fixedUpdate, scoreIncomingHits,
-        reads: {Fighter}, after: [fighterDriver])
-    ..addSystem(Schedules.fixedUpdate, applyDamage,
-        writes: {Fighter}, after: [scoreIncomingHits])
-    ..addSystem(Schedules.fixedUpdate, clearBufferOnStagger,
-        reads: {Fighter}, after: [applyDamage])
-    ..addSystem(Schedules.fixedUpdate, hitboxSystem,
-        reads: {Fighter}, after: [clearBufferOnStagger])
-    ..addSystem(Schedules.fixedUpdate, recordTrace,
-        reads: {Fighter}, after: [hitboxSystem]);
+    ..addSystem(
+      Schedules.fixedUpdate,
+      scoreIncomingHits,
+      reads: {Fighter},
+      after: [fighterDriver],
+    )
+    ..addSystem(
+      Schedules.fixedUpdate,
+      applyDamage,
+      writes: {Fighter},
+      after: [scoreIncomingHits],
+    )
+    ..addSystem(
+      Schedules.fixedUpdate,
+      clearBufferOnStagger,
+      reads: {Fighter},
+      after: [applyDamage],
+    )
+    ..addSystem(
+      Schedules.fixedUpdate,
+      hitboxSystem,
+      reads: {Fighter},
+      after: [clearBufferOnStagger],
+    )
+    ..addSystem(
+      Schedules.fixedUpdate,
+      recordTrace,
+      reads: {Fighter},
+      after: [hitboxSystem],
+    );
 }
 
 (TestGame, Entity, CombatLog) boot() {
@@ -163,8 +183,11 @@ void main() {
     game.world.buffer<CombatAction>().record(CombatAction.attack);
     game.pumpFixed(steps: 1 + startupTicks + activeTicks + recoveryTicks + 5);
     expect(log.swings, 1, reason: 'one swing, one land');
-    expect(log.hitboxTicks, activeTicks,
-        reason: 'open for exactly the active window');
+    expect(
+      log.hitboxTicks,
+      activeTicks,
+      reason: 'open for exactly the active window',
+    );
     expect(log.hitboxOpen, isFalse);
 
     game.world.buffer<CombatAction>().record(CombatAction.attack);
@@ -196,19 +219,26 @@ void main() {
     expect(log.blocked, 0);
   });
 
-  test('a roll buffered during recovery fires on the first idle tick', () {
-    final (game, _, log) = boot();
-    game.world.buffer<CombatAction>().record(CombatAction.attack);
-    game.pumpFixed(steps: 1 + startupTicks + activeTicks); // recovery starts
-    expect(log.trace.last, CombatPhase.recovery);
+  test(
+    'a roll buffered during recovery cancels the tail and fires at once',
+    () {
+      final (game, _, log) = boot();
+      game.world.buffer<CombatAction>().record(CombatAction.attack);
+      game.pumpFixed(steps: 1 + startupTicks + activeTicks); // recovery starts
+      expect(log.trace.last, CombatPhase.recovery);
 
-    game.world.buffer<CombatAction>().record(CombatAction.roll);
-    game.pumpFixed(steps: recoveryTicks);
-    expect(log.trace.last, CombatPhase.idle, reason: 'recovery just ended');
-    game.pumpFixed(steps: 1);
-    expect(log.trace.last, CombatPhase.rolling,
-        reason: 'the buffered roll fires on the first idle tick');
-  });
+      // Recovery cancel (a sample addition): committing to a swing is never a
+      // trap you cannot roll out of, so a roll buffered in the follow-through
+      // does NOT wait for idle — it fires on the very next tick.
+      game.world.buffer<CombatAction>().record(CombatAction.roll);
+      game.pumpFixed(steps: 1);
+      expect(
+        log.trace.last,
+        CombatPhase.rolling,
+        reason: 'the buffered roll cancels recovery immediately',
+      );
+    },
+  );
 
   test('justEntered(staggered) clears the buffer: intent recorded before '
       'the hit never fires out of it', () {
@@ -228,8 +258,11 @@ void main() {
     pumpMachineTicks(game, log, 1);
     expect(log.trace.last, CombatPhase.idle);
     pumpMachineTicks(game, log, 5);
-    expect(log.trace.last, CombatPhase.idle,
-        reason: 'the cleared roll did not fire after the stagger');
+    expect(
+      log.trace.last,
+      CombatPhase.idle,
+      reason: 'the cleared roll did not fire after the stagger',
+    );
   });
 
   test('hitstop stalls elapsed and shifts every subsequent boundary by '
@@ -238,18 +271,30 @@ void main() {
     game.world.buffer<CombatAction>().record(CombatAction.attack);
     game.pumpFixed(steps: 1); // startup entered
     game.emit(HitLanded(fighter, 10));
-    game.pumpFixed(steps: 1); // lands: staggered + freezeFor(hitstop)
+    game.pumpFixed(steps: 1); // lands: staggered (the sample no longer freezes)
+
+    // Hits stopped freezing the clock (the hitstop read as lag), but the
+    // freeze is a framework mechanic in its own right — drive it directly
+    // and prove frozen frames still run no fixed step.
+    const freezeSeconds = 0.05;
+    game.world.clock.freezeFor(freezeSeconds);
     final stepsAtFreeze = log.steps;
 
     // Every frozen frame renders but runs no fixed step: the machine
     // stalls for exactly the pump count the clock's arithmetic dictates.
-    final frozen = frozenPumpsFor(lightHitstopSeconds);
+    final frozen = frozenPumpsFor(freezeSeconds);
     game.pumpFixed(steps: frozen);
-    expect(log.steps, stepsAtFreeze,
-        reason: 'frozen frames run no fixed steps: the machine stalls');
+    expect(
+      log.steps,
+      stepsAtFreeze,
+      reason: 'frozen frames run no fixed steps: the machine stalls',
+    );
     game.pumpFixed(steps: 1);
-    expect(log.steps, stepsAtFreeze + 1,
-        reason: 'resumes on the very next pump: shift == frozen frames');
+    expect(
+      log.steps,
+      stepsAtFreeze + 1,
+      reason: 'resumes on the very next pump: shift == frozen frames',
+    );
 
     // The stagger still serves its full duration in machine ticks — every
     // boundary after the freeze lands the frozen count later in wall

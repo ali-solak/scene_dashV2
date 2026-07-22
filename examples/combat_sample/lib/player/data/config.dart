@@ -175,11 +175,32 @@ const double runBlendSpeed = 4.8;
 
 /// Clip lengths (read from the rig files, docs/asset_inventory.md); the
 /// mapper scales playback so the clip spans the machine's phase windows —
-/// never the reverse (L2). Two-handed set, to match the 2H sword.
+/// never the reverse (L2). Two-handed set, to match the 2H axe.
 const double strikeClipSeconds = 1.10; // Melee_2H_Attack_Slice
-const double heavyClipSeconds = 1.63; // Melee_2H_Attack_Chop
+const double heavyClipSeconds = 2.40; // Melee_2H_Attack_Spin
 const double rollClipSeconds = 0.40;
 const double hitClipSeconds = 0.67;
+const double windCastClipSeconds = 1.167; // Jump_Full_Short (the cast leap)
+
+/// Peak height of the wind-gust hop — a leap of about three-quarters of a
+/// metre before the gust lands.
+const double windCastHopHeight = 0.8;
+
+/// The hop is a REAL ballistic arc: the fighter leaves the ground at this
+/// speed and falls back under [knockbackGravity] (the same gravity the
+/// launch physics uses), so the height falls out of the motion rather than
+/// being drawn on. `updatePlayerMotion` integrates it and, while it lasts,
+/// owns `transform.y` — the knockback step would otherwise read a rising y
+/// as a launch and fight it. Kept off the Knockback itself on purpose, so
+/// a hop never flags the fighter airborne (no tumble, no fall pose, no
+/// lockout — you keep control through it).
+final double windCastJumpSpeed = math.sqrt(
+  2 * knockbackGravity * windCastHopHeight,
+);
+
+/// Seconds the hop spends off the ground (up and back). The jump clip and
+/// the leap both run for exactly this, so animation and arc land together.
+final double windCastSeconds = 2 * windCastJumpSpeed / knockbackGravity;
 
 /// Dodge clips play at this speed instead of being stretched across the
 /// full window. The directional dodge clip IS the dash — no procedural

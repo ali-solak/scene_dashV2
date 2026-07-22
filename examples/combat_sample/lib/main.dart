@@ -5,7 +5,6 @@
 //   flutter run --enable-flutter-gpu
 //
 // Input handling lives in `game/controls.dart` — this file is composition.
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart'
@@ -49,14 +48,6 @@ Future<void> main() async {
     await BrowserContextMenu.disableContextMenu();
   }
 
-  // Landscape pair only, and NOT for taste: rotating the phone resizes the
-  // swapchain, and flutter_scene frees the old attachments while a frame is
-  // still in flight — the next `RenderPass.begin` hands the driver a dead
-  // attachment and the app takes a SIGSEGV inside vkCmdBeginRenderPass.
-  //
-  // landscapeLeft <-> landscapeRight is the same pixel size, so the resize
-  // branch never runs and the crash cannot fire. Portrait would change the
-  // size, so it stays off the list until the engine bug is fixed.
   if (!kIsWeb && isMobile) {
     await SystemChrome.setPreferredOrientations(const [
       DeviceOrientation.landscapeLeft,
@@ -64,81 +55,32 @@ Future<void> main() async {
     ]);
   }
 
-  runApp(const CombatBoot());
+  runApp(const CombatApp());
 }
 
-class CombatBoot extends StatefulWidget {
-  const CombatBoot({super.key});
-
-  @override
-  State<CombatBoot> createState() => _CombatBootState();
-}
-
-class _CombatBootState extends State<CombatBoot> {
-  _Booted? _booted;
-  Object? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _boot();
-  }
-
-  Future<void> _boot() async {
-    try {
-      final booted = await _bootGame();
-      if (mounted) setState(() => _booted = booted);
-    } on Object catch (error) {
-      if (mounted) setState(() => _error = error);
-    }
-  }
+class CombatApp extends StatelessWidget {
+  const CombatApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final booted = _booted;
-    if (booted == null) {
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(
-          backgroundColor: Colors.black,
-          body: _LoadingScreen(error: _error),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: Colors.black,
+        body: GameBootstrap<SceneGame>(
+          boot: _bootGame,
+          loading: (context) => const _LoadingScreen(),
+          error: (context, error) => _LoadingScreen(error: error),
+          builder: (context, game) => _GameSurface(game: game),
         ),
-      );
-    }
-    return GameScope(
-      game: booted.game,
-      child: CombatApp(
-        game: booted.game,
-        buttons: booted.buttons,
-        axes: booted.axes,
-        buffer: booted.buffer,
-        look: booted.look,
-        cameraRig: booted.cameraRig,
       ),
     );
   }
 }
 
-class _Booted {
-  _Booted({
-    required this.game,
-    required this.buttons,
-    required this.axes,
-    required this.buffer,
-    required this.look,
-    required this.cameraRig,
-  });
-
-  final SceneGame game;
-  final ButtonInput<CombatAction> buttons;
-  final AxisInput<MoveAxis> axes;
-  final InputBuffer<CombatAction> buffer;
-  final LookInput look;
-  final CameraRig cameraRig;
-}
-
-Future<_Booted> _bootGame() async {
-  await Scene.initializeStaticResources();
+Future<SceneGame> _bootGame() async {
+  // `SceneGame.boot` calls `Scene.initializeStaticResources` itself; only
+  // the physics engine has to be brought up before we hand it a world.
   await RapierWorld.ensureInitialized();
   final assets = await loadWorldAssets();
   CharacterAssets? characters;
@@ -150,16 +92,7 @@ Future<_Booted> _bootGame() async {
     debugPrint('combat_sample: character assets unavailable: $error');
   }
 
-  // Only what the widget shell itself writes: buttons/axes/buffer/look are
-  // fed by the input widgets, the camera rig by the player feature.
-  final buttons = ButtonInput<CombatAction>();
-  final axes = AxisInput<MoveAxis>();
-  final buffer = InputBuffer<CombatAction>(window: bufferWindow);
-  final look = LookInput();
-
-  final cameraRig = CameraRig()..yaw = math.pi;
-
-  final game = await SceneGame.boot(
+  return SceneGame.boot(
     physics: RapierWorld(gravity: Vector3(0, -gravityStrength, 0)),
     strictAccess: true,
     accessConflictPolicy: AccessConflictPolicy.error,
@@ -177,11 +110,15 @@ Future<_Booted> _bootGame() async {
             GameSets.waves,
           ])
           ..configureSets(Schedules.update, [GameSets.logic])
-          ..world.insert(buttons)
-          ..world.insert(axes)
-          ..world.insert(buffer)
-          ..world.insert(look)
-          ..world.insert(cameraRig);
+          // Input surfaces: written by the widgets in `game/controls.dart`,
+          // read by the player and camera systems. Inserted here so both
+          // sides find the same instance (buffer and rig need non-default
+          // construction, so they cannot be left to lazy creation).
+          ..world.insert(ButtonInput<CombatAction>())
+          ..world.insert(AxisInput<MoveAxis>())
+          ..world.insert(InputBuffer<CombatAction>(window: bufferWindow))
+          ..world.insert(LookInput())
+          ..world.insert(CameraRig()..yaw = math.pi);
         if (characters != null) game.world.insert(characters);
       },
       installWorld(assets),
@@ -193,20 +130,8 @@ Future<_Booted> _bootGame() async {
       installRules,
     ],
   );
-
-  return _Booted(
-    game: game,
-    buttons: buttons,
-    axes: axes,
-    buffer: buffer,
-    look: look,
-    cameraRig: cameraRig,
-  );
 }
 
-/// Shown while the assets load and the world boots. Same inks as the rest
-/// of the interface, so the first frame the player sees already belongs to
-/// the game rather than to Flutter.
 class _LoadingScreen extends StatelessWidget {
   const _LoadingScreen({this.error});
 
@@ -240,9 +165,6 @@ class _LoadingScreen extends StatelessWidget {
               ),
             )
           else
-            // Named, not swallowed. A boot failure here is almost always
-            // the shader bundle (see world/data/assets.dart), and a blank
-            // window would send you looking in the wrong place.
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
@@ -266,64 +188,25 @@ class _LoadingScreen extends StatelessWidget {
   }
 }
 
-class CombatApp extends StatefulWidget {
-  const CombatApp({
-    super.key,
-    required this.game,
-    required this.buttons,
-    required this.axes,
-    required this.buffer,
-    required this.look,
-    required this.cameraRig,
-  });
+class _GameSurface extends StatelessWidget {
+  const _GameSurface({required this.game});
 
   final SceneGame game;
-  final ButtonInput<CombatAction> buttons;
-  final AxisInput<MoveAxis> axes;
-  final InputBuffer<CombatAction> buffer;
-  final LookInput look;
-  final CameraRig cameraRig;
-
-  @override
-  State<CombatApp> createState() => _CombatAppState();
-}
-
-class _CombatAppState extends State<CombatApp> {
-  @override
-  void dispose() {
-    // Runs the shutdown schedule and detaches the scene driver — important
-    // for hot restart, navigation and embedding.
-    unawaited(widget.game.shutdown());
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        backgroundColor: Colors.black,
-        body: GameControls(
-          game: widget.game,
-          buttons: widget.buttons,
-          axes: widget.axes,
-          buffer: widget.buffer,
-          look: widget.look,
-          showTouchControls: _showTouchControls,
-          scene: SceneView(
-            widget.game.scene,
-            cameraBuilder: (elapsed) =>
-                buildCombatCamera(elapsed, widget.cameraRig),
-            onTick: widget.game.onTick,
-            warmUp:
-                defaultTargetPlatform != TargetPlatform.android &&
-                defaultTargetPlatform != TargetPlatform.iOS,
-            loadingBuilder: (context, progress) =>
-                const Center(child: CircularProgressIndicator()),
-          ),
-          hud: const GameHud(),
-        ),
+    final cameraRig = game.world.resource<CameraRig>();
+    return GameControls(
+      showTouchControls: _showTouchControls,
+      scene: SceneView(
+        game.scene,
+        cameraBuilder: (elapsed) => buildCombatCamera(elapsed, cameraRig),
+        onTick: game.onTick,
+
+        loadingBuilder: (context, progress) =>
+            const Center(child: CircularProgressIndicator()),
       ),
+      hud: const GameHud(),
     );
   }
 }

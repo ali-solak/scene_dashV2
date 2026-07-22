@@ -5,7 +5,7 @@ import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart'
     show Matrix4, Quaternion, Vector2, Vector3;
 
-import '../enemies/enemies.dart' show Enemy;
+import '../enemies/enemies.dart' show Brawler, Enemy, Mired;
 import '../fx/barrier_visual.dart';
 import '../fx/burning_visual.dart';
 import '../fx/fire_gush.dart';
@@ -16,7 +16,8 @@ import '../game/character_assets.dart';
 import '../game/game_state.dart';
 import '../game/score.dart';
 import '../game/sets.dart';
-import '../player/player.dart' show HitLanded, PlayerMotion;
+import '../player/player.dart'
+    show CastLeap, HitLanded, Knockback, PlayerMotion, windCastSeconds;
 import '../world/data/assets.dart';
 
 part 'data/components.dart';
@@ -31,6 +32,15 @@ void installSkills(GameBuilder game) {
     ..registerComponent<LavaPit>()
     ..registerComponent<Barrier>()
     ..registerComponent<BarrierVisual>()
+    ..registerComponent<PendingWindBlast>()
+    // Fire/lava reads as landing with ONE flinch, on the catch — not a
+    // stagger (that stunlocks a body in a pit, see `applyDamage`) and not
+    // every tick (that held the reaction forever). Adding `Burning` fires
+    // once; refreshing it each lava tick fires nothing, so this is exactly
+    // the leading edge.
+    ..observe<Burning>(
+      onAdd: (world, entity, _) => world.tryGet<Brawler>(entity)?.sinceHurt = 0,
+    )
     ..world.insert(SkillBook())
     // frameStart, like the restart request: buying happens while the menu
     // has the world paused, so it must not sit behind a `fighting` gate.
@@ -40,6 +50,15 @@ void installSkills(GameBuilder game) {
       castSkills,
       inSet: GameSets.actions,
       reads: const {Player, Enemy, Health, PlayerMotion, SceneTransform},
+      runIf: inState(GameStatus.fighting),
+    )
+    // Fires the deferred wind gust once its leap lands.
+    ..addSystem(
+      Schedules.fixedUpdate,
+      firePendingWindBlast,
+      inSet: GameSets.actions,
+      reads: const {Player, Enemy, Health, SceneTransform},
+      writes: const {PendingWindBlast},
       runIf: inState(GameStatus.fighting),
     )
     ..addSystem(

@@ -1,6 +1,16 @@
 /// World-feature resources.
 library;
 
+import 'dart:math' as math;
+
+/// Paces the surf against the cliff: a countdown (seconds until the next
+/// break) that re-arms with jitter, and a seeded RNG so which point breaks
+/// and when is deterministic. A resource only so it outlives the system.
+class WaveClock {
+  final math.Random rng = math.Random(19);
+  double until = 0;
+}
+
 /// Accumulated wind-phase time, written each frame into the grass material's
 /// `time` parameter. A resource (not a system-local) so the wind dramaturgy
 /// can read and shape the same phase.

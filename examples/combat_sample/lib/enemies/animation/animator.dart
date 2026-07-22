@@ -5,7 +5,7 @@ part of '../enemies.dart';
 /// + velocity in, clip weights/times out; nothing here feeds combat.
 enum BrawlerLoco { idle, walk, run, strafeLeft, strafeRight }
 
-enum BrawlerShot { attack, hit, death, transform }
+enum BrawlerShot { rise, taunt, attack, hit, death, fall, transform }
 
 final class EnemyAnimator {
   EnemyAnimator({required this.locomotion, required this.shots});
@@ -57,6 +57,12 @@ final class EnemyAnimator {
       return;
     }
     switch (phase) {
+      case BrawlPhase.rising:
+        // Climbing out of the floor; snapped on so frame one is already
+        // prone (see the snap set below), not the standing idle sinking.
+        desired = BrawlerShot.rise;
+      case BrawlPhase.taunting:
+        desired = BrawlerShot.taunt;
       case BrawlPhase.telegraph || BrawlPhase.swing || BrawlPhase.recover:
         // One clip spans the whole arc: the slow windup IS the telegraph,
         // the contact rides the swing window, the tail is the recover.
@@ -68,19 +74,23 @@ final class EnemyAnimator {
         // delayed dissolve takes it (the "ragdoll then dissolve" staging).
         desired = BrawlerShot.death;
       case BrawlPhase.approach || BrawlPhase.circle:
-        desired = null;
+        // The fire/lava flinch: a non-staggering tick still jolts the body,
+        // but only while it is walking or circling — a barbarian mid-swing
+        // swings through the burn, exactly as the player does (poise).
+        desired = brawler.sinceHurt < brawlerFlinchSeconds
+            ? BrawlerShot.hit
+            : null;
     }
 
     // STILL IN THE AIR (a wind blast). The stagger is far shorter than
     // the arc, so without this a thrown barbarian goes back to its walk
     // cycle while it is still metres up — jogging across the sky. Being
     // airborne outranks the phase; death still outranks both.
-    // The DEATH clip, not the hit clip: it is the one that ends with the
-    // body on the floor, which is what a thrown barbarian should look
-    // like while it is down. It gets up again afterwards — the clip is
-    // being borrowed for its pose, not its meaning.
+    //
+    // A falling pose while up (the tumble spins it), then the death clip's
+    // floor pose on the landing beat — where the borrow finally fits.
     if (brawler.downed && phase != BrawlPhase.dying) {
-      desired = BrawlerShot.death;
+      desired = brawler.airborne ? BrawlerShot.fall : BrawlerShot.death;
     }
 
     if (desired != active) {
@@ -88,8 +98,11 @@ final class EnemyAnimator {
       final clip = desired == null ? null : shots[desired];
       if (clip != null) {
         clip.replay();
-        if (desired == BrawlerShot.hit || desired == BrawlerShot.death) {
-          // Stagger snaps (L2); death cuts hard under the hitstop.
+        if (desired == BrawlerShot.hit ||
+            desired == BrawlerShot.death ||
+            desired == BrawlerShot.rise) {
+          // Stagger snaps (L2); death cuts hard under the hitstop; the rise
+          // snaps so its prone first frame is not preceded by a stand.
           clip.weight = 1;
           for (final other in shots.values) {
             if (!identical(other, clip)) other.weight = 0;
@@ -222,15 +235,27 @@ EnemyAnimator buildEnemyAnimator(CharacterAssets assets, Node model) {
   };
   const attackWindow = telegraphSeconds + swingSeconds + recoverSeconds;
   final shots = <BrawlerShot, AnimationClip>{
+    // Climbs out of the ground on spawn; taunts between orbits mid-fight.
+    BrawlerShot.rise: shot(
+      'Skeletons_Awaken_Floor',
+      awakenClipSeconds,
+      risingSeconds,
+    ),
+    BrawlerShot.taunt: shot('Skeletons_Taunt', tauntClipSeconds, tauntSeconds),
     BrawlerShot.attack: shot(
       'Melee_2H_Attack_Chop',
       chopClipSeconds,
       attackWindow,
     ),
     BrawlerShot.hit: shot('Hit_B', hitBClipSeconds, brawlStaggerSeconds),
-    // The fall plays in real time; the corpse then lies through the
-    // dissolve delay.
+    // A barbarian collapse (NOT the skeleton death — this body should fall
+    // in one piece, not scatter). Plays in real time; the corpse then lies
+    // through the dissolve delay.
     BrawlerShot.death: shot('Death_B', deathBClipSeconds, deathBClipSeconds),
+    // The mid-air hang, held while a wind blast carries the body through
+    // its arc (see the `airborne` split above). LOOPS — a one-shot would
+    // finish mid-flight and drop the body to its bind pose.
+    BrawlerShot.fall: loop('Jump_Idle'),
     // The giant's growth spurt, spanning exactly the transform window.
     BrawlerShot.transform: shot(
       'EXPERIMENTAL_Medium_Transform',

@@ -49,7 +49,7 @@ void toggleSkillMenu(World world) {
 
 /// Starts a run clean (`OnEnter(fighting)`: boot and every restart).
 /// Undoes the slow-motion scale and drives each feature's reset from this
-/// one system — the resets touch the same component types on different
+/// one system., the resets touch the same component types on different
 /// entities, so a single writer keeps the conflict detector honest.
 void startRun(World world) {
   // Closing the skill menu re-enters `fighting` too, and that is a
@@ -82,32 +82,20 @@ void resolveStrikes(World world) {
   if (playerRow == null) return;
   final (player, fighter, motion, playerTransform) = playerRow;
 
-  if (fighter.phase.justEntered(CombatPhase.active)) {
-    final damage = fighter.heavy ? heavyDamage : lightDamage;
-    final push = fighter.heavy ? heavyKnockback : lightKnockback;
-    world.query2<Health, SceneTransform>(require: const [Enemy]).each((
-      enemy,
-      health,
-      enemyTransform,
-    ) {
-      if (!health.alive) return;
-      if (_inArc(
-        from: playerTransform,
-        facing: motion.facing,
-        to: enemyTransform,
-        reach: playerReach,
-        halfArc: playerStrikeHalfArc,
-      )) {
-        world.emit(
-          HitLanded(
-            enemy,
-            damage,
-            heavy: fighter.heavy,
-            knockback: _shove(playerTransform, enemyTransform, push),
-          ),
-        );
-      }
-    });
+  // A swing lands one connect; a spin lands one every `heavyHitInterval`
+  // as the axe comes around, so a body in it is struck — and staggered —
+  // several times. `strikeHits` counts taps already fired this active
+  // phase, so each is emitted exactly once across the fixed steps.
+  final phase = fighter.phase;
+  if (phase.justEntered(CombatPhase.active)) fighter.strikeHits = 0;
+  if (phase.state == CombatPhase.active) {
+    final due = fighter.heavy
+        ? (phase.elapsed / heavyHitInterval).floor() + 1
+        : 1;
+    while (fighter.strikeHits < due) {
+      fighter.strikeHits++;
+      _strikeEnemies(world, fighter, motion, playerTransform);
+    }
   }
 
   world.query2<Brawler, SceneTransform>(require: const [Enemy]).each((
@@ -145,6 +133,43 @@ void resolveStrikes(World world) {
   });
 }
 
+/// One tap of the player's swing: a connect to every living enemy inside
+/// the strike arc. Called once for a chop, once per sweep tick for the
+/// spin — every connect staggers (the default), so a body in the spin
+/// reacts each time the axe comes around.
+void _strikeEnemies(
+  World world,
+  Fighter fighter,
+  PlayerMotion motion,
+  SceneTransform playerTransform,
+) {
+  final damage = fighter.heavy ? heavyDamage : lightDamage;
+  final push = fighter.heavy ? heavyKnockback : lightKnockback;
+  world.query2<Health, SceneTransform>(require: const [Enemy]).each((
+    enemy,
+    health,
+    enemyTransform,
+  ) {
+    if (!health.alive) return;
+    if (_inArc(
+      from: playerTransform,
+      facing: motion.facing,
+      to: enemyTransform,
+      reach: playerReach,
+      halfArc: playerStrikeHalfArc,
+    )) {
+      world.emit(
+        HitLanded(
+          enemy,
+          damage,
+          heavy: fighter.heavy,
+          knockback: _shove(playerTransform, enemyTransform, push),
+        ),
+      );
+    }
+  });
+}
+
 /// Serves every [HitLanded]: an i-framed roll passes through cleanly;
 /// otherwise health drops, the victim staggers (stagger snaps — L2),
 /// the clock freezes per hit weight, a heavy kicks the camera, and a
@@ -174,12 +199,9 @@ void applyDamage(World world) {
     final barrier = hit.impact ? world.tryGet<Barrier>(hit.target) : null;
     if (barrier != null && !barrier.spent) {
       final broke = barrier.absorb(push: hit.knockback);
-      // A block is still an impact: it freezes and sparks like one, so it
-      // reads as the barrier TAKING the hit rather than as the hit
-      // quietly not happening.
-      world.clock.freezeFor(
-        hit.heavy ? heavyHitstopSeconds : lightHitstopSeconds,
-      );
+      // A block sparks so it reads as the barrier TAKING the hit rather
+      // than as the hit quietly not happening (no hitstop — the freeze
+      // read as lag).
       final at = world.tryGet<SceneTransform>(hit.target);
       if (at != null) {
         spawnImpactBurst(
@@ -252,17 +274,19 @@ void applyDamage(World world) {
         // held anything standing in a damage-over-time effect in a
         // permanent stunlock — and, because `coordinateAggro` releases a
         // staggered holder, quietly turned fire gush into crowd control.
+        // Those DoT ticks flinch ONCE on the catch instead (a `Burning`
+        // onAdd sets `Brawler.sinceHurt`; see `installSkills`).
         brawler.phase.go(BrawlPhase.staggered);
       }
     }
 
-    // Only blows freeze the clock — a damage-over-time tick passes
-    // straight through.
-    if (!hit.impact) continue;
-    world.clock.freezeFor(
-      hit.heavy ? heavyHitstopSeconds : lightHitstopSeconds,
-    );
-    if (hit.heavy) _kickCamera(world, heavyCameraKick);
+    // A player connect kicks the camera — the heavy harder than the light,
+    // but the light kicks too: with no hitstop, that little punch is what
+    // gives a quick slice some weight. (An enemy hit on YOU kicked
+    // hurtCameraKick above; this is your hits landing on THEM.)
+    if (hit.impact && world.has<Enemy>(hit.target)) {
+      _kickCamera(world, hit.heavy ? heavyCameraKick : lightCameraKick);
+    }
   }
 }
 

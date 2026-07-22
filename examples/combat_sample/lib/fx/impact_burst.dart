@@ -17,7 +17,7 @@ import 'particles.dart' as fx;
 // Kept modest on purpose: a burst is built PER CONNECT, and the particle
 // system allocates its buffers at construction. Every particle here is
 // paid for in the middle of a swing.
-const int _lightCount = 20;
+const int _lightCount = 28;
 const int _heavyCount = 38;
 const double _burstEntityLifetime = 1.2;
 
@@ -39,10 +39,10 @@ void spawnImpactBurst(World world, Vector3 position, {bool heavy = false}) {
         : const fx.UniformFloat(0.14, 0.3),
     startSpeed: heavy
         ? const fx.UniformFloat(6.0, 13.0)
-        : const fx.UniformFloat(3.5, 7.0),
+        : const fx.UniformFloat(4.5, 9.0),
     startSize: heavy
         ? const fx.UniformFloat(0.18, 0.38)
-        : const fx.UniformFloat(0.1, 0.22),
+        : const fx.UniformFloat(0.12, 0.26),
     startColor: fx.GradientColor(
       fx.ColorGradient(
         heavy

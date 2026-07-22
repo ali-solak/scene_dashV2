@@ -44,6 +44,7 @@ void installEnemies(GameBuilder game) {
     ..registerComponent<Ragdoll>()
     ..registerComponent<ModelSlot>()
     ..registerComponent<Dissolving>()
+    ..registerComponent<Mired>()
     // A despawned barbarian hands its pooled model back, so the next
     // wave can borrow it (imported skinned models cannot be cloned).
     ..observe<ModelSlot>(onRemove: releaseEnemyModel)
@@ -70,7 +71,7 @@ void installEnemies(GameBuilder game) {
       Schedules.fixedUpdate,
       moveBrawlers,
       inSet: GameSets.enemyMovement,
-      reads: const {Player, Enemy},
+      reads: const {Player, Enemy, Mired},
       writes: const {Brawler, SceneTransform, Knockback},
       runIf: inState(GameStatus.fighting),
     )

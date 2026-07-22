@@ -1,5 +1,20 @@
 part of '../skills.dart';
 
+/// A wind gust WAITING for the leap to land before it fires. `castSkills`
+/// adds this and starts the jump; `firePendingWindBlast` counts [elapsed]
+/// up and unleashes the blast once the leap has come back down — so the
+/// gust reads as thrown down on landing, not off the button.
+final class PendingWindBlast {
+  PendingWindBlast(this.power);
+
+  /// The blast's level scale, captured at cast so a purchase mid-flight
+  /// does not change the gust already in the air.
+  final double power;
+
+  /// Seconds since the cast; the gust fires at `windCastSeconds`.
+  double elapsed = 0;
+}
+
 /// On fire: ticks damage until the framework's `removeAfter:` clock takes
 /// the component off. Re-applying refreshes the clock rather than
 /// stacking — one fire, longer.

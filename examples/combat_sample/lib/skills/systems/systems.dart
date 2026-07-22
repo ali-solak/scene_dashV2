@@ -47,13 +47,47 @@ void castSkills(World world) {
     switch (cast.skill) {
       case Skill.fireGush:
         _castFireGush(world, motion, transform, power);
+        // Muzzle recoil: a firm shove BACKWARD (opposite the cone's facing),
+        // so the gush kicks. A decaying knockback, like a slight roll-back.
+        world
+            .tryGet<Knockback>(player)
+            ?.shove(
+              Vector3(
+                -math.sin(motion.facing) * fireGushRecoil,
+                0,
+                -math.cos(motion.facing) * fireGushRecoil,
+              ),
+            );
       case Skill.lavaPit:
         _openLavaPit(world, motion, transform, power);
       case Skill.windBlast:
-        _castWindBlast(world, transform, power);
+        // The player leaps NOW; the gust itself waits for the landing (see
+        // firePendingWindBlast), so it reads as thrown down on impact. The
+        // cost and cooldown still commit on the button.
+        world.add(player, PendingWindBlast(power));
+        world.emit(const CastLeap());
+
       case Skill.shield:
         _raiseBarrier(world, player, book.levelOf(cast.skill));
     }
+  }
+}
+
+/// Unleashes a wind gust once its leap has landed. The blast waits on the
+/// [PendingWindBlast] `castSkills` armed and fires at [windCastSeconds] —
+/// the leap's flight time — from wherever the fighter came down, so the
+/// gust reads as thrown into the ground on impact rather than off the
+/// button.
+void firePendingWindBlast(World world) {
+  final row = world
+      .query2<PendingWindBlast, SceneTransform>(require: const [Player])
+      .firstOrNull;
+  if (row == null) return;
+  final (player, pending, transform) = row;
+  pending.elapsed += world.dt;
+  if (pending.elapsed >= windCastSeconds) {
+    _castWindBlast(world, transform, pending.power);
+    world.remove<PendingWindBlast>(player);
   }
 }
 
@@ -197,8 +231,10 @@ void tickLavaPits(World world) {
   world.query2<LavaPit, SceneTransform>().each((entity, pit, at) {
     pit.elapsed += dt;
     pit.sinceTick += dt;
-    if (pit.sinceTick < lavaTickSeconds) return;
-    pit.sinceTick -= lavaTickSeconds;
+    // The BOG runs every step (so it can't be walked through); the COOK is
+    // metered on the pit's own tick.
+    final cook = pit.sinceTick >= lavaTickSeconds;
+    if (cook) pit.sinceTick -= lavaTickSeconds;
     world.query2<Health, SceneTransform>(require: const [Enemy]).each((
       enemy,
       health,
@@ -206,6 +242,10 @@ void tickLavaPits(World world) {
     ) {
       if (!health.alive) return;
       if (_distanceTo(at, standing) > lavaPitRadius) return;
+      // Bogged down while standing in it, refreshed every step so it wears
+      // off just after they wade out ([lavaMireLinger]).
+      world.add(enemy, const Mired(), removeAfter: lavaMireLinger);
+      if (!cook) return;
       world.emit(
         HitLanded(
           enemy,

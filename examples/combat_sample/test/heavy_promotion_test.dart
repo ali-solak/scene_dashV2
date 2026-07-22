@@ -61,8 +61,11 @@ void main() {
 
     game.pumpFixed(steps: thresholdTicks - 1);
     expect(fighter.heavy, isFalse, reason: 'one tick before the threshold');
-    expect(fighter.phase.state, CombatPhase.startup,
-        reason: 'the hold delays the light boundary');
+    expect(
+      fighter.phase.state,
+      CombatPhase.startup,
+      reason: 'the hold delays the light boundary',
+    );
     game.pumpFixed(steps: 1);
     expect(fighter.heavy, isTrue, reason: 'promoted exactly at threshold');
 
@@ -71,8 +74,11 @@ void main() {
     game.pumpFixed(steps: heavyStartupTicks - thresholdTicks - 1);
     expect(fighter.phase.state, CombatPhase.startup);
     game.pumpFixed(steps: 1);
-    expect(fighter.phase.state, CombatPhase.active,
-        reason: 'heavy goes active at its own startup boundary');
+    expect(
+      fighter.phase.state,
+      CombatPhase.active,
+      reason: 'heavy goes active at its own startup boundary',
+    );
     expect(fighter.heavy, isTrue);
   });
 
@@ -86,14 +92,20 @@ void main() {
 
     // Hold through the light boundary but not to the threshold.
     game.pumpFixed(steps: startupTicks + 2);
-    expect(fighter.phase.state, CombatPhase.startup,
-        reason: 'still winding up while held');
+    expect(
+      fighter.phase.state,
+      CombatPhase.startup,
+      reason: 'still winding up while held',
+    );
     expect(fighter.heavy, isFalse);
 
     buttons.setPressed(CombatAction.attack, false);
     game.pumpFixed(steps: 1);
-    expect(fighter.phase.state, CombatPhase.active,
-        reason: 'release past the light boundary swings at once');
+    expect(
+      fighter.phase.state,
+      CombatPhase.active,
+      reason: 'release past the light boundary swings at once',
+    );
     expect(fighter.heavy, isFalse);
   });
 
@@ -106,9 +118,10 @@ void main() {
     expect(fighter.heavy, isTrue);
     buttons.setPressed(CombatAction.attack, false);
 
-    // Ride out active + recovery back to idle, then tap.
+    // Ride out the spin's long active sweep + recovery back to idle, then
+    // tap.
     game.pumpFixed(
-      steps: ticksFor(activeSeconds) + ticksFor(heavyRecoverySeconds) + 2,
+      steps: ticksFor(heavyActiveSeconds) + ticksFor(heavyRecoverySeconds) + 2,
     );
     expect(fighter.phase.state, CombatPhase.idle);
     game.world.buffer<CombatAction>().record(CombatAction.attack);

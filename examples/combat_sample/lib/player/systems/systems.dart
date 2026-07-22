@@ -20,10 +20,11 @@ void attachPlayerVisuals(World world) {
   if (world.hasResource<CharacterAssets>()) {
     final assets = world.resource<CharacterAssets>();
     final model = assets.knight;
-    // The sword rides the animated hand-slot joint.
-    final sword = assets.sword;
-    if (sword != null) {
-      model.getChildByName('handslot.r')?.add(sword);
+    // The two-handed sword rides the animated hand-slot joint. Cloned so a
+    // restart's re-body never re-parents the shared template.
+    final weapon = assets.sword?.clone();
+    if (weapon != null) {
+      model.getChildByName('handslot.r')?.add(weapon);
     }
     final wrapper = Node(
       name: 'player-model',
@@ -35,13 +36,13 @@ void attachPlayerVisuals(World world) {
     )..add(model);
     world.add(player, SceneNode(Node(name: 'player')..add(wrapper)));
     world.add(player, buildPlayerAnimator(assets, model));
-    if (sword != null) {
+    if (weapon != null) {
       // The ribbon hangs in WORLD space, not off the hand: it is a
       // record of where the blade has been, so it must not travel with
       // the fighter after the fact.
       final trail = SwordTrail.create();
       world.resource<Scene>().add(trail.node);
-      world.add(player, BladeTrail(sword: sword, trail: trail));
+      world.add(player, BladeTrail(weapon: weapon, trail: trail));
     }
     return;
   }
@@ -245,9 +246,13 @@ void movePlayer(World world) {
             ..x += velocity.x * dt
             ..z += velocity.z * dt;
         }
-        // The shove rides on top of (and through) any rooted action, and owns
-        // the vertical arc.
-        if (knockback != null) {
+
+        final sinceCast = fighter.sinceCast;
+        if (sinceCast < windCastSeconds) {
+          transform.translation.y =
+              windCastJumpSpeed * sinceCast -
+              0.5 * knockbackGravity * sinceCast * sinceCast;
+        } else if (knockback != null) {
           knockback.step(dt, transform.translation);
         } else {
           transform.translation.y = 0;
@@ -268,6 +273,7 @@ void movePlayer(World world) {
         }
         // The animator has no entity handle, so the floor beat rides here.
         motion.downed = knockback?.incapacitated ?? false;
+        motion.airborne = knockback?.airborne ?? false; // falls vs lies
         transform.rotation.setAxisAngle(_up, motion.facing);
         if (motion.tumble != 0) {
           transform.rotation.setFrom(
@@ -320,7 +326,7 @@ void updateBladeTrail(World world) {
     _ => false,
   };
   if (swinging) {
-    blade.trail.sample(blade.sword.globalTransform);
+    blade.trail.sample(blade.weapon.globalTransform);
   } else {
     blade.trail.retract();
   }

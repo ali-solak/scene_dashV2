@@ -1,6 +1,3 @@
-/// Everything between a human and the world: keyboard, mouse, touch, and
-/// the focus bookkeeping that decides whether any of it arrives.
-///
 /// [GameControls] wraps the whole game surface — scene AND hud — and
 /// writes into the input resources `main` inserted. It owns no gameplay:
 /// held state goes to `ButtonInput`/`AxisInput`, edges to `InputBuffer`,
@@ -42,21 +39,10 @@ const List<LogicalKeyboardKey> _skillKeys = [
 class GameControls extends StatefulWidget {
   const GameControls({
     super.key,
-    required this.game,
-    required this.buttons,
-    required this.axes,
-    required this.buffer,
-    required this.look,
     required this.scene,
     required this.hud,
     this.showTouchControls = false,
   });
-
-  final SceneGame game;
-  final ButtonInput<CombatAction> buttons;
-  final AxisInput<MoveAxis> axes;
-  final InputBuffer<CombatAction> buffer;
-  final LookInput look;
 
   /// The scene view. Only this gets the look/attack pointer handling —
   /// dragging across the HUD must not swing the camera.
@@ -77,56 +63,69 @@ class _GameControlsState extends State<GameControls>
   final FocusNode _focus = FocusNode(debugLabel: 'combat-controls');
   final Set<LogicalKeyboardKey> _pressed = <LogicalKeyboardKey>{};
 
+  // The input surfaces `main` inserted, reached through the enclosing
+  // GameScope rather than threaded down as constructor arguments. This
+  // widget writes them and the player/camera systems read them — the
+  // README's UI-to-world path, one direction only. They live for the
+  // game's lifetime, so a one-time resolve is enough.
+  late WorldGame _game;
+  late ButtonInput<CombatAction> _buttons;
+  late AxisInput<MoveAxis> _axes;
+  late InputBuffer<CombatAction> _buffer;
+  late LookInput _look;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Game keys ride the HARDWARE keyboard, not the focus tree. A widget
+    // `onKeyEvent` only fires while this node holds focus, and focus gets
+    // stolen out from under a game constantly (capture overlays, a HUD
+    // click) — the reclaim below only heals POINTER input, so a keyboard
+    // cast was swallowed and only landed on the second press. A global
+    // handler is dispatched every key regardless of who holds focus.
+    HardwareKeyboard.instance.addHandler(_handleKey);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _game = GameScope.of(context);
+    final world = _game.world;
+    _buttons = world.buttons<CombatAction>();
+    _axes = world.axes<MoveAxis>();
+    _buffer = world.buffer<CombatAction>();
+    _look = world.resource<LookInput>();
   }
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKey);
     WidgetsBinding.instance.removeObserver(this);
     _focus.dispose();
-    widget.buttons.releaseAll();
-    widget.axes.clear();
+    _buttons.releaseAll();
+    _axes.clear();
     super.dispose();
   }
 
   // --- Focus ---------------------------------------------------------------
-
-  /// Takes the keyboard back.
-  ///
-  /// Pointer events reach a [Listener] whatever holds focus; key events
-  /// only reach `onKeyEvent` while THIS node has it. So every way of
-  /// losing focus presents identically — the mouse still works, the
-  /// keyboard is dead, and the window looks perfectly focused. Two known
-  /// ways in, and they want the same cure:
-  ///
-  ///  * a capture overlay (NVIDIA ShadowPlay, Steam, Discord) takes OS
-  ///    focus and hands it back without Flutter re-focusing anything;
-  ///    `autofocus` fires once at mount and never again;
-  ///  * any HUD button takes focus when clicked and simply keeps it,
-  ///    which kills WASD every time the skill menu is opened by mouse.
-  ///
-  /// Unconditional on purpose: `hasFocus` can read true while a
-  /// descendant actually holds the keyboard, and re-requesting focus you
-  /// already have is free.
   void _reclaimFocus() => _focus.requestFocus();
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _reclaimFocus();
+    if (state == AppLifecycleState.resumed) {
+      _reclaimFocus();
+    } else {
+      _releaseAllInput();
+    }
   }
 
-  /// Losing focus for real (alt-tab) must not leave keys stuck down: the
-  /// world would keep walking with nobody holding W.
-  void _onFocusChange(bool hasFocus) {
-    if (hasFocus) return;
+  void _releaseAllInput() {
     _pressed.clear();
     _keyAttack = false;
     _pointerAttack = false;
-    widget.buttons.releaseAll();
-    widget.axes.clear();
+    _buttons.releaseAll();
+    _axes.clear();
   }
 
   // --- Attack --------------------------------------------------------------
@@ -138,46 +137,64 @@ class _GameControlsState extends State<GameControls>
 
   void _syncAttack() {
     // Buffered on the edge; held state decides light vs heavy.
-    if (widget.buttons.setPressed(
+    if (_buttons.setPressed(
           CombatAction.attack,
           _keyAttack || _pointerAttack,
         ) ==
         ButtonEdge.pressed) {
-      widget.buffer.record(CombatAction.attack);
+      _buffer.record(CombatAction.attack);
     }
   }
 
   // --- Keyboard ------------------------------------------------------------
 
-  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+  /// A key this game acts on — consumed (returns true) so it never doubles
+  /// as focus traversal (Tab) or leaks to a system shortcut.
+  bool _isGameKey(LogicalKeyboardKey key) =>
+      _skillKeys.contains(key) ||
+      key == LogicalKeyboardKey.keyW ||
+      key == LogicalKeyboardKey.keyA ||
+      key == LogicalKeyboardKey.keyS ||
+      key == LogicalKeyboardKey.keyD ||
+      key == LogicalKeyboardKey.space ||
+      key == LogicalKeyboardKey.keyJ ||
+      key == LogicalKeyboardKey.tab ||
+      key == LogicalKeyboardKey.keyQ ||
+      key == LogicalKeyboardKey.escape;
+
+  /// The global hardware-keyboard handler (see [initState]). Only a
+  /// KeyDownEvent casts — a held key repeats as KeyRepeatEvent, which must
+  /// not spam a skill.
+  bool _handleKey(KeyEvent event) {
+    final key = event.logicalKey;
     if (event is KeyDownEvent) {
-      _pressed.add(event.logicalKey);
-      final slot = _skillKeys.indexOf(event.logicalKey);
+      _pressed.add(key);
+      final slot = _skillKeys.indexOf(key);
       if (slot >= 0 && slot < Skill.values.length) {
-        widget.game.emit(SkillCast(Skill.values[slot]));
+        _game.emit(SkillCast(Skill.values[slot]));
       }
-      switch (event.logicalKey) {
+      switch (key) {
         case LogicalKeyboardKey.space:
-          widget.buffer.record(CombatAction.roll);
+          _buffer.record(CombatAction.roll);
         case LogicalKeyboardKey.keyJ:
           _keyAttack = true;
           _syncAttack();
         case LogicalKeyboardKey.tab:
-          widget.game.emit(const LockPressed());
+          _game.emit(const LockPressed());
         case LogicalKeyboardKey.keyQ:
-          widget.game.emit(const LockCycled());
+          _game.emit(const LockCycled());
         case LogicalKeyboardKey.escape:
-          widget.game.emit(const SkillMenuToggled());
+          _game.emit(const SkillMenuToggled());
       }
     } else if (event is KeyUpEvent) {
-      _pressed.remove(event.logicalKey);
-      if (event.logicalKey == LogicalKeyboardKey.keyJ) {
+      _pressed.remove(key);
+      if (key == LogicalKeyboardKey.keyJ) {
         _keyAttack = false;
         _syncAttack();
       }
     }
     _syncMoveAxes();
-    return KeyEventResult.handled;
+    return _isGameKey(key);
   }
 
   void _syncMoveAxes() {
@@ -188,7 +205,7 @@ class _GameControlsState extends State<GameControls>
       return value;
     }
 
-    widget.axes
+    _axes
       ..setValue(
         MoveAxis.x,
         axis(LogicalKeyboardKey.keyA, LogicalKeyboardKey.keyD),
@@ -208,7 +225,7 @@ class _GameControlsState extends State<GameControls>
   void _onPointerDown(PointerDownEvent event) {
     if (event.kind == PointerDeviceKind.mouse) {
       if (event.buttons & kMiddleMouseButton != 0) {
-        widget.game.emit(const LockPressed());
+        _game.emit(const LockPressed());
       } else if (event.buttons & kPrimaryButton != 0) {
         _pointerAttack = true;
         _syncAttack();
@@ -230,7 +247,7 @@ class _GameControlsState extends State<GameControls>
         _touchDownPosition != null &&
         _touchTravel < _tapSlopPixels &&
         (event.timeStamp - _touchDownTime!) < _tapWindow) {
-      widget.game.emit(const LockPressed());
+      _game.emit(const LockPressed());
     }
     _touchDownPosition = null;
     _touchDownTime = null;
@@ -244,26 +261,23 @@ class _GameControlsState extends State<GameControls>
   void _onPointerMove(PointerMoveEvent event) {
     if (event.kind == PointerDeviceKind.mouse) {
       if ((event.buttons & kSecondaryButton) != 0) {
-        widget.look.addDelta(event.delta.dx, event.delta.dy);
+        _look.addDelta(event.delta.dx, event.delta.dy);
       }
     } else {
       _touchTravel += event.delta.distance;
-      widget.look.addDelta(event.delta.dx, event.delta.dy);
+      _look.addDelta(event.delta.dx, event.delta.dy);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Keys are handled globally (see [initState]/[_handleKey]), not through
+    // this node — so a stolen focus can no longer swallow a cast. The Focus
+    // stays only to hold [autofocus] and keep stray Tab traversal off the
+    // HUD widgets; the pointer reclaim below is now belt-and-suspenders.
     return Focus(
       focusNode: _focus,
       autofocus: true,
-      onKeyEvent: _onKey,
-      onFocusChange: _onFocusChange,
-      // The OUTER listener spans the hud as well as the scene, and only
-      // ever reclaims focus. Pointer events dispatch to every listener on
-      // the hit-test path, so this still fires when a HUD button handles
-      // the same click — which is exactly the case that used to eat the
-      // keyboard.
       child: Listener(
         onPointerDown: (_) => _reclaimFocus(),
         child: Stack(
@@ -284,14 +298,14 @@ class _GameControlsState extends State<GameControls>
               GameStateBuilder<GameStatus>(
                 builder: (context, status) => status == GameStatus.fighting
                     ? TouchControls(
-                        onMove: (x, y) => widget.axes
+                        onMove: (x, y) => _axes
                           ..setValue(MoveAxis.x, x)
                           ..setValue(MoveAxis.y, y),
                         onAttackChanged: (held) {
                           _pointerAttack = held;
                           _syncAttack();
                         },
-                        onRoll: () => widget.buffer.record(CombatAction.roll),
+                        onRoll: () => _buffer.record(CombatAction.roll),
                       )
                     : const SizedBox.shrink(),
               ),

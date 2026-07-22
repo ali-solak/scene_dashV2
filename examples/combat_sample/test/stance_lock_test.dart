@@ -111,8 +111,10 @@ void main() {
     final game = boot();
     final world = game.world;
     expect(world.entitiesWith(require: const [Player]).count(), 1);
-    expect(world.entitiesWith(require: const [Enemy]).count(),
-        enemiesForWave(1));
+    expect(
+      world.entitiesWith(require: const [Enemy]).count(),
+      enemiesForWave(1),
+    );
     expect(world.state<GameStatus>(), GameStatus.fighting);
   });
 
@@ -223,9 +225,9 @@ void main() {
     final near = world.tryGet<Target>(playerOf(world))!.entity;
     final nearTransform = world.get<SceneTransform>(near);
     double toTarget() => math.atan2(
-          nearTransform.translation.x - transform.translation.x,
-          nearTransform.translation.z - transform.translation.z,
-        );
+      nearTransform.translation.x - transform.translation.x,
+      nearTransform.translation.z - transform.translation.z,
+    );
     // 0.15 rad: the target circles between the facing write and this read.
     expect(motion.facing, closeTo(toTarget(), 0.15));
 
@@ -268,9 +270,16 @@ void main() {
     expect(windupDrift, greaterThan(0), reason: 'not fully rooted');
     expect(windupDrift, lessThan(freeDrift * 0.6), reason: 'but committing');
 
-    // Ride back to idle, then roll: displacement ≈ speed × duration.
+    // Ride the whole swing back to idle, then roll: displacement ≈
+    // speed × duration.
     world.axes<MoveAxis>().setValue(MoveAxis.y, 0);
-    game.pumpFixed(steps: 60);
+    game.pumpFixed(
+      steps:
+          ticksFor(startupSeconds) +
+          ticksFor(activeSeconds) +
+          ticksFor(recoverySeconds) +
+          4,
+    );
     expect(fighter.phase.state, CombatPhase.idle);
     world.axes<MoveAxis>().setValue(MoveAxis.y, 1);
     world.buffer<CombatAction>().record(CombatAction.roll);

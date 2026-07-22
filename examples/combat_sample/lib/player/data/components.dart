@@ -32,6 +32,11 @@ final class PlayerMotion {
   /// motion, not the entity — can hold the hit pose for the whole
   /// ragdoll, landing beat included.
   bool downed = false;
+
+  /// Still off the ground (a subset of [downed]): true through the arc,
+  /// false the moment the body lands. The mapper falls on this and lies on
+  /// the landing beat, so the two reads are different clips.
+  bool airborne = false;
 }
 
 /// The lock: present on the player while a target is held. Re-add replaces
@@ -41,14 +46,14 @@ final class Target {
   const Target(this.entity);
 }
 
-/// The blade trail's handles: the sword node to sample and the ribbon it
+/// The blade trail's handles: the weapon node to sample and the ribbon it
 /// feeds. One per fighter, alive for the whole run — the ribbon empties
 /// itself between swings rather than being respawned.
 final class BladeTrail {
-  BladeTrail({required this.sword, required this.trail});
+  BladeTrail({required this.weapon, required this.trail});
 
   /// The weapon node, sampled in world space each frame.
-  final Node sword;
+  final Node weapon;
 
   final SwordTrail trail;
 }

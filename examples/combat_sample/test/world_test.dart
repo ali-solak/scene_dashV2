@@ -24,15 +24,18 @@ void main() {
     game.pump();
   });
 
-  test('the clearing layout keeps its rings and leaves the cliff gap open',
-      () {
+  test('the clearing layout keeps its rings and leaves the cliff gap open', () {
     final placements = layoutClearing();
     // The sector skips thin the requested counts; the ring must still be
     // populated densely enough to read closed.
-    expect(placements.where((p) => p.kind == PropKind.tree).length,
-        greaterThan(treeCount ~/ 2));
-    expect(placements.where((p) => p.kind == PropKind.bush).length,
-        greaterThan((bushCount + underbrushCount) ~/ 2));
+    expect(
+      placements.where((p) => p.kind == PropKind.tree).length,
+      greaterThan(treeCount ~/ 2),
+    );
+    expect(
+      placements.where((p) => p.kind == PropKind.bush).length,
+      greaterThan((bushCount + underbrushCount) ~/ 2),
+    );
     for (final p in placements) {
       final r = math.sqrt(p.x * p.x + p.z * p.z);
       switch (p.kind) {
@@ -54,8 +57,11 @@ void main() {
       // Nothing stands inside the fighting circle…
       expect(r, greaterThan(arenaRadius));
       // …or in the cliff sector, where the view runs out to the sea.
-      expect(inCliffSector(math.atan2(p.x, p.z)), isFalse,
-          reason: 'the gap toward the sun stays open');
+      expect(
+        inCliffSector(math.atan2(p.x, p.z)),
+        isFalse,
+        reason: 'the gap toward the sun stays open',
+      );
       expect(p.variantRoll, inInclusiveRange(0, 1));
     }
     // Deterministic: the same seed lays the same clearing.

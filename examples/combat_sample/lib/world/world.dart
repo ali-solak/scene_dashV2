@@ -1,11 +1,12 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_scene/scene.dart';
 import 'package:flutter_scene_rapier/flutter_scene_rapier.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
-import 'package:vector_math/vector_math.dart'
-    show Matrix4, Quaternion, Vector3, Vector4;
+import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 
+import '../fx/wave_crash.dart';
 import '../game/physics_layers.dart';
 import 'data/assets.dart';
 import 'data/components.dart';
@@ -29,6 +30,7 @@ Feature installWorld(WorldAssets assets) => (game) {
     ..world.insert(GrassWind())
     ..world.insert(WindState())
     ..world.insert(GraphicsQuality(defaultQualityLevel))
+    ..world.insert(WaveClock())
     ..addSystem(
       Schedules.startup,
       setupWorld,
@@ -46,6 +48,13 @@ Feature installWorld(WorldAssets assets) => (game) {
       Schedules.update,
       updateWindMaterials,
       reads: const {Grass, Ocean, SceneNode},
+      runIf: hasResource<Scene>(),
+    )
+    // Deferred spawn only (the crash entity), so no live write is declared.
+    ..addSystem(
+      Schedules.update,
+      crashWaves,
+      reads: const {},
       runIf: hasResource<Scene>(),
     )
     ..addSystem(

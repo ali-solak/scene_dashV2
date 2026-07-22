@@ -122,17 +122,47 @@ void updateHealthBars(World world) {
     final alive = health.alive && brawler.phase.state != BrawlPhase.dying;
     bar.node.visible = alive;
     if (!alive) return;
-    bar.fraction.value = (health.current / health.max).clamp(0.0, 1.0);
+    final fraction = (health.current / health.max).clamp(0.0, 1.0);
+    // A drop is a hit — kick off the punch. (Healing on the breather lifts
+    // it, which must not react.)
+    if (fraction < bar.lastFraction - 1e-4) bar.sinceHit = 0;
+    bar.lastFraction = fraction;
+    bar.fraction.value = fraction;
+    bar.sinceHit += world.dt;
+
     final transform = world.tryGet<SceneTransform>(enemy);
     if (transform == null) return;
     final cameraYaw = math.atan2(
       rig.position.x - transform.translation.x,
       rig.position.z - transform.translation.z,
     );
+
+    // The hit reaction: a scale POP and a slash TILT in the screen plane,
+    // both decaying over the window. The tilt rides local Z (which points
+    // at the camera after the yaw), so it reads as a diagonal jolt rather
+    // than a yaw wobble.
+    var scale = 1.0;
+    var roll = 0.0;
+    if (bar.sinceHit < healthBarShakeSeconds) {
+      final p = bar.sinceHit / healthBarShakeSeconds;
+      final decay = 1 - p;
+      scale = 1 + healthBarShakePop * decay;
+      roll = healthBarShakeTilt * math.sin(p * math.pi * 3) * decay;
+    }
+    var rotation = Quaternion.axisAngle(
+      Vector3(0, 1, 0),
+      cameraYaw - brawler.facing,
+    );
+    if (roll != 0) {
+      rotation = rotation * Quaternion.axisAngle(Vector3(0, 0, 1), roll);
+    }
     bar.node.localTransform = Matrix4.compose(
-      Vector3(0, healthBarHeight, 0),
-      Quaternion.axisAngle(Vector3(0, 1, 0), cameraYaw - brawler.facing),
-      Vector3.all(1),
+      // Raised by the giant's scale to clear its taller body (this system
+      // rewrites the transform each frame, so the lift set at attach time
+      // has to be reapplied here or the bar sinks back onto normal height).
+      Vector3(0, healthBarHeight * (brawler.giant ? giantScale : 1.0), 0),
+      rotation,
+      Vector3.all(scale),
     );
   });
 }
@@ -160,6 +190,9 @@ void launchRagdolls(World world) {
     if (brawler.phase.state != BrawlPhase.dying) return;
     if (world.tryGet<Ragdoll>(enemy) != null) return; // already launched
 
+    // The corpse carries the killing blow's shove (a hit flings it off; a
+    // burn kill, with no knockback, just drops), plus a hop and a tumble.
+    // The sink in `updateBrawlerMaterials` takes it under once it settles.
     final push = knockback.velocity * corpseLaunchFactor;
     final body = RapierRigidBody(
       type: BodyType.dynamic_,
@@ -264,6 +297,7 @@ void brawlerDriver(World world) {
     health,
     transform,
   ) {
+    brawler.sinceHurt += world.dt; // ages the fire/lava flinch (render-only)
     final phase = brawler.phase..tick(world.dt);
     if (!health.alive && phase.state != BrawlPhase.dying) {
       // Killed outside applyDamage (tests, future hazards): still dies.
@@ -289,14 +323,27 @@ void brawlerDriver(World world) {
     final distance = math.sqrt(dx * dx + dz * dz);
 
     switch (phase.state) {
+      case BrawlPhase.rising:
+        // Held still by moveBrawlers; the awaken clip plays over this.
+        if (phase.elapsed >= risingSeconds) phase.go(BrawlPhase.approach);
       case BrawlPhase.approach:
         if (distance <= engageRange) phase.go(BrawlPhase.circle);
       case BrawlPhase.circle:
+        brawler.sinceTaunt += world.dt;
         if (brawler.hasToken && distance <= brawlerAttackRange) {
           phase.go(BrawlPhase.telegraph);
         } else if (distance > engageRange * 1.8) {
           phase.go(BrawlPhase.approach);
+        } else if (!brawler.hasToken &&
+            brawler.sinceTaunt >=
+                tauntIntervalSeconds + brawler.wobbleSeed.remainder(3.0)) {
+          // Not its turn: heckle. Only a token-less circler taunts, so the
+          // attacker's rhythm is never interrupted.
+          brawler.sinceTaunt = 0;
+          phase.go(BrawlPhase.taunting);
         }
+      case BrawlPhase.taunting:
+        if (phase.elapsed >= tauntSeconds) phase.go(BrawlPhase.circle);
       case BrawlPhase.telegraph:
         if (phase.elapsed >= telegraphSeconds) phase.go(BrawlPhase.swing);
       case BrawlPhase.swing:
@@ -438,6 +485,10 @@ void moveBrawlers(World world) {
         brawler.facing = math.atan2(dx, dz);
       case BrawlPhase.telegraph:
         brawler.facing = math.atan2(dx, dz); // the tell tracks its mark
+      case BrawlPhase.taunting:
+        brawler.facing = math.atan2(dx, dz); // roots, but taunts at its mark
+      case BrawlPhase.rising:
+        break; // on the floor hauling itself up — no drift, no aim yet
       case BrawlPhase.swing ||
           BrawlPhase.recover ||
           BrawlPhase.staggered ||
@@ -445,6 +496,13 @@ void moveBrawlers(World world) {
         break; // rooted, facing frozen
     }
 
+    // Bogged down in a lava pit — a hard slog. Only the ground speed is
+    // mired; the facing/aim above stay full, so it still turns to track the
+    // player as it wades, and a wind blast can still launch it.
+    if (world.has<Mired>(entity)) {
+      velocityX *= miredSpeedFactor;
+      velocityZ *= miredSpeedFactor;
+    }
     brawler.velocity.setValues(velocityX, 0, velocityZ);
     final knockback = world.tryGet<Knockback>(entity);
     // Sent flying (a wind blast): the arc owns them until they land.
@@ -481,6 +539,7 @@ void moveBrawlers(World world) {
       brawler.tumble = 0;
     }
     brawler.downed = knockback?.incapacitated ?? false;
+    brawler.airborne = knockback?.airborne ?? false; // falls vs lies
     transform.rotation.setAxisAngle(_upAxis, brawler.facing);
     if (brawler.tumble != 0) {
       transform.rotation.setFrom(

@@ -36,12 +36,25 @@ const double enemyCapsuleHeight = 0.8;
 const double healthBarHeight = 3;
 const double healthBarWorldHeight = 0.2;
 
+/// The bar's HIT punch (a world-space reaction on its billboard node): how
+/// long it lasts, how much bigger it pops, and how far it slash-tilts (rad,
+/// in the screen plane). Big on purpose — the bar is small on screen, so a
+/// timid reaction reads as nothing.
+const double healthBarShakeSeconds = 0.3;
+const double healthBarShakePop = 0.45;
+const double healthBarShakeTilt = 0.22;
+
 // --- The brawl rhythm (distinct from the player's, so beats interleave) ---
 
 // Scaled with the 2.6 u fighters: bigger bodies need bigger orbits and
 // faster closing, or the fight reads as slow-motion shuffling.
 const double approachSpeed = 4.2;
 const double circleSpeed = 2.3;
+
+/// Ground speed of a [Mired] body (in a lava pit) as a fraction of normal
+/// — a hard slog, so the pit reads as a trap to wade around rather than a
+/// patch you stroll across.
+const double miredSpeedFactor = 0.32;
 
 /// Orbit radius while circling; the wobble breathes around it.
 const double circleRadius = 4.4;
@@ -124,10 +137,10 @@ const double corpseAngularDamping = 1.4;
 /// wanders.
 const double corpseSettleSeconds = 1.4;
 
-/// How much of the killing blow's shove the ragdoll inherits. The blow
-/// is tuned to throw a LIVING fighter around; handing all of it to a
-/// corpse that then has to slow itself down under damping alone sends it
-/// skating across the clearing.
+/// How much of the killing blow's shove the ragdoll inherits, so a corpse
+/// flies off the hit rather than dropping straight down. Under 1: the blow
+/// is tuned to throw a LIVING fighter, and handing all of it to a corpse
+/// that then coasts under damping alone sends it skating off the arena.
 const double corpseLaunchFactor = 0.45;
 
 // --- Animation mapper (task 15, barbarian archetype) ---
@@ -150,7 +163,27 @@ const double brawlerRunBlendSpeed = 3.4;
 /// Clip lengths (docs/asset_inventory.md).
 const double chopClipSeconds = 1.63;
 const double hitBClipSeconds = 0.87;
-const double deathBClipSeconds = 2.63;
+const double deathBClipSeconds = 2.63; // Death_B (barbarian collapse)
+
+// --- Spawn rise + mid-fight taunt ---
+
+/// How long a barbarian spends climbing out of the ground before it can
+/// move. The full Skeletons_Awaken_Floor, so the rise reads as a rise and
+/// not a twitch — a wave opens with the pack hauling itself upright.
+const double risingSeconds = 2.30;
+const double awakenClipSeconds = 2.30; // Skeletons_Awaken_Floor
+
+/// The mid-fight taunt: how long it holds the barbarian still, and
+/// the base gap between one circling non-holder's taunts (jittered per
+/// brawler so the pack does not taunt in unison).
+const double tauntSeconds = 1.03;
+const double tauntClipSeconds = 1.033; // Skeletons_Taunt
+const double tauntIntervalSeconds = 7.0;
+
+/// How long the fire/lava flinch reaction shows before locomotion takes
+/// back over. Short — a jolt, not a stagger. A pit tick lands more often
+/// than this, so a body standing in lava keeps flinching.
+const double brawlerFlinchSeconds = 0.32;
 
 /// Radians per second a thrown body turns over onto its back. Slow
 /// enough to see it happen across the arc, fast enough to be flat by the

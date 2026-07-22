@@ -24,22 +24,6 @@ final bool isMobile =
 /// [qualityPresets], and the pause menu overrides it either way.
 final bool heavyAtmospherics = !isMobile;
 
-/// Whether [QualityPreset.renderScale] may be changed while the game is
-/// running.
-///
-/// False on mobile, and this one is a workaround, not a preference.
-/// Changing the render scale resizes the swapchain, and flutter_scene
-/// frees the old attachments while a frame is still in flight; the next
-/// `RenderPass.begin` hands the driver a dangling attachment and the app
-/// dies inside `vkCmdBeginRenderPass`:
-///
-/// ```
-/// E/Surface: 1 buffers were freed while being dequeued!
-/// F/libc   : Fatal signal 11 (SIGSEGV) ... null pointer dereference
-///   #00 libGLES_mali.so  vulkan::command_buffer::begin_renderpass(...)
-///   #06 libflutter.so    InternalFlutterGpu_RenderPass_Begin
-/// ```
-///
 /// BOOT is safe — the first allocation has nothing in flight behind it —
 /// so a phone still gets its rung's render scale, it just keeps it for
 /// the session. The rest of the preset (SSAO, god rays, grass) switches
@@ -122,6 +106,32 @@ const double cliffHalfAngle = 0.6;
 const double groundIslandRadius = treeRingOuter + 2;
 const double cliffHeight = 12;
 
+/// Big wet boulders and sea stacks massed at the foot of the cliff, in the
+/// gap where you can see them. Count, and the spread the surf breaks
+/// against: how far off the cliff face (radius) and how far up and down the
+/// waterline the rocks sit. [cliffRockSpike] jags each one's silhouette —
+/// vertices shoved radially by up to this fraction, so they read as craggy
+/// sea stacks, not river pebbles.
+const int cliffRockCount = 22;
+const double cliffRockRadialSpread = 4;
+const double cliffRockMinScale = 1.8;
+const double cliffRockMaxScale = 5.0;
+const double cliffRockSpike = 0.75;
+
+/// A wave breaks against the cliff this often (seconds), plus up to
+/// [waveCrashJitter] more, at a random point along the gap. Spawned a hair
+/// above the mean sea so the spray reads as thrown UP the rock.
+const double waveCrashInterval = 2.8;
+const double waveCrashJitter = 2.8;
+const double waveCrashRise = 0.6;
+
+/// Each break gusts the grass: the crash bumps [WindState] by this, and the
+/// fight's own wind ease pulls it back — the surf you see over the rim and
+/// the grass at your feet moving as one. Capped so a run of crashes cannot
+/// pile into a gale.
+const double waveGustBoost = 0.9;
+const double waveGustCap = 3.2;
+
 /// The sea: enough below the plateau top to read as a drop, high enough
 /// that a real band of water shows over the rim from the arena (the rim
 /// hides everything nearer than ~rim × (1 + depth/eye-height)).
@@ -176,18 +186,6 @@ const double fogSkyColorInfluence = 0.35;
 /// keeps at least this much of its own color at any distance.
 const double fogMaxOpacity = 0.42;
 
-/// How far fog reaches before it stops entirely.
-///
-/// This used to be 90, which was short of where the sea began and left
-/// the water rendering perfectly clean — deliberately, because the
-/// original tuning had the whole ocean converging to fog colour and
-/// reading as a white wall. Now the rim is closer the sea starts closer
-/// too, and a LITTLE haze over the water is wanted: enough that distance
-/// reads, not enough to bleach it.
-///
-/// The pair matters more than either value. This sets how far the haze
-/// reaches; [fogMaxOpacity] caps how thick it can ever get. Raising this
-/// without lowering that is what produced the white wall the first time.
 const double fogCutoffDistance = 150;
 
 /// Flat fog tone (the non-sky share): kept muted so distance haze greys
@@ -209,23 +207,12 @@ const double sceneVignetteIntensity = 0.22;
 const double sceneVignetteRadius = 0.85;
 const double sceneVignetteSmoothness = 0.6;
 
-// --- Grass (task 6, at the Phase-0 measured budget) ---
-
 /// Card count for the whole field — the density dial. The whole field is
 /// one baked `MeshGeometry` and therefore one draw call, so this trades
 /// against vertex cost rather than draw calls (see `vfx/grass_field.dart`
 /// for why it is not instanced).
 const int grassCardCount = 8000;
 
-/// The quality steps the pause menu offers, coarse enough that each one
-/// is a visible difference rather than a slider nobody can read.
-///
-/// Grass is in here but it is NOT the reason this setting exists.
-/// Measured: turning the field off entirely buys 2-3 fps, because the
-/// field is one draw call and the frame is spent on FRAGMENTS, not
-/// vertices. The knobs that move it are [renderScale] (every pixel of
-/// every pass), SSAO and god rays (two full-screen passes) — so the
-/// preset drives those, and takes the grass down with it.
 typedef QualityPreset = ({
   String label,
   int cards,

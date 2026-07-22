@@ -58,11 +58,7 @@ void pumpUnkillable(TestGame game, Entity enemy, {required int steps}) {
 /// bet on how often the pack connects. And pinned because an idle player
 /// left to the pack loses the run, which stops `castSkills` — and with it
 /// the cooldown the caller is waiting on.
-void pumpUntil(
-  TestGame game,
-  bool Function() ready, {
-  required int maxSteps,
-}) {
+void pumpUntil(TestGame game, bool Function() ready, {required int maxSteps}) {
   final health = game.world.get<Health>(playerOf(game.world));
   for (var i = 0; i < maxSteps && !ready(); i++) {
     health.current = health.max;
@@ -107,10 +103,7 @@ void main() {
     game.emit(const SkillUpgradeRequested(Skill.fireGush));
     game.pump();
     expect(world.resource<SkillBook>().levelOf(Skill.fireGush), 2);
-    expect(
-      score.points,
-      500 - Skill.fireGush.cost - Skill.fireGush.costAt(1),
-    );
+    expect(score.points, 500 - Skill.fireGush.cost - Skill.fireGush.costAt(1));
   });
 
   test('levels make a skill heavier, and stop at the cap', () {
@@ -382,7 +375,10 @@ void main() {
     final world = game.world;
     grant(game, Skill.lavaPit);
     // Well past the pit's rim, but still in front of the player.
-    final enemy = dummyInFront(game, distance: lavaPitDistance + lavaPitRadius * 2);
+    final enemy = dummyInFront(
+      game,
+      distance: lavaPitDistance + lavaPitRadius * 2,
+    );
     final health = world.get<Health>(enemy).current;
 
     game.emit(const SkillCast(Skill.lavaPit));
@@ -418,7 +414,8 @@ void main() {
     });
 
     game.emit(const SkillCast(Skill.windBlast));
-    game.pumpFixed(steps: 2);
+    // The gust now fires when the cast leap lands, not on the button.
+    game.pumpFixed(steps: ticksFor(windCastSeconds) + 4);
 
     var launched = 0;
     world.query2<Knockback, SceneTransform>(require: const [Enemy]).each((
@@ -442,9 +439,7 @@ void main() {
     // and a hop.
     // Hang time is 2 * lift / gravity — derived, not a magic number, so
     // retuning the arc cannot silently make this assertion vacuous.
-    game.pumpFixed(
-      steps: ticksFor(2 * windBlastLift / knockbackGravity) + 8,
-    );
+    game.pumpFixed(steps: ticksFor(2 * windBlastLift / knockbackGravity) + 8);
     world.query2<Knockback, SceneTransform>(require: const [Enemy]).each((
       entity,
       knockback,
@@ -466,16 +461,14 @@ void main() {
     final enemy = dummyInFront(game, distance: 3);
 
     game.emit(const SkillCast(Skill.windBlast));
-    game.pumpFixed(steps: 2);
+    game.pumpFixed(steps: ticksFor(windCastSeconds) + 4); // waits for the leap
     final knockback = world.get<Knockback>(enemy);
     expect(knockback.airborne, isTrue);
 
     // Ride out the flight. On landing it is still incapacitated — the
     // whole point: hang time alone let them pop upright the instant they
     // touched the floor.
-    game.pumpFixed(
-      steps: ticksFor(2 * windBlastLift / knockbackGravity) + 4,
-    );
+    game.pumpFixed(steps: ticksFor(2 * windBlastLift / knockbackGravity) + 4);
     expect(knockback.airborne, isFalse, reason: 'landed');
     expect(knockback.incapacitated, isTrue, reason: 'still on the floor');
     expect(
@@ -496,7 +489,7 @@ void main() {
     final enemy = dummyInFront(game, distance: windBlastRadius + 3);
 
     game.emit(const SkillCast(Skill.windBlast));
-    game.pumpFixed(steps: 2);
+    game.pumpFixed(steps: ticksFor(windCastSeconds) + 4); // waits for the leap
 
     expect(world.get<Knockback>(enemy).airborne, isFalse);
   });
@@ -512,23 +505,18 @@ void main() {
     bool heavy = false,
     bool impact = true,
   }) {
-    game.emit(HitLanded(
-      playerOf(game.world),
-      damage,
-      heavy: heavy,
-      impact: impact,
-    ));
-    // Past the hitstop this blow itself causes. A block freezes the clock
-    // like any other impact, a frozen clock does not advance fixed steps,
-    // and a follow-up emitted one step later would age out before
-    // resolution ever ran.
-    game.pumpFixed(steps: ticksFor(heavyHitstopSeconds) + 3);
+    game.emit(
+      HitLanded(playerOf(game.world), damage, heavy: heavy, impact: impact),
+    );
+    // A few steps for resolution to settle. Blows no longer freeze the
+    // clock (the hitstop read as lag), so there is no frozen window to pump
+    // past — a plain pump is enough.
+    game.pumpFixed(steps: 3);
   }
 
   /// The hand slot's bind-pose frame, read out of `Knight.glb` (both
   /// slots carry it): local +X → rig -X, +Y → rig +Z, +Z → rig +Y.
-  Vector3 throughHandSlot(Vector3 local) =>
-      Vector3(-local.x, local.z, local.y);
+  Vector3 throughHandSlot(Vector3 local) => Vector3(-local.x, local.z, local.y);
 
   test('the shield mount stands the slab up and faces it forward', () {
     // Identity is the trap: the shield's face normal is its local +Z, and
@@ -538,7 +526,9 @@ void main() {
     expect(flat.y, closeTo(1, 1e-6), reason: 'unrotated: face to the sky');
 
     final face = throughHandSlot(shieldMountRotation.rotated(Vector3(0, 0, 1)));
-    final height = throughHandSlot(shieldMountRotation.rotated(Vector3(0, 1, 0)));
+    final height = throughHandSlot(
+      shieldMountRotation.rotated(Vector3(0, 1, 0)),
+    );
 
     // KayKit characters import facing +Z (see characterModelYaw).
     expect(face.z, closeTo(1, 1e-6), reason: 'face points where you look');
@@ -636,8 +626,11 @@ void main() {
     // A damage-over-time tick: no charge spent, and it lands.
     strikePlayer(game, damage: 6, impact: false);
 
-    expect(world.get<Barrier>(player).charges, shieldBaseCharges,
-        reason: 'ticks do not drain the shield');
+    expect(
+      world.get<Barrier>(player).charges,
+      shieldBaseCharges,
+      reason: 'ticks do not drain the shield',
+    );
     expect(world.get<Health>(player).current, closeTo(full - 6, 1e-6));
   });
 

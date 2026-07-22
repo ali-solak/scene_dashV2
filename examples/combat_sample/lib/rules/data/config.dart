@@ -5,11 +5,17 @@ part of '../rules.dart';
 /// the whole fight loop runs headless; physics overlap queries return
 /// when geometry demands them.
 ///
-/// Reach is generous on purpose: a two-handed sword swung by a 2.6 u
-/// fighter should connect at sword-length, not require standing inside
-/// the enemy. The arcs are wide enough that a swing sweeps the front.
+/// Reach is generous on purpose: a two-handed axe swung by a 2.6 u
+/// fighter should connect at haft-length, not require standing inside
+/// the enemy.
+///
+/// The player's half-arc is a hair past a right angle (π/2 ≈ 1.57), so a
+/// single cleave sweeps the whole front and a little past each shoulder —
+/// the big axe's crowd-clearing identity, and what lets one swing catch a
+/// pack that has surrounded the fighter. The barbarians keep the tighter
+/// frontal arc so being flanked still matters.
 const double playerReach = 3.4;
-const double playerStrikeHalfArc = 1.3;
+const double playerStrikeHalfArc = 1.7;
 
 const double brawlerReach = 3.0;
 const double brawlerStrikeHalfArc = 1.1;
@@ -25,7 +31,10 @@ const double playerPoiseThreshold = 24;
 /// Chest height: where the spark burst blooms on a connect.
 const double impactBurstHeight = 1.5;
 
-/// Heavy connects punch the camera (consumed by the rig with decay).
+/// Player connects punch the camera (consumed by the rig with decay). The
+/// light gets a small one so a quick slice still lands with a bit of weight
+/// now that there is no hitstop; the heavy hits harder.
+const double lightCameraKick = 0.3;
 const double heavyCameraKick = 0.75;
 
 /// Player death drops the whole world into slow motion behind the

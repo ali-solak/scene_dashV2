@@ -210,6 +210,21 @@ runApp(GameScope(game: game, child: const MyGameApp()));  // yours; the
                             // subtree reaches `game` through GameScope.of
 ```
 
+`SceneGame.boot` is async, so `runApp`-after-`await` shows nothing until
+it returns. `GameBootstrap` moves the boot inside the tree — a loading
+frame while it runs, then the game under a `GameScope`, shut down on
+dispose (a boot that finishes after dispose is shut down too, never
+leaked):
+
+```dart
+runApp(GameBootstrap<SceneGame>(
+  boot: () => SceneGame.boot(features: [...]),  // called once, not per build
+  loading: (context) => const SplashScreen(),   // yours; optional
+  error: (context, err) => ErrorScreen(err),    // yours; optional
+  builder: (context, game) => MyGameApp(game: game),   // hosted + scoped
+));
+```
+
 ## Features and systems
 
 A feature registers its systems; a system is a stateless
