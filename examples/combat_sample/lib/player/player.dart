@@ -34,6 +34,8 @@ part 'systems/systems.dart';
 /// lock-on with the rig-driven camera.
 void installPlayer(GameBuilder game) {
   game
+    ..configureEvent<LockPressed>(retainedUpdates: 8)
+    ..configureEvent<LockCycled>(retainedUpdates: 8)
     ..registerTag<Player>()
     ..registerComponent<Fighter>()
     ..registerComponent<PlayerMotion>()
