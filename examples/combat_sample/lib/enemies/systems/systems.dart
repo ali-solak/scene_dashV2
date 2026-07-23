@@ -1,14 +1,11 @@
 part of '../enemies.dart';
 
-/// Startup: only the aggro coordinator. The waves feature fields the
-/// barbarians themselves and owns how many arrive and how strong they are.
+/// Spawns the encounter coordinator.
 void spawnEnemies(World world) {
   world.spawn([AggroCoordinator()]);
 }
 
-/// `OnEnter(fighting)` behind [freshRun]: hand the token coordinator a
-/// clean slate. The waves feature clears and re-fields the barbarians
-/// themselves, so there is nothing to resurrect here.
+/// Resets encounter coordination for a new run.
 void resetEncounter(World world) {
   final coordinator = world.query<AggroCoordinator>().firstOrNull?.$2;
   if (coordinator == null) return;
@@ -17,24 +14,18 @@ void resetEncounter(World world) {
     ..cooldown = 0;
 }
 
-/// Scene-gated, per frame: a barbarian model per enemy (clips bound to
-/// it, mapper attached), or the reddish capsule with a private emissive
-/// material when character assets are absent.
+/// Attaches an enemy model or fallback capsule.
 void attachEnemyVisuals(World world) {
   final hasCharacters = world.hasResource<CharacterAssets>();
   world.entitiesWith(require: const [Enemy]).each((enemy) {
-    // Already bodied: skip.
     if (world.tryGet<SceneNode>(enemy) != null) return;
     final assets = hasCharacters ? world.resource<CharacterAssets>() : null;
     final brawler = world.tryGet<Brawler>(enemy);
-    // Borrow a model from the pool; null means the pool is out and this
-    // one fights as a graybox capsule.
     final lent = assets?.takeBarbarian();
     if (assets != null && lent != null) {
       final model = assets.barbarians[lent];
       final bodyScale =
           characterScale * (brawler?.giant ?? false ? giantScale : 1.0);
-      // Each instance gets its own axe on the animated hand-slot joint.
       final axe = assets.axe;
       if (axe != null) {
         model.getChildByName('handslot.r')?.add(axe.clone());
@@ -78,8 +69,7 @@ void attachEnemyVisuals(World world) {
   });
 }
 
-/// Builds the billboard health bar as a child node above the head and
-/// records the [EnemyHealthBar] the drive/aim system pushes to.
+/// Attaches an enemy health bar.
 void _attachHealthBar(
   World world,
   Entity enemy,
@@ -106,9 +96,7 @@ void _attachHealthBar(
   world.add(enemy, EnemyHealthBar(fraction: fraction, node: barNode));
 }
 
-/// Pushes each barbarian's health fraction into its bar, hides the bar
-/// on death, and yaws the bar to face the camera (the parent node
-/// carries the barbarian's own facing, so the local yaw cancels it).
+/// Updates enemy health bars.
 void updateHealthBars(World world) {
   final rig = world.resource<CameraRig>();
   world.query3<Brawler, Health, EnemyHealthBar>(require: const [Enemy]).each((
@@ -121,8 +109,6 @@ void updateHealthBars(World world) {
     bar.node.visible = alive;
     if (!alive) return;
     final fraction = (health.current / health.max).clamp(0.0, 1.0);
-    // A drop is a hit: kick off the punch. (Healing on the breather lifts
-    // it, which must not react.)
     if (fraction < bar.lastFraction - 1e-4) bar.sinceHit = 0;
     bar.lastFraction = fraction;
     bar.fraction.value = fraction;
@@ -135,9 +121,6 @@ void updateHealthBars(World world) {
       rig.position.z - transform.translation.z,
     );
 
-    // The hit reaction: a scale pop and a slash tilt, decaying over the
-    // window. The tilt rides local Z (pointing at the camera after the
-    // yaw), so it reads as a diagonal jolt rather than a yaw wobble.
     var scale = 1.0;
     var roll = 0.0;
     if (bar.sinceHit < healthBarShakeSeconds) {
@@ -164,8 +147,7 @@ void updateHealthBars(World world) {
   });
 }
 
-/// `observe<ModelSlot>(onRemove:)`: fires when a barbarian despawns, and
-/// its pooled model goes back so the next wave can borrow it.
+/// Returns a despawned enemy model to the pool.
 void releaseEnemyModel(World world, Entity entity, ModelSlot slot) {
   if (!world.hasResource<CharacterAssets>()) return;
   world.resource<CharacterAssets>().releaseBarbarian(slot.index);
@@ -213,9 +195,7 @@ void launchRagdolls(World world) {
   });
 }
 
-/// Lets a corpse tumble for [corpseSettleSeconds], then nails it down;
-/// damping alone never brings a frictionless body fully to rest, so this
-/// ends the simulation instead.
+/// Stops a corpse simulation after [corpseSettleSeconds].
 void settleRagdolls(World world) {
   final dt = world.dt;
   world.query<Ragdoll>(require: const [Enemy]).each((entity, ragdoll) {
@@ -223,7 +203,6 @@ void settleRagdolls(World world) {
     ragdoll.age += dt;
     if (ragdoll.age < corpseSettleSeconds) return;
     ragdoll.settle();
-    // The body has stopped; hold the pose it died in.
     world.tryGet<EnemyAnimator>(entity)?.freeze();
   });
 }

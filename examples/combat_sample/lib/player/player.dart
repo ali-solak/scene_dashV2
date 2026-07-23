@@ -29,10 +29,7 @@ part 'data/config.dart';
 part 'data/bundles.dart';
 part 'systems/systems.dart';
 
-/// Installs the player: the lifted combat machine (`combat/combat.dart`,
-/// whose reference suite runs against that code unchanged), buffered
-/// roll/attack with the hold-to-commit heavy, stance locomotion, and
-/// lock-on with the rig-driven camera.
+/// Installs the player, combat state, movement, lock-on, and camera follow.
 void installPlayer(GameBuilder game) {
   game
     ..registerTag<Player>()
@@ -106,8 +103,6 @@ void installPlayer(GameBuilder game) {
       after: const [fighterDriver],
       runIf: hasResource<Scene>(),
     )
-    // The hit path (applyDamage, clearBufferOnStagger) is registered by the
-    // rules feature in GameSets.resolution, after every driver by set order.
     ..addSystem(
       Schedules.fixedUpdate,
       lockOnSystem,
@@ -122,15 +117,10 @@ void installPlayer(GameBuilder game) {
       },
       writes: const {Fighter},
       after: const [fighterDriver],
-      // Their Fighter reads (the machine's edges, `heavy`) and this
-      // system's stance write are different fields: the pair is
-      // independent, and the exemption says so instead of faking an
-      // ordering the design does not need.
+      // These systems use separate Fighter fields.
       independentOf: const [spawnPlayerFx, updateBladeTrail],
       runIf: inState(GameStatus.fighting),
     )
-    // Fixed-step, after resolution: a per-frame camera chasing
-    // per-fixed-step positions stair-steps into visible jitter.
     ..addSystem(
       Schedules.fixedUpdate,
       updateCameraRig,

@@ -1,8 +1,4 @@
-/// Planar combat geometry, shared by the sword, the axes, the skills and
-/// both movement systems — one authoritative definition each for
-/// distance, reach + arc, knockback direction, angle wrapping and prone
-/// settling, so the player, enemy and skill behaviors can never drift
-/// apart on the math itself. Tuning constants stay per feature.
+/// Shared planar combat geometry.
 library;
 
 import 'dart:math' as math;
@@ -17,9 +13,7 @@ double planarDistance(SceneTransform from, SceneTransform to) {
   return math.sqrt(dx * dx + dz * dz);
 }
 
-/// Reach + frontal arc: whether [to] stands within [reach] of [from] and
-/// inside ±[halfArc] of [facing] — the one test behind the sword's swing,
-/// the barbarian's axe and the fire gush's cone.
+/// Whether [to] is within [reach] and the frontal arc from [from].
 bool withinArc({
   required SceneTransform from,
   required double facing,
@@ -33,8 +27,7 @@ bool withinArc({
   return angleDifference(math.atan2(dx, dz), facing).abs() <= halfArc;
 }
 
-/// The world-space shove a connect delivers: straight out along
-/// [from] → [to], at [speed].
+/// A ground-plane shove from [from] toward [to].
 Vector3 awayFrom(SceneTransform from, SceneTransform to, double speed) {
   final dx = to.translation.x - from.translation.x;
   final dz = to.translation.z - from.translation.z;
@@ -50,15 +43,14 @@ double angleDifference(double a, double b) {
   return difference;
 }
 
-/// Turns [from] toward [to] by at most [maxDelta] radians, shortest arc.
+/// Turns [from] toward [to] by at most [maxDelta] radians.
 double turnToward(double from, double to, double maxDelta) {
   final difference = angleDifference(to, from);
   if (difference.abs() <= maxDelta) return to;
   return from + difference.sign * maxDelta;
 }
 
-/// Eases a thrown fighter's tumble down onto its back: the flop at the
-/// end of the arc, not a lie-down. [rate] is the owner's settle tuning.
+/// Moves a tumble angle toward the prone pose.
 double towardProne(double tumble, double dt, {required double rate}) {
   const prone = math.pi / 2;
   final step = rate * dt;

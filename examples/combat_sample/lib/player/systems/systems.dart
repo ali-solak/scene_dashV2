@@ -1,26 +1,19 @@
 part of '../player.dart';
 
-/// Startup: the player spawns as pure data, so headless suites drive the
-/// same path; the body arrives in [attachPlayerVisuals].
+/// Spawns the player data.
 void spawnPlayer(World world) {
   world.spawn(playerBundle());
 }
 
-/// Per frame, scene-gated: give the player the Knight (clips bound by
-/// node name), or the graybox capsule when character assets are absent.
-/// Skips anyone already bodied. Runs from the title screen on, so the
-/// fighter is in the clearing before the run begins.
+/// Attaches the player model or fallback capsule.
 void attachPlayerVisuals(World world) {
   final player = world.entitiesWith(require: const [Player]).firstOrNull;
   if (player == null) return;
-  // Already bodied (a restart re-enters this state); skip.
   if (world.tryGet<SceneNode>(player) != null) return;
 
   if (world.hasResource<CharacterAssets>()) {
     final assets = world.resource<CharacterAssets>();
     final model = assets.knight;
-    // The two-handed sword rides the animated hand-slot joint. Cloned so a
-    // restart's re-body never re-parents the shared template.
     final weapon = assets.sword?.clone();
     if (weapon != null) {
       model.getChildByName('handslot.r')?.add(weapon);
@@ -36,8 +29,7 @@ void attachPlayerVisuals(World world) {
     world.add(player, SceneNode(Node(name: 'player')..add(wrapper)));
     world.add(player, buildPlayerAnimator(assets, model));
     if (weapon != null) {
-      // The ribbon hangs in world space, not off the hand: it records
-      // where the blade has been, so it must not travel with the fighter.
+      // The trail remains in world space.
       final trail = SwordTrail.create();
       world.resource<Scene>().add(trail.node);
       world.add(player, BladeTrail(weapon: weapon, trail: trail));
@@ -73,10 +65,7 @@ void attachPlayerVisuals(World world) {
   world.add(player, SceneNode(root));
 }
 
-/// Leaving the fight (menu, death) wipes buffered intents: a roll pressed
-/// on the way out must not fire on the way back in. The widget-side gate
-/// stops NEW combat input off the fighting screen; this clears what was
-/// already banked inside the wall-clock press window.
+/// Clears buffered combat actions when leaving a fight.
 void clearCombatIntents(World world) {
   world.buffer<CombatAction>().clear();
 }
@@ -110,18 +99,13 @@ void resetPlayerRun(World world) {
   world.tryGet<PlayerAnimator>(player)?.reset();
 }
 
-/// The i-frame ghost: while the roll's i-frame window is open the player
-/// glows a cyan rim (`Node.highlightColor`) so the invulnerability reads.
-/// The system sets the color from `Fighter.iFramed`; the body never
-/// touches it (L3).
+/// Shows a cyan outline while the player is invulnerable.
 void updatePlayerGhost(World world) {
   final row = world
       .query2<Fighter, SceneNode>(require: const [Player])
       .firstOrNull;
   if (row == null) return;
   final (entity, fighter, ref) = row;
-  // Two ways to be untouchable: the roll's i-frames, and the arc a
-  // giant's blow throws you through. Both wear the same ghost.
   final launched = world.tryGet<Knockback>(entity)?.incapacitated ?? false;
   _setHighlight(
     ref.node,
@@ -129,9 +113,7 @@ void updatePlayerGhost(World world) {
   );
 }
 
-/// The mapper system: render-side consumer of the fixed-step gameplay
-/// state. Hitstop freezes the clips for free; the scene tick receives the
-/// scaled delta.
+/// Updates player animation.
 void updatePlayerAnimation(World world) {
   final dt = world.dt;
   world
@@ -141,12 +123,7 @@ void updatePlayerAnimation(World world) {
       });
 }
 
-/// Locomotion + stance, one fixed step at a time:
-///
-///  * free stance: camera-relative move, turn toward velocity;
-///  * locked stance: strafe-set velocity facing the target, slower back-off;
-///  * rolling: the direction committed on entry, at roll speed;
-///  * any other action phase: rooted, and never auto-turned.
+/// Updates player movement and facing.
 void movePlayer(World world) {
   final axes = world.axes<MoveAxis>();
   final rig = world.resource<CameraRig>();
@@ -157,8 +134,6 @@ void movePlayer(World world) {
         final (moveX, moveZ) = _stickWorldMove(axes, rig);
         final moving = moveX * moveX + moveZ * moveZ > 1e-6;
 
-        // Remember where the fighter is actually heading (survives the stick
-        // being released before a buffered roll fires).
         if (moving) {
           motion.moveIntent
             ..setValues(moveX, 0, moveZ)
@@ -182,8 +157,7 @@ void movePlayer(World world) {
       });
 }
 
-/// The stick in world space, clamped to unit length. Camera forward is
-/// (sin yaw, 0, cos yaw), camera right (cos yaw, 0, -sin yaw).
+/// Converts movement input into a clamped world-space vector.
 (double, double) _stickWorldMove(AxisInput<MoveAxis> axes, CameraRig rig) {
   final inputX = axes.value(MoveAxis.x);
   final inputY = axes.value(MoveAxis.y);
@@ -199,8 +173,7 @@ void movePlayer(World world) {
   return (moveX, moveZ);
 }
 
-/// Commit the roll direction once, on entry: this frame's input, else the
-/// last heading the fighter had, else straight ahead.
+/// Chooses a roll direction on entry.
 void _commitRollDirection(
   PlayerMotion motion,
   double moveX,
@@ -222,11 +195,7 @@ void _commitRollDirection(
   }
 }
 
-/// The phase's ground-plane velocity, written into [motion.velocity]:
-/// idle steers (locked strafe with the slower back-off, free turns toward
-/// the heading); rolling rides the committed direction; startup/recovery
-/// keep a drift so attacking never feels like a stop; active and
-/// staggered are rooted (the active frames ARE the commitment).
+/// Writes the phase's ground-plane velocity.
 void _planarVelocity(
   World world,
   Entity entity,
