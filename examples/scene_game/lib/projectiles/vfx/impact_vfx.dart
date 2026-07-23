@@ -71,12 +71,13 @@ void spawnImpactBurst(World world, Vector3 position, {double strength = 0}) {
     gravity: Vector3(0, -4, 0),
     seed: charged ? chargedImpactBurstSeed : impactBurstSeed,
   );
-  final emitter = fx.ParticleEmitterComponent(
-    system: system,
-    material: softAdditiveSprite(),
-  )
-    ..facing = BillboardFacing.velocityStretched
-    ..velocityStretch = 0.05;
+  final emitter =
+      fx.ParticleEmitterComponent(
+          system: system,
+          material: softAdditiveSprite(),
+        )
+        ..facing = BillboardFacing.velocityStretched
+        ..velocityStretch = 0.05;
   final node = Node(localTransform: Matrix4.translation(position))
     ..frustumCulled = false
     ..addComponent(emitter);

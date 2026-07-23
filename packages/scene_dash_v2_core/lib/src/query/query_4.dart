@@ -4,19 +4,12 @@ import '../storage/object_store.dart';
 import '../world/world.dart';
 import 'query.dart';
 
-/// Callback invoked once per matching entity for a four-component query.
 typedef Query4Callback<A, B, C, D> =
     void Function(Entity entity, A a, B b, C c, D d);
 
-/// Callback for [Query4.eachUntil]: return `true` to keep iterating, `false`
-/// to stop. The same shape doubles as the predicate of [Query4.firstWhere]
-/// and [Query4.any], where `true` instead means "this row matches" — each
-/// method documents which meaning applies.
 typedef Query4UntilCallback<A, B, C, D> =
     bool Function(Entity entity, A a, B b, C c, D d);
 
-/// A cached query over four object components [A], [B], [C] and [D], with
-/// optional `requires`/`excludes` filters.
 final class Query4<A, B, C, D> extends Query {
   @override
   String get debugLabel => 'query4<$A, $B, $C, $D>';
@@ -50,8 +43,6 @@ final class Query4<A, B, C, D> extends Query {
     this._withoutStores,
   );
 
-  /// Invokes [callback] for every live entity that has [A], [B], [C] and [D]
-  /// and satisfies the filters.
   void each(Query4Callback<A, B, C, D> callback) {
     final driver = Query.chooseDriver(_driverCandidates);
     final driverIsA = identical(driver, _a);
@@ -92,11 +83,6 @@ final class Query4<A, B, C, D> extends Query {
     }
   }
 
-  /// Invokes [callback] for matching entities exactly like [each], but stops
-  /// as soon as [callback] returns `false`.
-  ///
-  /// The early-exit form of [each]; same driver selection, filters and
-  /// iteration order. Allocation-free.
   void eachUntil(Query4UntilCallback<A, B, C, D> callback) {
     final driver = Query.chooseDriver(_driverCandidates);
     final driverIsA = identical(driver, _a);
@@ -139,15 +125,6 @@ final class Query4<A, B, C, D> extends Query {
     }
   }
 
-  /// The first matching row for which [predicate] returns `true`, as an
-  /// `(entity, a, b, c, d)` record, or `null` when no row satisfies it.
-  ///
-  /// **Inverted predicate:** `true` here means "this is the row I want" —
-  /// the *opposite* of an [eachUntil] callback, whose `true` means "keep
-  /// going".
-  ///
-  /// Cold-path convenience: allocates one record on a hit. Prefer [eachUntil]
-  /// with write-through mutation in per-frame loops.
   (Entity, A, B, C, D)? firstWhere(Query4UntilCallback<A, B, C, D> predicate) {
     final driver = Query.chooseDriver(_driverCandidates);
     final driverIsA = identical(driver, _a);
@@ -182,12 +159,6 @@ final class Query4<A, B, C, D> extends Query {
     }
   }
 
-  /// Whether any matching row satisfies [predicate]. Stops at the first hit.
-  ///
-  /// Like [firstWhere] — and unlike an [eachUntil] callback — `true` from
-  /// [predicate] means "this row matches". Allocates one small closure per
-  /// call (it wraps [eachUntil]); use [eachUntil] directly in the very
-  /// hottest loops.
   bool any(Query4UntilCallback<A, B, C, D> predicate) {
     var found = false;
     eachUntil((entity, a, b, c, d) {
@@ -200,13 +171,6 @@ final class Query4<A, B, C, D> extends Query {
     return found;
   }
 
-  /// Invokes [found] with [entity]'s [A], [B], [C] and [D] when [entity] is
-  /// live, has all four, and satisfies the filters; returns whether it matched.
-  ///
-  /// The random-access counterpart to [each]: an O(1) lookup of one specific
-  /// entity without scanning. It takes a callback rather than returning a
-  /// record so hot paths stay allocation-free; the passed components are the
-  /// live objects, so mutating their fields writes through.
   bool get(Entity entity, Query4Callback<A, B, C, D> found) {
     if (!_world.isAlive(entity)) return false;
     final entityIndex = entity.index;
@@ -231,13 +195,6 @@ final class Query4<A, B, C, D> extends Query {
     return true;
   }
 
-  /// [entity]'s [A], [B], [C] and [D] as a record, or `null` when [entity] is
-  /// stale, misses any component, or fails the filters — the record-returning
-  /// twin of [get], with identical semantics.
-  ///
-  /// The record fields are the live components, so mutating their fields
-  /// writes through. Cold-path convenience: allocates a record; prefer [get]
-  /// in per-frame loops.
   (A, B, C, D)? components(Entity entity) {
     if (!_world.isAlive(entity)) return null;
     final entityIndex = entity.index;
@@ -260,8 +217,6 @@ final class Query4<A, B, C, D> extends Query {
     );
   }
 
-  /// Whether no live entity matches this query. Stops at the first match;
-  /// allocation-free.
   bool get isEmpty {
     final driver = Query.chooseDriver(_driverCandidates);
     final driverIsA = identical(driver, _a);
@@ -287,9 +242,6 @@ final class Query4<A, B, C, D> extends Query {
     }
   }
 
-  /// The exact number of matching entities. Scans the driver store;
-  /// allocation-free. Cache it in a resource if you read it more than once
-  /// per frame at scale.
   int count() {
     final driver = Query.chooseDriver(_driverCandidates);
     final driverIsA = identical(driver, _a);
@@ -316,8 +268,6 @@ final class Query4<A, B, C, D> extends Query {
     }
   }
 
-  /// Resolves the single matching entity as `(entity, a, b, c, d)`, or `null`
-  /// when none match. Throws [StateError] when more than one entity matches.
   (Entity, A, B, C, D)? singleOrNull() {
     final driver = Query.chooseDriver(_driverCandidates);
     final driverIsA = identical(driver, _a);
@@ -360,8 +310,6 @@ final class Query4<A, B, C, D> extends Query {
     }
   }
 
-  /// Resolves the single matching entity as `(entity, a, b, c, d)`. Throws
-  /// [StateError] when zero or more than one entity matches.
   (Entity, A, B, C, D) single() {
     final match = singleOrNull();
     if (match == null) {

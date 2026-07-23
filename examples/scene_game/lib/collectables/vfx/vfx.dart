@@ -45,12 +45,13 @@ void spawnDeflectBurst(World world, Vector3 position) {
     gravity: Vector3(0, -3, 0),
     seed: deflectBurstSeed,
   );
-  final emitter = fx.ParticleEmitterComponent(
-    system: system,
-    material: softAdditiveSprite(),
-  )
-    ..facing = BillboardFacing.velocityStretched
-    ..velocityStretch = 0.03;
+  final emitter =
+      fx.ParticleEmitterComponent(
+          system: system,
+          material: softAdditiveSprite(),
+        )
+        ..facing = BillboardFacing.velocityStretched
+        ..velocityStretch = 0.03;
   final node = Node(localTransform: Matrix4.translation(position))
     ..frustumCulled = false
     ..addComponent(emitter);

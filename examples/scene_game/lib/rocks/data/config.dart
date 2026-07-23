@@ -1,39 +1,25 @@
-/// Rock tuning and difficulty scaling for the scene game example.
 library;
 
 const double rockRadius = 0.7;
 
-/// Spawn band at the high end of the ramp.
 const double rockSpawnZ = -15;
 const double rockSpawnY = 9;
 const double rockSpawnHalfWidth = 6;
 
-/// Spawn cadence ramps from start toward min over [rockSpawnRampSeconds], so
-/// the game stays playable before becoming a small physics stress test.
 const double rockSpawnIntervalStart = 0.36;
 const double rockSpawnIntervalMin = 0.15;
 const double rockSpawnRampSeconds = 18;
 
-/// Chance of the faster flaming variant, ramping up with the spawn cadence.
 const double flamingRockChanceStart = 0.18;
 const double flamingRockChanceMax = 0.38;
 
 const double flamingRockForwardVelocity = 15;
 const double flamingRockSpinVelocity = 8;
 
-/// Rocks that fall below this Y are despawned.
 const double rockKillY = -25;
 
 const double rockHitReactionDuration = 0.34;
 
-/// Flame-trail emitter tuning (upstream particle system; see
-/// `vfx/vfx.dart`). The explicit seed keeps replays visually identical.
-/// One shared world-space emitter serves every flaming rock, so the rate
-/// is *per rock* (the spawner gets rate × rock count) and `maxParticles`
-/// budgets the whole field: rocks travel ~15 u/s, so the per-rock rate
-/// sets the ember spacing along the trail (15 / rate ≈ 0.33 u), and the
-/// cap must cover rate × max lifetime × the most flaming rocks alive at
-/// the difficulty ceiling (~8).
 const int rockTrailSeed = 11;
 const int rockTrailMaxParticles = 512;
 const double rockTrailEmberRate = 70;

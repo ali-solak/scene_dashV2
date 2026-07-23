@@ -30,8 +30,7 @@ void updateChargeVisuals(World world) {
       root.add(plasmaNode);
     }
     plasma.spawner.rate = charging
-        ? chargePlasmaRateMin +
-              (chargePlasmaRateMax - chargePlasmaRateMin) * c
+        ? chargePlasmaRateMin + (chargePlasmaRateMax - chargePlasmaRateMin) * c
         : 0;
   }
 

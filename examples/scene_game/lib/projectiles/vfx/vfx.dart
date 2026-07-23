@@ -103,13 +103,14 @@ void spawnChargePlasma(World world) {
     system: system,
     material: softAdditiveSprite(),
   );
-  final node = Node(
-    localTransform: Matrix4.translation(
-      Vector3(0, 0, -(playerBodyVisualRadius + 0.55)),
-    ),
-  )
-    ..frustumCulled = false
-    ..addComponent(emitter);
+  final node =
+      Node(
+          localTransform: Matrix4.translation(
+            Vector3(0, 0, -(playerBodyVisualRadius + 0.55)),
+          ),
+        )
+        ..frustumCulled = false
+        ..addComponent(emitter);
   world.spawn([
     const Name('charge-plasma'),
     ChargePlasmaEmitter(node: node, spawner: spawner),

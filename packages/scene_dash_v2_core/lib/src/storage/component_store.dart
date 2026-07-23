@@ -2,58 +2,26 @@ import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
 
-/// Base sparse-set storage shared by every component store.
-///
-/// The sparse set keeps three logical pieces of state:
-///
-/// * a packed *dense* array of entity indices that currently have this
-///   component ([_denseEntities], `0..length`);
-/// * a *sparse* array indexed by entity index, holding `denseIndex + 1`
-///   (so `0` is the "absent" sentinel);
-/// * payload rows owned by subclasses, kept parallel to the dense array.
-///
-/// Removal is O(1) swap-removal: the last dense row is moved into the hole.
-/// Subclasses keep their payload consistent by overriding the [movePayload],
-/// [clearPayload] and [growPayload] hooks.
-///
-/// All stores use `denseIndex + 1` in the sparse array and treat `0` as the
-/// missing sentinel, and all use geometric capacity growth.
 abstract base class ComponentStore {
   Uint32List _denseEntities;
   Uint32List _sparse;
   int _length = 0;
   int _revision = 0;
 
-  /// Observer seam, attached by the surface observer registry when the
-  /// component type is observed; `null` (zero-cost) otherwise. Fires after
-  /// an absent→present insert, with the inserted payload. Replacing an
-  /// existing component fires nothing.
   void Function(int entityIndex, Object? payload)? onAdded;
 
-  /// Observer seam for removal: fires after the entity left the store,
-  /// with the payload captured just before the swap removal overwrote its
-  /// row — the still-live instance observers receive. Bulk [clear] (the
-  /// `World.reset` teardown) never fires it.
   void Function(int entityIndex, Object? payload)? onRemoved;
 
   ComponentStore({int denseCapacity = 8, int sparseCapacity = 16})
     : _denseEntities = Uint32List(denseCapacity),
       _sparse = Uint32List(sparseCapacity);
 
-  /// Number of entities currently stored.
   int get length => _length;
 
-  /// Structural/content revision for this store.
-  ///
-  /// Incremented when a component is inserted, replaced, or removed. Query and
-  /// integration code can cache this to skip work when the store has not
-  /// changed since its last pass.
   int get revision => _revision;
 
-  /// Whether [entityIndex] currently has this component.
   bool containsIndex(int entityIndex) => denseIndexOf(entityIndex) >= 0;
 
-  /// The dense row of [entityIndex], or `-1` if it is not stored.
   int denseIndexOf(int entityIndex) {
     if (entityIndex >= _sparse.length) return -1;
     final stamped = _sparse[entityIndex];
@@ -63,20 +31,10 @@ abstract base class ComponentStore {
     return dense;
   }
 
-  /// The entity index stored at dense row [dense].
   int entityIndexAt(int dense) => _denseEntities[dense];
 
-  /// Inserts [value] for [entityIndex], replacing any existing component.
-  ///
-  /// Implemented by typed subclasses; [value] is ignored by tag stores.
   void insertDynamic(int entityIndex, Object? value);
 
-  /// Removes the component of [entityIndex] if present (swap removal).
-  ///
-  /// When the store is observed, the payload is read *before* the swap
-  /// removal (which overwrites the row) and handed to [onRemoved] after the
-  /// entity has left the store — observers see the world post-change but
-  /// still receive the removed instance.
   void removeEntityIndex(int entityIndex) {
     final removed = onRemoved;
     if (removed == null) {
@@ -90,13 +48,6 @@ abstract base class ComponentStore {
     removed(entityIndex, payload);
   }
 
-  /// Removes every entity from this store at once — the store side of
-  /// `World.reset`. The store stays registered and keeps its capacity.
-  ///
-  /// Clears each payload row (releasing the object references) and bumps the
-  /// revision, so revision-cached consumers (like the scene mount adapter)
-  /// see the emptied membership on their next pass. A store that is already
-  /// empty is left untouched, revision included.
   void clear() {
     if (_length == 0) return;
     for (var dense = 0; dense < _length; dense++) {
@@ -107,9 +58,6 @@ abstract base class ComponentStore {
     bumpRevision();
   }
 
-  /// Allocates (or returns the existing) dense row for [entityIndex].
-  ///
-  /// The caller is responsible for writing the payload at the returned row.
   @protected
   int putSlot(int entityIndex) {
     final existing = denseIndexOf(entityIndex);
@@ -123,14 +71,11 @@ abstract base class ComponentStore {
     return dense;
   }
 
-  /// Marks this store as changed.
   @protected
   void bumpRevision() {
     _revision += 1;
   }
 
-  /// Removes [entityIndex] via swap removal. Returns the freed dense row, or
-  /// `-1` if the entity was not stored.
   @protected
   int removeSlot(int entityIndex) {
     final dense = denseIndexOf(entityIndex);
@@ -149,20 +94,15 @@ abstract base class ComponentStore {
     return dense;
   }
 
-  /// The payload at dense row [dense] as observers see it: the stored value
-  /// for object stores, the canonical witness instance for tag stores.
   @protected
   Object? payloadAt(int dense) => null;
 
-  /// Hook: move payload from dense row [from] to row [to] during swap removal.
   @protected
   void movePayload(int from, int to) {}
 
-  /// Hook: clear the payload at the now-unused dense row [dense].
   @protected
   void clearPayload(int dense) {}
 
-  /// Hook: grow payload rows to at least [newCapacity] dense slots.
   @protected
   void growPayload(int newCapacity) {}
 

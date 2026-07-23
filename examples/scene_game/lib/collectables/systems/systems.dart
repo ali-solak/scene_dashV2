@@ -128,5 +128,3 @@ void updateShieldVisuals(World world) {
     badgeScale,
   );
 }
-
-

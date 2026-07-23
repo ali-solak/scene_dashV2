@@ -2,21 +2,12 @@ import 'package:meta/meta.dart';
 
 import 'component_store.dart';
 
-/// Dense object storage for `@ObjectComponent` types.
-///
-/// Holds Dart references in a [List] kept parallel to the dense entity rows of
-/// the base sparse set. Values are the authoritative data and are handed
-/// directly to query callbacks.
 final class ObjectComponentStore<T> extends ComponentStore {
   List<T?> _values;
 
   ObjectComponentStore({super.denseCapacity = 8, super.sparseCapacity = 16})
     : _values = List<T?>.filled(denseCapacity, null, growable: false);
 
-  /// Inserts or replaces the component [value] for [entityIndex].
-  ///
-  /// [onAdded] fires only on absent→present; replacing an existing value
-  /// swaps the payload silently (the S4 add-over-existing rule).
   void insert(int entityIndex, T value) {
     final existing = denseIndexOf(entityIndex);
     if (existing >= 0) {
@@ -34,10 +25,8 @@ final class ObjectComponentStore<T> extends ComponentStore {
   void insertDynamic(int entityIndex, Object? value) =>
       insert(entityIndex, value as T);
 
-  /// The value stored at dense row [dense].
   T valueAt(int dense) => _values[dense] as T;
 
-  /// The value for [entityIndex], or `null` if it has no such component.
   T? valueOf(int entityIndex) {
     final dense = denseIndexOf(entityIndex);
     return dense < 0 ? null : _values[dense];

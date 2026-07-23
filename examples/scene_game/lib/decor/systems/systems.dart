@@ -26,7 +26,11 @@ void spawnMotes(World world) {
     final node = Node(
       mesh: Mesh(geometry, material),
       localTransform: Matrix4.translation(
-        Vector3(field.base[i * 3], field.base[i * 3 + 1], field.base[i * 3 + 2]),
+        Vector3(
+          field.base[i * 3],
+          field.base[i * 3 + 1],
+          field.base[i * 3 + 2],
+        ),
       ),
     )..frustumCulled = false;
     field.motes.add(node);

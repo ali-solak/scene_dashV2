@@ -1,11 +1,7 @@
-/// A named group of systems, used to order features against each other
-/// without referencing each other's systems.
+/// A named system phase.
 ///
-/// A system joins a set at registration (`addSystem(..., inSet: ...)`); the
-/// app declares the order of the sets once per schedule with
-/// `configureSets`. That keeps cross-feature ordering at the app level:
-/// a plugin only names its own phase, and never imports another feature's
-/// system descriptors just to write an `after:` edge.
+/// Systems join a set with `inSet:`. `configureSets` declares the phase order
+/// for a schedule. Unconfigured sets do not impose ordering.
 ///
 /// ```dart
 /// abstract final class GameSets {
@@ -20,13 +16,6 @@
 ///   ..addSystem(evaluateGameRulesSystem,
 ///       schedule: Schedules.update, inSet: GameSets.reactions);
 /// ```
-///
-/// Set order compiles down to ordinary `after` edges between the members at
-/// schedule compile time, so it composes with per-system `before`/`after`
-/// and participates in the same cycle detection. Membership in a set that
-/// is never configured is inert; a configured set with no members is
-/// skipped transparently (the sets around it still order against each
-/// other, so an empty phase never breaks the chain).
 final class SystemSet {
   /// The unique identifier string.
   final String id;

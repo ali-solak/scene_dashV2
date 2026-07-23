@@ -44,9 +44,9 @@ Texture2D softDotTexture() =>
     _softDot ??= Texture2D.fromPixels(_softDotPixels(64), 64, 64);
 
 /// A soft additive sprite material carrying the dot.
-SpriteMaterial softAdditiveSprite() => SpriteMaterial(
-  colorTexture: softDotTexture(),
-)..blendMode = SpriteBlendMode.additive;
+SpriteMaterial softAdditiveSprite() =>
+    SpriteMaterial(colorTexture: softDotTexture())
+      ..blendMode = SpriteBlendMode.additive;
 
 // --- Fire wisp -----------------------------------------------------------
 
@@ -139,5 +139,6 @@ Texture2D fireWispTexture() => _fireWisp ??= Texture2D.fromPixels(
 /// sky is bright, and additive fire on a bright background can only push
 /// toward white — it desaturates into pale cream. Alpha compositing lets
 /// the flame occlude the sky and keep its deep orange.
-SpriteMaterial fireSprite() => SpriteMaterial(colorTexture: fireWispTexture())
-  ..blendMode = SpriteBlendMode.alpha;
+SpriteMaterial fireSprite() =>
+    SpriteMaterial(colorTexture: fireWispTexture())
+      ..blendMode = SpriteBlendMode.alpha;

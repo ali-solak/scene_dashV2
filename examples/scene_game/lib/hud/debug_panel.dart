@@ -47,8 +47,7 @@ final class DebugCubit extends Cubit<DebugSettings> implements Disposable {
 
   void toggleStats() => emit(state.copyWith(stats: !state.stats));
 
-  void toggleInspector() =>
-      emit(state.copyWith(inspector: !state.inspector));
+  void toggleInspector() => emit(state.copyWith(inspector: !state.inspector));
 
   @override
   void dispose() => close();

@@ -73,7 +73,9 @@ void updateRockHitReactions(World world) {
     visuals,
   ) {
     final remaining = world.expiryOf<RockHitReaction>(entity);
-    if (remaining == null) return; // deadline served; removal lands at the boundary
+    if (remaining == null) {
+      return;
+    }
     final t = 1 - (remaining / rockHitReactionDuration).clamp(0.0, 1.0);
     final env = math.sin(t * math.pi);
     final pulse = 1 + 0.1 * math.sin(t * math.pi * 4);

@@ -120,8 +120,7 @@ class _PlayingHud extends StatelessWidget {
               select: (world) {
                 final shielded = world.query<Shielded>().firstOrNull;
                 if (shielded == null) return (false, 0.0, false);
-                final remaining =
-                    world.expiryOf<Shielded>(shielded.$1) ?? 0.0;
+                final remaining = world.expiryOf<Shielded>(shielded.$1) ?? 0.0;
                 return (
                   true,
                   _centi(remaining / shieldDuration),

@@ -128,9 +128,7 @@ final class Blaster {
       _burstTimer += blasterBurstInterval;
     }
     if (_queuedBurst == 0) {
-      phase.go(
-        _recovery.finished ? BlasterPhase.ready : BlasterPhase.cooldown,
-      );
+      phase.go(_recovery.finished ? BlasterPhase.ready : BlasterPhase.cooldown);
     }
     return fired;
   }

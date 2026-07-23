@@ -1,4 +1,3 @@
-/// Player tuning for the scene game example. Depends on world ramp geometry.
 library;
 
 import '../../world/data/ramp.dart';
@@ -11,15 +10,10 @@ const double playerStartZ = 6;
 
 const double playerStrafeSpeed = 8;
 
-/// Rock contacts shove the player rather than ending the run; enough hits push
-/// them off an edge, which is the only way to lose.
 const double knockbackPushSpeed = 15;
 const double knockbackDecayRate = 18;
 
-/// Below the ramp's low edge so the fall reads on screen before the run ends.
 const double playerFallLoseY = -7;
-
-// --- Crab legs ---
 
 const int crabLegsPerSide = 3;
 const int crabLegCount = crabLegsPerSide * 2;
@@ -48,7 +42,6 @@ const double crabLegBend = 0.28;
 
 const double shieldBubbleRadius = playerBodyVisualRadius * 1.85;
 
-/// Resting height of the player's centre at ramp depth [z].
 double playerGroundYAtZ(double z) =>
     rampSurfaceYAtZ(z) + playerCollisionRadius + playerGroundClearance;
 

@@ -1,22 +1,16 @@
-/// Shield-pickup and shield tuning for the scene game example.
 library;
 
 import '../../player/data/config.dart';
 import '../../world/data/config.dart';
 
-// --- Shield pickups ---
-
 const double collectableRadius = 0.5;
 
-/// Spawn band at the high (-Z) end of the ramp so pickups roll down toward the
-/// player like rocks do.
 const double shieldPickupSpawnZ = -14;
 const double shieldPickupSpawnY = 7.5;
 const double shieldPickupSpawnHalfWidth = 5;
 
 const double shieldPickupInterval = 9;
 
-/// Pickups despawn once they fall below this Y or roll past this Z.
 const double collectableKillY = -25;
 const double collectablePassZ = rampLength * 0.5 + 3;
 
@@ -26,26 +20,16 @@ final double shieldCollectDistanceSq = _square(
 
 double _square(double value) => value * value;
 
-// --- Shield ---
-
 const double shieldDuration = 6;
 
-/// Final seconds during which the shield visibly warns of expiry.
 const double shieldWarningWindow = 1.5;
 
-/// Seconds of shield time consumed by deflecting a single rock.
 const double shieldDeflectTimeCost = 0.4;
 
-/// Velocities applied to a rock the shield deflects.
 const double shieldDeflectOutward = 16;
 const double shieldDeflectUp = 12;
 const double shieldDeflectSpin = 10;
 
-// --- Deflection burst (upstream particle emitter) ---
-//
-// The explicit seed keeps replays visually identical; the entity lifetime
-// is the burst entity's `DespawnAfter` and must cover the longest particle
-// life.
 const int deflectBurstSeed = 31;
 const int deflectBurstCount = 18;
 const double deflectBurstEntityLifetime = 0.6;
