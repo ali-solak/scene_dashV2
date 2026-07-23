@@ -133,8 +133,10 @@ final class Transforming {
 /// the pool by an `onRemove` observer when the entity despawns, so waves
 /// can keep reusing a small set of imported (un-cloneable) skinned models.
 final class ModelSlot {
-  const ModelSlot(this.index);
+  const ModelSlot(this.index, {this.axe});
+
   final int index;
+  final Node? axe;
 }
 
 /// Marks a dying barbarian's death window. Added with `removeAfter:` so

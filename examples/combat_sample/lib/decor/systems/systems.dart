@@ -99,19 +99,53 @@ void animateLeaves(World world) {
     field.position[i * 3 + 1] = y;
     field.position[i * 3 + 2] = z;
 
-    field.leaves[i].localTransform = Matrix4.compose(
-      Vector3(x, y, z),
-      Quaternion.axisAngle(
-        Vector3(
-          field.axis[i * 3],
-          field.axis[i * 3 + 1],
-          field.axis[i * 3 + 2],
-        ),
-        field.spin[i],
-      ),
-      Vector3.all(1),
+    final node = field.leaves[i];
+    final transform = node.localTransform;
+    _setLeafTransform(
+      transform,
+      x: x,
+      y: y,
+      z: z,
+      axisX: field.axis[i * 3],
+      axisY: field.axis[i * 3 + 1],
+      axisZ: field.axis[i * 3 + 2],
+      angle: field.spin[i],
     );
+    node.localTransform = transform;
   }
+}
+
+void _setLeafTransform(
+  Matrix4 transform, {
+  required double x,
+  required double y,
+  required double z,
+  required double axisX,
+  required double axisY,
+  required double axisZ,
+  required double angle,
+}) {
+  final cosAngle = math.cos(angle);
+  final sinAngle = math.sin(angle);
+  final oneMinusCos = 1 - cosAngle;
+  final storage = transform.storage;
+
+  storage[0] = oneMinusCos * axisX * axisX + cosAngle;
+  storage[1] = oneMinusCos * axisX * axisY + sinAngle * axisZ;
+  storage[2] = oneMinusCos * axisX * axisZ - sinAngle * axisY;
+  storage[3] = 0;
+  storage[4] = oneMinusCos * axisX * axisY - sinAngle * axisZ;
+  storage[5] = oneMinusCos * axisY * axisY + cosAngle;
+  storage[6] = oneMinusCos * axisY * axisZ + sinAngle * axisX;
+  storage[7] = 0;
+  storage[8] = oneMinusCos * axisX * axisZ + sinAngle * axisY;
+  storage[9] = oneMinusCos * axisY * axisZ - sinAngle * axisX;
+  storage[10] = oneMinusCos * axisZ * axisZ + cosAngle;
+  storage[11] = 0;
+  storage[12] = x;
+  storage[13] = y;
+  storage[14] = z;
+  storage[15] = 1;
 }
 
 /// Respawn jitter. Seeded, so a run is reproducible.

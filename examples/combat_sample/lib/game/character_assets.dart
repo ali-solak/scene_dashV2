@@ -17,8 +17,6 @@ const List<String> _rigFiles = [
   'assets/animation/Rig_Medium_MovementBasic.glb',
   'assets/animation/Rig_Medium_MovementAdvanced.glb',
   'assets/animation/Rig_Medium_CombatMelee.glb',
-  // Carries EXPERIMENTAL_Medium_Transform (1.00 s): the giant's
-  // transformation.
   'assets/animation/Rig_Medium_Special.glb',
 ];
 
@@ -32,11 +30,8 @@ class CharacterAssets {
     this.shield,
   });
 
-  /// Model instances. Each barbarian gets its own import: `Node.clone()`
-  /// of a skinned model broke the clone's skin binding, so waves recycle
-  /// instead ([takeBarbarian] lends, [releaseBarbarian] returns). Pool
-  /// size is the concurrent-barbarian cap.
   final Node knight;
+
   final List<Node> barbarians;
 
   late final List<bool> _lent = List<bool>.filled(
@@ -45,9 +40,6 @@ class CharacterAssets {
     growable: true,
   );
 
-  /// Appends a background-loaded model to the pool: a few are warmed at
-  /// boot, the rest stream in behind the title screen so the loading
-  /// screen never freezes on ten glTF imports.
   void addBarbarian(Node node) {
     barbarians.add(node);
     _lent.add(false);
@@ -97,9 +89,6 @@ class CharacterAssets {
   }
 }
 
-/// Barbarians warmed synchronously at boot. Early waves are small
-/// ([baseWaveEnemies]), so this covers the opening; a wave that outruns
-/// the background fill borrows graybox capsules for a beat.
 const int _warmBarbarians = 4;
 
 Future<CharacterAssets> loadCharacterAssets({
@@ -133,14 +122,10 @@ Future<CharacterAssets> loadCharacterAssets({
     // reads as a missing material rather than as a shield.
     shield: await _loadWeapon('shield_square_color'),
   );
-  // The rest of the pool fills in the background, one import per turn of
-  // the event loop, so a frame renders between each.
   unawaited(_fillBarbarianPool(assets, barbarianCount - warm));
   return assets;
 }
 
-/// Streams [remaining] more barbarians into [assets]' pool, yielding between
-/// each so the load never blocks a frame.
 Future<void> _fillBarbarianPool(CharacterAssets assets, int remaining) async {
   for (var i = 0; i < remaining; i++) {
     try {

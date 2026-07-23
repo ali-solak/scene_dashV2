@@ -27,8 +27,10 @@ void attachEnemyVisuals(World world) {
       final bodyScale =
           characterScale * (brawler?.giant ?? false ? giantScale : 1.0);
       final axe = assets.axe;
+      Node? mountedAxe;
       if (axe != null) {
-        model.getChildByName('handslot.r')?.add(axe.clone());
+        mountedAxe = axe.clone();
+        model.getChildByName('handslot.r')?.add(mountedAxe);
       }
       final wrapper = Node(
         name: 'enemy-model',
@@ -43,7 +45,7 @@ void attachEnemyVisuals(World world) {
       world.add(enemy, SceneNode(root));
       world.add(enemy, buildEnemyAnimator(assets, model));
       world.add(enemy, BrawlerVisuals(bodyRoot: wrapper));
-      world.add(enemy, ModelSlot(lent));
+      world.add(enemy, ModelSlot(lent, axe: mountedAxe));
       return;
     }
     final material = PhysicallyBasedMaterial()
@@ -150,6 +152,7 @@ void updateHealthBars(World world) {
 /// Returns a despawned enemy model to the pool.
 void releaseEnemyModel(World world, Entity entity, ModelSlot slot) {
   if (!world.hasResource<CharacterAssets>()) return;
+  slot.axe?.detach();
   world.resource<CharacterAssets>().releaseBarbarian(slot.index);
 }
 

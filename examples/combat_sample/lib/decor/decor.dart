@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_scene/scene.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart'
-    show Matrix4, Quaternion, Vector3, Vector4;
+    show Matrix4, Vector4;
 
 import '../game/sets.dart';
 import '../world/data/config.dart' show windDirection;
