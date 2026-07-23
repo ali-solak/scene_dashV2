@@ -169,18 +169,12 @@ void recordTrace(World world) {
 }
 
 /// The buffer ages on wall time, so hitstop cannot extend it.
-void ageBuffer(World world) {
-  world.resource<InputBuffer<CombatAction>>().advance(
-    world.resource<FrameTime>().unscaledDelta,
-  );
-}
 
 void installFighter(GameBuilder game) {
   game.world
     ..insert(InputBuffer<CombatAction>(window: bufferWindow))
     ..insert(CombatLog());
   game
-    ..addSystem(Schedules.frameStart, ageBuffer, reads: const {})
     ..addSystem(Schedules.fixedUpdate, fighterDriver, writes: {AttackState})
     ..addSystem(
       Schedules.fixedUpdate,

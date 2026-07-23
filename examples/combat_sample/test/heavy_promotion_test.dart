@@ -21,7 +21,6 @@ void installFighter(GameBuilder game) {
     ..insert(ButtonInput<CombatAction>());
   game
     ..registerComponent<Fighter>()
-    ..addSystem(Schedules.frameStart, ageCombatBuffer, reads: const {})
     ..addSystem(Schedules.fixedUpdate, fighterDriver, writes: {Fighter});
 }
 

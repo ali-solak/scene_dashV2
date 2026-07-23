@@ -62,6 +62,15 @@ final class GameBuilder {
   /// [before]/[after] order against other systems *by function reference*
   /// — register the referenced system first. [runIf], [inSet] and the
   /// schedule labels are the carried machinery.
+  ///
+  /// [independentOf] exempts exactly this system's conflict pairing with
+  /// the listed systems (by function reference, register them first): the
+  /// author asserts the pair is independent — disjoint entities, disjoint
+  /// fields of a shared component — and the detector trusts it, in both
+  /// directions. Ordering is untouched (the pair stays unordered, ties
+  /// break by registration order) and every other pairing keeps the full
+  /// net. Prefer a real `after:` edge when order genuinely matters; this
+  /// is for the pairs the entity-blind detector cannot see are safe.
   void addSystem(
     ScheduleLabel schedule,
     WorldSystem system, {
@@ -69,6 +78,7 @@ final class GameBuilder {
     Set<Type>? writes,
     List<WorldSystem> before = const <WorldSystem>[],
     List<WorldSystem> after = const <WorldSystem>[],
+    List<WorldSystem> independentOf = const <WorldSystem>[],
     RunCondition? runIf,
     SystemSet? inSet,
     String? label,
@@ -118,6 +128,9 @@ final class GameBuilder {
       label: systemLabel,
       before: [for (final s in before) _requireLabel(s, 'before')],
       after: [for (final s in after) _requireLabel(s, 'after')],
+      independentOf: [
+        for (final s in independentOf) _requireLabel(s, 'independentOf'),
+      ],
       runIf: condition,
       inSet: inSet,
     );

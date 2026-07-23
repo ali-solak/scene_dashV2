@@ -7,16 +7,17 @@
 /// [consume] them when their state machine can act. Entries expire after
 /// [window] seconds, so stale intents never fire long after the press.
 ///
-/// A plain generic resource — insert one per action type with
-/// `insertResource(InputBuffer<CombatAction>())` and inject it with
-/// `@Resource()`. No system is installed for it; the game owns two lines:
-/// tick [advance] once per frame, and [record] on press edges.
+/// A plain generic resource — insert one per action type (or reach it as
+/// `world.buffer<T>()`, which creates it with the defaults) and [record]
+/// on press edges. The frame drivers age every buffer automatically, once
+/// per frame; no aging system to install, nothing to forget.
 ///
-/// **Tick [advance] with `FrameTime.unscaledDelta` at `frameStart`.** The
-/// buffer's clock is *unscaled by design*: hitstop and slow motion must not
-/// eat buffered inputs — a roll pressed during the freeze still fires when
-/// the freeze ends. Ticking with scaled delta would silently extend the
-/// window under slow motion and never expire entries during a pause.
+/// **The clock is wall time (`FrameTime.unscaledDelta`), by design**:
+/// hitstop and slow motion must not eat buffered inputs — a roll pressed
+/// during the freeze still fires when the freeze ends. A scaled clock
+/// would silently extend the window under slow motion and never expire
+/// entries during a pause. A buffer that genuinely needs a different
+/// clock opts out with `autoAdvance: false` and ticks [advance] itself.
 ///
 /// Backed by fixed-length parallel lists used as a ring: no allocation per
 /// press after construction.
@@ -29,20 +30,24 @@ final class InputBuffer<T> {
   /// drops the oldest (the newest press wins under spam).
   final int capacity;
 
+  /// Whether the frame drivers age this buffer each frame (the default).
+  /// `false` hands the clock to the game: tick [advance] yourself.
+  final bool autoAdvance;
+
   final List<T?> _actions;
   final List<double> _stamps;
   int _head = 0; // Index of the oldest entry.
   int _length = 0;
   double _now = 0;
 
-  InputBuffer({this.window = 0.15, this.capacity = 8})
+  InputBuffer({this.window = 0.15, this.capacity = 8, this.autoAdvance = true})
     : assert(capacity > 0, 'InputBuffer needs a positive capacity.'),
       _actions = List<T?>.filled(capacity, null),
       _stamps = List<double>.filled(capacity, 0);
 
-  /// Advances the buffer's internal clock by [unscaledDt] seconds. Call once
-  /// per frame with `FrameTime.unscaledDelta` (see the class doc for why the
-  /// unscaled delta, not the scaled one).
+  /// Advances the buffer's internal clock by [unscaledDt] seconds. The
+  /// frame drivers call this for every [autoAdvance] buffer; only a
+  /// buffer constructed with `autoAdvance: false` ticks it by hand.
   void advance(double unscaledDt) => _now += unscaledDt;
 
   /// Records a press of [action], stamped at the current clock. When the
@@ -138,5 +143,17 @@ final class InputBuffer<T> {
     }
     _head = 0;
     _length = 0;
+  }
+}
+
+/// Ages every [InputBuffer.autoAdvance] buffer among [resources] by
+/// [unscaledDt] wall seconds. Driver API — the frame loops call it once
+/// per frame right after stamping `FrameTime`, before the `frameStart`
+/// schedule; games never call it.
+void advanceInputBuffers(Iterable<Object> resources, double unscaledDt) {
+  for (final resource in resources) {
+    if (resource is InputBuffer && resource.autoAdvance) {
+      resource.advance(unscaledDt);
+    }
   }
 }

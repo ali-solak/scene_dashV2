@@ -4,6 +4,47 @@
 
 ### Surface
 
+- `world.previousState<S>()` — the transition's other side (null before
+  the first), surfacing the `CurrentState.previous` the machine already
+  tracked. An OnEnter system tells a resume from a fresh run without a
+  hand-rolled flag: the combat sample's `RunControl.resetPending` is
+  deleted; `startRun` gates on `previousState == skillMenu`.
+- setState-from-a-fixed-step semantics pinned by test: the transition
+  applies at the NEXT frame boundary — deferred, never lost (the old
+  "does not take" trap was a pumpFixed artifact, gone since pumpFixed
+  became the full per-frame pipeline). The sample's stale comment is
+  corrected.
+- `WorldBuilder(equals:)` (widget layer, both forms) — overrides `==`
+  for the change compare, so a select can return a plain `List` with
+  `listEquals` instead of a hand-written value class; the skill bar's
+  `_SkillSlots` class is now a record.
+- `addSystem(..., independentOf: [systems])`: pairwise access-conflict
+  exemption, by function reference: the author asserts the listed pairs
+  are independent (disjoint entities, or different fields of one
+  component — what the entity-blind detector cannot see), and detection
+  skips exactly those pairs, both directions. Ordering is untouched and
+  every other pairing keeps the full net. Replaces the combat sample's
+  fake `after:` edges on `lockOnSystem`.
+- Input buffers age themselves: the frame drivers advance every
+  `InputBuffer` resource by `FrameTime.unscaledDelta` once per frame,
+  before `frameStart` — the hand-installed aging system (forgettable,
+  silently leaving the press window infinite) is gone. `autoAdvance:
+  false` opts out for custom clocks; `advance()` stays public.
+- `world.expiryOf<DespawnAfter>` reads the component's own clock instead
+  of returning null, so both timed-lifetime mechanisms answer through
+  the one call (kills the lava-pit dead-end in the combat sample).
+- `world.unscaledDelta` — the wall-clock delta promoted beside
+  `world.delta`/`world.fixedDelta`, for HUD/camera-shake systems that
+  keep moving through pause, slow motion and hitstop.
+- The S6 observer cascade guard counts per (type, entity), not per-type
+  volume: adding an observed component to a whole pack in one flush (a
+  fire gush catching twenty barbarians) no longer throws in debug; a
+  same-entity re-add/re-remove loop still trips at the same limit.
+- `Resources.values` — allocation-free sibling of `entries` for
+  per-frame sweeps (the buffer aging uses it).
+- `WorldBuilder.pulse` (widget layer). the transition-to-pulse form: the
+  frame `trigger(previous, next)` passes on a changed selection,
+  `pulseBuilder` receives a pulse decaying 1 → 0 over `duration` 
 - `world.consumeAny<E>()`  the boolean shape of `world.events<E>()` for
   edge-like signals: reports whether any events arrived since this
   system's last read, consuming them (same per-registration cursor).

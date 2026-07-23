@@ -6,9 +6,9 @@ void spawnEnemies(World world) {
   world.spawn([AggroCoordinator()]);
 }
 
-/// `OnEnter(fighting)`, boot and every restart: hand the token
-/// coordinator a clean slate. The waves feature clears and re-fields the
-/// barbarians themselves, so there is nothing to resurrect here.
+/// `OnEnter(fighting)` behind [freshRun]: hand the token coordinator a
+/// clean slate. The waves feature clears and re-fields the barbarians
+/// themselves, so there is nothing to resurrect here.
 void resetEncounter(World world) {
   final coordinator = world.query<AggroCoordinator>().firstOrNull?.$2;
   if (coordinator == null) return;
@@ -146,21 +146,21 @@ void updateHealthBars(World world) {
       scale = 1 + healthBarShakePop * decay;
       roll = healthBarShakeTilt * math.sin(p * math.pi * 3) * decay;
     }
-    var rotation = Quaternion.axisAngle(
-      Vector3(0, 1, 0),
-      cameraYaw - brawler.facing,
-    );
-    if (roll != 0) {
-      rotation = rotation * Quaternion.axisAngle(Vector3(0, 0, 1), roll);
-    }
-    bar.node.localTransform = Matrix4.compose(
-      // Raised by the giant's scale to clear its taller body (this system
-      // rewrites the transform each frame, so the lift set at attach time
-      // has to be reapplied here or the bar sinks back onto normal height).
-      Vector3(0, healthBarHeight * (brawler.giant ? giantScale : 1.0), 0),
-      rotation,
-      Vector3.all(scale),
-    );
+    // Rebuilt in place on the node's own matrix: this runs per enemy per
+    // frame, so it must not allocate (no compose, no fresh quaternions).
+    // The lift is reapplied every frame — the giant's bar sinks back onto
+    // normal height otherwise — and T·Ry·Rz·S mirrors the old compose.
+    final barTransform = bar.node.localTransform
+      ..setIdentity()
+      ..setTranslationRaw(
+        0,
+        healthBarHeight * (brawler.giant ? giantScale : 1.0),
+        0,
+      )
+      ..rotateY(cameraYaw - brawler.facing);
+    if (roll != 0) barTransform.rotateZ(roll);
+    if (scale != 1) barTransform.scaleByDouble(scale, scale, scale, 1);
+    bar.node.localTransform = barTransform;
   });
 }
 
@@ -506,14 +506,15 @@ void moveBrawlers(World world) {
     if (knockback != null && knockback.airborne) {
       // Tips over once on the way down, at its own rate; a continuous
       // spin read as a rotating prop, not a person.
-      brawler.tumble = _towardProne(
+      brawler.tumble = towardProne(
         brawler.tumble,
         dt * (0.75 + brawler.wobbleSeed % 0.5),
+        rate: proneSettleRate,
       );
     } else if (knockback != null && knockback.downed > 0) {
       // Landed: settle flat and stay down for the whole downed beat; a
       // thrown body should not pop upright the moment it touches down.
-      brawler.tumble = _towardProne(brawler.tumble, dt);
+      brawler.tumble = towardProne(brawler.tumble, dt, rate: proneSettleRate);
     } else {
       brawler.tumble = 0;
     }
@@ -526,15 +527,6 @@ void moveBrawlers(World world) {
       );
     }
   });
-}
-
-/// Eases a tumbling body down onto its back. Fast: this is the flop at
-/// the end of the arc, not a lie-down.
-double _towardProne(double tumble, double dt) {
-  const prone = math.pi / 2;
-  final step = proneSettleRate * dt;
-  if ((prone - tumble).abs() <= step) return prone;
-  return tumble + (prone - tumble).sign * step;
 }
 
 final Vector3 _upAxis = Vector3(0, 1, 0);

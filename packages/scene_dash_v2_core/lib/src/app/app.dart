@@ -186,6 +186,7 @@ final class App implements AppBuilder {
     required SystemLabel label,
     List<SystemLabel> after = const <SystemLabel>[],
     List<SystemLabel> before = const <SystemLabel>[],
+    List<SystemLabel> independentOf = const <SystemLabel>[],
     RunCondition? runIf,
     SystemSet? inSet,
   }) {
@@ -197,6 +198,7 @@ final class App implements AppBuilder {
         label: label,
         after: after,
         before: before,
+        independentOf: independentOf,
         runIf: runIf,
         inSet: inSet,
       ),

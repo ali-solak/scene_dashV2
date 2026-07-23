@@ -1,6 +1,9 @@
 # Scene-Dash v2: Concept and Architecture
 
 Scene-Dash is an object-based ECS and feature layer for `flutter_scene`.
+Its job is to organize, coordinate, and headlessly test gameplay code as a
+game grows; ECS is the implementation model, not a replacement renderer or
+scene framework.
 
 It is primarily an ergonomics and architecture project. It does not assume
 an ECS or typed-array storage is automatically faster than straightforward
@@ -163,6 +166,13 @@ excludes it from detection. `boot(strictAccess: true)` turns undeclared
 into an error for projects that want the full net, and a debug-mode check
 compares declared access against the component types the system's queries
 actually construct, warning on drift.
+
+The detector is entity-blind: it pairs systems by component *type*, so
+two systems touching disjoint entities — or disjoint fields of one
+component — read as a conflict it cannot see through. When the author
+knows such a pair is independent, `independentOf: [other]` on either
+side exempts exactly that pairing instead of faking an ordering edge;
+ordering is untouched and every other pairing keeps the full net.
 
 ## Optional system profiling
 

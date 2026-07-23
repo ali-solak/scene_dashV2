@@ -1,13 +1,14 @@
 /// The three cast slots shown along the bottom while fighting. Each slot
 /// is the button for its skill (the only way in on touch), pops when the
 /// skill fires, and shows its cooldown sweep, level, or live barrier
-/// charges. Reads the world reactively; a selection is a value type so
-/// `WorldBuilder` rebuilds only on real change.
+/// charges. Reads the world reactively; the list selection compares by
+/// content through `WorldBuilder`'s `equals:`, so the bar rebuilds only
+/// on real change.
 library;
 
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show immutable, listEquals;
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 
@@ -15,37 +16,24 @@ import '../player/player.dart';
 import '../skills/skills.dart';
 import 'ink.dart';
 
-/// `WorldBuilder` re-selects every frame and rebuilds on `!=`, so a
-/// selection has to be a value; a bare `List` would compare by identity
-/// and rebuild the bar every single frame.
-@immutable
-final class _SkillSlots {
-  const _SkillSlots(this.slots, this.barrierCharges);
-
-  final List<(int level, double readiness)> slots;
-
-  /// Blocks left on the barrier, 0 when it is down. The shield slot shows
-  /// this instead of a cooldown sweep while it is up: mid-fight you need
-  /// hits left, not time until recast.
-  final int barrierCharges;
-
-  @override
-  bool operator ==(Object other) =>
-      other is _SkillSlots &&
-      barrierCharges == other.barrierCharges &&
-      listEquals(slots, other.slots);
-
-  @override
-  int get hashCode => Object.hash(Object.hashAll(slots), barrierCharges);
-}
+/// Per-skill (level, readiness), plus blocks left on the barrier — the
+/// shield slot shows charges instead of a cooldown sweep while it is up:
+/// mid-fight you need hits left, not time until recast.
+typedef _SkillSlots = ({
+  List<(int level, double readiness)> slots,
+  int barrierCharges,
+});
 
 _SkillSlots _selectSkills(World world) {
   final book = world.resource<SkillBook>();
   final barrier = world.query<Barrier>(require: const [Player]).firstOrNull?.$2;
-  return _SkillSlots([
-    for (final skill in Skill.values)
-      (book.levelOf(skill), book.readinessOf(skill)),
-  ], barrier?.charges ?? 0);
+  return (
+    slots: [
+      for (final skill in Skill.values)
+        (book.levelOf(skill), book.readinessOf(skill)),
+    ],
+    barrierCharges: barrier?.charges ?? 0,
+  );
 }
 
 /// The three cast slots. Locked slots stay visible (and greyed) so the
@@ -57,6 +45,8 @@ class SkillBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return WorldBuilder<_SkillSlots>(
       select: _selectSkills,
+      equals: (a, b) =>
+          a.barrierCharges == b.barrierCharges && listEquals(a.slots, b.slots),
       builder: (context, state) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -81,10 +71,11 @@ class SkillBar extends StatelessWidget {
   }
 }
 
-/// One slot. Stateful only so it can pop when the skill fires: the pop
-/// acknowledges the keypress on the frame it happened, which is what
-/// makes the button feel connected to the cast.
-class _SkillSlot extends StatefulWidget {
+/// One slot. The pop rides a `WorldBuilder.pulse` keyed off the CAST, not
+/// the keypress: readiness falls off a cliff only when `castSkills`
+/// actually triggers the skill, so a press rejected for cooldown or cost
+/// never pops the slot.
+class _SkillSlot extends StatelessWidget {
   const _SkillSlot({
     required this.index,
     required this.skill,
@@ -108,64 +99,39 @@ class _SkillSlot extends StatefulWidget {
   final int charges;
 
   @override
-  State<_SkillSlot> createState() => _SkillSlotState();
-}
-
-class _SkillSlotState extends State<_SkillSlot>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pop = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 260),
-  );
-
-  @override
-  void dispose() {
-    _pop.dispose();
-    super.dispose();
-  }
-
-  @override
-  void didUpdateWidget(_SkillSlot old) {
-    super.didUpdateWidget(old);
-    // A cast is the one moment readiness falls off a cliff, so watching
-    // it needs no event plumbing between the world and the widget.
-    if (old.readiness >= 1 && widget.readiness < 1) {
-      _pop.forward(from: 0);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _pop,
-      builder: (context, child) {
-        final t = _pop.value;
+    return WorldBuilder<double>.pulse(
+      select: (world) => world.resource<SkillBook>().readinessOf(skill),
+      trigger: (previous, next) => previous >= 1 && next < 1,
+      duration: 0.26,
+      pulseBuilder: (context, pulse, _) {
+        // The pulse decays 1 → 0; the pop curve wants elapsed 0 → 1.
+        final t = 1 - pulse;
+        final flash = math.sin(t * math.pi);
         // Snap out, ease back: a quick overshoot reads as a press. The
         // flash rides the same curve so the border and the swell are one
         // gesture rather than two.
-        final swell = 1 + 0.34 * math.sin(t * math.pi) * (1 - t * 0.35);
-        return Transform.scale(scale: swell, child: child);
+        final swell = 1 + 0.34 * flash * (1 - t * 0.35);
+        return Transform.scale(
+          scale: swell,
+          // The slot IS the button (touch has no number keys). Fires on
+          // pointer-down via a raw Listener: a cast is a panic button, so
+          // it lands the instant you touch the slot. Opaque so the jab
+          // does not fall through to the strike listener beneath.
+          child: Listener(
+            onPointerDown: (_) => onCast(),
+            behavior: HitTestBehavior.opaque,
+            child: _build(context, flash),
+          ),
+        );
       },
-      // The slot IS the button (touch has no number keys). Fires on
-      // pointer-down via a raw Listener: a cast is a panic button, so it
-      // lands the instant you touch the slot. Opaque so the jab does not
-      // fall through to the strike listener beneath.
-      child: Listener(
-        onPointerDown: (_) => widget.onCast(),
-        behavior: HitTestBehavior.opaque,
-        child: _build(context),
-      ),
     );
   }
 
-  Widget _build(BuildContext context) {
-    final index = widget.index;
-    final level = widget.level;
-    final readiness = widget.readiness;
+  Widget _build(BuildContext context, double flash) {
     final unlocked = level > 0;
     final ready = unlocked && readiness >= 1;
-    final holding = widget.charges > 0;
-    final flash = math.sin(_pop.value * math.pi);
+    final holding = charges > 0;
     return Container(
       width: 54,
       height: 54,
@@ -197,7 +163,7 @@ class _SkillSlotState extends State<_SkillSlot>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    for (var i = 0; i < widget.charges; i++)
+                    for (var i = 0; i < charges; i++)
                       Container(
                         width: 5,
                         height: 5,

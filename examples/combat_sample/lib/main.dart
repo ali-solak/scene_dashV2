@@ -78,19 +78,28 @@ class CombatApp extends StatelessWidget {
   }
 }
 
+/// What the boot is doing right now, for the loading screen: a staged
+/// readout reads as intentional on a slow device, an indefinite spinner
+/// reads as a hang.
+final ValueNotifier<String> _bootStage = ValueNotifier<String>('physics');
+
 Future<SceneGame> _bootGame() async {
   // `SceneGame.boot` calls `Scene.initializeStaticResources` itself; only
   // the physics engine has to be brought up before we hand it a world.
+  _bootStage.value = 'physics';
   await RapierWorld.ensureInitialized();
+  _bootStage.value = 'world materials';
   final assets = await loadWorldAssets();
   CharacterAssets? characters;
   try {
     // Waves borrow from this pool and hand models back on despawn.
+    _bootStage.value = 'character rigs';
     characters = await loadCharacterAssets(barbarianCount: barbarianPoolSize);
   } on Object catch (error) {
     // The fight still runs on graybox capsules.
     debugPrint('combat_sample: character assets unavailable: $error');
   }
+  _bootStage.value = 'the clearing';
 
   return SceneGame.boot(
     physics: RapierWorld(gravity: Vector3(0, -gravityStrength, 0)),
@@ -181,6 +190,20 @@ class _LoadingScreen extends StatelessWidget {
               letterSpacing: 4,
             ),
           ),
+          if (!failed) ...[
+            const SizedBox(height: 6),
+            ValueListenableBuilder<String>(
+              valueListenable: _bootStage,
+              builder: (context, stage, _) => Text(
+                stage.toUpperCase(),
+                style: const TextStyle(
+                  color: HudInk.steel,
+                  fontSize: 9,
+                  letterSpacing: 3,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

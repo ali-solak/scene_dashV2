@@ -18,6 +18,12 @@ final class RecordingAdapter implements SystemAdapter {
   void run() => log.add(name);
 }
 
+void _requestDungeon(World world) {
+  if (world.state<GamePhase>() == GamePhase.title) {
+    world.setState(GamePhase.dungeon);
+  }
+}
+
 /// Runs an arbitrary body against the world.
 final class RunAdapter implements SystemAdapter {
   final void Function(World world) body;
@@ -33,6 +39,58 @@ final class RunAdapter implements SystemAdapter {
 }
 
 void main() {
+  group('setState timing (the frame boundary)', () {
+    test('a setState from a fixed-step system applies at the NEXT frame '
+        'boundary — deferred, never lost', () {
+      final game = TestGame.headless(
+        features: [
+          (g) => g
+            ..addState<GamePhase>(GamePhase.title)
+            ..addSystem(Schedules.fixedUpdate, _requestDungeon,
+                reads: const {}),
+        ],
+      );
+      game.start();
+      expect(game.world.state<GamePhase>(), GamePhase.title);
+
+      game.pumpFixed(steps: 1); // the fixed step queues the transition
+      expect(
+        game.world.state<GamePhase>(),
+        GamePhase.title,
+        reason: 'never applied mid-frame',
+      );
+
+      game.pumpFixed(steps: 1); // the next frame's boundary applies it
+      expect(game.world.state<GamePhase>(), GamePhase.dungeon);
+    });
+
+    test('world.previousState names the other side of the transition', () {
+      final seen = <GamePhase?>[];
+      final game = TestGame.headless(
+        features: [
+          (g) => g
+            ..addState<GamePhase>(GamePhase.title)
+            ..addSystem(
+              OnEnter(GamePhase.overworld),
+              (world) => seen.add(world.previousState<GamePhase>()),
+              reads: const {},
+            ),
+        ],
+      );
+      game.start();
+      expect(
+        game.world.previousState<GamePhase>(),
+        isNull,
+        reason: 'no transition yet',
+      );
+
+      game.world.setState(GamePhase.overworld);
+      game.pump();
+      expect(seen, [GamePhase.title], reason: 'visible inside OnEnter');
+      expect(game.world.previousState<GamePhase>(), GamePhase.title);
+    });
+  });
+
   group('addState', () {
     test(
       'inserts CurrentState and NextState resources at the initial value',

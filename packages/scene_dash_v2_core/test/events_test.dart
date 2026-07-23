@@ -65,6 +65,22 @@ void main() {
       expect(slow.drain().map((e) => e.id), <int>[1]);
     });
 
+    test('the world default retention holds an unread event for eight '
+        'passes — the public contract', () {
+      final world = World();
+      world.registerEvent<Pinged>(); // no retainedUpdates: the default
+      final channel = world.eventChannel<Pinged>();
+      final stalled = channel.reader();
+
+      channel.send(const Pinged(1));
+      for (var pass = 1; pass < 8; pass++) {
+        channel.update();
+        expect(stalled.hasUnread, isTrue, reason: 'pass $pass of 8');
+      }
+      channel.update(); // pass 8: the window is spent
+      expect(stalled.hasUnread, isFalse);
+    });
+
     test('a stalled reader is skipped past the retention window', () {
       final channel = EventChannel<Pinged>(retainedUpdates: 2);
       final stalled = channel.reader();

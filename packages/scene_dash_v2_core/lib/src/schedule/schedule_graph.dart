@@ -186,6 +186,13 @@ abstract final class ScheduleGraph {
         final ordered = reachable[i][j] || reachable[j][i];
         if (ordered) continue;
 
+        // An author-asserted independent pair (either side declaring
+        // suffices): exempt exactly this pairing, nothing else.
+        if (registrations[i].independentOf.contains(registrations[j].label) ||
+            registrations[j].independentOf.contains(registrations[i].label)) {
+          continue;
+        }
+
         final ai = accesses[i];
         final aj = accesses[j];
         if (ai.reads.isEmpty &&

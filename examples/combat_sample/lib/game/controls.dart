@@ -126,6 +126,13 @@ class _GameControlsState extends State<GameControls>
 
   // --- Attack --------------------------------------------------------------
 
+  /// Combat intents (attack, roll, casts, lock) only land during the
+  /// fight: on the title, menu and death screens the keys still track
+  /// held state, but nothing is buffered or emitted — a press made on a
+  /// dead screen must never fire the instant the fight resumes. Escape
+  /// stays live everywhere; the toggle system ignores the wrong states.
+  bool get _fighting => _game.world.state<GameStatus>() == GameStatus.fighting;
+
   // Attack is held when either source (J, left button) is held; tracked
   // independently so releasing one never releases the other.
   bool _keyAttack = false;
@@ -133,11 +140,11 @@ class _GameControlsState extends State<GameControls>
 
   void _syncAttack() {
     // Buffered on the edge; held state decides light vs heavy.
-    if (_buttons.setPressed(
-          CombatAction.attack,
-          _keyAttack || _pointerAttack,
-        ) ==
-        ButtonEdge.pressed) {
+    final edge = _buttons.setPressed(
+      CombatAction.attack,
+      _keyAttack || _pointerAttack,
+    );
+    if (edge == ButtonEdge.pressed && _fighting) {
       _buffer.record(CombatAction.attack);
     }
   }
@@ -166,18 +173,18 @@ class _GameControlsState extends State<GameControls>
     if (event is KeyDownEvent) {
       _pressed.add(key);
       final slot = _skillKeys.indexOf(key);
-      if (slot >= 0 && slot < Skill.values.length) {
+      if (slot >= 0 && slot < Skill.values.length && _fighting) {
         _game.emit(SkillCast(Skill.values[slot]));
       }
       switch (key) {
-        case LogicalKeyboardKey.space:
+        case LogicalKeyboardKey.space when _fighting:
           _buffer.record(CombatAction.roll);
         case LogicalKeyboardKey.keyJ:
           _keyAttack = true;
-          _syncAttack();
-        case LogicalKeyboardKey.tab:
+          _syncAttack(); // held always tracked; the record gates inside
+        case LogicalKeyboardKey.tab when _fighting:
           _game.emit(const LockPressed());
-        case LogicalKeyboardKey.keyQ:
+        case LogicalKeyboardKey.keyQ when _fighting:
           _game.emit(const LockCycled());
         case LogicalKeyboardKey.escape:
           _game.emit(const SkillMenuToggled());
@@ -221,7 +228,7 @@ class _GameControlsState extends State<GameControls>
   void _onPointerDown(PointerDownEvent event) {
     if (event.kind == PointerDeviceKind.mouse) {
       if (event.buttons & kMiddleMouseButton != 0) {
-        _game.emit(const LockPressed());
+        if (_fighting) _game.emit(const LockPressed());
       } else if (event.buttons & kPrimaryButton != 0) {
         _pointerAttack = true;
         _syncAttack();
@@ -240,6 +247,7 @@ class _GameControlsState extends State<GameControls>
     }
     if (event is PointerUpEvent &&
         event.kind != PointerDeviceKind.mouse &&
+        _fighting &&
         _touchDownPosition != null &&
         _touchTravel < _tapSlopPixels &&
         (event.timeStamp - _touchDownTime!) < _tapWindow) {

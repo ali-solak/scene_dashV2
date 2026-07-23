@@ -72,11 +72,6 @@ void applyHits(World world) {
 }
 
 /// The buffer ages on wall time, so hitstop cannot extend it.
-void ageBuffer(World world) {
-  world.resource<InputBuffer<CombatAction>>().advance(
-    world.resource<FrameTime>().unscaledDelta,
-  );
-}
 
 void installCombat(GameBuilder game) {
   game.world
@@ -84,7 +79,6 @@ void installCombat(GameBuilder game) {
     ..insert(InputBuffer<CombatAction>(window: 6 / 64));
   game
     ..addState(RunMode.playing)
-    ..addSystem(Schedules.frameStart, ageBuffer, reads: const {})
     ..addSystem(
       Schedules.fixedUpdate,
       fighterSystem,

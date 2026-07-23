@@ -1,8 +1,9 @@
 name: scene_dash_v2
 description: >-
-  Scene-Dash v2, flutter_scene integration: SceneGame boot, GameView, scene
-  node binding and transform sync, physics bridge and collision hooks, and
-  the world-as-data-source UI primitives, over the scene_dash_v2_core engine.
+  Scene-Dash v2 for flutter_scene: organize and test gameplay code while
+  keeping rendering, scenes, cameras, physics, and widgets native. Includes
+  SceneGame boot, node binding, transform sync, physics hooks, and world-backed
+  UI primitives over the scene_dash_v2_core engine.
 version: 0.0.1
 publish_to: none
 resolution: workspace

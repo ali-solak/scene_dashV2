@@ -38,9 +38,12 @@ final class ObserverRegistry {
 
   final Map<Type, _TypeObservers> _byType = <Type, _TypeObservers>{};
 
-  // Debug cascade guard (S6): per-type firing counts within one outermost
-  // flush, reset lazily when the world's flush epoch advances.
-  final Map<Type, int> _fireCounts = <Type, int>{};
+  // Debug cascade guard (S6): per-(type, entity) firing counts within one
+  // outermost flush, reset lazily when the world's flush epoch advances.
+  // Keyed per entity because a loop re-fires the SAME entity's observers;
+  // one system legitimately touching a whole pack (a fire cone catching
+  // twenty enemies) fires each entity once and must never trip.
+  final Map<Type, Map<int, int>> _fireCounts = <Type, Map<int, int>>{};
   int _guardEpoch = -1;
   static const int _cascadeLimit = 16;
 
@@ -111,14 +114,15 @@ final class ObserverRegistry {
         _guardEpoch = world.flushEpoch;
         _fireCounts.clear();
       }
-      final count = (_fireCounts[type] ?? 0) + 1;
-      _fireCounts[type] = count;
+      final perEntity = _fireCounts.putIfAbsent(type, () => <int, int>{});
+      final count = (perEntity[entityIndex] ?? 0) + 1;
+      perEntity[entityIndex] = count;
       if (count > _cascadeLimit) {
         throw StateError(
-          'Observers for $type fired $count times within one command flush '
-          '— an observer is re-adding or re-removing what it observes, '
-          'looping the flush (S6). Break the cycle: react to the change, '
-          'do not undo-and-redo it.',
+          'Observers for $type fired $count times for one entity within '
+          'one command flush — an observer is re-adding or re-removing '
+          'what it observes, looping the flush (S6). Break the cycle: '
+          'react to the change, do not undo-and-redo it.',
         );
       }
       return true;

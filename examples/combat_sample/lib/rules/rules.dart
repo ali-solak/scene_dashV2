@@ -6,12 +6,12 @@ import 'package:vector_math/vector_math.dart' show Vector3;
 import '../enemies/enemies.dart';
 import '../fx/impact_burst.dart';
 import '../game/camera_rig.dart';
+import '../game/combat_math.dart';
 import '../game/game_state.dart';
 import '../game/score.dart';
 import '../game/sets.dart';
 import '../player/player.dart';
 import '../skills/skills.dart';
-import '../waves/waves.dart';
 import '../world/data/config.dart'
     show windCalmStrength, windEaseRate, windGustStrength;
 import '../world/data/resources.dart' show WindState;
@@ -28,29 +28,16 @@ void installRules(GameBuilder game) {
     // The impact bursts spawn with these, so their stores must exist.
     ..registerComponent<DespawnAfter>()
     ..registerComponent<DespawnOnExit>()
-    ..world.insert(RunControl())
     ..addSystem(Schedules.frameStart, requestStart, reads: const {})
     ..addSystem(Schedules.frameStart, requestRestart, reads: const {})
     ..addSystem(Schedules.frameStart, toggleSkillMenu, reads: const {})
-    // One system drives every feature's reset (boot and restart), so the
-    // player and enemy resets never collide.
+    // Each feature resets its own state in `OnEnter(fighting)`, all gated
+    // on [freshRun]; rules owns only the clock.
     ..addSystem(
       OnEnter(GameStatus.fighting),
       startRun,
-      writes: const {
-        Fighter,
-        PlayerMotion,
-        PlayerAnimator,
-        Target,
-        Health,
-        Knockback,
-        SceneTransform,
-        Brawler,
-        AggroCoordinator,
-        BrawlerVisuals,
-        EnemyAnimator,
-        Dissolving,
-      },
+      reads: const {},
+      runIf: freshRun,
     )
     ..addSystem(OnEnter(GameStatus.lost), slowMotionOnLoss, reads: const {})
     ..addSystem(
@@ -84,8 +71,9 @@ void installRules(GameBuilder game) {
       reads: const {Fighter},
       after: const [applyDamage],
     )
-    // Update schedule, after the fixed step's damage settles: setState
-    // from a fixed step does not take.
+    // Update schedule, after the fixed step's damage settles. (A setState
+    // from a fixed step would apply at the next frame boundary just the
+    // same — pinned by the core states suite.)
     ..addSystem(
       Schedules.update,
       checkPlayerDeath,

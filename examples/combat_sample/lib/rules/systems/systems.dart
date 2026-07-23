@@ -10,8 +10,6 @@ void checkPlayerDeath(World world) {
 }
 
 /// Leaves the title screen (frameStart, alongside the other intents).
-/// `resetPending` is already true at boot, so the run starts clean
-/// through the same `startRun` path a restart uses.
 void requestStart(World world) {
   if (!world.consumeAny<GameStarted>()) return;
   if (world.state<GameStatus>() != GameStatus.title) return;
@@ -21,11 +19,10 @@ void requestStart(World world) {
 
 /// Consumes the restart intent (frameStart, so it never lags the event
 /// retention window): while lost, a restart request returns the world to
-/// `fighting`; each feature's `OnEnter(fighting)` does the actual reset.
+/// `fighting`, and `startRun` resets from there.
 void requestRestart(World world) {
   if (!world.consumeAny<RestartRequested>()) return;
   if (world.state<GameStatus>() != GameStatus.lost) return;
-  world.resource<RunControl>().resetPending = true;
   world.setState(GameStatus.fighting);
 }
 
@@ -46,21 +43,12 @@ void toggleSkillMenu(World world) {
   }
 }
 
-/// Starts a run clean (`OnEnter(fighting)`: boot and every restart).
-/// Undoes the slow-motion scale and drives each feature's reset from this
-/// one system; a single writer keeps the conflict detector honest.
+/// `OnEnter(fighting)` on a fresh run ([freshRun]): undo the death
+/// slow-motion. Every feature resets its own state through its own
+/// `OnEnter(fighting)` system behind the same gate; the clock is the one
+/// piece rules owns.
 void startRun(World world) {
-  // Closing the skill menu re-enters `fighting` too, and that is a
-  // resume, not a new run.
-  final control = world.resource<RunControl>();
-  if (!control.resetPending) return;
-  control.resetPending = false;
-
   world.clock.timeScale = 1;
-  resetPlayerRun(world);
-  resetEncounter(world);
-  resetWaves(world);
-  resetSkills(world);
 }
 
 /// Death drops the world into slow motion behind the restart prompt.
@@ -101,7 +89,7 @@ void resolveStrikes(World world) {
     enemyTransform,
   ) {
     if (brawler.phase.justEntered(BrawlPhase.swing) &&
-        _inArc(
+        withinArc(
           from: enemyTransform,
           facing: brawler.facing,
           to: playerTransform,
@@ -109,7 +97,7 @@ void resolveStrikes(World world) {
           halfArc: brawlerStrikeHalfArc,
         )) {
       final damage = brawlerDamage * brawler.power;
-      final shove = _shove(
+      final shove = awayFrom(
         enemyTransform,
         playerTransform,
         brawlerKnockback * brawler.power,
@@ -148,7 +136,7 @@ void _strikeEnemies(
     enemyTransform,
   ) {
     if (!health.alive) return;
-    if (_inArc(
+    if (withinArc(
       from: playerTransform,
       facing: motion.facing,
       to: enemyTransform,
@@ -160,7 +148,7 @@ void _strikeEnemies(
           enemy,
           damage,
           heavy: fighter.heavy,
-          knockback: _shove(playerTransform, enemyTransform, push),
+          knockback: awayFrom(playerTransform, enemyTransform, push),
         ),
       );
     }
@@ -301,31 +289,4 @@ void _kickCamera(World world, double amount) {
   if (!world.hasResource<CameraRig>()) return;
   final rig = world.resource<CameraRig>();
   rig.kick = math.max(rig.kick, amount);
-}
-
-/// The world-space shove a connect delivers: straight out along
-/// attacker → victim, at [speed].
-Vector3 _shove(SceneTransform from, SceneTransform to, double speed) {
-  final dx = to.translation.x - from.translation.x;
-  final dz = to.translation.z - from.translation.z;
-  final length = math.sqrt(dx * dx + dz * dz).clamp(1e-6, double.infinity);
-  return Vector3(dx / length * speed, 0, dz / length * speed);
-}
-
-bool _inArc({
-  required SceneTransform from,
-  required double facing,
-  required SceneTransform to,
-  required double reach,
-  required double halfArc,
-}) {
-  final dx = to.translation.x - from.translation.x;
-  final dz = to.translation.z - from.translation.z;
-  final distance = math.sqrt(dx * dx + dz * dz);
-  if (distance > reach) return false;
-  final angle = math.atan2(dx, dz);
-  var difference = (angle - facing) % (2 * math.pi);
-  if (difference > math.pi) difference -= 2 * math.pi;
-  if (difference < -math.pi) difference += 2 * math.pi;
-  return difference.abs() <= halfArc;
 }

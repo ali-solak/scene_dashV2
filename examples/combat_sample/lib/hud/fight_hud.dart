@@ -226,74 +226,23 @@ class _Bar extends StatelessWidget {
 /// means most blows do not stagger you, so without this the only evidence
 /// of a hit was a bar in a corner. A vignette, not a full wash: it must
 /// be unmissable without covering the fight.
-class _HurtFlash extends StatefulWidget {
+class _HurtFlash extends StatelessWidget {
   const _HurtFlash();
 
   @override
-  State<_HurtFlash> createState() => _HurtFlashState();
-}
-
-class _HurtFlashState extends State<_HurtFlash>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _flash = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 420),
-  );
-
-  @override
-  void dispose() {
-    _flash.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // The same trick the skill slots use for the cast pop: watch a value
-    // that can only fall for one reason, rather than plumbing an event
-    // from the world into the widget tree.
-    return WorldBuilder<double>(
-      select: (world) {
-        final health = world
-            .query<Health>(require: const [Player])
-            .firstOrNull
-            ?.$2;
-        if (health == null) return 1;
-        return (health.current / health.max).clamp(0.0, 1.0);
-      },
-      builder: (context, hp) => _Flash(controller: _flash, hp: hp),
-    );
-  }
-}
-
-/// Split out so `didUpdateWidget` sees the previous fraction; a drop is
-/// only visible by comparing frames.
-class _Flash extends StatefulWidget {
-  const _Flash({required this.controller, required this.hp});
-
-  final AnimationController controller;
-  final double hp;
-
-  @override
-  State<_Flash> createState() => _FlashState();
-}
-
-class _FlashState extends State<_Flash> {
-  @override
-  void didUpdateWidget(_Flash old) {
-    super.didUpdateWidget(old);
-    // Only downward. Healing between waves must not flash you red.
-    if (widget.hp < old.hp) widget.controller.forward(from: 0);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: widget.controller,
-      builder: (context, _) {
-        final t = widget.controller.value;
-        if (t == 0) return const SizedBox.shrink();
+    // Keyed off the OUTCOME (health actually fell), not [HitLanded]: the
+    // event also fires for i-framed rolls and barrier blocks, and neither
+    // of those should flash you red. Only downward healing between
+    // waves must not flash either.
+    return WorldBuilder<double>.pulse(
+      select: _playerHealth,
+      trigger: (previous, next) => next < previous,
+      duration: 0.42,
+      pulseBuilder: (context, pulse, _) {
+        if (pulse == 0) return const SizedBox.shrink();
         // Punch in, ease out: the strike is instant, the ache lingers.
-        final intensity = (1 - t) * (1 - t);
+        final intensity = pulse * pulse;
         return DecoratedBox(
           decoration: BoxDecoration(
             gradient: RadialGradient(
@@ -309,4 +258,10 @@ class _FlashState extends State<_Flash> {
       },
     );
   }
+}
+
+double _playerHealth(World world) {
+  final health = world.query<Health>(require: const [Player]).firstOrNull?.$2;
+  if (health == null) return 1;
+  return (health.current / health.max).clamp(0.0, 1.0);
 }

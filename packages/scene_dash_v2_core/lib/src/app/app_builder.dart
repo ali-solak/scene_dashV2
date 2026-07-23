@@ -38,12 +38,17 @@ abstract interface class AppBuilder {
 
   /// Registers a system [adapter] directly. Used by hand-written adapters
   /// (tests, advanced integrations) that do not go through a `@System` class.
+  ///
+  /// [independentOf] exempts this system's access-conflict pairing with the
+  /// listed labels — an author assertion of independence, symmetric, with
+  /// no effect on ordering.
   AppBuilder addSystemAdapter(
     SystemAdapter adapter, {
     required ScheduleLabel schedule,
     required SystemLabel label,
     List<SystemLabel> after,
     List<SystemLabel> before,
+    List<SystemLabel> independentOf,
     RunCondition? runIf,
     SystemSet? inSet,
   });
@@ -70,9 +75,11 @@ abstract interface class AppBuilder {
   ///
   /// [retainedUpdates] bounds how many event-maintenance passes (normally one
   /// per frame) an unread event survives, so a reader that stops draining
-  /// cannot grow the buffer without bound. The default of `2` keeps an event
-  /// readable for the frame it was sent plus the next one; pass `null` to
-  /// retain events until every reader has consumed them.
+  /// cannot grow the buffer without bound. The default of `8` keeps an event
+  /// readable for the frame it was sent plus seven more — wide enough that
+  /// fixed-step and briefly-gated readers on high-refresh displays never
+  /// silently lose an edge; pass `null` to retain events until every reader
+  /// has consumed them.
   AppBuilder addEvent<T>({int? retainedUpdates});
 
   /// Inserts the resource instance for type [T].

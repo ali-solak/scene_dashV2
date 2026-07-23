@@ -33,5 +33,11 @@ void installWaves(GameBuilder game) {
       // this set runs after it.
       writes: const {Health},
       runIf: inState(GameStatus.fighting),
+    )
+    ..addSystem(
+      OnEnter(GameStatus.fighting),
+      resetWaves,
+      reads: const {Enemy},
+      runIf: freshRun,
     );
 }

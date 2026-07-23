@@ -32,6 +32,12 @@ final class SystemRegistration {
   /// Labels this system must run before.
   final List<SystemLabel> before;
 
+  /// Labels whose access-conflict pairing with this system is exempted:
+  /// the author asserts the pair is independent (disjoint entities,
+  /// disjoint fields), and the detector trusts it in both directions.
+  /// Ordering is untouched; every other pairing keeps the full net.
+  final List<SystemLabel> independentOf;
+
   /// Optional predicate gating each run; `null` means always run.
   final RunCondition? runIf;
 
@@ -44,6 +50,7 @@ final class SystemRegistration {
     required this.label,
     this.after = const <SystemLabel>[],
     this.before = const <SystemLabel>[],
+    this.independentOf = const <SystemLabel>[],
     this.runIf,
     this.inSet,
   });

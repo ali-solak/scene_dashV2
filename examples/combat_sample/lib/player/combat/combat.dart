@@ -212,10 +212,3 @@ void clearBufferOnStagger(World world) {
     if (fighter.phase.justEntered(CombatPhase.staggered)) buffer.clear();
   });
 }
-
-/// The buffer ages on wall time, so hitstop cannot extend the press window.
-void ageCombatBuffer(World world) {
-  world.resource<InputBuffer<CombatAction>>().advance(
-    world.resource<FrameTime>().unscaledDelta,
-  );
-}

@@ -1,9 +1,57 @@
 import 'package:scene_dash_v2_core/advanced.dart';
+import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
 import 'package:test/test.dart';
 
 enum _Action { attack, roll, parry }
 
 void main() {
+  group('auto-advance (the frame drivers own the clock)', () {
+    test('a buffered press expires on pumped wall time with no aging '
+        'system installed', () {
+      final game = TestGame.headless();
+      game.start();
+      final buffer = game.world.buffer<_Action>();
+      buffer.record(_Action.roll);
+      game.pumpFixed(steps: 3); // 0.05 s: inside the 0.15 s default window
+      expect(buffer.has(_Action.roll), isTrue);
+      game.pumpFixed(steps: 8); // 0.183 s total: strictly past it
+      expect(buffer.has(_Action.roll), isFalse);
+    });
+
+    test('a paused clock still expires presses (wall time, not game time)',
+        () {
+      final game = TestGame.headless();
+      game.start();
+      final buffer = game.world.buffer<_Action>();
+      game.clock.paused = true;
+      buffer.record(_Action.roll);
+      game.pumpFixed(steps: 3);
+      expect(buffer.has(_Action.roll), isTrue);
+      game.pumpFixed(steps: 8);
+      expect(
+        buffer.has(_Action.roll),
+        isFalse,
+        reason: 'pause must not preserve stale intents',
+      );
+    });
+
+    test('autoAdvance: false hands the clock back to the game', () {
+      final game = TestGame.headless();
+      game.start();
+      final buffer = InputBuffer<_Action>(autoAdvance: false);
+      game.world.insert(buffer);
+      buffer.record(_Action.roll);
+      game.pumpFixed(steps: 60); // a full second of frames
+      expect(
+        buffer.has(_Action.roll),
+        isTrue,
+        reason: 'the drivers leave an opted-out buffer alone',
+      );
+      buffer.advance(1);
+      expect(buffer.has(_Action.roll), isFalse);
+    });
+  });
+
   group('InputBuffer', () {
     test('a recorded action is consumable exactly once', () {
       final buffer = InputBuffer<_Action>();

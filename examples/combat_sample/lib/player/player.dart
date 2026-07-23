@@ -11,6 +11,7 @@ import '../fx/dash_dust.dart';
 import '../fx/sword_trail.dart';
 import '../game/actors.dart';
 import '../game/camera_rig.dart';
+import '../game/combat_math.dart';
 import '../game/character_assets.dart';
 import '../game/game_state.dart';
 import '../game/inputs.dart';
@@ -41,11 +42,31 @@ void installPlayer(GameBuilder game) {
     ..registerComponent<Knockback>()
     ..registerComponent<Target>()
     ..registerComponent<BladeTrail>()
-    ..addSystem(Schedules.frameStart, ageCombatBuffer, reads: const {})
+    ..world.insert(EnemyHighlights())
     ..addSystem(
       Schedules.startup,
       spawnPlayer,
       writes: const {Player, Fighter, PlayerMotion},
+    )
+    ..addSystem(
+      OnEnter(GameStatus.fighting),
+      resetPlayerRun,
+      reads: const {Player},
+      writes: const {
+        Fighter,
+        PlayerMotion,
+        PlayerAnimator,
+        Target,
+        Health,
+        Knockback,
+        SceneTransform,
+      },
+      runIf: freshRun,
+    )
+    ..addSystem(
+      OnExit(GameStatus.fighting),
+      clearCombatIntents,
+      reads: const {},
     )
     ..addSystem(
       Schedules.update,
@@ -54,8 +75,6 @@ void installPlayer(GameBuilder game) {
       reads: const {Player},
       runIf: hasResource<Scene>(),
     )
-    // Run resets (boot + restart) go through rules' `startRun`, which calls
-    // [resetPlayerRun]: one writer, so player and enemy resets don't collide.
     ..addSystem(
       Schedules.fixedUpdate,
       movePlayer,
@@ -102,9 +121,12 @@ void installPlayer(GameBuilder game) {
         Target,
       },
       writes: const {Fighter},
-      // `spawnPlayerFx` only reads Fighter and this writes it; the
-      // entity-blind detector calls that a conflict, so order it explicitly.
-      after: const [fighterDriver, spawnPlayerFx, updateBladeTrail],
+      after: const [fighterDriver],
+      // Their Fighter reads (the machine's edges, `heavy`) and this
+      // system's stance write are different fields: the pair is
+      // independent, and the exemption says so instead of faking an
+      // ordering the design does not need.
+      independentOf: const [spawnPlayerFx, updateBladeTrail],
       runIf: inState(GameStatus.fighting),
     )
     // Fixed-step, after resolution: a per-frame camera chasing

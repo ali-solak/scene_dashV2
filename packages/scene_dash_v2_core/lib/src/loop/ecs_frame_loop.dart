@@ -1,4 +1,5 @@
 import '../app/app.dart';
+import '../input/input_buffer.dart';
 import '../schedule/schedules.dart';
 import '../surface/remove_after.dart';
 import '../time/fixed_time.dart';
@@ -75,6 +76,10 @@ final class EcsFrameLoop {
       ..unscaledDelta = deltaSeconds
       ..elapsed = elapsed
       ..frame += 1;
+    // Input buffers age on the wall clock, before frameStart systems read
+    // them — automatic, so the press window can never silently become
+    // infinite because a game forgot its aging system.
+    advanceInputBuffers(app.world.resources.values, deltaSeconds);
     app.runSchedule(Schedules.frameStart);
     app.applyStateTransitions();
     onCommandBoundary?.call();

@@ -3,7 +3,9 @@
 How Scene-Dash composes with `flutter_scene`: node mounting, transform
 authority, scene commands, reaching native engine features, and the
 physics bridge. The [README](../README.md) covers the core ECS; this is
-the integration detail.
+the integration detail. Scene-Dash organizes gameplay code around
+`flutter_scene`; rendering, scene construction, cameras, physics, and widgets
+remain the native `flutter_scene` APIs.
 
 ## Lifecycle
 

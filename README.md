@@ -2,8 +2,10 @@
 
 ![Scene-Dash v2: the combat sample](combat_sample_game.gif)
 
-An entity-component-system runtime for
-[`flutter_scene`](https://pub.dev/packages/flutter_scene).
+An ECS-based way to organize, coordinate, and headlessly test gameplay code
+built on top of [`flutter_scene`](https://pub.dev/packages/flutter_scene). ECS is
+the implementation model. the purpose is keeping a growing game's features,
+state, lifecycles, and tests understandable.
 
 Entities are generational ids. Components are plain Dart objects held in
 sparse-set stores, dense arrays with O(1) insert, remove and lookup
@@ -15,9 +17,9 @@ boundaries, so they never invalidate a running query.
 
 A `SceneNode` component binds an entity to a `flutter_scene` `Node`: the
 framework mounts bound nodes into the scene and syncs `SceneTransform`
-components onto them each frame. Rendering, cameras and physics remain
-native `flutter_scene`; the framework never constructs or wraps
-`SceneView`.
+components onto them each frame. Keep using `flutter_scene` for rendering,
+cameras, physics, scene nodes, and widgets; Scene-Dash organizes the game
+code around them and never constructs or wraps `SceneView`.
 
 The core has no Flutter dependency, so gameplay runs headless under
 `dart test`. A widget layer reads the world reactively: widgets select a
@@ -51,6 +53,16 @@ GameStateBuilder<GameStatus>(builder: (ctx, s) => switch (s) { ... })
 WorldEventListener<EnemyKilled>(onEvent: (ctx, e) => shakeScore(ctx),
     child: const ScorePanel())                     // world events into UI;
                                                    //   widget-lifetime cleanup
+
+WorldBuilder<double>.pulse(
+    select: (w) => playerHp(w),                    // transient feedback: the
+    trigger: (previous, next) => next < previous,  //   frame this passes,
+    duration: 0.4,                                 //   pulse runs 1 → 0 over
+    pulseBuilder: (ctx, pulse, child) =>           //   wall time (hitstop and
+        HurtVignette(intensity: pulse * pulse))    //   pause never freeze
+                                     // feedback), then rests at 0. Key it off
+                                     //   the OUTCOME (the value moved): events
+                                     //   also fire for blocked/i-framed hits
 ```
 
 When a feature spawned the entity (nothing in `main` holds the handle),
@@ -442,6 +454,11 @@ game.configureSets(Schedules.fixedUpdate, [GameSets.movement, GameSets.combat]);
 game.addSystem(Schedules.fixedUpdate, closeIn, inSet: GameSets.movement);
 // within a feature: order by function reference, so a rename is a compile error
 game.addSystem(Schedules.fixedUpdate, enemyAttacks, after: [closeIn]);
+// a pair the detector flags but the author knows is independent (disjoint
+// entities, or different fields of one component): exempt exactly that
+// pair — ordering untouched, every other pairing keeps the net
+game.addSystem(Schedules.fixedUpdate, lockOn, writes: {Fighter},
+    independentOf: [enemyAttacks]);
 ```
 
 ```dart
@@ -550,9 +567,11 @@ void awardBounty(World world) {
 }
 ```
 
-Events are retained for the emitting frame plus one, so an every-frame
-reader never misses one; a gated reader skips older events (reported once
-by a diagnostic). `game.configureEvent<T>(retainedUpdates: null)` keeps
+Events are retained for eight update passes (the emitting frame plus
+seven), so every-frame readers never miss one and fixed-step or
+briefly-gated readers on high-refresh displays keep their edges; a reader
+lagging past the window skips the older events (reported once by a
+diagnostic). `game.configureEvent<T>(retainedUpdates: null)` keeps
 them until every reader consumed them, the right setting for input edges
 that must survive to a fixed step. `world.events` throws outside a running system;
 widgets use `WorldEventListener`.
@@ -645,6 +664,10 @@ void evaluateGameRules(World world) {
     world.setState(GameStatus.lost);   // applies at next frame start:
   }                                    //   OnExit(playing) → OnEnter(lost)
 }
+
+// the transition's other side (null before the first): an OnEnter system
+// tells a resume from a fresh run without a hand-rolled flag
+world.previousState<GameStatus>()
 ```
 
 `enemyBundle` carries `DespawnOnExit(GameStatus.playing)`: leaving the
@@ -657,14 +680,15 @@ no cleanup system.
 // cheatsheet: the clock
 world.dt            // schedule-aware: fixed delta in fixed schedules,
                     //   frame delta otherwise
-world.delta / world.fixedDelta       // the explicit pair
+world.delta / world.fixedDelta / world.unscaledDelta   // the explicit trio;
+                                     //   unscaled = wall clock
 
 world.clock.freezeFor(0.06);         // hitstop: 60ms of wall time
 world.clock.timeScale = 0.5;         // slow motion: physics, animation,
 world.clock.paused = true;           //   gameplay together; the fixed step
                                      //   never changes, so fixed-step
                                      //   gameplay stays deterministic
-// HUD / camera shake keep moving on FrameTime.unscaledDelta
+// HUD / camera shake keep moving on world.unscaledDelta
 ```
 
 Durations live on components and tick with `world.dt`, so they pause,

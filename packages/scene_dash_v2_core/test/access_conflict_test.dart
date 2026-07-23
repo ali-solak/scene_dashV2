@@ -30,12 +30,14 @@ void _add(
   AccessAdapter adapter, {
   ScheduleLabel schedule = Schedules.update,
   List<SystemLabel> after = const [],
+  List<SystemLabel> independentOf = const [],
 }) {
   app.addSystemAdapter(
     adapter,
     schedule: schedule,
     label: SystemLabel(label),
     after: after,
+    independentOf: independentOf,
   );
 }
 
@@ -171,6 +173,101 @@ void main() {
       app.start();
 
       expect(app.accessConflicts, isEmpty);
+    });
+
+    test('independentOf exempts exactly the declared pair; one side '
+        'declaring suffices', () {
+      final app = _app();
+      _add(
+        app,
+        'x',
+        AccessAdapter(writes: {A}),
+        independentOf: const [SystemLabel('y')],
+      );
+      _add(app, 'y', AccessAdapter(writes: {A}));
+      app.start();
+
+      expect(app.accessConflicts, isEmpty);
+    });
+
+    test('the exemption is pairwise: a third conflicting system still '
+        'reports against both', () {
+      final app = _app();
+      _add(
+        app,
+        'x',
+        AccessAdapter(writes: {A}),
+        independentOf: const [SystemLabel('y')],
+      );
+      _add(app, 'y', AccessAdapter(writes: {A}));
+      _add(app, 'z', AccessAdapter(writes: {A}));
+      app.start();
+
+      expect(app.accessConflicts, hasLength(2));
+      for (final conflict in app.accessConflicts) {
+        expect({conflict.a.id, conflict.b.id}, contains('z'));
+      }
+    });
+
+    test('an exempted pair passes the error policy', () {
+      final app = _app(policy: AccessConflictPolicy.error);
+      _add(app, 'x', AccessAdapter(writes: {A}));
+      _add(
+        app,
+        'y',
+        AccessAdapter(writes: {A}),
+        independentOf: const [SystemLabel('x')],
+      );
+      app.start();
+
+      expect(app.accessConflicts, isEmpty);
+    });
+
+    test('GameBuilder resolves independentOf by function reference under '
+        'the error policy', () {
+      void writerA(World world) {}
+      void writerB(World world) {}
+      final game = TestGame.headless(
+        features: [
+          (g) => g
+            ..addSystem(Schedules.update, writerA, writes: {A})
+            ..addSystem(
+              Schedules.update,
+              writerB,
+              writes: {A},
+              independentOf: [writerA],
+            ),
+        ],
+      );
+      game.start(); // TestGame defaults to the error policy: no throw.
+      expect(game.app.accessConflicts, isEmpty);
+    });
+
+    test('independentOf referencing an unregistered system throws the '
+        'register-first error', () {
+      void writerA(World world) {}
+      void writerB(World world) {}
+      // writerA exists but is never registered.
+      expect(writerA, isNotNull);
+      expect(
+        () => TestGame.headless(
+          features: [
+            (g) => g.addSystem(
+              Schedules.update,
+              writerB,
+              writes: {A},
+              independentOf: [writerA],
+            ),
+          ],
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('independentOf'),
+          ),
+        ),
+      );
     });
 
     test('hand-written adapters without access never conflict', () {

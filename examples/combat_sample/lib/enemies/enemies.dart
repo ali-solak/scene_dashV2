@@ -10,6 +10,7 @@ import 'package:vector_math/vector_math.dart'
 
 import '../game/actors.dart';
 import '../game/camera_rig.dart';
+import '../game/combat_math.dart';
 import '../game/physics_layers.dart';
 import '../game/character_assets.dart';
 import '../game/game_state.dart';
@@ -51,6 +52,12 @@ void installEnemies(GameBuilder game) {
       spawnEnemies,
       writes: const {Enemy, Health, Brawler, AggroCoordinator},
     )
+    ..addSystem(
+      OnEnter(GameStatus.fighting),
+      resetEncounter,
+      writes: const {AggroCoordinator},
+      runIf: freshRun,
+    )
     // Per frame, not once: waves keep fielding barbarians and each new
     // one needs a body; already-bodied ones are skipped. Deferred adds
     // only, so no live write is declared.
@@ -61,9 +68,6 @@ void installEnemies(GameBuilder game) {
       reads: const {Enemy, Brawler},
       runIf: hasResource<Scene>(),
     )
-    // The encounter reset (boot + restart) is driven by rules' `startRun`
-    // via [resetEncounter]: one writer, so it doesn't collide with the
-    // player reset in `OnEnter(fighting)`.
     ..addSystem(
       Schedules.fixedUpdate,
       moveBrawlers,

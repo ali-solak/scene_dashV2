@@ -186,6 +186,22 @@ void main() {
       );
     });
 
+    test('pack-scale volume never trips the cascade guard (S6): one flush '
+        'may add an observed component to any number of entities', () {
+      final world = World();
+      var fires = 0;
+      ObserverRegistry.of(world).observe<Health>(
+        onAdd: (w, entity, health) => fires++,
+      );
+      // A fire cone catching a whole pack: 40 fresh adds of one observed
+      // type in a single boundary — per-entity counting must let it pass.
+      for (var i = 0; i < 40; i++) {
+        world.spawn([Health(1)]);
+      }
+      SpawnQueue.of(world).flush();
+      expect(fires, 40);
+    });
+
     test('tag observers receive the canonical witness instance', () {
       const instance = Burning();
       Object? added;

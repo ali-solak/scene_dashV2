@@ -13,6 +13,7 @@ import '../fx/lava_pit_visual.dart';
 import '../fx/wind_blast.dart';
 import '../game/actors.dart';
 import '../game/character_assets.dart';
+import '../game/combat_math.dart';
 import '../game/game_state.dart';
 import '../game/score.dart';
 import '../game/sets.dart';
@@ -125,5 +126,11 @@ void installSkills(GameBuilder game) {
       reads: const {LavaPit, SceneNode},
       after: const [attachLavaVisuals],
       runIf: hasResource<Scene>(),
+    )
+    ..addSystem(
+      OnEnter(GameStatus.fighting),
+      resetSkills,
+      reads: const {Player, LavaPit},
+      runIf: freshRun,
     );
 }

@@ -102,7 +102,6 @@ void installFighter(GameBuilder game) {
     ..insert(CombatLog());
   game
     ..registerComponent<Fighter>()
-    ..addSystem(Schedules.frameStart, ageCombatBuffer, reads: const {})
     ..addSystem(Schedules.fixedUpdate, fighterDriver, writes: {Fighter})
     ..addSystem(
       Schedules.fixedUpdate,

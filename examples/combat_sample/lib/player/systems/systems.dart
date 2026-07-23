@@ -73,9 +73,17 @@ void attachPlayerVisuals(World world) {
   world.add(player, SceneNode(root));
 }
 
-/// Resets the player to a clean, full-health idle at the spawn mark
-/// (boot and every restart). Called by rules' `startRun`: one system
-/// drives every feature's reset, so they never collide.
+/// Leaving the fight (menu, death) wipes buffered intents: a roll pressed
+/// on the way out must not fire on the way back in. The widget-side gate
+/// stops NEW combat input off the fighting screen; this clears what was
+/// already banked inside the wall-clock press window.
+void clearCombatIntents(World world) {
+  world.buffer<CombatAction>().clear();
+}
+
+/// Resets the player to a clean, full-health idle at the spawn mark.
+/// `OnEnter(fighting)` behind [freshRun]: boot, title start and restart —
+/// never a menu-close resume.
 void resetPlayerRun(World world) {
   final row = world
       .query3<Fighter, PlayerMotion, Health>(require: const [Player])
@@ -146,134 +154,173 @@ void movePlayer(World world) {
   world
       .query3<Fighter, PlayerMotion, SceneTransform>(require: const [Player])
       .each((entity, fighter, motion, transform) {
-        // Camera-relative input in world space: camera forward is
-        // (sin yaw, 0, cos yaw), camera right (cos yaw, 0, -sin yaw).
-        final inputX = axes.value(MoveAxis.x);
-        final inputY = axes.value(MoveAxis.y);
-        final sinYaw = math.sin(rig.yaw);
-        final cosYaw = math.cos(rig.yaw);
-        var moveX = cosYaw * inputX + sinYaw * inputY;
-        var moveZ = -sinYaw * inputX + cosYaw * inputY;
-        final magnitude = math.sqrt(moveX * moveX + moveZ * moveZ);
-        if (magnitude > 1) {
-          moveX /= magnitude;
-          moveZ /= magnitude;
-        }
+        final (moveX, moveZ) = _stickWorldMove(axes, rig);
+        final moving = moveX * moveX + moveZ * moveZ > 1e-6;
 
         // Remember where the fighter is actually heading (survives the stick
         // being released before a buffered roll fires).
-        if (magnitude > 1e-3) {
+        if (moving) {
           motion.moveIntent
             ..setValues(moveX, 0, moveZ)
             ..normalize();
         }
-
-        final phase = fighter.phase;
-        if (phase.justEntered(CombatPhase.rolling)) {
-          // Commit the roll direction once: this frame's input, else the last
-          // heading the fighter had, else straight ahead.
-          if (magnitude > 1e-3) {
-            motion.rollDirection
-              ..setValues(moveX, 0, moveZ)
-              ..normalize();
-          } else if (motion.moveIntent.length2 > 1e-6) {
-            motion.rollDirection.setFrom(motion.moveIntent);
-          } else {
-            motion.rollDirection.setValues(
-              math.sin(motion.facing),
-              0,
-              math.cos(motion.facing),
-            );
-          }
+        if (fighter.phase.justEntered(CombatPhase.rolling)) {
+          _commitRollDirection(motion, moveX, moveZ, moving: moving);
         }
 
-        final velocity = motion.velocity..setZero();
-        switch (phase.state) {
-          case CombatPhase.idle:
-            final locked = fighter.stance == Stance.locked;
-            velocity.setValues(moveX, 0, moveZ);
-            velocity.scale(locked ? lockedMoveSpeed : freeMoveSpeed);
-            final targetTransform = locked
-                ? _targetTransform(world, entity)
-                : null;
-            if (targetTransform != null) {
-              final dx =
-                  targetTransform.translation.x - transform.translation.x;
-              final dz =
-                  targetTransform.translation.z - transform.translation.z;
-              motion.facing = math.atan2(dx, dz);
-              // The back-off walk: moving away from the target is slower.
-              if (dx * velocity.x + dz * velocity.z < 0) {
-                velocity.scale(backpedalFactor);
-              }
-            } else if (velocity.length2 > 1e-9) {
-              motion.facing = _turnToward(
-                motion.facing,
-                math.atan2(velocity.x, velocity.z),
-                turnRate * dt,
-              );
-            }
-          case CombatPhase.rolling:
-            velocity
-              ..setFrom(motion.rollDirection)
-              ..scale(rollSpeed);
-          case CombatPhase.startup || CombatPhase.recovery:
-            // Committing, not frozen: you keep some drift through the windup
-            // and the follow-through, so attacking never feels like a stop.
-            velocity.setValues(moveX, 0, moveZ);
-            velocity.scale(
-              (fighter.stance == Stance.locked
-                      ? lockedMoveSpeed
-                      : freeMoveSpeed) *
-                  attackMoveFactor,
-            );
-          case CombatPhase.active || CombatPhase.staggered:
-            break; // the active frames ARE the commitment; stagger is a loss
-        }
-
-        final knockback = world.tryGet<Knockback>(entity);
-        // No steering while thrown or still on the floor from it.
-        final grounded = knockback == null || !knockback.incapacitated;
-        if (grounded) {
-          transform.translation
-            ..x += velocity.x * dt
-            ..z += velocity.z * dt;
-        }
-
-        final sinceCast = fighter.sinceCast;
-        if (sinceCast < windCastSeconds) {
-          transform.translation.y =
-              windCastJumpSpeed * sinceCast -
-              0.5 * knockbackGravity * sinceCast * sinceCast;
-        } else if (knockback != null) {
-          knockback.step(dt, transform.translation);
-        } else {
-          transform.translation.y = 0;
-        }
-        clampToArena(transform.translation);
-
-        // The launch tumble: a giant sends you head over heels, and the body
-        // keeps spinning until it hits the dirt.
-        if (knockback != null && knockback.airborne) {
-          // Tips over once on the way down rather than spinning (see the
-          // barbarians' movement for why).
-          motion.tumble = _towardProne(motion.tumble, dt);
-        } else if (knockback != null && knockback.downed > 0) {
-          // Landed: flat on your back for the downed beat, like the corpses.
-          motion.tumble = _towardProne(motion.tumble, dt);
-        } else {
-          motion.tumble = 0;
-        }
-        // The animator has no entity handle, so the floor beat rides here.
-        motion.downed = knockback?.incapacitated ?? false;
-        motion.airborne = knockback?.airborne ?? false; // falls vs lies
-        transform.rotation.setAxisAngle(_up, motion.facing);
-        if (motion.tumble != 0) {
-          transform.rotation.setFrom(
-            transform.rotation * Quaternion.axisAngle(_right, motion.tumble),
-          );
-        }
+        _planarVelocity(
+          world,
+          entity,
+          fighter,
+          motion,
+          transform,
+          moveX,
+          moveZ,
+          dt,
+        );
+        _integrateMotion(world, entity, fighter, motion, transform, dt);
       });
+}
+
+/// The stick in world space, clamped to unit length. Camera forward is
+/// (sin yaw, 0, cos yaw), camera right (cos yaw, 0, -sin yaw).
+(double, double) _stickWorldMove(AxisInput<MoveAxis> axes, CameraRig rig) {
+  final inputX = axes.value(MoveAxis.x);
+  final inputY = axes.value(MoveAxis.y);
+  final sinYaw = math.sin(rig.yaw);
+  final cosYaw = math.cos(rig.yaw);
+  var moveX = cosYaw * inputX + sinYaw * inputY;
+  var moveZ = -sinYaw * inputX + cosYaw * inputY;
+  final magnitude = math.sqrt(moveX * moveX + moveZ * moveZ);
+  if (magnitude > 1) {
+    moveX /= magnitude;
+    moveZ /= magnitude;
+  }
+  return (moveX, moveZ);
+}
+
+/// Commit the roll direction once, on entry: this frame's input, else the
+/// last heading the fighter had, else straight ahead.
+void _commitRollDirection(
+  PlayerMotion motion,
+  double moveX,
+  double moveZ, {
+  required bool moving,
+}) {
+  if (moving) {
+    motion.rollDirection
+      ..setValues(moveX, 0, moveZ)
+      ..normalize();
+  } else if (motion.moveIntent.length2 > 1e-6) {
+    motion.rollDirection.setFrom(motion.moveIntent);
+  } else {
+    motion.rollDirection.setValues(
+      math.sin(motion.facing),
+      0,
+      math.cos(motion.facing),
+    );
+  }
+}
+
+/// The phase's ground-plane velocity, written into [motion.velocity]:
+/// idle steers (locked strafe with the slower back-off, free turns toward
+/// the heading); rolling rides the committed direction; startup/recovery
+/// keep a drift so attacking never feels like a stop; active and
+/// staggered are rooted (the active frames ARE the commitment).
+void _planarVelocity(
+  World world,
+  Entity entity,
+  Fighter fighter,
+  PlayerMotion motion,
+  SceneTransform transform,
+  double moveX,
+  double moveZ,
+  double dt,
+) {
+  final velocity = motion.velocity..setZero();
+  switch (fighter.phase.state) {
+    case CombatPhase.idle:
+      final locked = fighter.stance == Stance.locked;
+      velocity.setValues(moveX, 0, moveZ);
+      velocity.scale(locked ? lockedMoveSpeed : freeMoveSpeed);
+      final targetTransform = locked ? _targetTransform(world, entity) : null;
+      if (targetTransform != null) {
+        final dx = targetTransform.translation.x - transform.translation.x;
+        final dz = targetTransform.translation.z - transform.translation.z;
+        motion.facing = math.atan2(dx, dz);
+        // The back-off walk: moving away from the target is slower.
+        if (dx * velocity.x + dz * velocity.z < 0) {
+          velocity.scale(backpedalFactor);
+        }
+      } else if (velocity.length2 > 1e-9) {
+        motion.facing = turnToward(
+          motion.facing,
+          math.atan2(velocity.x, velocity.z),
+          turnRate * dt,
+        );
+      }
+    case CombatPhase.rolling:
+      velocity
+        ..setFrom(motion.rollDirection)
+        ..scale(rollSpeed);
+    case CombatPhase.startup || CombatPhase.recovery:
+      velocity.setValues(moveX, 0, moveZ);
+      velocity.scale(
+        (fighter.stance == Stance.locked ? lockedMoveSpeed : freeMoveSpeed) *
+            attackMoveFactor,
+      );
+    case CombatPhase.active || CombatPhase.staggered:
+      break;
+  }
+}
+
+/// One step of world-space motion: the planar velocity while grounded,
+/// the wind-cast leap's arc, the knockback's ballistic step, the launch
+/// tumble (tips over once, lies flat through the downed beat), and the
+/// final rotation write.
+void _integrateMotion(
+  World world,
+  Entity entity,
+  Fighter fighter,
+  PlayerMotion motion,
+  SceneTransform transform,
+  double dt,
+) {
+  final knockback = world.tryGet<Knockback>(entity);
+  // No steering while thrown or still on the floor from it.
+  final grounded = knockback == null || !knockback.incapacitated;
+  if (grounded) {
+    transform.translation
+      ..x += motion.velocity.x * dt
+      ..z += motion.velocity.z * dt;
+  }
+
+  final sinceCast = fighter.sinceCast;
+  if (sinceCast < windCastSeconds) {
+    transform.translation.y =
+        windCastJumpSpeed * sinceCast -
+        0.5 * knockbackGravity * sinceCast * sinceCast;
+  } else if (knockback != null) {
+    knockback.step(dt, transform.translation);
+  } else {
+    transform.translation.y = 0;
+  }
+  clampToArena(transform.translation);
+
+  if (knockback != null && knockback.incapacitated) {
+    motion.tumble = towardProne(motion.tumble, dt, rate: proneSettleRate);
+  } else {
+    motion.tumble = 0;
+  }
+  // The animator has no entity handle, so the floor beat rides here.
+  motion.downed = knockback?.incapacitated ?? false;
+  motion.airborne = knockback?.airborne ?? false; // falls vs lies
+  transform.rotation.setAxisAngle(_up, motion.facing);
+  if (motion.tumble != 0) {
+    transform.rotation.setFrom(
+      transform.rotation * Quaternion.axisAngle(_right, motion.tumble),
+    );
+  }
 }
 
 /// Kicks up earth on the frame a dodge commits (a no-op headless).
@@ -343,46 +390,11 @@ void lockOnSystem(World world) {
       : null;
 
   if (pressed) {
-    if (held != null) {
-      held = null; // toggle off
-    } else {
-      // No cone gate: nearest in front of the camera wins; behind-camera
-      // targets only when nothing is in front. A press always locks
-      // something in range.
-      final cameraYaw = world.resource<CameraRig>().yaw;
-      _Candidate? bestInView;
-      _Candidate? bestBehind;
-      for (final candidate in _lockCandidates(world, transform)) {
-        final inView =
-            _angleDifference(candidate.angle, cameraYaw).abs() <= math.pi / 2;
-        if (inView) {
-          if (bestInView == null || candidate.distance < bestInView.distance) {
-            bestInView = candidate;
-          }
-        } else if (bestBehind == null ||
-            candidate.distance < bestBehind.distance) {
-          bestBehind = candidate;
-        }
-      }
-      held = (bestInView ?? bestBehind)?.entity;
-    }
+    held = held != null
+        ? null // toggle off
+        : _acquireTarget(world, transform);
   } else if (cycled && held != null) {
-    final currentTarget = held;
-    final others =
-        _lockCandidates(
-            world,
-            transform,
-          ).where((c) => c.entity != currentTarget).toList()
-          ..sort((a, b) => a.angle.compareTo(b.angle));
-    if (others.isNotEmpty) {
-      final currentAngle = _angleTo(transform, world, currentTarget);
-      held = others
-          .firstWhere(
-            (c) => c.angle > currentAngle,
-            orElse: () => others.first, // wrap around
-          )
-          .entity;
-    }
+    held = _nextTarget(world, transform, held);
   }
 
   if (held == null) {
@@ -391,6 +403,43 @@ void lockOnSystem(World world) {
     world.add(player, Target(held)); // re-add replaces
   }
   fighter.stance = held != null ? Stance.locked : Stance.free;
+}
+
+/// Acquire on press: the nearest living enemy in range, preferring those
+/// in front of the camera; behind-camera only when nothing is in front.
+/// No cone gate — a press always locks something in range.
+Entity? _acquireTarget(World world, SceneTransform player) {
+  final cameraYaw = world.resource<CameraRig>().yaw;
+  _Candidate? bestInView;
+  _Candidate? bestBehind;
+  for (final candidate in _lockCandidates(world, player)) {
+    final inView =
+        angleDifference(candidate.angle, cameraYaw).abs() <= math.pi / 2;
+    if (inView) {
+      if (bestInView == null || candidate.distance < bestInView.distance) {
+        bestInView = candidate;
+      }
+    } else if (bestBehind == null || candidate.distance < bestBehind.distance) {
+      bestBehind = candidate;
+    }
+  }
+  return (bestInView ?? bestBehind)?.entity;
+}
+
+/// Cycle (Q): the next candidate clockwise by angle, wrapping; [current]
+/// keeps the lock when it is the only candidate left.
+Entity _nextTarget(World world, SceneTransform player, Entity current) {
+  final others =
+      _lockCandidates(world, player).where((c) => c.entity != current).toList()
+        ..sort((a, b) => a.angle.compareTo(b.angle));
+  if (others.isEmpty) return current;
+  final currentAngle = _angleTo(player, world, current);
+  return others
+      .firstWhere(
+        (c) => c.angle > currentAngle,
+        orElse: () => others.first, // wrap around
+      )
+      .entity;
 }
 
 /// Follows the fight (writes the [CameraRig] that `cameraBuilder` in
@@ -435,7 +484,7 @@ void updateCameraRig(World world) {
       targetTransform.translation.z - position.z,
     );
     final yawBlend = 1 - math.exp(-cameraYawSharpness * dt);
-    rig.yaw += _angleDifference(desiredYaw, rig.yaw) * yawBlend;
+    rig.yaw += angleDifference(desiredYaw, rig.yaw) * yawBlend;
     final pitchBlend = 1 - math.exp(-cameraPitchSharpness * dt);
     rig.pitch += (cameraLockedPitch - rig.pitch) * pitchBlend;
   } else {
@@ -495,23 +544,51 @@ void updateCameraRig(World world) {
 /// gold for the locked enemy, a rising orange telegraph pulse overriding
 /// it. Works on any body without cloning materials per enemy (L3: one
 /// system owns the color).
+///
+/// The recursive node walk is the expensive part, so steady states (no
+/// highlight, the static lock gold) write once and are remembered in
+/// [EnemyHighlights]; only a telegraph's rising pulse rewrites per frame.
 void updateEnemyHighlights(World world) {
   final player = world.entitiesWith(require: const [Player]).firstOrNull;
   final locked = player == null ? null : world.tryGet<Target>(player)?.entity;
+  final applied = world.resource<EnemyHighlights>().applied;
   world.query2<Brawler, SceneNode>(require: const [Enemy]).each((
     enemy,
     brawler,
     ref,
   ) {
-    Vector4? color;
     if (brawler.phase.state == BrawlPhase.telegraph) {
       final tell = (brawler.phase.elapsed / telegraphSeconds).clamp(0.0, 1.0);
-      color = Vector4(1.0, 0.45 - 0.25 * tell, 0.1, 0.35 + 0.65 * tell);
-    } else if (enemy == locked) {
-      color = Vector4(1.0, 0.78, 0.25, 1.0);
+      applied[enemy.index] = EnemyHighlights.telegraph;
+      _setHighlight(
+        ref.node,
+        Vector4(1.0, 0.45 - 0.25 * tell, 0.1, 0.35 + 0.65 * tell),
+      );
+      return;
     }
-    _setHighlight(ref.node, color);
+    final state = enemy == locked
+        ? EnemyHighlights.locked
+        : EnemyHighlights.none;
+    if (applied[enemy.index] == state) return;
+    applied[enemy.index] = state;
+    _setHighlight(
+      ref.node,
+      state == EnemyHighlights.locked ? Vector4(1.0, 0.78, 0.25, 1.0) : null,
+    );
   });
+}
+
+/// Last highlight state written per enemy, by entity index. Slot reuse is
+/// safe: a fresh enemy's nodes start unhighlighted, which IS the `none`
+/// state, so a stale `none` skipping the first write is correct and any
+/// other stale value mismatches and rewrites. Owned by the player
+/// feature: enemies never read their own outline.
+final class EnemyHighlights {
+  static const int none = 0;
+  static const int locked = 1;
+  static const int telegraph = 2;
+
+  final Map<int, int> applied = <int, int>{};
 }
 
 void _setHighlight(Node node, Vector4? color) {
@@ -527,14 +604,6 @@ final Vector3 _up = Vector3(0, 1, 0);
 
 /// The tumble axis: head-over-heels, not a flat spin.
 final Vector3 _right = Vector3(1, 0, 0);
-
-/// Eases a thrown fighter down onto their back on landing.
-double _towardProne(double tumble, double dt) {
-  const prone = math.pi / 2;
-  final step = proneSettleRate * dt;
-  if ((prone - tumble).abs() <= step) return prone;
-  return tumble + (prone - tumble).sign * step;
-}
 
 final class _Candidate {
   const _Candidate(this.entity, this.distance, this.angle);
@@ -587,19 +656,4 @@ double _angleTo(SceneTransform player, World world, Entity entity) {
     transform.translation.x - player.translation.x,
     transform.translation.z - player.translation.z,
   );
-}
-
-/// Signed shortest difference `a - b`, wrapped to `(-pi, pi]`.
-double _angleDifference(double a, double b) {
-  var difference = (a - b) % (2 * math.pi);
-  if (difference > math.pi) difference -= 2 * math.pi;
-  if (difference < -math.pi) difference += 2 * math.pi;
-  return difference;
-}
-
-/// Turns [from] toward [to] by at most [maxDelta] radians, shortest arc.
-double _turnToward(double from, double to, double maxDelta) {
-  final difference = _angleDifference(to, from);
-  if (difference.abs() <= maxDelta) return to;
-  return from + difference.sign * maxDelta;
 }

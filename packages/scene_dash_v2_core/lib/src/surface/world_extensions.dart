@@ -8,6 +8,7 @@ import '../input/axis_input.dart';
 import '../input/button_input.dart';
 import '../input/input_buffer.dart';
 import '../query/entity_query.dart';
+import '../state/despawn_after.dart';
 import '../state/states.dart';
 import '../time/fixed_time.dart';
 import '../time/frame_time.dart';
@@ -82,6 +83,14 @@ extension WorldSurface on World {
   /// `CurrentState<S>.value`.
   S state<S extends Object>() => resources.get<CurrentState<S>>().value;
 
+  /// The value the machine for [S] held before its most recent transition,
+  /// or `null` before the first — sugar for `CurrentState<S>.previous`.
+  /// Inside `OnEnter`/`OnExit` systems it names the other side of the
+  /// transition being applied, so an enter system can tell a resume from
+  /// a fresh run without a hand-rolled flag.
+  S? previousState<S extends Object>() =>
+      resources.get<CurrentState<S>>().previous;
+
   /// Inserts (or replaces) the resource of type [T] — the feature-install
   /// shorthand for `resources.insert`.
   void insert<T extends Object>(T resource) => resources.insert<T>(resource);
@@ -135,8 +144,18 @@ extension WorldSurface on World {
   /// Seconds until the `removeAfter:` deadline removes [T] from [entity],
   /// or `null` when no deadline is tracked (never added with
   /// `removeAfter:`, canceled, expired, or the entity died).
-  double? expiryOf<T>(Entity entity) =>
-      resources.tryGet<RemoveAfterTracker>()?.expiryOf(entity, T);
+  ///
+  /// [DespawnAfter] is the one timed lifetime whose clock lives on the
+  /// component itself rather than in the tracker; asking for it reads the
+  /// store, so both timed-lifetime mechanisms answer through this one
+  /// call.
+  double? expiryOf<T>(Entity entity) {
+    if (T == DespawnAfter) {
+      final remaining = tryGet<DespawnAfter>(entity)?.remaining;
+      return remaining == null || remaining > 0 ? remaining : 0;
+    }
+    return resources.tryGet<RemoveAfterTracker>()?.expiryOf(entity, T);
+  }
 
   // ── component singletons (S9) ─────────────────────────────────────────
 
@@ -182,6 +201,11 @@ extension WorldSurface on World {
 
   /// The fixed timestep, explicitly (see [dt]).
   double get fixedDelta => resources.get<FixedTime>().delta;
+
+  /// This frame's wall-clock delta, unscaled by the [clock] — for HUD,
+  /// camera shake and anything that keeps moving through pause, slow
+  /// motion and hitstop (sugar for `FrameTime.unscaledDelta`).
+  double get unscaledDelta => resources.get<FrameTime>().unscaledDelta;
 
   /// The gameplay clock (pause, `timeScale`, `freezeFor` hitstop).
   GameClock get clock => resources.get<GameClock>();

@@ -34,6 +34,26 @@ void main() {
     return game;
   }
 
+  group('expiryOf<DespawnAfter> (the component clock)', () {
+    test('reads remaining from the store, and nulls with the entity', () {
+      final game = boot();
+      final timed = game.world.spawn([DespawnAfter(10 * dt)]);
+      final bare = game.world.spawn(<Object>[]);
+      game.pump();
+
+      expect(game.world.expiryOf<DespawnAfter>(bare), isNull);
+      expect(
+        game.world.expiryOf<DespawnAfter>(timed),
+        closeTo(9 * dt, 1e-9),
+        reason: 'one update frame has already ticked the component',
+      );
+
+      game.pumpFixed(steps: 20);
+      expect(game.world.isAlive(timed), isFalse);
+      expect(game.world.expiryOf<DespawnAfter>(timed), isNull);
+    });
+  });
+
   group('removeAfter (S7)', () {
     test('removes at the exact fixed tick', () {
       const duration = 0.5;

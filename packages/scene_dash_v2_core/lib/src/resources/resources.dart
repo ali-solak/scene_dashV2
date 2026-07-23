@@ -80,6 +80,11 @@ final class Resources {
     }
   }
 
+  /// Every registered resource instance, in insertion order — the
+  /// allocation-free sibling of [entries] (a live map view, no records)
+  /// for per-frame sweeps like the input-buffer aging.
+  Iterable<Object> get values => _resources.values;
+
   /// Removes the resource of type [T], returning it if present. The removed
   /// instance is disposed (if [Disposable]) — removal is teardown, not an
   /// ownership transfer.

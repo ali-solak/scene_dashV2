@@ -17,6 +17,7 @@ library;
 import '../app/app.dart';
 import '../diagnostics/app_diagnostics.dart';
 import '../input/button_input.dart';
+import '../input/input_buffer.dart';
 import '../schedule/access_conflict.dart';
 import '../schedule/schedules.dart';
 import '../time/fixed_time.dart';
@@ -140,6 +141,9 @@ final class TestGame {
       ..unscaledDelta = dt
       ..elapsed = _elapsed
       ..frame += 1;
+    // Mirrors the device driver: buffers age on wall time before the
+    // frameStart schedule runs.
+    advanceInputBuffers(world.resources.values, dt);
     app.runSchedule(Schedules.frameStart);
     app.applyStateTransitions();
     _boundary();

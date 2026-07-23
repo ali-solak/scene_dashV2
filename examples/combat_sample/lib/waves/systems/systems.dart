@@ -84,8 +84,8 @@ void _fieldWave(World world, int wave) {
   }
 }
 
-/// `OnEnter(fighting)` (boot and every restart), called by rules'
-/// `startRun`: clear the field and start the run at wave 1.
+/// `OnEnter(fighting)` behind [freshRun]: clear the field and start the
+/// run at wave 1.
 void resetWaves(World world) {
   world.resource<WaveState>().reset();
   world.resource<Score>().reset();

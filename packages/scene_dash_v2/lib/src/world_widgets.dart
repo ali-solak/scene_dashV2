@@ -177,18 +177,82 @@ class _EntityBuilderState<T extends Object, S>
 ///   select: (world) => world.query<Rock>().count(),
 ///   builder: (context, rocks) => Text('$rocks rocks'),
 /// )
+///
+/// WorldBuilder<double>.pulse(
+///   select: (world) => playerHpFraction(world),   // pulse form: a transition
+///   trigger: (previous, next) => next < previous, //   becomes decaying energy
+///   duration: 0.4,
+///   pulseBuilder: (context, pulse, child) =>
+///       HurtVignette(intensity: pulse * pulse),
+/// )
 /// ```
 ///
 /// [select] runs once per rendered frame; keep it cheap and give it
 /// meaningful `==` (see `EntityBuilder`).
+///
+/// The pulse form serves transient feedback (hurt flashes, cast pops): the
+/// frame [trigger] passes on a changed selection, [pulseBuilder] starts
+/// receiving a pulse that decays 1 → 0 over [duration] seconds and holds 0
+/// at rest (no rebuilds). The decay runs on wall time
+/// (`FrameTime.unscaledDelta`), so hitstop, slow motion and a paused clock
+/// never freeze feedback mid-flash; a re-trigger mid-decay restarts at 1;
+/// the first frame only establishes the baseline and never fires. Key the
+/// trigger off an *outcome* the world already shows (health fell, a
+/// cooldown started): gameplay events are often attempts — a blocked or
+/// i-framed hit still emits its event — but a transition cannot lie.
 class WorldBuilder<S> extends StatefulWidget {
-  const WorldBuilder({super.key, required this.select, required this.builder});
+  const WorldBuilder({
+    super.key,
+    required this.select,
+    required this.builder,
+    this.equals,
+  }) : trigger = null,
+       duration = 0,
+       pulseBuilder = null,
+       child = null;
+
+  /// The pulse form: the frame `trigger(previous, next)` passes,
+  /// [pulseBuilder] receives 1.0, decaying to 0 over [duration] seconds of
+  /// wall time.
+  const WorldBuilder.pulse({
+    super.key,
+    required this.select,
+    required bool Function(S previous, S next) this.trigger,
+    required this.duration,
+    required Widget Function(BuildContext context, double pulse, Widget? child)
+    this.pulseBuilder,
+    this.child,
+    this.equals,
+  }) : builder = null,
+       assert(duration > 0, 'pulse duration is seconds and must be positive');
 
   /// Selects the watched value from the world; compared with `==`.
   final S Function(World world) select;
 
-  /// Builds from the selected value; runs only when it changed.
-  final Widget Function(BuildContext context, S value) builder;
+  /// Overrides `==` for the change compare — `listEquals` lets a select
+  /// return a plain `List` instead of wrapping it in a value class.
+  /// Returns whether the two selections are the SAME (no rebuild).
+  final bool Function(S previous, S next)? equals;
+
+  /// Builds from the selected value; runs only when it changed. (Plain
+  /// form; null in the pulse form.)
+  final Widget Function(BuildContext context, S value)? builder;
+
+  /// Fires the pulse when a changed selection crosses this edge (pulse
+  /// form; null in the plain form). Evaluated only when `next != previous`.
+  final bool Function(S previous, S next)? trigger;
+
+  /// Seconds the pulse takes to decay 1 → 0, on wall time (pulse form).
+  final double duration;
+
+  /// Builds from the live pulse; runs every frame while it is above 0 and
+  /// not at all at rest. Curving is the call site's job (`pulse * pulse`).
+  final Widget Function(BuildContext context, double pulse, Widget? child)?
+  pulseBuilder;
+
+  /// Static subtree handed to [pulseBuilder] unrebuilt (the
+  /// `AnimatedBuilder` convention).
+  final Widget? child;
 
   @override
   State<WorldBuilder<S>> createState() => _WorldBuilderState<S>();
@@ -196,6 +260,7 @@ class WorldBuilder<S> extends StatefulWidget {
 
 class _WorldBuilderState<S> extends _FrameTickState<WorldBuilder<S>> {
   late S _value;
+  double _pulse = 0;
 
   @override
   void attached(WorldGame? previous) => _value = widget.select(game.world);
@@ -203,12 +268,35 @@ class _WorldBuilderState<S> extends _FrameTickState<WorldBuilder<S>> {
   @override
   void frameTick() {
     final value = widget.select(game.world);
-    if (value == _value) return;
-    setState(() => _value = value);
+    final equals = widget.equals;
+    final same = equals != null ? equals(_value, value) : value == _value;
+    final trigger = widget.trigger;
+    if (trigger == null) {
+      if (same) return;
+      setState(() => _value = value);
+      return;
+    }
+    final fired = !same && trigger(_value, value);
+    _value = value;
+    var pulse = _pulse;
+    if (fired) {
+      pulse = 1;
+    } else if (pulse > 0) {
+      pulse -= game.world.resource<FrameTime>().unscaledDelta / widget.duration;
+      if (pulse < 0) pulse = 0;
+    }
+    if (pulse == _pulse) return;
+    setState(() => _pulse = pulse);
   }
 
   @override
-  Widget build(BuildContext context) => widget.builder(context, _value);
+  Widget build(BuildContext context) {
+    final pulseBuilder = widget.pulseBuilder;
+    if (pulseBuilder != null) {
+      return pulseBuilder(context, _pulse, widget.child);
+    }
+    return widget.builder!(context, _value);
+  }
 }
 
 /// Typed overlay routing off `CurrentState<S>` — HUD while playing,

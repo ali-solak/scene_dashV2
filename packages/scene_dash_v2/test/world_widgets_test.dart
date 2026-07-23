@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
@@ -177,6 +178,96 @@ void main() {
     drive(game);
     await tester.pump();
     expect(find.text('2'), findsOneWidget);
+  });
+
+  testWidgets('WorldBuilder equals: gives list selections a content '
+      'compare', (tester) async {
+    final game = await boot();
+    game.world.spawn([Health(1)]);
+    drive(game);
+    var builds = 0;
+    await tester.pumpWidget(
+      GameScope(
+        game: game,
+        child: WorldBuilder<List<double>>(
+          select: (world) => [
+            for (final (_, h) in world.query<Health>().records) h.current,
+          ],
+          equals: listEquals,
+          builder: (context, values) {
+            builds++;
+            return Text('${values.length}', textDirection: TextDirection.ltr);
+          },
+        ),
+      ),
+    );
+    expect(builds, 1);
+    drive(game, 3);
+    await tester.pump();
+    expect(builds, 1, reason: 'fresh-but-equal lists: no rebuild');
+    game.world.spawn([Health(2)]);
+    drive(game);
+    await tester.pump();
+    expect(builds, 2);
+    expect(find.text('2'), findsOneWidget);
+  });
+
+  testWidgets('WorldBuilder.pulse fires on its transition, decays on wall '
+      'time even paused, and restarts on refire', (tester) async {
+    final game = await boot();
+    final health = Health(100);
+    game.world.spawn([health]);
+    drive(game);
+    final seen = <double>[];
+    await tester.pumpWidget(
+      GameScope(
+        game: game,
+        child: WorldBuilder<double>.pulse(
+          select: (world) => world.query<Health>().firstOrNull?.$2.current ?? 0,
+          trigger: (previous, next) => next < previous,
+          duration: 0.1, // each 1/60 frame drains 1/6
+          pulseBuilder: (context, pulse, child) {
+            seen.add(pulse);
+            return child!;
+          },
+          child: const SizedBox(),
+        ),
+      ),
+    );
+    expect(seen, [0.0], reason: 'the first frame is baseline, never a fire');
+
+    drive(game, 2);
+    await tester.pump();
+    expect(seen, [0.0], reason: 'no transition: no rebuilds at rest');
+
+    health.current = 60; // the outcome: the value fell
+    drive(game);
+    await tester.pump();
+    expect(seen.last, 1.0);
+
+    game.world.clock.paused = true; // wall time: a pause must not freeze it
+    drive(game);
+    await tester.pump();
+    expect(seen.last, closeTo(1 - (1 / 60) / 0.1, 1e-9));
+    game.world.clock.paused = false;
+
+    health.current = 80; // rising: the trigger says no — it keeps decaying
+    drive(game);
+    await tester.pump();
+    expect(seen.last, closeTo(1 - 2 * (1 / 60) / 0.1, 1e-9));
+
+    health.current = 30; // refire mid-decay restarts at 1
+    drive(game);
+    await tester.pump();
+    expect(seen.last, 1.0);
+
+    drive(game, 10); // past the window: drains to exactly 0 and rests
+    await tester.pump();
+    expect(seen.last, 0.0);
+    final builds = seen.length;
+    drive(game, 3);
+    await tester.pump();
+    expect(seen.length, builds, reason: 'at rest: no per-frame rebuilds');
   });
 
   testWidgets('GameStateBuilder routes on transitions', (tester) async {

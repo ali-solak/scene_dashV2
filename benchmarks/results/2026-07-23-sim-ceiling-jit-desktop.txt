@@ -1,0 +1,47 @@
+Session 0a — simulation ceiling (combat_sample, headless)
+==========================================================
+Source: examples/combat_sample/test/sim_ceiling_benchmark.dart
+Run:    flutter test test/sim_ceiling_benchmark.dart
+Env:    debug JIT under flutter test (asserts ON — absolute numbers are
+        pessimistic; the shape is the signal), desktop Windows, 2026-07-23.
+Method: full feature cascade via the fight harness, exactly N barbarians
+        (wave director parked engaged), player and pack at 1e12 health so
+        nothing dies mid-measure. 181-frame warmup, 300 measured frames,
+        one fixed step per frame (whole pipeline per frame).
+
+sim ceiling — full cascade, headless, 1 fixed step per frame, debug JIT,
+300 measured frames
+  N=  10:   0.079 ms/frame  (  7.92 µs/barb)
+  N= 100:   0.060 ms/frame  (  0.60 µs/barb)
+  N= 300:   0.091 ms/frame  (  0.30 µs/barb)
+  N=1000:   0.275 ms/frame  (  0.28 µs/barb)
+  N= 300 + 4 lava pits: 0.455 ms/frame (pit-free rerun 0.084)
+  60 Hz budget: 16.667 ms/frame
+
+Verdict
+-------
+LINEAR, NO BEND. Per-barb cost falls with N (fixed overhead amortizes) and
+settles ~0.28 µs/barb. 1000 simultaneous barbarians cost 1.6% of the 60 Hz
+frame budget in debug; release AOT only improves it. The O(N) proximity
+question is settled: SPATIAL QUERIES NEVER GET BUILT. Any future "300
+barbs" ceiling is a renderer/animator conversation (Session 0b), not a
+simulation one.
+
+The one super-linear path — tickLavaPits' O(pits × N) nested query plus
+RemoveAfterTracker's linear row scan on every Mired/Burning re-add — is
+5.4x the plain frame at N=300 and still only 0.455 ms. Extrapolated to
+N=1000 it stays low single-digit ms. Not worth machinery either.
+
+Finding: S6 observer guard caps legitimate volume (debug-only crash)
+--------------------------------------------------------------------
+The first lava cook adds fresh `Burning` to every enemy in radius in ONE
+command flush; at 17+ the S6 guard ("Observers for Burning fired 17 times
+within one command flush — an observer is re-adding what it observes")
+throws in debug. This is reachable in normal debug play: a fire gush into
+a pack of 17+ barbarians is the same shape (one system, 17+ fresh adds of
+one observed type, one boundary). Release builds are unaffected (the
+guard lives in asserts). The benchmark works around it by pre-seeding
+burns in <=16-per-boundary batches (re-adds over existing fire no
+observers). Fix candidate for the silent-failure session: count per-
+entity re-fires (the actual loop signature) instead of per-type volume,
+or scale the threshold with the flush's structural batch size.

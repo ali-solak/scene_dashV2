@@ -111,7 +111,7 @@ void _castFireGush(
     at,
   ) {
     if (!health.alive) return;
-    if (!_inCone(
+    if (!withinArc(
       from: origin,
       facing: motion.facing,
       to: at,
@@ -124,7 +124,7 @@ void _castFireGush(
       HitLanded(
         enemy,
         fireGushDamage * power,
-        knockback: _away(origin, at, fireGushKnockback),
+        knockback: awayFrom(origin, at, fireGushKnockback),
         // A gush is not a hammer: it burns, it does not interrupt.
         stagger: false,
       ),
@@ -177,10 +177,10 @@ void _castWindBlast(World world, SceneTransform origin, double power) {
     at,
   ) {
     if (!health.alive) return;
-    if (_distanceTo(origin, at) > windBlastRadius) return;
+    if (planarDistance(origin, at) > windBlastRadius) return;
     // The throw itself gets heavier: further out and higher up, so a
     // levelled blast clears more of the field for longer.
-    final push = _away(origin, at, windBlastSpeed * power)
+    final push = awayFrom(origin, at, windBlastSpeed * power)
       ..y = windBlastLift * power;
     world.emit(HitLanded(enemy, windBlastDamage * power, knockback: push));
   });
@@ -221,6 +221,12 @@ void tickBarriers(World world) {
 
 /// Cooks whatever is standing in a pit. Damage is metered per pit, not
 /// per victim, so walking through one costs the same wherever you enter.
+///
+/// Deliberately O(pits × enemies), and fine at this game's scale BY
+/// INVARIANT: the skill's cooldown outlasts the pit's lifetime, so the
+/// player holds at most one live pit (plus a beat of overlap). If a
+/// future design allows concurrent zones, reach for a spatial grid or an
+/// enemy→zone ownership pass instead of widening this loop.
 void tickLavaPits(World world) {
   final dt = world.dt;
   world.query2<LavaPit, SceneTransform>().each((entity, pit, at) {
@@ -236,7 +242,7 @@ void tickLavaPits(World world) {
       standing,
     ) {
       if (!health.alive) return;
-      if (_distanceTo(at, standing) > lavaPitRadius) return;
+      if (planarDistance(at, standing) > lavaPitRadius) return;
       // Bogged down while standing in it, refreshed every step so it wears
       // off just after they wade out ([lavaMireLinger]).
       world.add(enemy, const Mired(), removeAfter: lavaMireLinger);
@@ -263,8 +269,8 @@ void tickLavaPits(World world) {
   });
 }
 
-/// `OnEnter(fighting)` via rules' `startRun`: a new run starts with
-/// nothing bought and nothing on the ground.
+/// `OnEnter(fighting)` behind [freshRun]: a new run starts with nothing
+/// bought and nothing on the ground.
 void resetSkills(World world) {
   world.resource<SkillBook>().reset();
   world.entitiesWith(require: const [LavaPit]).each(world.despawn);
@@ -387,50 +393,11 @@ void attachLavaVisuals(World world) {
 /// follows the pit's clock, the pit never asks the material anything).
 void updateLavaMaterials(World world) {
   world.query2<LavaPit, SceneNode>().each((entity, pit, ref) {
-    // `DespawnAfter.remaining`, not an `expiryOf` clock: `expiryOf`
-    // returned null here, and its fallback pinned the pit at full heat
-    // forever.
-    final remaining =
-        world.tryGet<DespawnAfter>(entity)?.remaining ?? lavaPitSeconds;
+    final remaining = world.expiryOf<DespawnAfter>(entity) ?? lavaPitSeconds;
     // Swells open fast, then dims over its last second as it crusts over.
     final heat =
         (pit.elapsed / lavaPitOpenSeconds).clamp(0.0, 1.0) *
         (remaining / lavaPitCoolSeconds).clamp(0.0, 1.0);
     setLavaPitHeat(ref.node, time: pit.elapsed, heat: heat);
   });
-}
-
-/// Distance on the ground plane between two transforms.
-double _distanceTo(SceneTransform from, SceneTransform to) {
-  final dx = to.translation.x - from.translation.x;
-  final dz = to.translation.z - from.translation.z;
-  return math.sqrt(dx * dx + dz * dz);
-}
-
-/// A shove pointing from [from] out through [to], at [speed].
-Vector3 _away(SceneTransform from, SceneTransform to, double speed) {
-  final dx = to.translation.x - from.translation.x;
-  final dz = to.translation.z - from.translation.z;
-  final length = math.sqrt(dx * dx + dz * dz).clamp(1e-6, double.infinity);
-  return Vector3(dx / length * speed, 0, dz / length * speed);
-}
-
-/// Reach + frontal arc, the same test the sword's swing uses; a skill
-/// cone should not have its own idea of what "in front of you" means.
-bool _inCone({
-  required SceneTransform from,
-  required double facing,
-  required SceneTransform to,
-  required double reach,
-  required double halfArc,
-}) {
-  if (_distanceTo(from, to) > reach) return false;
-  final angle = math.atan2(
-    to.translation.x - from.translation.x,
-    to.translation.z - from.translation.z,
-  );
-  var difference = (angle - facing) % (2 * math.pi);
-  if (difference > math.pi) difference -= 2 * math.pi;
-  if (difference < -math.pi) difference += 2 * math.pi;
-  return difference.abs() <= halfArc;
 }
