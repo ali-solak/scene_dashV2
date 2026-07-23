@@ -1,9 +1,5 @@
 name: combat_sample
-description: >-
-  Combat Slice, the Scene-Dash v2 melee sample: a knight locks onto barbarians
-  in a sunlit forest clearing. Requires the Flutter master channel + Flutter
-  GPU (`flutter run --enable-flutter-gpu`); the authored `.fmat` materials
-  additionally need `flutter config --enable-dart-data-assets`.
+description: A sample Flutter Scene app demonstrating combat mechanics.
 publish_to: none
 resolution: workspace
 
@@ -12,6 +8,7 @@ environment:
   flutter: ">=3.16.0"
 
 dependencies:
+  data_assets: ^0.20.0
   flutter:
     sdk: flutter
   flutter_scene: ^0.19.0
@@ -30,10 +27,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    # KayKit Adventurers: characters carry no clips; every animation lives in
-    # the shared Rig_Medium_* files and is retargeted by node name at runtime
-    # (see docs/asset_inventory.md at the repo root).
-    - assets/characters/
-    - assets/animation/
-    - assets/materials/
+    # Characters, animation rigs, and `.fmat` materials are compiled
+    # DataAssets. Weapons remain multi-file runtime glTFs.
     - assets/character_assets/

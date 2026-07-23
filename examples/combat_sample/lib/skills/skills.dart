@@ -18,7 +18,13 @@ import '../game/game_state.dart';
 import '../game/score.dart';
 import '../game/sets.dart';
 import '../player/player.dart'
-    show CastLeap, HitLanded, Knockback, PlayerMotion, windCastSeconds;
+    show
+        CastLeap,
+        HitLanded,
+        Knockback,
+        PlayerAnimator,
+        PlayerMotion,
+        windCastSeconds;
 import '../world/data/assets.dart';
 
 part 'data/components.dart';
@@ -47,6 +53,7 @@ void installSkills(GameBuilder game) {
       castSkills,
       inSet: GameSets.actions,
       reads: const {Player, Enemy, Health, PlayerMotion, SceneTransform},
+      writes: const {Knockback, PlayerAnimator},
       runIf: inState(GameStatus.fighting),
     )
     ..addSystem(

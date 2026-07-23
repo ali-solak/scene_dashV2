@@ -24,12 +24,22 @@ final class PlayerAnimator {
   final Map<PlayerShot, AnimationClip> shots;
 
   PlayerShot? active;
+  double _backwardDashRemaining = 0;
+
+  /// Plays the existing backward dodge as a visual-only recoil. Gameplay
+  /// remains in its current phase, so this grants neither roll movement nor
+  /// i-frames.
+  void playBackwardDash() {
+    _backwardDashRemaining = rollClipSeconds / rollPlaybackScale;
+  }
 
   /// Drives the clips from the frame's gameplay state. Phase-to-shot
   /// mapping derives from state, not machine edges: this runs on the
   /// update schedule, and a multi-fixed-step frame can skip an edge.
   void update(Fighter fighter, PlayerMotion motion, double dt) {
     final phase = fighter.phase.state;
+    final recoiling = _backwardDashRemaining > 0;
+    _backwardDashRemaining = math.max(0.0, _backwardDashRemaining - dt);
 
     PlayerShot? desired;
     switch (phase) {
@@ -49,6 +59,10 @@ final class PlayerAnimator {
         } else {
           desired = fighter.sinceHurt < flinchSeconds ? PlayerShot.hit : null;
         }
+    }
+
+    if (recoiling && phase != CombatPhase.rolling) {
+      desired = PlayerShot.rollBack;
     }
 
     // Thrown outranks the phase: the stagger ends while the body is still
@@ -185,6 +199,7 @@ final class PlayerAnimator {
   /// Restart: back to a clean idle.
   void reset() {
     active = null;
+    _backwardDashRemaining = 0;
     for (final clip in shots.values) {
       clip.stop();
       clip.weight = 0;

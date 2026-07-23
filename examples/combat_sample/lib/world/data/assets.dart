@@ -1,15 +1,7 @@
-/// GPU-backed stage assets, loaded once in `main` before boot (imports and
-/// material compilation are async; systems are not) and handed to
-/// [installWorld] as a resource. Headless games use [WorldAssets.none];
-/// every consumer is scene-gated.
 library;
 
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_scene/scene.dart';
-
-// The KayKit nature-pack glTFs were dropped: they carry Khronos material
-// extensions the 0.19 runtime importer rejects. The forest is procedural
-// now (vfx/forest.dart); only the authored .fmat materials load here.
 
 class WorldAssets {
   WorldAssets({
@@ -21,8 +13,6 @@ class WorldAssets {
     this.barrierMaterial,
   });
 
-  /// The headless stand-in: no materials. Scene-gated systems never touch
-  /// it.
   WorldAssets.none()
     : groundMaterial = null,
       grassMaterial = null,
@@ -31,9 +21,6 @@ class WorldAssets {
       lavaMaterial = null,
       barrierMaterial = null;
 
-  /// The authored `.fmat` materials, or null when the DataAssets bundle is
-  /// unavailable (consumers fall back to plain PBR and the stage still
-  /// boots).
   final Material? groundMaterial;
   final PreprocessedMaterial? grassMaterial;
 
@@ -47,36 +34,38 @@ class WorldAssets {
   /// The lava pit's crust, `time`/`heat` driven by the pit's own clock.
   final PreprocessedMaterial? lavaMaterial;
 
-  /// The shield's bubble: `charge` from what the barrier has left,
-  /// `hit`/`hit_dir` from the last block. One instance, shared; there is
-  /// only ever one barrier, because there is only ever one player.
   final PreprocessedMaterial? barrierMaterial;
 }
 
 /// Loads every stage asset. Call after `Scene.initializeStaticResources()`;
 /// imports upload geometry and need the GPU context.
-Future<WorldAssets> loadWorldAssets() async {
+Future<WorldAssets> loadWorldAssets({ResourceGroup? loading}) async {
+  final registry = await FmatMaterialRegistry.load();
+  final ground = await _track(loading, _load(registry, 'ground_noise'));
+  final grass = await _track(loading, _load(registry, 'grass_sway'));
+  final dissolve = await _track(loading, _load(registry, 'dissolve'));
+  final ocean = await _track(loading, _load(registry, 'ocean'));
+  final lava = await _track(loading, _load(registry, 'lava'));
+  final barrier = await _track(loading, _load(registry, 'barrier'));
   return WorldAssets(
-    groundMaterial: await _load('ground_noise'),
-    grassMaterial: await _load('grass_sway'),
-    dissolveMaterial: await _load('dissolve'),
-    oceanMaterial: await _load('ocean'),
-    lavaMaterial: await _load('lava'),
-    barrierMaterial: await _load('barrier'),
+    groundMaterial: ground,
+    grassMaterial: grass,
+    dissolveMaterial: dissolve,
+    oceanMaterial: ocean,
+    lavaMaterial: lava,
+    barrierMaterial: barrier,
   );
 }
 
-/// Loads one `.fmat`, or null with a named complaint. One try per
-/// material, not one around the batch, so a bad shader is named instead
-/// of silently taking out everything after it in the list.
-///
-/// Common causes: a stale bundle (`.fmat`s compile at build time via
-/// `hook/build.dart`, so a hot restart misses new ones; stop and run
-/// again), `flutter config --enable-dart-data-assets` never run, or the
-/// shader itself does not compile.
-Future<PreprocessedMaterial?> _load(String name) async {
+Future<T> _track<T>(ResourceGroup? loading, Future<T> load) =>
+    loading?.add(load) ?? load;
+
+Future<PreprocessedMaterial?> _load(
+  FmatMaterialRegistry registry,
+  String name,
+) async {
   try {
-    return await loadFmatMaterial('assets/materials/$name.fmat');
+    return await registry.loadMaterial('assets/materials/$name.fmat');
   } on Object catch (error) {
     debugPrint('combat_sample: $name.fmat unavailable, using fallback: $error');
     return null;

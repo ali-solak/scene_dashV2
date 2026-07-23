@@ -234,24 +234,45 @@ final game = await SceneGame.boot(
   ],
 );
 
-runApp(GameScope(game: game, child: const MyGameApp()));  // yours; the
+runApp(GameHost(game: game, child: const MyGameApp()));   // yours; the
                             // subtree reaches `game` through GameScope.of
 ```
 
-`SceneGame.boot` is async, so `runApp`-after-`await` shows nothing until
-it returns. `GameBootstrap` moves the boot inside the tree. A loading
-frame while it runs, then the game under a `GameScope`, shut down on
-dispose (a boot that finishes after dispose is shut down too, never
-leaked):
+Asset-backed games should put their loading lifecycle inside the app. Create
+the `Scene` and `ResourceGroup` first, add every load to the group, and mount
+`SceneView` immediately. The view owns progress, reveal, and optional pipeline
+warm-up; once the game is ready, `GameHost` provides scope and hot reload:
 
 ```dart
-runApp(GameBootstrap<SceneGame>(
-  boot: () => SceneGame.boot(features: [...]),  // called once, not per build
-  loading: (context) => const SplashScreen(),   // yours; optional
-  error: (context, err) => ErrorScreen(err),    // yours; optional
-  builder: (context, game) => MyGameApp(game: game),   // hosted + scoped
-));
+final scene = Scene();
+final loading = ResourceGroup();
+final gameFuture = loading.add(_boot(scene, loading));
+
+Future<SceneGame> _boot(Scene scene, ResourceGroup loading) async {
+  scene.add(await loading.add(Node.fromGlbAsset('assets/model.glb')));
+  return SceneGame.boot(scene: scene, features: [...]);
+}
+
+final sceneView = SceneView(
+  scene,
+  loading: loading,
+  warmUp: true,
+  loadingBuilder: (context, progress) => SplashScreen(progress),
+);
+
+FutureBuilder<SceneGame>(
+  future: gameFuture,
+  builder: (context, snapshot) {
+    final game = snapshot.data;
+    return game == null
+        ? sceneView
+        : GameHost(game: game, child: sceneView);
+  },
+);
 ```
+
+The app owns `game.shutdown()` and `loading.dispose()` in its lifecycle. See
+`examples/combat_sample` for the complete mounted-during-boot pattern.
 
 ## Features and systems
 

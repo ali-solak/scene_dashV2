@@ -66,34 +66,6 @@ void spawnClearing(World world) {
   // Big wet boulders massed at the foot of the cliff in the treeline gap,
   // where the surf breaks against them.
   clearing.add(buildCliffRocks());
-  // Pipeline pre-warm: the dissolve's first real draw is a mid-fight
-  // death, and compiling its pipeline then hitches the frame. A tiny
-  // occluded cube inside the plateau draws it from boot instead.
-  final dissolve = assets.dissolveMaterial;
-  if (dissolve != null) {
-    clearing.add(
-      Node(
-        name: 'dissolve-warmup',
-        localTransform: Matrix4.translation(Vector3(0, -3, 0)),
-      )..mesh = Mesh(CuboidGeometry(Vector3.all(0.3)), dissolve),
-    );
-  }
-  // Same pre-warm for the shield bubble: the first raise draws a blended
-  // sphere, and compiling that pipeline mid-fight hitches the frame the
-  // barrier goes up. A tiny occluded sphere on the exact material the
-  // cast uses (authored `.fmat` or the unlit-blend fallback) compiles it
-  // from boot instead.
-  clearing.add(
-    Node(
-        name: 'barrier-warmup',
-        localTransform: Matrix4.translation(Vector3(0, -3, 0)),
-      )
-      ..mesh = Mesh(
-        SphereGeometry(radius: 0.3, segments: 32, rings: 16),
-        assets.barrierMaterial ??
-            (UnlitMaterial()..alphaMode = AlphaMode.blend),
-      ),
-  );
   scene.root.add(clearing);
 
   // The mount adapter parents these at the scene root.

@@ -49,6 +49,7 @@ void castSkills(World world) {
         _castFireGush(world, motion, transform, power);
         // Muzzle recoil: a firm shove backward (opposite the cone's facing),
         // so the gush kicks. A decaying knockback, like a slight roll-back.
+        world.tryGet<PlayerAnimator>(player)?.playBackwardDash();
         world
             .tryGet<Knockback>(player)
             ?.shove(

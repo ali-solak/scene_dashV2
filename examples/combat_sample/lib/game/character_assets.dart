@@ -6,9 +6,9 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_scene/scene.dart';
 
 import '../anim/hemisphere.dart';
-import 'package:flutter_scene/scene.dart';
 
 /// Rig files this slice actually uses (general/hits/deaths, locomotion,
 /// dodges/strafes, melee).
@@ -19,6 +19,11 @@ const List<String> _rigFiles = [
   'assets/animation/Rig_Medium_CombatMelee.glb',
   'assets/animation/Rig_Medium_Special.glb',
 ];
+
+const int _openingBarbarians = 2;
+const int _barbarianSlots = 10;
+
+String _barbarianScene(int index) => 'assets/characters/Barbarian_$index.glb';
 
 class CharacterAssets {
   CharacterAssets({
@@ -33,6 +38,7 @@ class CharacterAssets {
   final Node knight;
 
   final List<Node> barbarians;
+  Future<void> Function()? _loadReserve;
 
   late final List<bool> _lent = List<bool>.filled(
     barbarians.length,
@@ -43,6 +49,15 @@ class CharacterAssets {
   void addBarbarian(Node node) {
     barbarians.add(node);
     _lent.add(false);
+  }
+
+  /// Starts the deferred reserve realizations once the first scene frame is
+  /// visible. Safe to call more than once.
+  void loadReserve() {
+    final load = _loadReserve;
+    if (load == null) return;
+    _loadReserve = null;
+    unawaited(load());
   }
 
   /// Lends a free model index, or null when the pool is exhausted (the
@@ -65,19 +80,11 @@ class CharacterAssets {
     barbarians[index].detach();
   }
 
-  /// Weapon templates for the `handslot.r` joint (each wielder clones its
-  /// own). The player carries the [sword]; every barbarian carries the
-  /// [axe]. Null when the glTF fails to import: the fight goes
-  /// bare-handed, not down.
   final Node? sword;
   final Node? axe;
 
-  /// The shield, for `handslot.l`. Unlike the weapons this is not worn
-  /// from the start: the skill parents a clone while its barrier is up
-  /// and takes it back off when the barrier breaks.
   final Node? shield;
 
-  /// Every parsed rig animation by clip name.
   final Map<String, Animation> clips;
 
   Animation clip(String name) {
@@ -89,20 +96,34 @@ class CharacterAssets {
   }
 }
 
-const int _warmBarbarians = 4;
-
 Future<CharacterAssets> loadCharacterAssets({
   required int barbarianCount,
+  ResourceGroup? loading,
 }) async {
-  final knight = await Node.fromGlbAsset('assets/characters/Knight.glb');
-  final warm = math.min(_warmBarbarians, barbarianCount);
-  final barbarians = <Node>[
-    for (var i = 0; i < warm; i++)
-      await Node.fromGlbAsset('assets/characters/Barbarian.glb'),
-  ];
+  if (barbarianCount > _barbarianSlots) {
+    throw ArgumentError.value(
+      barbarianCount,
+      'barbarianCount',
+      'the build hook provides $_barbarianSlots independent scene slots',
+    );
+  }
+  final scenes = await SceneRegistry.load();
+  final knightFuture = _track(
+    loading,
+    scenes.loadScene('assets/characters/Knight.glb'),
+  );
+  final knight = await knightFuture;
+  final openingCount = math.min(_openingBarbarians, barbarianCount);
+  final barbarians = <Node>[];
+  for (var i = 0; i < openingCount; i++) {
+    barbarians.add(
+      await _track(loading, scenes.loadScene(_barbarianScene(i))),
+    );
+  }
+
   final clips = <String, Animation>{};
   for (final path in _rigFiles) {
-    final rig = await Node.fromGlbAsset(path);
+    final rig = await _track(loading, scenes.loadScene(path));
     for (final animation in rig.parsedAnimations) {
       clips[animation.name] = animation;
     }
@@ -116,21 +137,38 @@ Future<CharacterAssets> loadCharacterAssets({
     clips: clips,
     // Two-handed: the player's sword, the barbarians' axe. The reach sells
     // the wide swings.
-    sword: await _loadWeapon('sword_2handed'),
-    axe: await _loadWeapon('axe_2handed'),
+    sword: await _track(loading, _loadWeapon('sword_2handed')),
+    axe: await _track(loading, _loadWeapon('axe_2handed')),
     // The coloured variant: the plain one is untextured white, which
     // reads as a missing material rather than as a shield.
-    shield: await _loadWeapon('shield_square_color'),
+    shield: await _track(loading, _loadWeapon('shield_square_color')),
   );
-  unawaited(_fillBarbarianPool(assets, barbarianCount - warm));
+  // Two bodies cover the opening wave. The app realizes the reserve only after
+  // its first rendered frames, so it cannot hold the loading cover.
+  assets._loadReserve = () => _fillBarbarianPool(
+    assets,
+    scenes,
+    openingCount,
+    barbarianCount - openingCount,
+  );
   return assets;
 }
 
-Future<void> _fillBarbarianPool(CharacterAssets assets, int remaining) async {
+Future<T> _track<T>(ResourceGroup? loading, Future<T> load) =>
+    loading?.add(load) ?? load;
+
+Future<void> _fillBarbarianPool(
+  CharacterAssets assets,
+  SceneRegistry scenes,
+  int start,
+  int remaining,
+) async {
   for (var i = 0; i < remaining; i++) {
+    await Future<void>.delayed(Duration.zero);
     try {
-      final node = await Node.fromGlbAsset('assets/characters/Barbarian.glb');
-      assets.addBarbarian(node);
+      assets.addBarbarian(
+        await scenes.loadScene(_barbarianScene(start + i)),
+      );
     } on Object catch (error) {
       debugPrint('combat_sample: background barbarian load failed: $error');
       return;
@@ -138,9 +176,13 @@ Future<void> _fillBarbarianPool(CharacterAssets assets, int remaining) async {
   }
 }
 
-Future<Uint8List> _weaponBytes(String uri) async {
-  final data = await rootBundle.load('assets/character_assets/$uri');
+Future<Uint8List> _assetBytes(String path) async {
+  final data = await rootBundle.load(path);
   return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+}
+
+Future<Uint8List> _weaponBytes(String uri) async {
+  return _assetBytes('assets/character_assets/$uri');
 }
 
 /// Weapons are multi-file glTFs; a failed import (unsupported extension)
