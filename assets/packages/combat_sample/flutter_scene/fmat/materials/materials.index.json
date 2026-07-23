@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "package": "combat_sample",
+  "bundleName": "materials",
+  "shaderBundleAssetKey": "packages/combat_sample/flutter_scene/fmat/materials/materials.shaderbundle",
+  "sidecarAssetKey": "packages/combat_sample/flutter_scene/fmat/materials/materials.fmat.json",
+  "materials": {
+    "barrier": {
+      "entryName": "barrier",
+      "source": "assets/materials/barrier.fmat"
+    },
+    "dissolve": {
+      "entryName": "dissolve",
+      "source": "assets/materials/dissolve.fmat"
+    },
+    "grass_sway": {
+      "entryName": "grass_sway",
+      "source": "assets/materials/grass_sway.fmat"
+    },
+    "ground_noise": {
+      "entryName": "ground_noise",
+      "source": "assets/materials/ground_noise.fmat"
+    },
+    "lava": {
+      "entryName": "lava",
+      "source": "assets/materials/lava.fmat"
+    },
+    "ocean": {
+      "entryName": "ocean",
+      "source": "assets/materials/ocean.fmat"
+    }
+  }
+}
