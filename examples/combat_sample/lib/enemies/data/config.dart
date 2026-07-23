@@ -13,12 +13,9 @@ const double giantPower = 2.2;
 /// Upward velocity a giant's connect puts on the player (the "fly").
 const double giantLaunchSpeed = 12.5;
 
-/// The transformation: EXPERIMENTAL_Medium_Transform is 1.00 s, and the
-/// body swells from normal size to [giantScale] across exactly that
-/// window (the clip and the growth share one `removeAfter:` clock).
-/// The window the growth and the clip share. LONGER than the clip, so
-/// the transformation plays at ~0.6x — a giant swelling should feel like
-/// effort, and at 1:1 the clip simply stopped dead on its last frame.
+/// The window the growth and the transform clip share (one `removeAfter:`
+/// clock drives both). Longer than the 1.0 s clip so it plays at ~0.6x:
+/// a giant swelling should feel like effort.
 const double giantTransformSeconds = 1.7;
 const double transformClipSeconds = 1.0;
 
@@ -29,17 +26,15 @@ const int giantPoints = 50;
 const double enemyCapsuleRadius = 0.48;
 const double enemyCapsuleHeight = 0.8;
 
-/// The in-world health bar sits this high above the barbarian's feet, at
-/// this world height (task 17). Small — the widget's 240×64 canvas makes
-/// it ~3.75× as wide, so this height sets the whole footprint. Raised to
-/// clear the taller 2.45 u barbarian.
+/// The in-world health bar's lift above the feet, and its world height.
+/// The widget's 240x64 canvas makes it ~3.75x as wide, so the height sets
+/// the whole footprint. The lift clears the taller 2.45 u barbarian.
 const double healthBarHeight = 3;
 const double healthBarWorldHeight = 0.2;
 
-/// The bar's HIT punch (a world-space reaction on its billboard node): how
-/// long it lasts, how much bigger it pops, and how far it slash-tilts (rad,
-/// in the screen plane). Big on purpose — the bar is small on screen, so a
-/// timid reaction reads as nothing.
+/// The bar's hit punch: how long it lasts, how much bigger it pops, and
+/// how far it slash-tilts (rad, in the screen plane). Big on purpose: the
+/// bar is small on screen, so a timid reaction reads as nothing.
 const double healthBarShakeSeconds = 0.3;
 const double healthBarShakePop = 0.45;
 const double healthBarShakeTilt = 0.22;
@@ -51,9 +46,9 @@ const double healthBarShakeTilt = 0.22;
 const double approachSpeed = 4.2;
 const double circleSpeed = 2.3;
 
-/// Ground speed of a [Mired] body (in a lava pit) as a fraction of normal
-/// — a hard slog, so the pit reads as a trap to wade around rather than a
-/// patch you stroll across.
+/// Ground speed of a [Mired] body (in a lava pit) as a fraction of
+/// normal: a hard slog, so the pit reads as a trap to wade around rather
+/// than a patch you stroll across.
 const double miredSpeedFactor = 0.32;
 
 /// Orbit radius while circling; the wobble breathes around it.
@@ -68,7 +63,7 @@ const double engageRange = 6.2;
 const double tokenCloseSpeed = 3.6;
 
 /// The token holder telegraphs once within this range. Must sit inside
-/// the swing's reach (rules' `brawlerReach` 3.0) — the telegraph roots
+/// the swing's reach (rules' `brawlerReach` 3.0); the telegraph roots
 /// the body, so an out-of-reach telegraph would whiff every time.
 const double brawlerAttackRange = 2.6;
 
@@ -88,33 +83,25 @@ const double brawlerDamage = 15;
 /// Cooldown between the token returning and the next grant.
 const double aggroCooldownSeconds = 1.2;
 
-/// The death window's back half — the sink.
-///
-/// INVARIANT: `dissolveDelaySeconds + dissolveSeconds` must stay under
+/// The death window's back half: the sink.
+/// Invariant: `dissolveDelaySeconds + dissolveSeconds` must stay under
 /// the wave breather (`waveIntermissionSeconds`, 3.0). A corpse holds its
-/// pooled model until it despawns, so a death window longer than the
-/// breather means wave N's corpses are still holding models when wave
-/// N+1 walks in — and the barbarians that miss out fall back to graybox
-/// CAPSULES. At 2.6 the total was 3.3 against a 3.0 breather, which is
-/// exactly the overlap that produced them.
+/// pooled model until despawn; overshoot and the next wave's barbarians
+/// fall back to graybox capsules.
 const double dissolveSeconds = 1.8;
 
-/// Death restage: the fall clip plays and the corpse lies for this long
-/// BEFORE the sink-and-shrink starts (the `Dissolving` clock runs
-/// delay + dissolve; the body is untouched through the delay). Short so
-/// the effect is clearly seen, not a long-delayed vanish.
+/// How long the corpse lies before the sink starts (the `Dissolving`
+/// clock runs delay + dissolve; the body is untouched through the delay).
 const double dissolveDelaySeconds = 0.7;
 
-/// How far the dying body sinks into the ground as it shrinks away
-/// (the fallback when the corpse never got a physics body).
-/// Deep enough to swallow a body lying on its side — the corpse sinks at
-/// full size now (no shrink), so this has to clear the ragdoll's height
-/// rather than just dip it.
+/// How far the dying body sinks into the ground. Deep enough to swallow
+/// a body lying on its side: the corpse sinks at full size, so this has
+/// to clear the ragdoll's height rather than just dip it.
 const double deathSinkDepth = 2.2;
 
 // --- Ragdoll (Rapier owns the corpse) ---
 
-/// The corpse's collider: a BOX, not a capsule — a vertical capsule
+/// The corpse's collider: a box, not a capsule. A vertical capsule
 /// settles upright ("stands up" after death); a box tips and lies on a
 /// face. Sized to the 2.45 u barbarian.
 final Vector3 corpseHalfExtents = Vector3(0.45, 1.2, 0.35);
@@ -124,11 +111,9 @@ final Vector3 corpseHalfExtents = Vector3(0.45, 1.2, 0.35);
 const double corpseHopVelocity = 3.4;
 const double corpseTumbleFactor = 1.6;
 
-/// Rapier has no friction on these colliders, so DAMPING is the only
-/// brake a corpse has. At 0.25 a body carrying a heavy hit's shove kept
-/// coasting along the ground long after it should have settled — the
-/// "dead enemies glide". High enough now that it tumbles, skids briefly
-/// and stops.
+/// No friction on these colliders, so damping is the corpse's only
+/// brake. High enough that it tumbles, skids briefly and stops instead
+/// of gliding along the ground.
 const double corpseLinearDamping = 2.4;
 const double corpseAngularDamping = 1.4;
 
@@ -138,20 +123,19 @@ const double corpseAngularDamping = 1.4;
 const double corpseSettleSeconds = 1.4;
 
 /// How much of the killing blow's shove the ragdoll inherits, so a corpse
-/// flies off the hit rather than dropping straight down. Under 1: the blow
-/// is tuned to throw a LIVING fighter, and handing all of it to a corpse
-/// that then coasts under damping alone sends it skating off the arena.
+/// flies off the hit rather than dropping straight down. Under 1: the
+/// full shove is tuned for a living fighter and would skate the corpse
+/// off the arena.
 const double corpseLaunchFactor = 0.45;
 
-// --- Animation mapper (task 15, barbarian archetype) ---
+// --- Animation mapper ---
 
-// Back to the hard snap — see the player's config. The barbarians were
-// the ones that pancaked first and worst, which is a clue in itself:
-// they have more clips sharing the same joints than the player does.
+// Hard snap, same as the player's config: crossfades pancaked the pose,
+// and barbarians have more clips sharing the same joints than the player.
 const double brawlerLocomotionFadeSeconds = 0.001;
 const double brawlerOneShotFadeSeconds = 0.001;
 
-/// Authored ground speeds of the loop clips, for stride sync — scaled
+/// Authored ground speeds of the loop clips, for stride sync; scaled
 /// with the 2.45 u barbarian so the feet stop sliding.
 const double brawlerWalkStrideSpeed = 2.3;
 const double brawlerRunStrideSpeed = 5.2;
@@ -169,7 +153,7 @@ const double deathBClipSeconds = 2.63; // Death_B (barbarian collapse)
 
 /// How long a barbarian spends climbing out of the ground before it can
 /// move. The full Skeletons_Awaken_Floor, so the rise reads as a rise and
-/// not a twitch — a wave opens with the pack hauling itself upright.
+/// not a twitch; a wave opens with the pack hauling itself upright.
 const double risingSeconds = 2.30;
 const double awakenClipSeconds = 2.30; // Skeletons_Awaken_Floor
 
@@ -181,7 +165,7 @@ const double tauntClipSeconds = 1.033; // Skeletons_Taunt
 const double tauntIntervalSeconds = 7.0;
 
 /// How long the fire/lava flinch reaction shows before locomotion takes
-/// back over. Short — a jolt, not a stagger. A pit tick lands more often
+/// back over. Short: a jolt, not a stagger. A pit tick lands more often
 /// than this, so a body standing in lava keeps flinching.
 const double brawlerFlinchSeconds = 0.32;
 
@@ -190,5 +174,5 @@ const double brawlerFlinchSeconds = 0.32;
 /// time it lands.
 const double proneSettleRate = 2.6;
 
-/// Telegraph tell color (emissive ramp on the body — L3's first consumer).
+/// Telegraph tell color (emissive ramp on the body).
 final Vector4 telegraphEmissive = Vector4(1.0, 0.42, 0.12, 1);

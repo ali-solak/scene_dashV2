@@ -1,6 +1,6 @@
 part of '../player.dart';
 
-// The Player tag and Health live in game/actors.dart (shared vocabulary —
+// The Player tag and Health live in game/actors.dart (shared vocabulary:
 // the enemies and rules features read them without importing this one).
 
 /// Movement state written by [movePlayer] each fixed step and read by the
@@ -13,24 +13,21 @@ final class PlayerMotion {
   /// The direction a roll committed to on entry (world space, unit).
   final Vector3 rollDirection = Vector3(0, 0, 1);
 
-  /// The last non-zero movement input (world space, unit). A roll is
-  /// BUFFERED, so it can fire a frame or two after the press — by then
-  /// the stick may already be centred. This remembers where the fighter
-  /// was actually heading so the dash still goes there.
+  /// The last non-zero movement input (world space, unit). A buffered roll
+  /// can fire a frame or two after the press, when the stick may already
+  /// be centred; this remembers where the fighter was heading.
   final Vector3 moveIntent = Vector3.zero();
 
   /// Yaw the model faces: forward is `(sin facing, 0, cos facing)`.
   double facing = 0;
 
-  /// Pitch the body tumbles through while a giant's blow has you in the
-  /// air — the ragdoll read on a rig that is animated, not simulated.
-  /// Snaps back to zero on landing (stagger snaps, L2).
+  /// Pitch the body tumbles through while airborne from a giant's blow;
+  /// the ragdoll read on an animated rig. Snaps to zero on landing (L2).
   double tumble = 0;
 
   /// Thrown, or still on the floor from it. Mirrors
-  /// `Knockback.incapacitated` so the animator — which sees only the
-  /// motion, not the entity — can hold the hit pose for the whole
-  /// ragdoll, landing beat included.
+  /// `Knockback.incapacitated` so the animator (which sees only the
+  /// motion, not the entity) can hold the hit pose through the landing.
   bool downed = false;
 
   /// Still off the ground (a subset of [downed]): true through the arc,
@@ -47,8 +44,8 @@ final class Target {
 }
 
 /// The blade trail's handles: the weapon node to sample and the ribbon it
-/// feeds. One per fighter, alive for the whole run — the ribbon empties
-/// itself between swings rather than being respawned.
+/// feeds. Alive for the whole run; the ribbon empties itself between
+/// swings rather than being respawned.
 final class BladeTrail {
   BladeTrail({required this.weapon, required this.trail});
 

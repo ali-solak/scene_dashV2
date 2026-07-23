@@ -1,5 +1,5 @@
 /// The loss screen: `YOU DIED` over a dimmed scrim with a restart prompt.
-/// Bare text on a scrim rather than the bordered panel — the run is over,
+/// Bare text on a scrim rather than the bordered panel: the run is over,
 /// there is nothing to read here, only the choice to go again.
 library;
 

@@ -19,9 +19,9 @@ enum BrawlPhase {
   dying,
 }
 
-/// The barbarian's brain: one [Machine] owns the mode (the readability
-/// contract lives in its timings — a fixed telegraph always precedes a
-/// swing). Rhythm constants are deliberately distinct from the player's.
+/// The barbarian's brain: one [Machine] owns the mode; a fixed telegraph
+/// always precedes a swing. Rhythm constants are deliberately distinct
+/// from the player's.
 final class Brawler {
   Brawler({
     required this.slot,
@@ -29,7 +29,7 @@ final class Brawler {
     required this.wobbleSeed,
     this.power = 1,
     this.giant = false,
-  }) : // Giants do not climb out of the ground — they walk in normal-sized
+  }) : // Giants do not climb out of the ground; they walk in normal-sized
        // and swell on the transform clip, so a giant starts already up
        // (`approach`) and the awaken rise is for ordinary barbarians only.
        phase = Machine<BrawlPhase>(
@@ -39,7 +39,7 @@ final class Brawler {
   /// Spawn index within the wave (drives the circle direction and wobble).
   final int slot;
 
-  /// Damage/knockback multiplier — waves scale it, giants multiply it.
+  /// Damage/knockback multiplier: waves scale it, giants multiply it.
   final double power;
 
   /// A giant: bigger, tougher, and its blows launch the player.
@@ -47,15 +47,13 @@ final class Brawler {
 
   final Machine<BrawlPhase> phase;
 
-  /// Seconds spent circling since the last taunt — the mid-fight taunt
-  /// fires off this (see `brawlerDriver`), so the pack heckles on a timer
-  /// instead of every frame.
+  /// Seconds spent circling since the last taunt; the mid-fight taunt
+  /// fires off this, so the pack heckles on a timer.
   double sinceTaunt = 0;
 
-  /// Seconds since the last connect that did not stagger — a fire-gush or
-  /// lava tick. The mapper reads it for a brief flinch (mirrors the
-  /// player's [Fighter.sinceHurt]); it gates nothing, so a body on fire
-  /// still circles and swings. Starts spent.
+  /// Seconds since a non-staggering connect (a fire-gush or lava tick).
+  /// The mapper reads it for a brief flinch; it gates nothing, so a body
+  /// on fire still circles and swings. Starts spent.
   double sinceHurt = double.infinity;
 
   /// +1 or -1: which way this one circles the player.
@@ -73,17 +71,16 @@ final class Brawler {
   double facing = 0;
 
   /// Pitch the body tumbles through while a wind blast has it in the air.
-  /// Snaps flat on landing (L2: stagger snaps).
+  /// Snaps flat on landing.
   double tumble = 0;
 
-  /// Thrown, or still on the floor from it — mirrors
+  /// Thrown, or still on the floor from it; mirrors
   /// `Knockback.incapacitated` for the animation mapper.
   bool downed = false;
 
   /// Still in the air (a subset of [downed]): true through the wind-blast
-  /// arc, false once it lands. The mapper falls on this and lies on the
-  /// landing beat — a real airborne pose instead of the death clip held
-  /// stiff with its legs apart.
+  /// arc, false once it lands. Lets the mapper show a real airborne pose,
+  /// then the floor pose on the landing beat.
   bool airborne = false;
 
   /// Mirror of the coordinator's grant (single writer: [coordinateAggro]).
@@ -91,7 +88,7 @@ final class Brawler {
   bool hasToken = false;
 
   /// World-space velocity this step (written by movement, read by the
-  /// animation mapper — L2's "machine + velocity" inputs).
+  /// animation mapper).
   final Vector3 velocity = Vector3.zero();
 }
 
@@ -100,16 +97,16 @@ final class Mired {
   const Mired();
 }
 
-/// A barbarian's in-world health bar (task 17): a `WidgetComponent`
-/// surface on a child [node] above the head, its fill pushed each frame
-/// into [fraction] and the node yaw-aimed at the camera.
+/// A barbarian's in-world health bar: a `WidgetComponent` surface on a
+/// child [node] above the head, its fill pushed each frame into
+/// [fraction] and the node yaw-aimed at the camera.
 final class EnemyHealthBar {
   EnemyHealthBar({required this.fraction, required this.node});
 
   final ValueNotifier<double> fraction;
   final Node node;
 
-  /// Last fraction pushed — a DROP means a hit, which starts the punch.
+  /// Last fraction pushed; a drop means a hit, which starts the punch.
   double lastFraction = 1;
 
   /// Seconds since the last hit, driving the scale-pop-and-tilt in
@@ -117,10 +114,9 @@ final class EnemyHealthBar {
   double sinceHit = double.infinity;
 }
 
-/// The process entity's token: at most one barbarian holds the right to
-/// telegraph at a time (L4 keeps the fight readable). Granted by
-/// [coordinateAggro]; returned on recover/stagger/death with a cooldown
-/// before the next grant.
+/// The aggro token: at most one barbarian may telegraph at a time, which
+/// keeps the fight readable. Granted by [coordinateAggro]; returned on
+/// recover/stagger/death with a cooldown before the next grant.
 final class AggroCoordinator {
   Entity? holder;
   double cooldown = 0;
@@ -149,10 +145,9 @@ final class Dissolving {
 }
 
 /// The body's scene handles: the model wrapper node the death effect
-/// sinks and shrinks (its base transform captured so a restart puts it
-/// back), and — for the graybox capsule fallback only — its private
-/// material (the emissive telegraph tell; imported models tell through
-/// the highlight system).
+/// sinks (base transform captured so a restart puts it back), plus, for
+/// the graybox capsule fallback only, its private material for the
+/// emissive telegraph tell.
 final class BrawlerVisuals {
   BrawlerVisuals({required this.bodyRoot, this.capsuleMaterial})
     : _baseTransform = bodyRoot.localTransform.clone();
@@ -162,15 +157,8 @@ final class BrawlerVisuals {
   final Matrix4 _baseTransform;
   final PhysicallyBasedMaterial? capsuleMaterial;
 
-  /// The corpse's exit: it SINKS, at full size, until the ground has it.
-  ///
-  /// This used to shrink the body to nothing as well, which was a
-  /// stand-in from before the ragdoll existed — a corpse shrivelling to a
-  /// dot in front of you looks ridiculous, and it fights the ragdoll's
-  /// whole point of being a body with weight. The sink alone reads as the
-  /// ground taking it.
-  ///
-  /// [progress] runs 0 → 1 across the dissolve window; the body descends
+  /// The corpse's exit: it sinks, at full size, until the ground has it.
+  /// [progress] runs 0 to 1 across the dissolve window; the body descends
   /// by [sink] over it, eased so it slips under rather than dropping.
   void applyDeath(double progress, double sink) {
     final eased = progress * progress;
@@ -200,13 +188,9 @@ final class Ragdoll {
 
   bool settled = false;
 
-  /// Nails the corpse down where it came to rest.
-  ///
-  /// These colliders carry no friction, so a body only ever slows by
-  /// damping — asymptotically, never to zero. That residual crawl is the
-  /// "dead enemies glide", and no damping value fixes it because the
-  /// velocity never actually reaches zero. Turning the body FIXED does:
-  /// it stops being simulated at all.
+  /// Nails the corpse down where it came to rest. The colliders have no
+  /// friction, so damping alone never reaches zero and the body creeps
+  /// forever; turning it fixed ends the simulation outright.
   void settle() {
     if (settled) return;
     settled = true;

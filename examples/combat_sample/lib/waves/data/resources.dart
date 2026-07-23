@@ -1,7 +1,7 @@
 part of '../waves.dart';
 
 /// The run's wave clock: which wave is live, and the breather between
-/// them. A plain resource — the wave system writes it, the HUD reads it.
+/// them. A plain resource; the wave system writes it, the HUD reads it.
 final class WaveState {
   /// 0 before the first wave has been fielded.
   int wave = 0;

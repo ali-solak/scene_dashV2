@@ -1,12 +1,9 @@
 part of '../waves.dart';
 
 /// The game loop: field a wave, wait until every barbarian is down, take
-/// a breather, then field a bigger one. Every few waves one of them
-/// arrives as a giant.
-///
-/// Runs on the update schedule while fighting; the kill payout lives in
-/// `rules.applyDamage`, so this system only has to watch the living
-/// count and the clock.
+/// a breather, field a bigger one; every few waves one arrives as a
+/// giant. The kill payout lives in `rules.applyDamage`, so this only
+/// watches the living count and the clock.
 void advanceWaves(World world) {
   final waves = world.resource<WaveState>();
   final living = _livingEnemies(world);
@@ -41,7 +38,7 @@ void _healPlayer(World world) {
   });
 }
 
-/// Barbarians still standing (a corpse mid-dissolve does not count — the
+/// Barbarians still standing (a corpse mid-dissolve does not count; the
 /// next wave should not wait on the ragdoll).
 int _livingEnemies(World world) {
   var living = 0;

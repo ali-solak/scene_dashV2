@@ -2,7 +2,7 @@
 /// alpha mask.
 ///
 /// Generated rather than shipped, like the grass blade mask and the lava
-/// crust — it keeps the CC0 asset fence (L5) intact and costs one small
+/// crust; it keeps the CC0 asset fence (L5) intact and costs one small
 /// texture upload.
 library;
 

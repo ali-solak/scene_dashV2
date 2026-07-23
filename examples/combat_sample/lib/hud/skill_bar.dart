@@ -1,7 +1,7 @@
 /// The three cast slots shown along the bottom while fighting. Each slot
 /// is the button for its skill (the only way in on touch), pops when the
 /// skill fires, and shows its cooldown sweep, level, or live barrier
-/// charges. Reads the world reactively — a selection is a VALUE type so
+/// charges. Reads the world reactively; a selection is a value type so
 /// `WorldBuilder` rebuilds only on real change.
 library;
 
@@ -16,7 +16,7 @@ import '../skills/skills.dart';
 import 'ink.dart';
 
 /// `WorldBuilder` re-selects every frame and rebuilds on `!=`, so a
-/// selection has to be a VALUE — a bare `List` would compare by identity
+/// selection has to be a value; a bare `List` would compare by identity
 /// and rebuild the bar every single frame.
 @immutable
 final class _SkillSlots {
@@ -24,10 +24,9 @@ final class _SkillSlots {
 
   final List<(int level, double readiness)> slots;
 
-  /// Blocks left on the barrier right now, 0 when it is down. The shield
-  /// slot shows this instead of a cooldown sweep while it is up — what
-  /// you need mid-fight is how many hits you have left, not how long
-  /// until you could raise another one you cannot raise yet anyway.
+  /// Blocks left on the barrier, 0 when it is down. The shield slot shows
+  /// this instead of a cooldown sweep while it is up: mid-fight you need
+  /// hits left, not time until recast.
   final int barrierCharges;
 
   @override
@@ -82,12 +81,9 @@ class SkillBar extends StatelessWidget {
   }
 }
 
-/// One slot. Stateful only so it can POP when the skill fires.
-///
-/// The cast itself is invisible on the HUD otherwise: the cooldown sweep
-/// starts draining, which is information but not feedback. The pop is the
-/// widget acknowledging the keypress on the frame it happened, which is
-/// what makes a button feel connected to the thing it does.
+/// One slot. Stateful only so it can pop when the skill fires: the pop
+/// acknowledges the keypress on the frame it happened, which is what
+/// makes the button feel connected to the cast.
 class _SkillSlot extends StatefulWidget {
   const _SkillSlot({
     required this.index,
@@ -131,10 +127,8 @@ class _SkillSlotState extends State<_SkillSlot>
   @override
   void didUpdateWidget(_SkillSlot old) {
     super.didUpdateWidget(old);
-    // A cast is the one moment readiness falls off a cliff: it can only
-    // go DOWN by being spent, and it climbs back gradually. Watching the
-    // readiness itself means no extra event plumbing between the world
-    // and the widget — the state the HUD already reads says it.
+    // A cast is the one moment readiness falls off a cliff, so watching
+    // it needs no event plumbing between the world and the widget.
     if (old.readiness >= 1 && widget.readiness < 1) {
       _pop.forward(from: 0);
     }
@@ -152,15 +146,10 @@ class _SkillSlotState extends State<_SkillSlot>
         final swell = 1 + 0.34 * math.sin(t * math.pi) * (1 - t * 0.35);
         return Transform.scale(scale: swell, child: child);
       },
-      // The slot IS the button. It was a readout before, which meant a
-      // touch device could see every skill it had bought and cast none of
-      // them — the number keys were the only way in.
-      //
-      // Fires on pointer-DOWN via a raw Listener, the same way the touch
-      // attack/roll buttons do — a cast is a panic button, so it lands the
-      // instant you touch the slot (like the keyboard's key-down) rather
-      // than waiting for a clean tap-and-release. Opaque so the jab lands on
-      // the slot rather than falling through to the strike listener beneath.
+      // The slot IS the button (touch has no number keys). Fires on
+      // pointer-down via a raw Listener: a cast is a panic button, so it
+      // lands the instant you touch the slot. Opaque so the jab does not
+      // fall through to the strike listener beneath.
       child: Listener(
         onPointerDown: (_) => widget.onCast(),
         behavior: HitTestBehavior.opaque,
@@ -184,11 +173,9 @@ class _SkillSlotState extends State<_SkillSlot>
         color: const Color(0xB2101214),
         // Square: the bar is a rack of slots, not a row of app icons.
         border: Border.all(
-          // The border brightens with the pop, so a slot that just fired
-          // still reads as "yours" for the beat after the cooldown greys
-          // it out. A live barrier holds the accent outright: the skill
-          // is not "ready", it is WORKING, and that has to look different
-          // from a slot on cooldown.
+          // The border brightens with the pop. A live barrier holds the
+          // accent outright: a working skill must look different from one
+          // on cooldown.
           color: Color.lerp(
             ready || holding ? HudInk.steel : HudInk.ruleFaint,
             Colors.white,
@@ -246,7 +233,7 @@ class _SkillSlotState extends State<_SkillSlot>
             const Center(child: Icon(Icons.lock, size: 16, color: HudInk.ash))
           else
             // The level, so an upgrade is visible without opening the
-            // menu — the bar is where you look mid-fight.
+            // menu; the bar is where you look mid-fight.
             Align(
               alignment: Alignment.bottomRight,
               child: Padding(

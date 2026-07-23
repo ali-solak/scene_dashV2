@@ -1,10 +1,8 @@
 part of '../player.dart';
 
-/// The player's animation mapper state (task 15): looping locomotion clips
-/// blended by weight, one-shot clips fired from machine-phase changes.
-/// Animations strictly FOLLOW gameplay (L2): the mapper reads
-/// [Fighter.phase] + [PlayerMotion] and drives clip weights/times; tests
-/// never look at it, and no timing here feeds back into combat.
+/// The player's animation mapper: looping locomotion clips blended by
+/// weight, one-shots fired from machine-phase changes. Animation follows
+/// gameplay (L2); no timing here feeds back into combat.
 enum PlayerLoco { idle, walk, run, strafeLeft, strafeRight, backpedal }
 
 enum PlayerShot {
@@ -27,9 +25,9 @@ final class PlayerAnimator {
 
   PlayerShot? active;
 
-  /// Drives the clips from the frame's gameplay state. Phase→shot mapping
-  /// is derived from STATE, not machine edges: this runs on the update
-  /// schedule, and a multi-fixed-step frame can skip an edge.
+  /// Drives the clips from the frame's gameplay state. Phase-to-shot
+  /// mapping derives from state, not machine edges: this runs on the
+  /// update schedule, and a multi-fixed-step frame can skip an edge.
   void update(Fighter fighter, PlayerMotion motion, double dt) {
     final phase = fighter.phase.state;
 
@@ -43,10 +41,9 @@ final class PlayerAnimator {
       case CombatPhase.staggered:
         desired = PlayerShot.hit;
       case CombatPhase.idle:
-        // The leap that throws the wind gust, then the flinch: both a blow
-        // that did not stagger and a cast reaction live in the `idle` arm
-        // ALONE, so they stay visual — swing through either and the swing
-        // wins, exactly as poise promises. The leap outranks the flinch.
+        // The cast leap and the flinch live in the idle arm alone, so
+        // they stay visual: swing through either and the swing wins, as
+        // poise promises. The leap outranks the flinch.
         if (fighter.sinceCast < windCastSeconds) {
           desired = PlayerShot.windCast;
         } else {
@@ -54,12 +51,9 @@ final class PlayerAnimator {
         }
     }
 
-    // THROWN. The stagger is much shorter than the arc a giant's blow
-    // sends you through, so the machine returns to idle while the body is
-    // still metres up — the fighter starts running on air. Being thrown
-    // outranks the phase, and it holds through the landing beat too, so
-    // you lie where you fell instead of bouncing upright. A falling pose
-    // while airborne, then the hit pose (flat on the floor) on the landing.
+    // Thrown outranks the phase: the stagger ends while the body is still
+    // metres up, and without this the fighter would run on air. Holds
+    // through the landing beat too; fall pose airborne, hit pose down.
     if (motion.downed) {
       desired = motion.airborne ? PlayerShot.fall : PlayerShot.hit;
     }
@@ -80,7 +74,7 @@ final class PlayerAnimator {
           clip.replay();
         }
         if (desired == PlayerShot.hit) {
-          // Stagger snaps — no ease-in (L2).
+          // Stagger snaps; no ease-in (L2).
           clip.weight = 1;
           for (final other in shots.values) {
             if (!identical(other, clip)) other.weight = 0;
@@ -95,9 +89,8 @@ final class PlayerAnimator {
     if (active != null) {
       final activeClip = shots[active]!;
       // A held button delays the swing past the clip's windup: hold the
-      // clip AT its windup pose until the machine actually goes active —
-      // otherwise the visual contact plays before the hit exists (the
-      // "weirdly clippy" strike).
+      // clip at its windup pose until the machine goes active, otherwise
+      // the visual contact plays before the hit exists.
       if (phase == CombatPhase.startup) {
         final windupEnd =
             (fighter.heavy ? heavyStartupSeconds : startupSeconds) *
@@ -135,7 +128,7 @@ final class PlayerAnimator {
       final side =
           (motion.velocity.x * forwardZ - motion.velocity.z * forwardX) / speed;
       // `side` is dot(velocity, right) where right = (cos f, -sin f), so
-      // positive IS the fighter's right — map it straight.
+      // positive is the fighter's right; map it straight.
       target = forward.abs() >= side.abs()
           ? (forward >= 0 ? PlayerLoco.walk : PlayerLoco.backpedal)
           : (side >= 0 ? PlayerLoco.strafeRight : PlayerLoco.strafeLeft);
@@ -149,16 +142,9 @@ final class PlayerAnimator {
     _stride(PlayerLoco.backpedal, speed, backpedalStrideSpeed);
 
     final fade = dt / locomotionFadeSeconds;
-    // The swing's TAIL. Dropping the one-shot at the locomotion fade
-    // abandoned it the instant the machine left the action — mid-clip,
-    // mid-follow-through — which is the "animation suddenly stops". It
-    // rides out on its own, longer fade instead, so the recovery reads
-    // as the swing finishing rather than as the swing being cut.
-    //
-    // Only the fade OUT is slow. Fading IN stays a hard snap (see
-    // `oneShotFadeSeconds`): an attack has to start on the frame you
-    // press, and the long-path slerp pancake we are dodging shows up on
-    // the way INTO a pose, not on the way out of one.
+    // The swing's tail rides out on its own fade so the follow-through is
+    // never cut mid-clip. Fading in stays a hard snap (see
+    // `oneShotFadeSeconds`): an attack must start on the frame you press.
     final tail = dt / oneShotFadeOutSeconds;
     for (final clip in shots.values) {
       clip.weight = _approach(clip.weight, 0, tail);
@@ -180,10 +166,9 @@ final class PlayerAnimator {
   }
 
   /// Guards against the bind-pose ("T-pose") flash: the AnimationPlayer
-  /// resets to the bind pose and only normalizes weights DOWN when their
-  /// sum exceeds 1 — a mid-crossfade dip below 1 shows the rig snapping to
-  /// bind for a beat (the hit "clips out"). Idle carries the residual so
-  /// the total is always at least 1.
+  /// only normalizes weights down, so a weight sum below 1 shows the rig
+  /// snapping to bind for a beat. Idle carries the residual so the total
+  /// is always at least 1.
   void _fillIdle() {
     var sum = 0.0;
     for (final clip in shots.values) {
@@ -249,11 +234,9 @@ PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
         ..loop = true
         ..weight = 0
         ..play();
-  // The windows in combat.dart are sized so clip/window lands at or under
-  // `maxOneShotPlaybackScale` — so a swing plays slightly brisk and
-  // FINISHES, instead of being fast-forwarded or cut off mid
-  // follow-through. If a clip is ever swapped for a longer one, its
-  // window has to grow with it.
+  // Windows in combat.dart are sized so clip/window lands at or under
+  // `maxOneShotPlaybackScale`: a swing plays slightly brisk and finishes.
+  // If a clip is swapped for a longer one, its window must grow with it.
   AnimationClip shot(String name, double clipSeconds, double windowSeconds) =>
       model.createAnimationClip(assets.clip(name))
         ..loop = false
@@ -264,7 +247,7 @@ PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
         );
 
   final locomotion = <PlayerLoco, AnimationClip>{
-    // Two-handed guard: the axe is up, ready — reads as a fighter.
+    // Two-handed guard: the axe is up, ready; reads as a fighter.
     PlayerLoco.idle: loop('Melee_2H_Idle')..weight = 1,
     PlayerLoco.walk: loop('Walking_A'),
     PlayerLoco.run: loop('Running_A'),
@@ -276,9 +259,8 @@ PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
   const heavyWindow =
       heavyStartupSeconds + heavyActiveSeconds + heavyRecoverySeconds;
   final shots = <PlayerShot, AnimationClip>{
-    // Normal is a quick horizontal slice — fast and wide, for a snappy
-    // ground game; heavy is the big spin sweep. Both cover the wide strike
-    // arc (the hit test is the same for both).
+    // Normal is a quick horizontal slice; heavy is the big spin sweep.
+    // Both cover the same wide strike arc.
     PlayerShot.strike: shot(
       'Melee_2H_Attack_Slice',
       strikeClipSeconds,
@@ -289,10 +271,9 @@ PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
       heavyClipSeconds,
       heavyWindow,
     ),
-    // The packs ship no true roll — the dodges are it (Phase-0 inventory).
-    // Played SNAPPY (not stretched over the whole 0.5 s window, which read
-    // as a slide): the hop lands early and the clamped landing pose rides
-    // out the i-frame tail.
+    // The packs ship no true roll; the dodges are it. Played snappy (not
+    // stretched over the window, which read as a slide): the hop lands
+    // early and the landing pose rides out the i-frame tail.
     PlayerShot.rollForward: shot(
       'Dodge_Forward',
       rollClipSeconds,
@@ -314,13 +295,12 @@ PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
       rollClipSeconds / rollPlaybackScale,
     ),
     PlayerShot.hit: shot('Hit_A', hitClipSeconds, staggerSeconds),
-    // The mid-air hang, held while a giant's blow carries the fighter
-    // through its arc (see the `downed`/`airborne` split in `update`). It
-    // LOOPS: a launch can outlast the clip, and a finished one-shot drops
-    // to the bind pose — the T-pose in the air.
+    // The mid-air hang while a launch carries the fighter. Loops: a
+    // launch can outlast the clip, and a finished one-shot drops to the
+    // bind pose (a T-pose in the air).
     PlayerShot.fall: loop('Jump_Idle'),
-    // The leap that throws the wind gust — a full jump, played brisk so it
-    // reads as a quick hop rather than a committed leap.
+    // The leap that throws the wind gust: a full jump, played brisk so it
+    // reads as a quick hop.
     PlayerShot.windCast: shot(
       'Jump_Full_Short',
       windCastClipSeconds,

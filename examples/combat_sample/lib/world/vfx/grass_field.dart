@@ -1,6 +1,6 @@
 // Pure card-field baking: every grass card as two crossed quads in flat
 // vertex arrays, ready for MeshGeometry.fromArrays. Kept free of any
-// geometry/GPU construction so it runs (and is tested) headless — the
+// geometry/GPU construction so it runs (and is tested) headless; the
 // stage builds its field from this on the GPU side.
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -35,10 +35,10 @@ class GrassField {
 /// Deterministic for a given [seed] so density comparisons re-lay the same
 /// field.
 ///
-/// With [falloffStart] set, cards beyond it thin smoothly to zero at the rim
-/// (full density inside), so the field dissolves under the treeline and fog
-/// instead of ending at a hard edge; [cards] is then the full-density
-/// attempt count and [GrassField.cardCount] reports the survivors.
+/// With [falloffStart] set, cards beyond it thin smoothly to zero at the
+/// rim so the field dissolves under the treeline instead of ending hard;
+/// [cards] is then the attempt count and [GrassField.cardCount] reports
+/// the survivors.
 GrassField buildGrassField(
   int cards, {
   required double radius,

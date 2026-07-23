@@ -1,6 +1,6 @@
 /// Cross-feature system phases. Features join a phase with `inSet:`; the
 /// composition root (`main`) declares the phase order once per schedule
-/// (scene_game's pattern — plugins never reference each other's systems).
+/// (scene_game's pattern: plugins never reference each other's systems).
 library;
 
 import 'package:scene_dash_v2/scene_dash_v2.dart';
@@ -8,7 +8,7 @@ import 'package:scene_dash_v2/scene_dash_v2.dart';
 abstract final class GameSets {
   // fixedUpdate: the player moves, the barbarians answer (reading the
   // moved player), the machines transition, then resolution reads the
-  // frame's edges. Cross-feature ordering lives ONLY in this sequence —
+  // frame's edges. Cross-feature ordering lives only in this sequence;
   // resolution never names another feature's systems.
   static const movement = SystemSet('game.movement');
   static const enemyMovement = SystemSet('game.enemyMovement');

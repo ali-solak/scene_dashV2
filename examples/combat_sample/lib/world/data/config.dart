@@ -1,6 +1,6 @@
 /// The stage's settings block: world units, arena dimensions, light, fog,
-/// god rays, and the grass budget. Every value the clearing is built from is
-/// a named constant here (task 5's "one settings block" rule).
+/// god rays, and the grass budget. Every value the clearing is built from
+/// is a named constant here.
 library;
 
 import 'dart:math' as math;
@@ -18,26 +18,22 @@ final bool isMobile =
 
 /// Whether the platform can afford the expensive full-screen passes
 /// (god rays, SSAO) at native resolution. False on phones: measured too
-/// expensive on mobile GPUs without a visible payoff.
-///
-/// This is the boot default only — it picks the starting rung on
-/// [qualityPresets], and the pause menu overrides it either way.
+/// expensive there without a visible payoff. Boot default only; it picks
+/// the starting rung on [qualityPresets], and the pause menu overrides it.
 final bool heavyAtmospherics = !isMobile;
 
-/// BOOT is safe — the first allocation has nothing in flight behind it —
+/// Boot is safe (the first allocation has nothing in flight behind it),
 /// so a phone still gets its rung's render scale, it just keeps it for
-/// the session. The rest of the preset (SSAO, god rays, grass) switches
-/// freely. Lift this the moment the engine resizes safely.
+/// the session; the rest of the preset switches freely. Lift this the
+/// moment the engine resizes safely.
 final bool runtimeRenderScaleIsSafe = !isMobile;
 
 // --- World units ---
 
-/// KayKit medium-rig characters are authored ~2.2–2.5 units tall. The
-/// slice originally pinned the knight at 1.8 world units, but against a
-/// 14 u arena the fighters read as small and their reach as short — so
-/// the pin is now 2.6 u (a heroic scale that fills the frame and lets the
-/// swing arcs cover real ground). One shared factor keeps the kit's
-/// relative proportions (barbarian lands at ~2.45).
+/// KayKit medium rigs are authored about 2.2 to 2.5 units tall; the
+/// knight is pinned at 2.6 u, a heroic scale that fills the frame
+/// against the 14 u arena and lets the swing arcs cover real ground. One
+/// shared factor keeps the kit's relative proportions (barbarian ~2.45).
 const double characterScale = 2.6 / 2.543;
 
 /// Yaw the model wrappers apply to land imported fronts on our +Z-forward
@@ -71,7 +67,7 @@ const double groundThickness = 1;
 /// Placement seed: the clearing re-lays identically every boot.
 const int clearingSeed = 41;
 
-/// Trees ring the arena between these radii — dense enough to close the
+/// Trees ring the arena between these radii, dense enough to close the
 /// level off visually everywhere except the cliff gap.
 const double treeRingInner = 17;
 const double treeRingOuter = 24;
@@ -97,21 +93,15 @@ final double cliffAzimuth = math.atan2(sunDirection.x, sunDirection.z);
 const double cliffHalfAngle = 0.6;
 
 /// The plateau the whole clearing sits on; its wall is the cliff.
-///
-/// Deliberately CLOSE to the treeline. The rim used to sit 21 units past
-/// the arena edge, which put the drop — and therefore the whole reason
-/// there is a sea at all — outside anywhere you could see it from a
-/// fight. The clearing is tighter now and the rim sits just past the
-/// trees, so the gap in the treeline actually shows you a cliff.
+/// Deliberately close to the treeline so the drop is visible from a
+/// fight; a far rim hides the sea entirely.
 const double groundIslandRadius = treeRingOuter + 2;
 const double cliffHeight = 12;
 
-/// Big wet boulders and sea stacks massed at the foot of the cliff, in the
-/// gap where you can see them. Count, and the spread the surf breaks
-/// against: how far off the cliff face (radius) and how far up and down the
-/// waterline the rocks sit. [cliffRockSpike] jags each one's silhouette —
-/// vertices shoved radially by up to this fraction, so they read as craggy
-/// sea stacks, not river pebbles.
+/// Boulders and sea stacks at the foot of the cliff, in the gap where
+/// you can see them: count, plus the spread off the cliff face and along
+/// the waterline. [cliffRockSpike] shoves vertices radially by up to
+/// this fraction so they read as craggy stacks, not river pebbles.
 const int cliffRockCount = 22;
 const double cliffRockRadialSpread = 4;
 const double cliffRockMinScale = 1.8;
@@ -125,13 +115,6 @@ const double waveCrashInterval = 2.8;
 const double waveCrashJitter = 2.8;
 const double waveCrashRise = 0.6;
 
-/// Each break gusts the grass: the crash bumps [WindState] by this, and the
-/// fight's own wind ease pulls it back — the surf you see over the rim and
-/// the grass at your feet moving as one. Capped so a run of crashes cannot
-/// pile into a gale.
-const double waveGustBoost = 0.9;
-const double waveGustCap = 3.2;
-
 /// The sea: enough below the plateau top to read as a drop, high enough
 /// that a real band of water shows over the rim from the arena (the rim
 /// hides everything nearer than ~rim × (1 + depth/eye-height)).
@@ -142,13 +125,13 @@ const double oceanLevel = -5;
 const double oceanHalfExtent = 700;
 
 /// Ocean grid tessellation per side (the wave vertex stage needs verts).
-/// Doubled for the bigger swell: a tall wave across a coarse grid is a
-/// row of folded facets, not water.
+/// Kept dense: a tall wave across a coarse grid is a row of folded
+/// facets, not water.
 const int oceanGridSegments = 96;
 
-/// The swell. Tall enough that the horizon visibly rises and falls —
-/// this is the sea seen from a clifftop, so the tide is most of what
-/// makes it read as water rather than a blue plane.
+/// The swell. Tall enough that the horizon visibly rises and falls; seen
+/// from a clifftop, the tide is most of what makes it read as water
+/// rather than a blue plane.
 const double oceanWaveHeight = 2.4;
 
 /// Wavelength, inverted: bigger means choppier. Kept long, so the swell
@@ -159,7 +142,7 @@ const double oceanWaveScale = 0.05;
 const double propScaleJitterMin = 0.85;
 const double propScaleJitterMax = 1.2;
 
-// --- Sun, sky, fog, rays (task 5) ---
+// --- Sun, sky, fog, rays ---
 
 /// Low-afternoon sun: long shadows across the clearing, shafts through the
 /// treeline. Normalized when used.
@@ -182,7 +165,7 @@ const double fogHeightFalloff = 0.07;
 /// influence whitewashes everything distant.
 const double fogSkyColorInfluence = 0.35;
 
-/// Fog never fully whites anything out — the sea across the cliff gap
+/// Fog never fully whites anything out; the sea across the cliff gap
 /// keeps at least this much of its own color at any distance.
 const double fogMaxOpacity = 0.42;
 
@@ -207,10 +190,9 @@ const double sceneVignetteIntensity = 0.22;
 const double sceneVignetteRadius = 0.85;
 const double sceneVignetteSmoothness = 0.6;
 
-/// Card count for the whole field — the density dial. The whole field is
-/// one baked `MeshGeometry` and therefore one draw call, so this trades
-/// against vertex cost rather than draw calls (see `vfx/grass_field.dart`
-/// for why it is not instanced).
+/// Card count for the whole field: the density dial. The field is one
+/// baked `MeshGeometry` (one draw call), so this trades against vertex
+/// cost rather than draw calls.
 const int grassCardCount = 8000;
 
 typedef QualityPreset = ({
@@ -221,9 +203,8 @@ typedef QualityPreset = ({
   bool godRays,
 });
 
-///
 /// The rungs step [renderScale] and the full-screen passes together,
-/// because those are what actually cost — grass rides along rather than
+/// because those are what actually cost; grass rides along rather than
 /// leading. ULTRA is the authored look and nothing else touches it.
 const List<QualityPreset> qualityPresets = [
   (
@@ -259,17 +240,10 @@ const List<QualityPreset> qualityPresets = [
   ),
 ];
 
-/// Everything but a phone boots at ULTRA
-///
-/// Phones boot one rung down, at HIGH. Not because the phone is expected
-/// to cope with ULTRA, but because the thing a phone cannot afford is
-/// FRAGMENTS: [renderScale] multiplies on top of a device pixel ratio
-/// that is routinely 3, so native resolution means ~3x the pixels of the
-/// logical size — through the shadow pass, the main pass, SSAO, god rays
-/// and post.
-///
-/// A starting rung, not a ceiling: the pause menu moves in both
-/// directions, and a phone that can hold ULTRA is welcome to it.
+/// Everything but a phone boots at ULTRA; phones boot at HIGH. What a
+/// phone cannot afford is fragments: [renderScale] multiplies on a
+/// device pixel ratio that is routinely 3, through every pass. A
+/// starting rung, not a ceiling; the pause menu moves both ways.
 final int defaultQualityLevel = heavyAtmospherics ? 3 : 2;
 
 /// The field extends under the treeline and thins with distance: full
@@ -281,7 +255,7 @@ const int grassFieldSeed = 11;
 const double grassWindStrength = 0.28;
 const double grassSwayScale = 0.3;
 
-// --- Wind dramaturgy (task 18) ---
+// --- Wind dramaturgy ---
 
 /// Strength multipliers the wind eases toward: a gust while the pack
 /// circles, near-still while a barbarian telegraphs.

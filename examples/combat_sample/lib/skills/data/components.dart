@@ -1,9 +1,8 @@
 part of '../skills.dart';
 
-/// A wind gust WAITING for the leap to land before it fires. `castSkills`
-/// adds this and starts the jump; `firePendingWindBlast` counts [elapsed]
-/// up and unleashes the blast once the leap has come back down — so the
-/// gust reads as thrown down on landing, not off the button.
+/// A wind gust waiting for the leap to land. `castSkills` adds this and
+/// starts the jump; `firePendingWindBlast` fires the blast once the leap
+/// comes back down, so the gust reads as thrown down on landing.
 final class PendingWindBlast {
   PendingWindBlast(this.power);
 
@@ -17,14 +16,13 @@ final class PendingWindBlast {
 
 /// On fire: ticks damage until the framework's `removeAfter:` clock takes
 /// the component off. Re-applying refreshes the clock rather than
-/// stacking — one fire, longer.
+/// stacking: one fire, longer.
 final class Burning {
   Burning(this.damage);
 
-  /// Damage per tick, scaled by the fire gush's level AT THE MOMENT IT
-  /// WAS CAST. Carried on the component rather than read from the book
-  /// each tick, so a burn already on a barbarian is not retroactively
-  /// changed by a purchase made while it is still burning.
+  /// Damage per tick, scaled by the gush's level at cast time. Carried on
+  /// the component so a purchase mid-burn does not retroactively change a
+  /// fire already on a barbarian.
   final double damage;
 
   /// Seconds since the last damage tick.
@@ -43,18 +41,14 @@ final class LavaPit {
 
   double sinceTick = 0;
 
-  /// Seconds since the pit opened — drives the material's swell-in.
+  /// Seconds since the pit opened; drives the material's swell-in.
   double elapsed = 0;
 }
 
-/// The shield's barrier, while it is up. Lives on the fighter it protects
-/// rather than on its own entity — it has no position of its own, and it
-/// has to be found from a [HitLanded] target.
-///
-/// Presence IS the barrier: `applyDamage` removes the component on the
-/// blow that spends the last charge, so "is the shield up" is a
-/// `tryGet<Barrier>` everywhere rather than a flag anyone can disagree
-/// about.
+/// The shield's barrier while it is up. Lives on the fighter it protects
+/// (no position of its own, and it must be findable from a [HitLanded]
+/// target). Presence is the state: `applyDamage` removes it on the blow
+/// that spends the last charge, so "is the shield up" is one `tryGet`.
 final class Barrier {
   Barrier(this.charges) : maxCharges = charges;
 
@@ -63,7 +57,7 @@ final class Barrier {
   /// paid for (see the note on [Burning.damage]).
   int charges;
 
-  /// What it was raised with — the visual reads its brightness off the
+  /// What it was raised with: the visual reads its brightness off the
   /// fraction remaining, and the HUD draws this many pips.
   final int maxCharges;
 
@@ -71,12 +65,9 @@ final class Barrier {
   /// so a freshly raised barrier is not born mid-flash.
   double sinceBlock = double.infinity;
 
-  /// Where on the shell the last blow struck, as a world-space direction
-  /// from the fighter outward. The bubble's ripple expands from here, so
-  /// a block reads as coming FROM somewhere.
-  ///
-  /// Recorded by gameplay and only read by the visual (L3) — the shader
-  /// asks nothing of the fight.
+  /// World-space direction from the fighter to where the last blow
+  /// struck; the bubble's ripple expands from here. Written by gameplay,
+  /// only read by the visual.
   final Vector3 hitFrom = Vector3(0, 0, 1);
 
   bool get spent => charges <= 0;
@@ -100,8 +91,8 @@ final class Barrier {
 }
 
 /// The light sphere drawn around a shielded fighter, and the shield model
-/// on its arm. Held so the system that raised them can take them back off
-/// — like [BurnFlame], these ride a body and cannot own their lifetime.
+/// on its arm. Held so the system that raised them can take them back
+/// off; like [BurnFlame], these ride a body and cannot own their lifetime.
 final class BarrierVisual {
   BarrierVisual({required this.sphere, required this.material, this.arm});
 
@@ -121,7 +112,7 @@ final class BarrierVisual {
 }
 
 /// The flame hanging on a burning body. Holds the node so the system can
-/// take it back off again when the burn ends — the fire follows the
+/// take it back off again when the burn ends; the fire follows the
 /// barbarian, so it cannot be an entity with its own lifetime.
 final class BurnFlame {
   const BurnFlame(this.node);

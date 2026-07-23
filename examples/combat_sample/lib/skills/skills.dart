@@ -27,12 +27,11 @@ part 'systems/systems.dart';
 
 void installSkills(GameBuilder game) {
   game
-    // castSkills → fighterDriver, both fighting-gated fixed systems one
-    // step apart: unbounded retention so the leap can never be dropped —
-    // not even by a pause opened the same instant as the cast. (The input
-    // edges — SkillCast, the lock presses — ride the framework's default
-    // retention, which is wide enough for fixed-step readers at any
-    // realistic refresh rate.)
+    // castSkills feeds fighterDriver one fixed step later: unbounded
+    // retention so a pause opened the same instant as the cast cannot
+    // drop the leap. The input edges (SkillCast, the lock presses) ride
+    // the framework's default retention, wide enough for fixed-step
+    // readers.
     ..configureEvent<CastLeap>(retainedUpdates: null)
     ..registerComponent<Burning>()
     ..registerComponent<BurnFlame>()
@@ -40,10 +39,9 @@ void installSkills(GameBuilder game) {
     ..registerComponent<Barrier>()
     ..registerComponent<BarrierVisual>()
     ..registerComponent<PendingWindBlast>()
-    // Fire/lava reads as landing with ONE flinch, on the catch — not a
-    // stagger (that stunlocks a body in a pit, see `applyDamage`) and not
-    // every tick (that held the reaction forever). Adding `Burning` fires
-    // once; refreshing it each lava tick fires nothing, so this is exactly
+    // One flinch on catching fire: not a stagger (that stunlocks a body
+    // in a pit) and not per tick (that held the reaction forever). Adding
+    // `Burning` fires once; refreshes fire nothing, so this is exactly
     // the leading edge.
     ..observe<Burning>(
       onAdd: (world, entity, _) => world.tryGet<Brawler>(entity)?.sinceHurt = 0,
@@ -80,7 +78,7 @@ void installSkills(GameBuilder game) {
       Schedules.fixedUpdate,
       tickLavaPits,
       inSet: GameSets.actions,
-      // Burning is READ (never downgrade a gush's fire) and added
+      // Burning is read (never downgrade a gush's fire) and added
       // deferred, so it is not declared as a write.
       reads: const {Enemy, Health, SceneTransform, Burning},
       writes: const {LavaPit},
@@ -96,7 +94,7 @@ void installSkills(GameBuilder game) {
       writes: const {Barrier},
       runIf: inState(GameStatus.fighting),
     )
-    // Deferred adds only — no live write declared (see the player's attach).
+    // Deferred adds only; no live write declared (see the player's attach).
     ..addSystem(
       Schedules.update,
       attachLavaVisuals,
@@ -111,9 +109,8 @@ void installSkills(GameBuilder game) {
       reads: const {Burning, SceneNode},
       runIf: hasResource<Scene>(),
     )
-    // Deferred add/remove of BarrierVisual only — the Barrier itself is
-    // read, never written (see the player's attach on why the empty
-    // `writes:` is deliberate).
+    // Deferred add/remove of BarrierVisual only; Barrier is read, never
+    // written (the empty `writes:` is deliberate, see the player's attach).
     ..addSystem(
       Schedules.update,
       updateBarrierVisual,

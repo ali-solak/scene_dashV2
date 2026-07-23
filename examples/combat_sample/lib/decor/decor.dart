@@ -16,15 +16,11 @@ part 'systems/systems.dart';
 
 /// Ambient decoration: leaves turning down through the clearing.
 ///
-/// Each leaf is its own [Node] sharing one quad and a handful of
-/// materials — the same trade `scene_game`'s motes make, and for the same
-/// reason: a translucent `InstancedMesh` buys nothing here and a
-/// per-leaf draw of one two-triangle quad is cheap.
-///
-/// They ride the fight's own [WindState] rather than a private clock, so
-/// the leaves gust when the pack circles and hang almost still while a
-/// barbarian telegraphs. The wind dramaturgy already existed for the
-/// grass; this is a second reader of it, and it costs nothing to add.
+/// Each leaf is its own [Node] sharing one quad and a few materials; a
+/// translucent `InstancedMesh` buys nothing here and a per-leaf draw of
+/// one two-triangle quad is cheap. They ride the fight's own [WindState]
+/// rather than a private clock, so the leaves gust when the pack circles
+/// and settle while a barbarian telegraphs.
 void installDecor(GameBuilder game) {
   game
     ..world.insert(LeafField())

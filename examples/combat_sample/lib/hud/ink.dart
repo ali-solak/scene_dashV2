@@ -1,10 +1,6 @@
-/// One palette, so every screen reads as a set rather than as whatever
-/// colour each widget reached for. Cold steel against the world's greens
-/// and the fight's reds: the UI stays legible over grass, fire and blood
-/// without competing with any of them.
-///
-/// Shared by the fight HUD, the skill menu, the title screen and the
-/// loading screen — they are one interface, so they use one set of inks.
+/// One palette, so every screen reads as a set: cold steel that stays
+/// legible over grass, fire and blood. Shared by the fight HUD, skill
+/// menu, title and loading screens.
 library;
 
 import 'package:flutter/material.dart' show Color;

@@ -1,10 +1,7 @@
-/// Ambient leaves drifting across the pause screen — a handful of soft
-/// green-and-autumn leaves falling diagonally on their own ticker, so the
-/// frozen menu still feels like it is sitting in the clearing.
-///
-/// Purely decorative and cheap: one full-screen [CustomPaint] repainting
-/// off a [Ticker], a dozen-odd path fills. The host wraps it in an
-/// [IgnorePointer] so it never eats a tap.
+/// Ambient leaves drifting across the pause screen on their own ticker,
+/// so the frozen menu still feels like it sits in the clearing. Cheap:
+/// one full-screen [CustomPaint], a dozen-odd path fills. The host wraps
+/// it in an [IgnorePointer] so it never eats a tap.
 library;
 
 import 'dart:math' as math;
@@ -15,7 +12,7 @@ import 'package:flutter/widgets.dart';
 class Leaves extends StatefulWidget {
   const Leaves({super.key, this.count = 18});
 
-  /// How many leaves are aloft at once. Kept low — this drifts over a menu,
+  /// How many leaves are aloft at once. Kept low; this drifts over a menu,
   /// it is not a storm.
   final int count;
 

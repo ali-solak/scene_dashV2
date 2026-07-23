@@ -2,13 +2,13 @@
 library;
 
 /// Points banked this run. Kills award them (bigger enemies pay more);
-/// the skill menu spends them. A plain resource — the HUD reads it
+/// the skill menu spends them. A plain resource: the HUD reads it
 /// through a `WorldBuilder`, systems mutate it directly.
 final class Score {
   /// Points available to spend.
   int points = 0;
 
-  /// Total earned this run (the score proper — spending does not lower
+  /// Total earned this run (the score proper; spending does not lower
   /// it, so the HUD can show a real score).
   int earned = 0;
 

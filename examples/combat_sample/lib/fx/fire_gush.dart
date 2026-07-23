@@ -1,7 +1,7 @@
 /// The fire gush's flame: a cone of burning particles thrown along the
 /// player's facing.
 ///
-/// A no-op headless (`hasResource<Scene>`), like the impact burst — the
+/// A no-op headless (`hasResource<Scene>`), like the impact burst; the
 /// skill's damage does not depend on it. The entity's [DespawnAfter] is
 /// the whole cleanup.
 library;
@@ -17,15 +17,12 @@ import '../skills/skills.dart' show fireGushHalfArc, fireGushRange;
 import 'particle_texture.dart';
 import 'particles.dart' as fx;
 
-// PUFFS, not sparks. Enough overlapping bodies to read as a rolling mass
-// of fire, few enough that you can still see individual puffs turning
-// over inside it. The earlier spark pass went too far the other way:
-// thin fast streaks are legible up close and nearly invisible at combat
-// distance.
+// Puffs, not sparks: enough overlap to read as a rolling mass of fire,
+// few enough that individual puffs stay visible at combat distance.
 const int _flameCount = 120;
 
 /// How long the flame keeps pouring. The damage is instant (one cone
-/// check on the cast), so this is pure theater — long enough to read as
+/// check on the cast), so this is pure theater: long enough to read as
 /// a gush, short enough that it never lies about where the damage was.
 const double _gushSeconds = 0.55;
 const double _entityLifetime = 2.4;
@@ -42,26 +39,17 @@ void spawnFireGush(World world, Vector3 position, double facing) {
     spawner: fx.Spawner(rate: _flameCount / _gushSeconds),
     looping: false,
     duration: _gushSeconds,
-    // Fast enough to cross the cone's reach inside its lifetime — the
-    // flame front should arrive where the damage did.
-    // Long enough for a puff to bloom, roll and burn out where you can
-    // watch it.
+    // Fast enough to cross the cone's reach inside its lifetime, so the
+    // flame front arrives where the damage did; long enough for a puff
+    // to bloom and burn out where you can watch it.
     lifetime: const fx.UniformFloat(0.5, 0.85),
-    // Slower than the spark pass: fire ROLLS out of the hand, it is not
-    // shot out of it.
+    // Slow: fire rolls out of the hand, it is not shot out of it.
     startSpeed: fx.UniformFloat(fireGushRange * 0.55, fireGushRange * 1.05),
-    // Big soft bodies — the puff itself.
+    // Big soft bodies: the puff itself.
     startSize: const fx.UniformFloat(0.7, 1.5),
-    // BLUE IS THE ENEMY. Additive blending sums channels, so wherever
-    // sprites overlap the strongest channel clips at 1 first and the
-    // others keep climbing — red saturates, then green, and the pixel
-    // walks up through orange to yellow to white. That is exactly the
-    // "reddish white cloud" this used to be.
-    //
-    // Holding blue near zero and green low means a deep stack can only
-    // ever climb to saturated orange: the dense base of the cone reads
-    // white-hot because it is dense, and the thin tips stay red, which
-    // is the gradient real flame has.
+    // Blue near zero and green low. Additive overlap sums channels and
+    // walks up through orange to yellow to white; a red-dominant stack
+    // can only ever climb to saturated orange.
     startColor: fx.GradientColor(
       fx.ColorGradient([
         fx.ColorStop(0, Vector4(1.05, 0.20, 0.010, 1)),
@@ -69,29 +57,19 @@ void spawnFireGush(World world, Vector3 position, double facing) {
       ]),
     ),
     modules: [
-      // Blooms as it rolls outward, then collapses — the shape of a puff
-      // of burning gas expanding and being consumed.
+      // Blooms as it rolls outward, then collapses: a puff of burning
+      // gas expanding and being consumed.
       fx.SizeOverLifeModule(
         fx.CurveFloat(fx.ParticleCurve.linear(from: 0.6, to: 1.7)),
       ),
-      // This gradient carries the FLAME COLOUR, not a brightness curve.
-      //
-      // The previous version was near-white (1, 0.95, 0.85) on the theory
-      // that it only scaled the start colour. Whether it multiplies or
-      // replaces, a white-ish gradient over a white premultiplied sprite
-      // under additive blending can only produce white — which is exactly
-      // what it produced. Every stop here is an actual fire colour with
-      // blue near zero, so there is no path to white through any of it.
+      // This gradient carries the flame colour, not a brightness curve:
+      // ColorOverLifeModule replaces the colour, and anything white-ish
+      // here renders white.
       fx.ColorOverLifeModule(
         fx.GradientColor(
           fx.ColorGradient([
-            // RED-dominant the whole way. Green is what carries a flame
-            // toward yellow and then white under additive stacking, so it
-            // stays low even at the hot end and drops away fast; blue is
-            // effectively off throughout.
-            // Under alpha blending these are the colours you actually
-            // SEE — nothing sums, so they can be read straight off a
-            // reference instead of being kept artificially dim.
+            // Red-dominant with green low and blue off, so the stack
+            // cannot climb toward yellow or white.
             fx.ColorStop(0, Vector4(1.00, 0.45, 0.08, 1.0)),
             fx.ColorStop(0.3, Vector4(0.95, 0.16, 0.02, 1.0)),
             fx.ColorStop(0.7, Vector4(0.55, 0.05, 0.01, 0.85)),

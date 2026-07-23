@@ -1,17 +1,8 @@
 /// The blade's trail: a ribbon of light rebuilt every frame from where
-/// the sword ACTUALLY IS.
-///
-/// The previous crescent was a fixed mesh spawned once per swing, sized
-/// from the hitbox. It was honest about reach and completely wrong about
-/// motion — a shape that appeared, sat there and faded, whatever the
-/// blade did. This samples the sword node's world transform each frame
-/// and stitches the samples into a strip, so the ribbon is the path the
-/// weapon swept: it curves the way the animation curves, it is short when
-/// the swing is slow and long when it whips, and it stops dead when the
-/// blade does.
-///
-/// One `GeometryStorage.updatable` mesh, rebuilt in place — no
-/// per-frame allocation, no entity churn.
+/// the sword actually is. Samples the sword node's world transform each
+/// frame and stitches the samples into a strip, so the ribbon is the
+/// path the weapon swept. One `GeometryStorage.updatable` mesh, rebuilt
+/// in place; no per-frame allocation, no entity churn.
 library;
 
 import 'dart:typed_data';
@@ -20,8 +11,8 @@ import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 
 /// How many samples the ribbon remembers. At a 60 Hz fixed step this is
-/// the trail's length in frames — long enough to arc, short enough that
-/// it reads as a whip rather than a scarf.
+/// the trail's length in frames: long enough to arc, short enough to
+/// read as a whip rather than a scarf.
 const int trailSamples = 14;
 
 /// Where the blade's tip sits in the sword node's local space. The
@@ -38,14 +29,10 @@ class _Rung {
 
 /// The live trail behind one blade. Owns its node and geometry.
 ///
-/// The vertex count NEVER changes. An updatable geometry sizes its GPU
-/// buffers from the arrays it is first given and grows only within that
-/// spare capacity — feeding it a ribbon that starts at two rungs and
-/// swells to fourteen overruns them and throws (`RangeError` out of
-/// `_RingBufferStream.writeRange`). So every rebuild writes all
-/// [trailSamples] rungs, and the ones that are not yet real collapse
-/// onto the oldest live rung at zero alpha: degenerate triangles that
-/// cost nothing and draw nothing.
+/// The vertex count never changes: updatable geometry sizes its GPU
+/// buffers from the first arrays it gets and throws a `RangeError` past
+/// that. Every rebuild writes all [trailSamples] rungs; unused ones
+/// collapse onto the oldest live rung at zero alpha and draw nothing.
 class SwordTrail {
   SwordTrail._(this.node, this._geometry);
 
@@ -57,8 +44,8 @@ class SwordTrail {
   final List<_Rung> _rungs = <_Rung>[];
   int _live = 0;
 
-  /// Scratch buffers, reused every frame — the whole point of updatable
-  /// storage is not allocating here.
+  /// Scratch buffers, reused every frame; the point of updatable storage
+  /// is not allocating here.
   late final Float32List _positions = Float32List(trailSamples * 2 * 3);
   late final Float32List _colors = Float32List(trailSamples * 2 * 4);
   late final List<int> _indices = _buildIndices();
@@ -114,8 +101,8 @@ class SwordTrail {
     if (_live < trailSamples) _live++;
   }
 
-  /// Drops the oldest rung — how the ribbon retracts once the swing is
-  /// over, instead of vanishing all at once.
+  /// Drops the oldest rung, so the ribbon retracts after the swing
+  /// instead of vanishing all at once.
   void retract() {
     if (_live > 0) _live--;
     if (_live == 0) _rungs.clear();

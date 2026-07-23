@@ -61,10 +61,8 @@ enum Skill {
 /// A resource: the menu and HUD read it through a `WorldBuilder`,
 /// `castSkills` mutates it.
 ///
-/// Everything here LEVELS. A skill is not a switch you flip once — level
-/// 0 is "not bought", and every level after that makes the same skill
-/// heavier, on the same escalating-cost curve vitality uses. That keeps
-/// late-run points meaningful once you own all three.
+/// Skills level rather than toggle: level 0 is "not bought", every level
+/// after makes the same skill heavier, so late-run points stay useful.
 final class SkillBook {
   final Map<Skill, int> _levels = <Skill, int>{};
   final Map<Skill, double> _cooldowns = <Skill, double>{};
@@ -82,10 +80,9 @@ final class SkillBook {
   /// What the next level of [skill] costs.
   int priceOf(Skill skill) => skill.costAt(levelOf(skill));
 
-  /// The multiplier this skill's numbers scale by right now. Level 1 is
-  /// 1.0 (the authored values ARE level 1); each level after adds
-  /// [skillPowerPerLevel]. Zero when unbought, so a stray cast that got
-  /// past the gate would do nothing rather than something.
+  /// Level scale for this skill's numbers: the authored values are level
+  /// 1 (so 1.0), each level after adds [skillPowerPerLevel]. Zero when
+  /// unbought so a stray cast past the gate does nothing.
   double powerOf(Skill skill) {
     final level = levelOf(skill);
     return level <= 0 ? 0 : 1 + skillPowerPerLevel * (level - 1);

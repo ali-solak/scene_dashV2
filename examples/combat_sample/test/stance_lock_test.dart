@@ -1,9 +1,6 @@
-/// Tasks 9 + 10, headless: stance vectors (camera-relative free move,
-/// strafe-set locked move, back-off walk, rooted actions, roll
-/// displacement, arena clamp) and the lock-on lifecycle (acquire in
-/// range + cone, cycle sorted by angle, release on press-again / death /
-/// range break). Boots the FULL feature set under strictAccess — this
-/// suite doubles as the whole-game conflict-detector proof.
+/// Tasks 9 + 10, headless: stance vectors and the lock-on lifecycle.
+/// Boots the FULL feature set under strictAccess, so this suite doubles
+/// as the whole-game conflict-detector proof.
 library;
 
 import 'dart:math' as math;
@@ -26,7 +23,7 @@ import 'package:scene_dash_v2/scene_dash_v2.dart';
 const double dt = combatFixedDt;
 
 /// Boots the full feature set. This suite pins stance and lock semantics,
-/// so the aggro coordinator is despawned — barbarians approach and circle
+/// so the aggro coordinator is despawned: barbarians approach and circle
 /// but never earn the token, keeping the player untouched and the runs
 /// deterministic (the fight loop has its own suite).
 TestGame boot() {
@@ -87,7 +84,7 @@ void placeEnemies(World world, List<(double, double)> spots) {
 Entity playerOf(World world) =>
     world.entitiesWith(require: const [Player]).firstOrNull!;
 
-/// The enemy nearest to (x, z) — spawn spots drift once the brawl
+/// The enemy nearest to (x, z): spawn spots drift once the brawl
 /// machines start walking, so lookups are proximity-based.
 Entity enemyAt(World world, double x, double z) {
   Entity? found;
@@ -135,7 +132,7 @@ void main() {
     expect(transform.translation.z - z0, closeTo(freeMoveSpeed * dt, 1e-5));
     expect(transform.translation.x, closeTo(0, 1e-5));
 
-    // Facing was pi (spawn, the exact antipode of the +Z heading — either
+    // Facing was pi (spawn, the exact antipode of the +Z heading; either
     // arc is shortest); it closes on the heading at the configured rate,
     // not instantly.
     var distance = (motion.facing - 0).abs() % (2 * math.pi);
@@ -232,7 +229,7 @@ void main() {
     expect(motion.facing, closeTo(toTarget(), 0.15));
 
     // Aim the camera straight at the target, then W approaches at locked
-    // speed and S backs off slower — the strafe set.
+    // speed and S backs off slower: the strafe set.
     rig.yaw = toTarget();
     world.axes<MoveAxis>().setValue(MoveAxis.y, 1);
     game.pumpFixed(steps: 1);
@@ -264,7 +261,7 @@ void main() {
     game.pumpFixed(steps: 5);
     expect(fighter.phase.state, CombatPhase.startup);
     // Committing, not frozen: the windup keeps a fraction of the drift,
-    // so it moves — but well under a free step.
+    // so it moves, but well under a free step.
     final windupDrift = transform.translation.z - zAtStartup;
     final freeDrift = freeMoveSpeed * dt * 5;
     expect(windupDrift, greaterThan(0), reason: 'not fully rooted');
@@ -295,7 +292,7 @@ void main() {
       rollMoveTicks++;
     }
     // The machine serves the full roll; movement rides one tick behind it
-    // (measure magnitude — the committed direction is camera-relative).
+    // (measure magnitude, the committed direction is camera-relative).
     expect(rollMoveTicks, ticksFor(rollSeconds));
     final dx = transform.translation.x - startX;
     final dz = transform.translation.z - startZ;

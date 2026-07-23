@@ -1,4 +1,4 @@
-/// [GameControls] wraps the whole game surface — scene AND hud — and
+/// [GameControls] wraps the whole game surface (scene and hud) and
 /// writes into the input resources `main` inserted. It owns no gameplay:
 /// held state goes to `ButtonInput`/`AxisInput`, edges to `InputBuffer`,
 /// pointer deltas to `LookInput`, and one-shot intents are emitted as
@@ -44,7 +44,7 @@ class GameControls extends StatefulWidget {
     this.showTouchControls = false,
   });
 
-  /// The scene view. Only this gets the look/attack pointer handling —
+  /// The scene view. Only this gets the look/attack pointer handling;
   /// dragging across the HUD must not swing the camera.
   final Widget scene;
 
@@ -63,11 +63,10 @@ class _GameControlsState extends State<GameControls>
   final FocusNode _focus = FocusNode(debugLabel: 'combat-controls');
   final Set<LogicalKeyboardKey> _pressed = <LogicalKeyboardKey>{};
 
-  // The input surfaces `main` inserted, reached through the enclosing
-  // GameScope rather than threaded down as constructor arguments. This
-  // widget writes them and the player/camera systems read them — the
-  // README's UI-to-world path, one direction only. They live for the
-  // game's lifetime, so a one-time resolve is enough.
+  // The input surfaces `main` inserted, reached through GameScope. This
+  // widget writes them, the player/camera systems read them (one
+  // direction only). They live for the game's lifetime, so a one-time
+  // resolve is enough.
   late WorldGame _game;
   late ButtonInput<CombatAction> _buttons;
   late AxisInput<MoveAxis> _axes;
@@ -78,12 +77,9 @@ class _GameControlsState extends State<GameControls>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Game keys ride the HARDWARE keyboard, not the focus tree. A widget
-    // `onKeyEvent` only fires while this node holds focus, and focus gets
-    // stolen out from under a game constantly (capture overlays, a HUD
-    // click) — the reclaim below only heals POINTER input, so a keyboard
-    // cast was swallowed and only landed on the second press. A global
-    // handler is dispatched every key regardless of who holds focus.
+    // Game keys ride the hardware keyboard, not the focus tree: focus
+    // gets stolen constantly (overlays, HUD clicks) and a focus-based
+    // onKeyEvent swallowed casts. A global handler sees every key.
     HardwareKeyboard.instance.addHandler(_handleKey);
   }
 
@@ -148,7 +144,7 @@ class _GameControlsState extends State<GameControls>
 
   // --- Keyboard ------------------------------------------------------------
 
-  /// A key this game acts on — consumed (returns true) so it never doubles
+  /// A key this game acts on, consumed (returns true) so it never doubles
   /// as focus traversal (Tab) or leaks to a system shortcut.
   bool _isGameKey(LogicalKeyboardKey key) =>
       _skillKeys.contains(key) ||
@@ -163,7 +159,7 @@ class _GameControlsState extends State<GameControls>
       key == LogicalKeyboardKey.escape;
 
   /// The global hardware-keyboard handler (see [initState]). Only a
-  /// KeyDownEvent casts — a held key repeats as KeyRepeatEvent, which must
+  /// KeyDownEvent casts; a held key repeats as KeyRepeatEvent, which must
   /// not spam a skill.
   bool _handleKey(KeyEvent event) {
     final key = event.logicalKey;
@@ -253,11 +249,9 @@ class _GameControlsState extends State<GameControls>
     _touchDownTime = null;
   }
 
-  // Drag-to-look: without pointer capture, free hover-look spins the
-  // camera on every cursor move and dies at the window edge — so the
-  // orbit is right-button drag on desktop and any swipe on touch (touch
-  // never attacks from the scene: the HUD button owns that). The camera
-  // system ignores the deltas while a lock frames the fight.
+  // Drag-to-look: free hover-look dies at the window edge, so the orbit
+  // is right-button drag on desktop and any swipe on touch (touch attacks
+  // via the HUD button, never the scene). Deltas are ignored while locked.
   void _onPointerMove(PointerMoveEvent event) {
     if (event.kind == PointerDeviceKind.mouse) {
       if ((event.buttons & kSecondaryButton) != 0) {
@@ -271,10 +265,8 @@ class _GameControlsState extends State<GameControls>
 
   @override
   Widget build(BuildContext context) {
-    // Keys are handled globally (see [initState]/[_handleKey]), not through
-    // this node — so a stolen focus can no longer swallow a cast. The Focus
-    // stays only to hold [autofocus] and keep stray Tab traversal off the
-    // HUD widgets; the pointer reclaim below is now belt-and-suspenders.
+    // Keys are handled globally (see [_handleKey]); the Focus stays only
+    // to hold [autofocus] and keep stray Tab traversal off the HUD.
     return Focus(
       focusNode: _focus,
       autofocus: true,
@@ -291,9 +283,8 @@ class _GameControlsState extends State<GameControls>
               behavior: HitTestBehavior.opaque,
               child: widget.scene,
             ),
-            // Only while there is a fight to steer: the stick and the
-            // attack button over a title screen or a death panel are
-            // controls for something that is not happening.
+            // Only while there is a fight to steer; no stick over a
+            // title screen or death panel.
             if (widget.showTouchControls)
               GameStateBuilder<GameStatus>(
                 builder: (context, status) => status == GameStatus.fighting

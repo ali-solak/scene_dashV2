@@ -1,6 +1,6 @@
 /// GPU-backed stage assets, loaded once in `main` before boot (imports and
 /// material compilation are async; systems are not) and handed to
-/// [installWorld] as a resource. Headless games use [WorldAssets.none] —
+/// [installWorld] as a resource. Headless games use [WorldAssets.none];
 /// every consumer is scene-gated.
 library;
 
@@ -48,7 +48,7 @@ class WorldAssets {
   final PreprocessedMaterial? lavaMaterial;
 
   /// The shield's bubble: `charge` from what the barrier has left,
-  /// `hit`/`hit_dir` from the last block. One instance, shared — there is
+  /// `hit`/`hit_dir` from the last block. One instance, shared; there is
   /// only ever one barrier, because there is only ever one player.
   final PreprocessedMaterial? barrierMaterial;
 }
@@ -66,20 +66,14 @@ Future<WorldAssets> loadWorldAssets() async {
   );
 }
 
-/// Loads one `.fmat`, or null with a NAMED complaint.
+/// Loads one `.fmat`, or null with a named complaint. One try per
+/// material, not one around the batch, so a bad shader is named instead
+/// of silently taking out everything after it in the list.
 ///
-/// Deliberately one try per material rather than one around the batch:
-/// batching means a single bad shader takes out every material after it
-/// in the list, and the log names none of them. Two authored materials
-/// have already failed silently in this sample's history (see NOTES.md
-/// B4) — the console should say which one and why.
-///
-/// Common causes, in order of likelihood:
-///  * the bundle is STALE — a newly added `.fmat` is compiled by
-///    `hook/build.dart` at BUILD time, so a hot restart will not pick it
-///    up. Stop the app and run it again.
-///  * `flutter config --enable-dart-data-assets` was never run.
-///  * the shader does not compile; the error below is the compiler's.
+/// Common causes: a stale bundle (`.fmat`s compile at build time via
+/// `hook/build.dart`, so a hot restart misses new ones; stop and run
+/// again), `flutter config --enable-dart-data-assets` never run, or the
+/// shader itself does not compile.
 Future<PreprocessedMaterial?> _load(String name) async {
   try {
     return await loadFmatMaterial('assets/materials/$name.fmat');

@@ -1,25 +1,18 @@
 part of '../decor.dart';
 
-/// Enough to read as weather without becoming confetti. Each is a draw,
-/// so this is also the budget — and now that the column is short and
-/// close to the camera, the same count read as far busier than it did
-/// spread over the old one.
+/// Enough to read as weather without becoming confetti. Each leaf is a
+/// draw, so this is also the budget.
 const int _leafCount = 38;
 
 /// The column the leaves fall through: a cylinder centred on the arena,
-/// wide enough that they are never obviously spawning in a ring.
-///
-/// The ceiling is deliberately LOW. The camera sits behind the fighter
-/// looking slightly down, so anything much above head height is out of
-/// frame for the whole fight — leaves drifting at 14 units were falling
-/// entirely above the screen. This keeps them in the band you actually
-/// look at, and the tighter radius keeps them near the fight rather than
-/// out over the treeline.
+/// wide enough that they are never obviously spawning in a ring. The
+/// ceiling is deliberately low: the camera looks slightly down, so
+/// anything much above head height falls entirely off-screen.
 const double _leafFieldRadius = 15;
 const double _leafCeiling = 5.5;
 
 /// Fall speed range. A leaf is mostly air resistance, so this stays well
-/// under gravity — but drifting too slowly reads as floating debris
+/// under gravity, but drifting too slowly reads as floating debris
 /// rather than something falling.
 const double _fallSlowest = 0.55;
 const double _fallFastest = 1.25;
@@ -42,11 +35,8 @@ const double _swayFastest = 2.0;
 const double _leafSize = 0.22;
 
 /// Feature-owned state: the per-leaf nodes plus packed animation data.
-///
-/// Packed parallel arrays rather than a list of objects, for the same
-/// reason `scene_game`'s motes do it: this is touched every frame for
-/// every leaf, and it is the one place in the sample where that pattern
-/// actually earns its awkwardness.
+/// Packed parallel arrays rather than a list of objects because this is
+/// touched every frame for every leaf.
 final class LeafField {
   /// Built by `spawnLeaves`; empty until then (and forever headless).
   final List<Node> leaves = [];

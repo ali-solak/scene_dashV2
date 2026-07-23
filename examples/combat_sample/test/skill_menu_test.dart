@@ -1,8 +1,6 @@
-/// The skill menu, headless. The menu is a [GameStatus], not an overlay
-/// with a pause flag, so what these pin is really the state machine: the
-/// world stops while it is open, buying works while it is stopped, and
-/// closing it RESUMES — the trap being that `OnEnter(fighting)` also
-/// fires on boot and on restart, where it must wipe the run.
+/// The skill menu, headless. The menu is a [GameStatus], so these pin
+/// the state machine. The trap: `OnEnter(fighting)` fires on boot and on
+/// restart too, where it must wipe the run; closing the menu must not.
 library;
 
 import 'package:combat_sample/enemies/enemies.dart';
@@ -58,7 +56,7 @@ void main() {
     expect(world.resource<WaveState>().wave, wave);
   });
 
-  test('closing the menu RESUMES the run — it does not restart it', () {
+  test('closing the menu RESUMES the run, it does not restart it', () {
     final game = boot();
     final world = game.world;
     final score = world.resource<Score>()..award(500);

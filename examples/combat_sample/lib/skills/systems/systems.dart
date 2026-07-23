@@ -2,7 +2,7 @@ part of '../skills.dart';
 
 /// Serves the menu's purchases (frameStart, so it works while the menu
 /// has the world paused). A buy that cannot be afforded is simply
-/// ignored — the menu greys those out, this is the authority.
+/// ignored; the menu greys those out, this is the authority.
 void buyUpgrades(World world) {
   final book = world.resource<SkillBook>();
   final score = world.resource<Score>();
@@ -28,7 +28,7 @@ void buyUpgrades(World world) {
 }
 
 /// Runs the cooldowns down and serves every [SkillCast] the player can
-/// actually pay for. Casting is instant — these are panic buttons and
+/// actually pay for. Casting is instant: these are panic buttons and
 /// openers, not another attack machine to time.
 void castSkills(World world) {
   final book = world.resource<SkillBook>()..tick(world.dt);
@@ -47,7 +47,7 @@ void castSkills(World world) {
     switch (cast.skill) {
       case Skill.fireGush:
         _castFireGush(world, motion, transform, power);
-        // Muzzle recoil: a firm shove BACKWARD (opposite the cone's facing),
+        // Muzzle recoil: a firm shove backward (opposite the cone's facing),
         // so the gush kicks. A decaying knockback, like a slight roll-back.
         world
             .tryGet<Knockback>(player)
@@ -73,11 +73,9 @@ void castSkills(World world) {
   }
 }
 
-/// Unleashes a wind gust once its leap has landed. The blast waits on the
-/// [PendingWindBlast] `castSkills` armed and fires at [windCastSeconds] —
-/// the leap's flight time — from wherever the fighter came down, so the
-/// gust reads as thrown into the ground on impact rather than off the
-/// button.
+/// Unleashes a wind gust once its leap has landed: fires the
+/// [PendingWindBlast] `castSkills` armed at [windCastSeconds] (the leap's
+/// flight time), from wherever the fighter came down.
 void firePendingWindBlast(World world) {
   final row = world
       .query2<PendingWindBlast, SceneTransform>(require: const [Player])
@@ -91,18 +89,15 @@ void firePendingWindBlast(World world) {
   }
 }
 
-/// Raises the barrier. Charges come from the LEVEL rather than from
-/// `powerOf` — this is the one skill whose scaling is a count, and a
-/// fractional block is not a thing.
-///
-/// Re-adding replaces: a cast while the barrier is somehow still up
-/// refreshes it to full rather than stacking a second one.
+/// Raises the barrier. Charges come from the level, not `powerOf`: this
+/// skill scales by a count, and a fractional block is not a thing.
+/// Re-adding replaces, so a cast while one is up refreshes it to full.
 void _raiseBarrier(World world, Entity player, int level) {
   world.add(player, Barrier(shieldChargesFor(level)));
 }
 
 /// A cone of flame: everything inside takes the hit and catches fire.
-/// The shove is small — this is not a knockback tool, and stacking it
+/// The shove is small; this is not a knockback tool, and stacking it
 /// with the burn's ticks would drag the pack out of your reach.
 void _castFireGush(
   World world,
@@ -149,7 +144,7 @@ void _castFireGush(
 }
 
 /// Opens a pool of lava on the ground ahead of the player. The pit is its
-/// own entity with its own lifetime — the cast is over the instant it
+/// own entity with its own lifetime; the cast is over the instant it
 /// lands, the pit is not.
 void _openLavaPit(
   World world,
@@ -159,7 +154,7 @@ void _openLavaPit(
 ) {
   final x = origin.translation.x + math.sin(motion.facing) * lavaPitDistance;
   final z = origin.translation.z + math.cos(motion.facing) * lavaPitDistance;
-  // The ground breaking open (a no-op headless), so the pit ARRIVES
+  // The ground breaking open (a no-op headless), so the pit arrives
   // instead of simply being switched on.
   spawnLavaEruption(world, Vector3(x, 0, z));
   world.spawn([
@@ -172,9 +167,9 @@ void _openLavaPit(
   ]);
 }
 
-/// The panic button: everything in the ring goes up and OUT. Damage is an
-/// afterthought — the launch IS the skill, and it rides the same
-/// ballistic knockback a giant's blow puts on the player.
+/// The panic button: everything in the ring goes up and out. Damage is an
+/// afterthought; the launch is the skill, and it rides the same ballistic
+/// knockback a giant's blow puts on the player.
 void _castWindBlast(World world, SceneTransform origin, double power) {
   world.query2<Health, SceneTransform>(require: const [Enemy]).each((
     enemy,
@@ -254,11 +249,10 @@ void tickLavaPits(World world) {
           impact: false, // standing in lava is not a hit to freeze on
         ),
       );
-      // Alight. This is what puts real fire on a body standing in the
-      // pit — the flame is driven off [Burning], so without this the
-      // lava cooked people without ever visibly lighting them. Never
-      // weaker than a burn already carried: walking through a pit must
-      // not downgrade a gush's fire.
+      // Alight: the flame visual is driven off [Burning], so without this
+      // the lava cooked people without ever lighting them. Never weaker
+      // than a burn already carried, so a pit cannot downgrade a gush's
+      // fire.
       final carried = world.tryGet<Burning>(enemy)?.damage ?? 0;
       world.add(
         enemy,
@@ -274,15 +268,14 @@ void tickLavaPits(World world) {
 void resetSkills(World world) {
   world.resource<SkillBook>().reset();
   world.entitiesWith(require: const [LavaPit]).each(world.despawn);
-  // The barrier rides the player, who survives the restart — nothing else
+  // The barrier rides the player, who survives the restart; nothing else
   // would take it back off.
   world.entitiesWith(require: const [Player]).each(world.remove<Barrier>);
 }
 
 /// Lights up whoever is burning and puts the fire out when the burn's
-/// clock ends (a no-op headless). Driven off the presence of [Burning]
-/// rather than off the cast, so a burn refreshed mid-fire never restarts
-/// the flame — L3: the effect follows the gameplay state.
+/// clock ends (a no-op headless). Driven off the presence of [Burning],
+/// so a burn refreshed mid-fire never restarts the flame.
 void updateBurnFlames(World world) {
   world.query<SceneNode>(require: const [Enemy]).each((entity, ref) {
     final burning = world.tryGet<Burning>(entity) != null;
@@ -298,14 +291,10 @@ void updateBurnFlames(World world) {
   });
 }
 
-/// Raises and drops the light sphere (and the shield on the arm) with the
+/// Raises and drops the light sphere (and the arm shield) with the
 /// barrier itself, and drives the bubble's brightness from what is left
-/// (a no-op headless).
-///
-/// Driven off the PRESENCE of [Barrier], the way the burn's flame is
-/// driven off [Burning]: `applyDamage` removes the component on the blow
-/// that breaks it, and the bubble has to go wherever that happens —
-/// including mid-swing, mid-roll, or on the frame the run is lost.
+/// (a no-op headless). Driven off the presence of [Barrier]:
+/// `applyDamage` can remove it anywhere, and the bubble must follow.
 void updateBarrierVisual(World world) {
   final dt = world.dt;
   world.query<SceneNode>(require: const [Player]).each((entity, ref) {
@@ -316,7 +305,7 @@ void updateBarrierVisual(World world) {
       if (visual == null) return;
       ref.node.remove(visual.sphere);
       // The shield hangs off an animated joint deep in the skeleton, not
-      // off the node we added it under — detach is the only way back.
+      // off the node we added it under; detach is the only way back.
       visual.arm?.detach();
       world.remove<BarrierVisual>(entity);
       return;
@@ -346,9 +335,9 @@ void updateBarrierVisual(World world) {
       time: current.elapsed,
       remaining: barrier.charges / barrier.maxCharges,
       // 1 on the frame of a block, decaying to 0 over the flash window.
-      // Straight off the gameplay clock: adding this frame's dt to a
-      // value accumulated in fixed steps would double-count it, and
-      // `sinceBlock` starts at infinity so a fresh barrier reads 0 here.
+      // Off the gameplay clock alone: adding this frame's dt would
+      // double-count it, and `sinceBlock` starts at infinity so a fresh
+      // barrier reads 0 here.
       flash: 1 - barrier.sinceBlock / shieldFlashSeconds,
       hitFrom: barrier.hitFrom,
     );
@@ -364,9 +353,8 @@ Node? _mountShield(World world, Node body) {
   final slot = body.getChildByName('handslot.l');
   if (template == null || slot == null) return null;
   final shield = template.clone()
-    // Stands the slab up and turns its face forward — the hand slot's
-    // own frame puts it flat otherwise. See [shieldMountRotation] for the
-    // bind-pose axes this is derived from.
+    // Stands the slab up and turns its face forward; the hand slot's own
+    // frame puts it flat otherwise. See [shieldMountRotation].
     ..localTransform = Matrix4.compose(
       Vector3.zero(),
       shieldMountRotation,
@@ -399,10 +387,9 @@ void attachLavaVisuals(World world) {
 /// follows the pit's clock, the pit never asks the material anything).
 void updateLavaMaterials(World world) {
   world.query2<LavaPit, SceneNode>().each((entity, pit, ref) {
-    // Same trap as the swing arc: this is `DespawnAfter.remaining`, not
-    // an `expiryOf` clock. The old `expiryOf` call always returned null,
-    // and the fallback quietly pinned the pit at full heat forever
-    // instead of ever crusting over.
+    // `DespawnAfter.remaining`, not an `expiryOf` clock: `expiryOf`
+    // returned null here, and its fallback pinned the pit at full heat
+    // forever.
     final remaining =
         world.tryGet<DespawnAfter>(entity)?.remaining ?? lavaPitSeconds;
     // Swells open fast, then dims over its last second as it crusts over.
@@ -428,7 +415,7 @@ Vector3 _away(SceneTransform from, SceneTransform to, double speed) {
   return Vector3(dx / length * speed, 0, dz / length * speed);
 }
 
-/// Reach + frontal arc, the same test the sword's swing uses — a skill
+/// Reach + frontal arc, the same test the sword's swing uses; a skill
 /// cone should not have its own idea of what "in front of you" means.
 bool _inCone({
   required SceneTransform from,

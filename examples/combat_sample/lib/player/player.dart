@@ -28,8 +28,8 @@ part 'data/config.dart';
 part 'data/bundles.dart';
 part 'systems/systems.dart';
 
-/// Installs the player: the lifted combat machine (`combat/combat.dart` —
-/// its reference suite runs against that code unchanged), buffered
+/// Installs the player: the lifted combat machine (`combat/combat.dart`,
+/// whose reference suite runs against that code unchanged), buffered
 /// roll/attack with the hold-to-commit heavy, stance locomotion, and
 /// lock-on with the rig-driven camera.
 void installPlayer(GameBuilder game) {
@@ -54,9 +54,8 @@ void installPlayer(GameBuilder game) {
       reads: const {Player},
       runIf: hasResource<Scene>(),
     )
-    // The run reset (boot + restart) is driven by rules' `startRun`, which
-    // calls [resetPlayerRun] — one writer, so the player and enemy resets
-    // don't collide in `OnEnter(fighting)`.
+    // Run resets (boot + restart) go through rules' `startRun`, which calls
+    // [resetPlayerRun]: one writer, so player and enemy resets don't collide.
     ..addSystem(
       Schedules.fixedUpdate,
       movePlayer,
@@ -88,9 +87,8 @@ void installPlayer(GameBuilder game) {
       after: const [fighterDriver],
       runIf: hasResource<Scene>(),
     )
-    // The hit path (applyDamage, clearBufferOnStagger) is registered by
-    // the rules feature in GameSets.resolution — after every driver, by
-    // set order alone.
+    // The hit path (applyDamage, clearBufferOnStagger) is registered by the
+    // rules feature in GameSets.resolution, after every driver by set order.
     ..addSystem(
       Schedules.fixedUpdate,
       lockOnSystem,
@@ -104,15 +102,13 @@ void installPlayer(GameBuilder game) {
         Target,
       },
       writes: const {Fighter},
-      // `spawnPlayerFx` only READS Fighter (for the roll edge) and this
-      // writes it, which the entity-blind detector calls a conflict even
-      // though they cannot disagree. Ordering settles it.
+      // `spawnPlayerFx` only reads Fighter and this writes it; the
+      // entity-blind detector calls that a conflict, so order it explicitly.
       after: const [fighterDriver, spawnPlayerFx, updateBladeTrail],
       runIf: inState(GameStatus.fighting),
     )
-    // Fixed-step, after resolution: the camera and the fighters advance on
-    // the same clock — a per-frame camera chasing per-fixed-step positions
-    // stair-steps into visible jitter.
+    // Fixed-step, after resolution: a per-frame camera chasing
+    // per-fixed-step positions stair-steps into visible jitter.
     ..addSystem(
       Schedules.fixedUpdate,
       updateCameraRig,

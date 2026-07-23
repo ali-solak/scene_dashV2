@@ -1,6 +1,6 @@
 /// The camera rig: a plain resource written by the player feature's
 /// `updateCameraRig` each frame and read by `main`'s `cameraBuilder`
-/// (scene_game's pattern — the framework never owns cameras).
+/// (scene_game's pattern: the framework never owns cameras).
 library;
 
 import 'package:vector_math/vector_math.dart' show Vector3;
@@ -24,8 +24,7 @@ class CameraRig {
   double kick = 0;
 
   /// Seconds left of the opening push-in from the title framing onto the
-  /// fighter. Set when the run starts; counted down by the camera system,
-  /// which flies on a slower blend while it runs so the arrival reads as
-  /// a move rather than a cut.
+  /// fighter. The camera system counts it down and blends slower while it
+  /// runs, so the arrival reads as a move rather than a cut.
   double intro = 0;
 }

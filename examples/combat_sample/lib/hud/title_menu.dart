@@ -1,4 +1,4 @@
-/// The start screen. Same panel, rules and inks as the skill menu — it is
+/// The start screen. Same panel, rules and inks as the skill menu: it is
 /// the same interface seen earlier, not a separate title treatment.
 library;
 
@@ -18,13 +18,11 @@ class TitleMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MenuShell(
-      // Lighter than the other screens': the clearing behind this one is
-      // the point, so the panel sits over it rather than blacking it out.
+      // Lighter than the other screens' scrims: the clearing stays visible.
       scrim: const Color(0x660B0C0D),
       maxWidth: 460,
-      // START is PINNED. In landscape the control list is taller than the
-      // screen, and with everything in one scroll view the button sat
-      // below the fold with nothing to suggest it existed.
+      // START is pinned: in landscape the control list is taller than the
+      // screen, and the button must not sit below the fold.
       footer: Container(
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: HudInk.rule)),

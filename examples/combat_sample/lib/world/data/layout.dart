@@ -43,7 +43,7 @@ bool inCliffSector(double theta) {
 /// Lays the clearing out deterministically from [clearingSeed]: a dense,
 /// evenly-spaced jittered tree ring with an underbrush ring at its feet
 /// (the level reads closed), rocks and bushes scattered between arena and
-/// treeline — and nothing at all in the cliff sector, where the view runs
+/// treeline, and nothing at all in the cliff sector, where the view runs
 /// out over the water.
 List<PropPlacement> layoutClearing({int seed = clearingSeed}) {
   final rng = math.Random(seed);
@@ -95,7 +95,7 @@ PropPlacement _placement(
   return PropPlacement(
     kind: kind,
     // The codebase's azimuth convention throughout: atan2(x, z), i.e.
-    // x = sin, z = cos — the same space [inCliffSector] tests.
+    // x = sin, z = cos, the same space [inCliffSector] tests.
     x: math.sin(theta) * r,
     z: math.cos(theta) * r,
     yaw: rng.nextDouble() * 2 * math.pi,

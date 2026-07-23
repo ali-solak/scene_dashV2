@@ -43,10 +43,8 @@ void spawnWindBlast(World world, Vector3 position) {
       fx.SizeOverLifeModule(
         fx.CurveFloat(fx.ParticleCurve.linear(from: 0.6, to: 3.0)),
       ),
-      // NOTE: ColorOverLifeModule REPLACES the particle colour outright —
-      // it does not modulate `startColor`. A white curve here renders white
-      // no matter what `startColor` says, which is why every effect in this
-      // directory once looked like grey mist. Carry the real colour here.
+      // ColorOverLifeModule replaces the particle colour outright, it
+      // does not modulate `startColor`: carry the real colour here.
       fx.ColorOverLifeModule(
         fx.GradientColor(
           fx.ColorGradient([

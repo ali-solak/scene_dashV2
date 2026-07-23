@@ -18,10 +18,10 @@ class GrassWind {
   double time = 0;
 }
 
-/// the grass material: gusts while the barbarians circle, near-still while
-/// one telegraphs (the held breath before a swing). A resource so the
-/// grass (world) reads what the fight (rules) writes without either
-/// importing the other.
+/// Wind strength for the grass material: gusts while the barbarians
+/// circle, near-still while one telegraphs. A resource so the grass
+/// (world) reads what the fight (rules) writes without either importing
+/// the other.
 class WindState {
   /// Multiplier on the base grass wind strength (eased toward its target).
   double strength = 1;
@@ -39,7 +39,7 @@ class GraphicsQuality {
 /// Menu intent: switch to `qualityPresets[level]`.
 ///
 /// An event rather than a direct write, for the same reason buying a
-/// skill is one — widgets ask, systems decide. It keeps one write path
+/// skill is one: widgets ask, systems decide. It keeps one write path
 /// into the world even for a setting with no rules to enforce.
 final class QualityRequested {
   const QualityRequested(this.level);

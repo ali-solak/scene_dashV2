@@ -26,11 +26,9 @@ part 'data/config.dart';
 part 'data/bundles.dart';
 part 'systems/systems.dart';
 
-/// Installs the barbarians: the brawl machine (approach/circle/telegraph/
-/// swing/recover/staggered/dying), the aggro-token coordinator, pack
-/// locomotion, and the material tells (telegraph emissive, death
-/// dissolve). Stagger and death themselves arrive through the rules
-/// feature's `applyDamage`.
+/// Installs the barbarians: the brawl machine, the aggro-token
+/// coordinator, pack locomotion, and the material tells. Stagger and
+/// death themselves arrive through the rules feature's `applyDamage`.
 void installEnemies(GameBuilder game) {
   game
     ..registerTag<Enemy>()
@@ -53,10 +51,9 @@ void installEnemies(GameBuilder game) {
       spawnEnemies,
       writes: const {Enemy, Health, Brawler, AggroCoordinator},
     )
-    // Per frame, not once: waves field barbarians all run long, and each
-    // new one needs a body. The system skips anyone already bodied, so
-    // the steady-state cost is one query. Deferred adds only — no live
-    // write declared (see the player's attach).
+    // Per frame, not once: waves keep fielding barbarians and each new
+    // one needs a body; already-bodied ones are skipped. Deferred adds
+    // only, so no live write is declared.
     ..addSystem(
       Schedules.update,
       attachEnemyVisuals,
@@ -65,7 +62,7 @@ void installEnemies(GameBuilder game) {
       runIf: hasResource<Scene>(),
     )
     // The encounter reset (boot + restart) is driven by rules' `startRun`
-    // via [resetEncounter] — one writer, so it doesn't collide with the
+    // via [resetEncounter]: one writer, so it doesn't collide with the
     // player reset in `OnEnter(fighting)`.
     ..addSystem(
       Schedules.fixedUpdate,
@@ -92,8 +89,8 @@ void installEnemies(GameBuilder game) {
       after: const [brawlerDriver],
       runIf: inState(GameStatus.fighting),
     )
-    // Death → Rapier: registered before the material/death system, which
-    // orders itself after it.
+    // Hands death to Rapier: registered before the material/death system,
+    // which orders itself after it.
     ..addSystem(
       Schedules.update,
       launchRagdolls,
@@ -120,10 +117,9 @@ void installEnemies(GameBuilder game) {
       after: const [launchRagdolls],
       runIf: hasResource<Scene>(),
     )
-    // After BOTH ragdoll systems. The launch no longer freezes the
-    // skeleton (the death clip has to play), so the freeze arrives from
-    // `settleRagdolls` once the body has come to rest — and this mapper
-    // has to run after it to see `frozen` and leave the final pose alone.
+    // After both ragdoll systems: `settleRagdolls` sets `frozen` once the
+    // body rests, and this mapper must run after it to see the flag and
+    // leave the final pose alone.
     ..addSystem(
       Schedules.update,
       updateEnemyAnimation,

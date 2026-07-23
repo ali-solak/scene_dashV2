@@ -1,15 +1,9 @@
 /// A procedurally generated lava crust: cooled black rock cracked open by
 /// glowing molten channels.
 ///
-/// This exists because the authored `lava.fmat` cannot be relied on. Two
-/// authored materials in this sample have already failed to render with
-/// no error anyone could act on (NOTES.md B4), and a lava pit is a DAMAGE
-/// ZONE — a hazard you cannot see is worse than an ugly one. So the pit
-/// gets a crust that is generated in Dart and needs no shader bundle, no
-/// data-assets flag and no successful compile.
-///
-/// Same trick as the grass blade mask: generate pixels rather than ship a
-/// texture, which also keeps the CC0 asset fence (L5) intact.
+/// Exists because authored `.fmat`s have silently failed to render before
+/// (NOTES.md B4), and a damage zone you cannot see is worse than an ugly
+/// one. Generated pixels also keep the CC0 asset fence (L5) intact.
 library;
 
 import 'dart:math' as math;
@@ -17,9 +11,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_scene/scene.dart';
 
-/// Cheap deterministic value noise. Seeded by hand so the crust is the
-/// same every run — a pit that looked different each cast would read as
-/// flicker.
+/// Cheap deterministic value noise, hand-seeded so the crust is the same
+/// every run; a pit that changed per cast would read as flicker.
 double _hash(int x, int y, int seed) {
   var h = x * 374761393 + y * 668265263 + seed * 1274126177;
   h = (h ^ (h >> 13)) * 1274126177;
@@ -81,8 +74,7 @@ Uint8List lavaCrustPixels(int size) {
       final hot = _smoothstep(0.72, 0.95, molten);
 
       // Crust is near-black with a little warmth; the channels glow.
-      // Blue stays near zero throughout — the same reason the fire keeps
-      // it low, so nothing here can drift toward white.
+      // Blue stays near zero, same as the fire, so nothing drifts white.
       final r = (0.09 + veins * 1.05 + hot * 0.55).clamp(0.0, 1.0);
       final g = (0.05 + veins * 0.26 + hot * 0.42).clamp(0.0, 1.0);
       final b = (0.05 + veins * 0.03 + hot * 0.10).clamp(0.0, 1.0);

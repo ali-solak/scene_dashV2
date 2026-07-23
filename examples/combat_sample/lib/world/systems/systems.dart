@@ -53,11 +53,9 @@ void setupWorld(World world) {
 }
 
 /// Builds the clearing: the ground slab (visual + fixed Rapier collider),
-/// the procedural LOD forest ring, and the grass field at budget. The
-/// static dressing is plain scene nodes (L4 theater); the grass spawns as
-/// an entity so the wind system reaches its material through the ECS. The
-/// arena-bounds clamp for fighters is `data/arena.dart`, applied by the
-/// Phase-2 movement systems.
+/// the forest ring, and the grass field at budget. Static dressing is
+/// plain scene nodes; the grass spawns as an entity so the wind system
+/// reaches its material through the ECS.
 void spawnClearing(World world) {
   final scene = world.resource<Scene>();
   final assets = world.resource<WorldAssets>();
@@ -68,10 +66,9 @@ void spawnClearing(World world) {
   // Big wet boulders massed at the foot of the cliff in the treeline gap,
   // where the surf breaks against them.
   clearing.add(buildCliffRocks());
-  // Pipeline pre-warm: the dissolve material's first appearance is a mid-
-  // fight death, and compiling its pipeline then hitches the frame. A tiny
-  // cube buried inside the plateau body draws it (occluded) from boot, so
-  // warm-up compiles it with everything else.
+  // Pipeline pre-warm: the dissolve's first real draw is a mid-fight
+  // death, and compiling its pipeline then hitches the frame. A tiny
+  // occluded cube inside the plateau draws it from boot instead.
   final dissolve = assets.dissolveMaterial;
   if (dissolve != null) {
     clearing.add(
@@ -81,12 +78,11 @@ void spawnClearing(World world) {
       )..mesh = Mesh(CuboidGeometry(Vector3.all(0.3)), dissolve),
     );
   }
-  // Same pre-warm for the shield bubble: the first raise is the first draw
-  // of a BLENDED sphere, and compiling that pipeline mid-fight hitches the
-  // frame the barrier goes up (the second raise is smooth — the pipeline is
-  // cached by then). A tiny occluded sphere on the exact material the cast
-  // uses — the authored `.fmat`, or the same unlit-blend fallback
-  // `buildBarrierSphere` falls back to — compiles it from boot instead.
+  // Same pre-warm for the shield bubble: the first raise draws a blended
+  // sphere, and compiling that pipeline mid-fight hitches the frame the
+  // barrier goes up. A tiny occluded sphere on the exact material the
+  // cast uses (authored `.fmat` or the unlit-blend fallback) compiles it
+  // from boot instead.
   clearing.add(
     Node(
         name: 'barrier-warmup',
@@ -105,12 +101,10 @@ void spawnClearing(World world) {
   world.spawn([const Ocean(), SceneNode(_buildOcean(assets))]);
 }
 
-/// Advances the wind clock with game time and writes it into the grass
-/// and ocean entities' materials — resolved through their nodes, so the
-/// seam is visible in the queries, not hidden in a shared mutable
-/// resource. Game-time (not wall-time) on purpose: slow-mo slows wind and
-/// waves with everything else, and a hitstop's 0.05 s pause is
-/// imperceptible.
+/// Advances the wind clock and writes it into the grass and ocean
+/// materials, resolved through their nodes so the seam shows in the
+/// queries. Game-time on purpose: slow-mo slows wind and waves with
+/// everything else, and a hitstop's 0.05 s pause is imperceptible.
 void updateWindMaterials(World world) {
   final wind = world.resource<GrassWind>()..time += world.dt;
   final windState = world.resource<WindState>();
@@ -135,10 +129,10 @@ void updateWindMaterials(World world) {
   });
 }
 
-/// Breaks a wave against the cliff every [waveCrashInterval]-ish seconds at
-/// a random point along the treeline gap. Pure theatre, so it gates on the
-/// SCENE, not the fight — the surf runs on the title screen too. Game-time,
-/// so it pauses behind the menu with everything else.
+/// Breaks a wave against the cliff every [waveCrashInterval]-ish seconds
+/// at a random point along the treeline gap. Pure theatre, so it gates on
+/// the scene, not the fight (the surf runs on the title screen too).
+/// Game-time, so it pauses behind the menu with everything else.
 void crashWaves(World world) {
   final clock = world.resource<WaveClock>();
   clock.until -= world.dt;
@@ -147,9 +141,9 @@ void crashWaves(World world) {
   final theta =
       cliffAzimuth + (clock.rng.nextDouble() - 0.5) * 2 * cliffHalfAngle * 0.85;
   final radius = groundIslandRadius + (clock.rng.nextDouble() - 0.5) * 2.5;
-  // Every break is a different size, and re-rolls its own spread, so the
-  // surf never sparks the same twice — a wide range so a small lap and a
-  // big wall are obviously different.
+  // Every break rolls its own size and spread, so the surf never sparks
+  // the same twice; a wide range so a small lap and a big wall are
+  // obviously different.
   final intensity = 0.45 + clock.rng.nextDouble() * 1.25;
   spawnWaveCrash(
     world,
@@ -161,20 +155,11 @@ void crashWaves(World world) {
     intensity: intensity,
     seed: clock.rng.nextInt(1 << 30),
   );
-  // The break gusts the grass, harder for a bigger one. `driveWind` (rules)
-  // eases the strength back toward its target every frame, so this reads as
-  // a gust that swells with the crash and settles — the surf and the grass
-  // moving as one. Capped so a quick run of breaks cannot pile into a gale.
-  final wind = world.resource<WindState>();
-  wind.strength = math.min(
-    waveGustCap,
-    wind.strength + waveGustBoost * intensity,
-  );
 }
 
 /// The forest: an evenly-spaced jittered pine ring with rocks and bushes
-/// scattered up to the treeline, all STATICALLY BATCHED into one mesh (see
-/// `vfx/forest.dart` for why). Placement comes from the pure [layoutClearing].
+/// scattered up to the treeline, all statically batched into one mesh.
+/// Placement comes from the pure [layoutClearing].
 void _spawnForestRing(Node clearing) {
   clearing.add(buildForestBatch(layoutClearing()));
 }
@@ -280,8 +265,7 @@ Node _buildOcean(WorldAssets assets) {
       assets.oceanMaterial ??
       (UnlitMaterial()..baseColorFactor = Vector4(0.06, 0.2, 0.3, 1));
   // Driven from Dart rather than left on the `.fmat` defaults, so the
-  // swell can be tuned without rebuilding the shader bundle — and so it
-  // still has SOME value if the authored material never loads.
+  // swell can be tuned without rebuilding the shader bundle.
   if (material is PreprocessedMaterial) {
     material.parameters
       ..setFloat('wave_height', oceanWaveHeight)
@@ -326,11 +310,9 @@ Node _buildGrass(WorldAssets assets) {
   return node;
 }
 
-/// Bakes [cards] worth of field onto [node].
-///
-/// Zero is a real setting, not a degenerate one: `MeshGeometry.fromArrays`
-/// with empty buffers is not worth finding out about, so the node is
-/// simply hidden instead.
+/// Bakes [cards] worth of field onto [node]. Zero is a real setting:
+/// rather than feed `MeshGeometry.fromArrays` empty buffers, the node is
+/// simply hidden.
 void _bakeGrass(Node node, Material material, int cards) {
   if (cards <= 0) {
     node.visible = false;
@@ -359,13 +341,12 @@ void _bakeGrass(Node node, Material material, int cards) {
 /// Applies `qualityPresets[level]` to the live scene.
 ///
 /// The grass re-bake is the expensive half (a full vertex-buffer upload),
-/// so it is skipped when the new preset asks for the same card count —
-/// HIGH and ULTRA differ only in grass, LOW and MED only in post.
+/// so it is skipped when the new preset asks for the same card count.
 void _applyQuality(Scene scene, Node? grass, int fromLevel, int toLevel) {
   final preset = qualityPresets[toLevel];
   // Everything here is a flag flip except the render scale, which
-  // reallocates the swapchain — and doing that mid-session is a hard
-  // crash on mobile (see `runtimeRenderScaleIsSafe`).
+  // reallocates the swapchain; doing that mid-session is a hard crash
+  // on mobile (see `runtimeRenderScaleIsSafe`).
   if (runtimeRenderScaleIsSafe) scene.renderScale = preset.renderScale;
   scene
     ..ambientOcclusion.enabled = preset.ambientOcclusion
@@ -378,15 +359,10 @@ void _applyQuality(Scene scene, Node? grass, int fromLevel, int toLevel) {
   _bakeGrass(grass, material, preset.cards);
 }
 
-/// Serves the pause menu's quality choice.
-///
-/// Polled on `update` rather than triggered, because there is no
-/// event-triggered scheduling — `world.events` needs a running system.
-/// The drain is free on the frames nobody asked.
-///
-/// Not state-gated: the setting is changed from the PAUSE menu, so this
-/// has to run while the world is stopped or the change would not land
-/// until the fight resumed.
+/// Serves the pause menu's quality choice. Polled on `update` because
+/// `world.events` needs a running system; the drain is free when nobody
+/// asked. Not state-gated: the change comes from the pause menu, so it
+/// must land while the world is stopped.
 void applyGraphicsQuality(World world) {
   var level = -1;
   for (final request in world.events<QualityRequested>()) {

@@ -1,7 +1,7 @@
 part of '../decor.dart';
 
 /// Startup: scatter the leaves through the column above the clearing, one
-/// node each. A no-op headless — decoration needs a scene.
+/// node each. A no-op headless: decoration needs a scene.
 ///
 /// The quad and the leaf mask are shared; only the tint materials differ,
 /// so this is [_leafCount] draws of two triangles rather than
@@ -59,7 +59,7 @@ void spawnLeaves(World world) {
 
 /// Update: fall, sway, tumble, and wrap back to the ceiling.
 ///
-/// Allocation-free per leaf — each node's transform is rewritten in
+/// Allocation-free per leaf; each node's transform is rewritten in
 /// place. Reads the fight's [WindState], so the drift picks up when the
 /// pack circles and settles when one telegraphs.
 void animateLeaves(World world) {
@@ -86,7 +86,7 @@ void animateLeaves(World world) {
     var z = field.position[i * 3 + 2] + (windZ + windX * slalom * 0.35) * dt;
 
     // Landed, or blown off the field: back to the ceiling somewhere new.
-    // Recycling beats spawning — the count stays flat all run.
+    // Recycling beats spawning; the count stays flat all run.
     if (y <= 0 || (x * x + z * z) > _leafFieldRadius * _leafFieldRadius) {
       final radius = _leafFieldRadius * math.sqrt(_wrapRandom.nextDouble());
       final theta = _wrapRandom.nextDouble() * math.pi * 2;
@@ -117,12 +117,10 @@ void animateLeaves(World world) {
 /// Respawn jitter. Seeded, so a run is reproducible.
 final math.Random _wrapRandom = math.Random(97);
 
-/// One leaf: a quad carrying the mask, emitted BOTH ways round.
-///
-/// A leaf is a flat sheet that tumbles, so it is seen from either face —
-/// and a translucent material is always back-face culled, whatever
-/// `doubleSided` says. Without the second winding every leaf would blink
-/// out for half of its own rotation.
+/// One leaf: a quad carrying the mask, emitted both ways round. A
+/// translucent material is always back-face culled whatever
+/// `doubleSided` says, and a tumbling leaf is seen from either face;
+/// without the second winding it would blink out for half its rotation.
 MeshGeometry _leafQuad() {
   const half = _leafSize;
   final positions = Float32List.fromList([

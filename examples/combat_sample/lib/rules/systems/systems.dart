@@ -29,11 +29,10 @@ void requestRestart(World world) {
   world.setState(GameStatus.fighting);
 }
 
-/// Opens and closes the skill menu (frameStart, alongside the restart
-/// intent). The menu is just a state: everything that fights gates on
-/// `fighting`, so the world stops the moment it opens and picks up
-/// exactly where it was when it closes. Ignored while lost — the death
-/// panel owns that screen.
+/// Opens and closes the skill menu. The menu is just a state: everything
+/// that fights gates on `fighting`, so the world stops the moment it
+/// opens and resumes where it was on close. Ignored while lost; the
+/// death panel owns that screen.
 void toggleSkillMenu(World world) {
   if (!world.consumeAny<SkillMenuToggled>()) return;
   switch (world.state<GameStatus>()) {
@@ -49,8 +48,7 @@ void toggleSkillMenu(World world) {
 
 /// Starts a run clean (`OnEnter(fighting)`: boot and every restart).
 /// Undoes the slow-motion scale and drives each feature's reset from this
-/// one system., the resets touch the same component types on different
-/// entities, so a single writer keeps the conflict detector honest.
+/// one system; a single writer keeps the conflict detector honest.
 void startRun(World world) {
   // Closing the skill menu re-enters `fighting` too, and that is a
   // resume, not a new run.
@@ -70,10 +68,10 @@ void slowMotionOnLoss(World world) {
   world.clock.timeScale = loseSlowMoTimeScale;
 }
 
-/// The strike windows ARE the machines' edges: the player's
+/// The strike windows are the machines' edges: the player's
 /// `justEntered(active)` and a barbarian's `justEntered(swing)` each check
 /// reach + frontal arc once, both directions, and emit [HitLanded] for
-/// every connect. One swing can never land twice — the edge is one tick
+/// every connect. One swing can never land twice; the edge is one tick
 /// wide.
 void resolveStrikes(World world) {
   final playerRow = world
@@ -83,9 +81,8 @@ void resolveStrikes(World world) {
   final (player, fighter, motion, playerTransform) = playerRow;
 
   // A swing lands one connect; a spin lands one every `heavyHitInterval`
-  // as the axe comes around, so a body in it is struck — and staggered —
-  // several times. `strikeHits` counts taps already fired this active
-  // phase, so each is emitted exactly once across the fixed steps.
+  // as the axe comes around. `strikeHits` counts taps already fired this
+  // active phase, so each is emitted exactly once across the fixed steps.
   final phase = fighter.phase;
   if (phase.justEntered(CombatPhase.active)) fighter.strikeHits = 0;
   if (phase.state == CombatPhase.active) {
@@ -117,7 +114,7 @@ void resolveStrikes(World world) {
         playerTransform,
         brawlerKnockback * brawler.power,
       );
-      // A giant doesn't shove you — it sends you FLYING.
+      // A giant doesn't shove you, it sends you flying.
       if (brawler.giant) shove.y = giantLaunchSpeed;
       world.emit(
         HitLanded(
@@ -135,8 +132,8 @@ void resolveStrikes(World world) {
 
 /// One tap of the player's swing: a connect to every living enemy inside
 /// the strike arc. Called once for a chop, once per sweep tick for the
-/// spin — every connect staggers (the default), so a body in the spin
-/// reacts each time the axe comes around.
+/// spin; every connect staggers, so a body in the spin reacts each time
+/// the axe comes around.
 void _strikeEnemies(
   World world,
   Fighter fighter,
@@ -171,37 +168,29 @@ void _strikeEnemies(
 }
 
 /// Serves every [HitLanded]: an i-framed roll passes through cleanly;
-/// otherwise health drops, the victim staggers (stagger snaps — L2),
-/// the clock freezes per hit weight, a heavy kicks the camera, and a
-/// barbarian at zero enters `dying` — falling, then dissolving on the
-/// framework's `removeAfter:` clock, then despawning so the waves feature
-/// can recycle its pooled model.
+/// otherwise health drops, the victim staggers, and a barbarian at zero
+/// enters `dying` (falling, then dissolving, then despawning so the waves
+/// feature can recycle its pooled model).
 void applyDamage(World world) {
   for (final hit in world.events<HitLanded>()) {
     final fighter = world.tryGet<Fighter>(hit.target);
     if (fighter != null) {
       if (fighter.iFramed) continue; // rolled through it
-      // Launched: a giant's blow throws you, and you are untouchable
-      // through the arc — the flight is an escape, never a juggle. Only
-      // the player (the Fighter) gets this; a wind-blasted barbarian is
-      // very much still hittable in the air.
+      // Launched by a giant: untouchable through the arc (the flight is
+      // an escape, never a juggle). Only the player gets this; an
+      // airborne barbarian is still hittable.
       if (world.tryGet<Knockback>(hit.target)?.airborne ?? false) continue;
     }
 
-    // The barrier eats the blow whole — no health, no shove, no stagger —
-    // and spends one charge doing it, whatever the blow was worth. That
-    // is the shield's whole proposition: it answers being SURROUNDED, so
-    // a giant's overhead costs it exactly what a jab costs.
-    //
-    // Blows only. A shield stops what swings at you; it does not put out
-    // a fire you are standing in, and letting ticks spend charges would
-    // drain a full barrier in under a second of lava.
+    // The barrier eats the blow whole (no health, no shove, no stagger)
+    // and spends one charge, whatever the blow was worth. Blows only:
+    // letting DoT ticks spend charges would drain a full barrier in
+    // under a second of lava.
     final barrier = hit.impact ? world.tryGet<Barrier>(hit.target) : null;
     if (barrier != null && !barrier.spent) {
       final broke = barrier.absorb(push: hit.knockback);
-      // A block sparks so it reads as the barrier TAKING the hit rather
-      // than as the hit quietly not happening (no hitstop — the freeze
-      // read as lag).
+      // A block sparks so it reads as the barrier taking the hit, not the
+      // hit quietly not happening (no hitstop; the freeze read as lag).
       final at = world.tryGet<SceneTransform>(hit.target);
       if (at != null) {
         spawnImpactBurst(
@@ -245,11 +234,9 @@ void applyDamage(World world) {
     // Poise: only a blow heavy enough breaks the player's action.
     if (hit.stagger) fighter?.phase.go(CombatPhase.staggered);
 
-    // The flinch. Poise deliberately lets an ordinary swing through
-    // without cancelling you — but the fighter still has to LOOK hit, or
-    // the only sign you took a blow is a bar moving in the corner. Visual
-    // only: the animator plays it when idle and drops it the moment you
-    // act, so nothing here touches the machine.
+    // The flinch: poise lets an ordinary swing through, but the fighter
+    // still has to look hit. Visual only; nothing here touches the
+    // machine.
     if (fighter != null && hit.damage > 0) {
       fighter.sinceHurt = 0;
       if (hit.impact) _kickCamera(world, hurtCameraKick);
@@ -263,41 +250,33 @@ void applyDamage(World world) {
         world.resource<Score>().award(
           brawler.giant ? giantPoints : enemyPoints,
         );
-        // Ragdoll, then dissolve, then DESPAWN — waves recycle the slot
+        // Ragdoll, then dissolve, then despawn; waves recycle the slot
         // (and the pooled model, via the ModelSlot observer).
         const deathSeconds = dissolveDelaySeconds + dissolveSeconds;
         world.add(hit.target, const Dissolving(), removeAfter: deathSeconds);
         world.add(hit.target, DespawnAfter(deathSeconds));
       } else if (hit.stagger) {
-        // Poise cuts both ways. A burn tick or a lava tick arrives every
-        // 0.4–0.5 s against a 0.8 s stagger, so an ungated stagger here
-        // held anything standing in a damage-over-time effect in a
-        // permanent stunlock — and, because `coordinateAggro` releases a
-        // staggered holder, quietly turned fire gush into crowd control.
-        // Those DoT ticks flinch ONCE on the catch instead (a `Burning`
-        // onAdd sets `Brawler.sinceHurt`; see `installSkills`).
+        // DoT ticks arrive faster than the stagger window, so an ungated
+        // stagger here stunlocked anything standing in fire. Those ticks
+        // flinch once on the catch instead (a `Burning` onAdd sets
+        // `Brawler.sinceHurt`; see `installSkills`).
         brawler.phase.go(BrawlPhase.staggered);
       }
     }
 
-    // A player connect kicks the camera — the heavy harder than the light,
-    // but the light kicks too: with no hitstop, that little punch is what
-    // gives a quick slice some weight. (An enemy hit on YOU kicked
-    // hurtCameraKick above; this is your hits landing on THEM.)
+    // Your connects landing on enemies kick the camera; the light kicks
+    // too, since without hitstop that little punch is what gives a quick
+    // slice some weight.
     if (hit.impact && world.has<Enemy>(hit.target)) {
       _kickCamera(world, hit.heavy ? heavyCameraKick : lightCameraKick);
     }
   }
 }
 
-/// Wind dramaturgy (task 18): the strength eases toward a gust while the
-/// pack circles and toward near-still while one telegraphs (the held
-/// breath before a swing). Written for the grass material to read (world
-/// feature), so neither imports the other.
-///
-/// A heavy connect used to punch a shockwave through the grass here. It
-/// was removed: a ripple firing on every heavy read as the world
-/// twitching, not as weight.
+/// Wind dramaturgy: the strength eases toward a gust while the pack
+/// circles and toward near-still while one telegraphs (the held breath
+/// before a swing). Writes the resource the grass material reads, so
+/// neither feature imports the other.
 void driveWind(World world) {
   final wind = world.resource<WindState>();
   final dt = world.dt;
@@ -316,11 +295,8 @@ void driveWind(World world) {
 }
 
 /// Punches the camera, keeping whatever bigger kick is already riding.
-///
-/// Resource-guarded: the lifted combat reference suite boots a MINIMAL
-/// world with no camera at all, and a hit resolving there must not throw.
-/// The heavy-connect kick carried this hazard unguarded for a long time
-/// and only got away with it because that suite never sent a heavy.
+/// Resource-guarded: the headless test suite boots a world with no
+/// camera at all, and a hit resolving there must not throw.
 void _kickCamera(World world, double amount) {
   if (!world.hasResource<CameraRig>()) return;
   final rig = world.resource<CameraRig>();

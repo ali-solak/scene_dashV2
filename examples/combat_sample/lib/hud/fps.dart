@@ -1,10 +1,8 @@
 /// The frame-rate readout.
 ///
-/// Counted off a [Ticker] rather than off the world clock on purpose:
-/// `world.dt` is scaled by hitstop and by the death slow-motion, so a
-/// gameplay-derived figure would read ~20 FPS every time the game froze
-/// deliberately for weight — exactly backwards for a performance number.
-/// This counts frames the engine actually presented.
+/// Counted off a [Ticker], not the world clock: `world.dt` is scaled by
+/// hitstop and death slow-motion, which would misreport deliberate
+/// freezes as low FPS. This counts frames actually presented.
 library;
 
 import 'package:flutter/material.dart';
@@ -29,13 +27,9 @@ class FpsCounter extends StatefulWidget {
 
 class _FpsCounterState extends State<FpsCounter>
     with SingleTickerProviderStateMixin {
-  // Started in initState, NOT as a `late final` initialiser.
-  //
-  // A `late` field is built on first READ, and nothing here ever reads
-  // the ticker except `dispose` — so the lazy form never constructed it,
-  // never started it, never ticked, and the counter sat at 0 forever.
-  // (The skill slots' controller gets away with the lazy form only
-  // because their build method reads it every frame.)
+  // Started in initState, NOT as a `late final` initialiser: a `late`
+  // field is built on first read, and nothing reads the ticker before
+  // `dispose`, so the lazy form never started it and the counter sat at 0.
   late final Ticker _ticker;
   Duration _windowStart = Duration.zero;
   int _frames = 0;
@@ -67,8 +61,8 @@ class _FpsCounterState extends State<FpsCounter>
 
   @override
   Widget build(BuildContext context) {
-    // Ash while it is holding up, amber once it is not — the number is
-    // for glancing at, and a colour reads faster than digits do.
+    // Ash while healthy, amber once not; a colour reads faster than
+    // digits do.
     final healthy = _fps >= 50;
     return Text(
       '$_fps FPS',

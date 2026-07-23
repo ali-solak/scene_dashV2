@@ -1,8 +1,7 @@
 part of '../waves.dart';
 
-/// How many barbarians wave [wave] fields, capped by the model pool /
-/// theater budget (L4 says the fight stays readable — more than a
-/// handful of live agents is noise, not difficulty).
+/// How many barbarians wave [wave] fields, capped so the fight stays
+/// readable: more than a handful of live agents is noise, not difficulty.
 const int baseWaveEnemies = 2;
 const int maxWaveEnemies = 6;
 
@@ -10,15 +9,9 @@ int enemiesForWave(int wave) =>
     math.min(maxWaveEnemies, baseWaveEnemies + (wave - 1) ~/ 2);
 
 /// Imported skinned models cannot be cloned, so each live barbarian
-/// borrows one from a pool.
-///
-/// The death window is tuned to end inside the breather (see
-/// `dissolveSeconds`), so in principle a wave's corpses are gone before
-/// the next one needs their models. The headroom is for the cases where
-/// that reasoning does not hold exactly — hitstop freezes game time, so
-/// a bloody wave-clear stretches both clocks unevenly. Running out means
-/// visible graybox capsules mid-fight, which is worth a few megabytes to
-/// never see.
+/// borrows one from a pool. The headroom covers corpses still dissolving
+/// when the next wave spawns (hitstop stretches the clocks unevenly);
+/// running out means graybox capsules mid-fight.
 const int barbarianPoolSize = maxWaveEnemies + 4;
 
 /// Health and power ramp per wave, so wave 10 is a different fight from

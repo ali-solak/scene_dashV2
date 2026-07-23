@@ -1,13 +1,11 @@
-/// A wave breaking against the cliff: fine spray thrown up the rock face, a
-/// slower foam boiling at its foot, and a soft mist hanging after. Tinted
-/// off the sea — pale blue-white sprinkles that glint (additive), white foam
-/// and haze that block light and linger (alpha).
+/// A wave breaking against the cliff: fine spray thrown up the rock
+/// face, a slower foam boiling at its foot, and a soft mist hanging
+/// after.
 ///
-/// Each break varies: `intensity` scales how much it throws and how high,
-/// and `seed` re-rolls the spread, so no two crashes read the same. A no-op
-/// headless (`hasResource<Scene>`) like the other fx; the entity's
-/// [DespawnAfter] is its whole cleanup. Sized and sped for the DISTANCE — it
-/// breaks out at the cliff, ~30 units off, so a combat-scale puff would
+/// `intensity` scales the throw and `seed` re-rolls the spread, so no
+/// two crashes read the same. A no-op headless like the other fx; the
+/// entity's [DespawnAfter] is its whole cleanup. Sized for distance: it
+/// breaks at the cliff, ~30 units off, so a combat-scale puff would
 /// vanish.
 library;
 
@@ -36,8 +34,8 @@ void spawnWaveCrash(
   final sprayN = (_sprayCount * intensity).round().clamp(8, _sprayCount * 2);
   final foamN = (_foamCount * intensity).round().clamp(4, _foamCount * 2);
   final mistN = (_mistCount * intensity).round().clamp(4, _mistCount * 2);
-  // A bigger break flings higher and fatter, not just more — a wide spread
-  // so a small one is clearly a lap and a big one clearly a wall.
+  // A bigger break flings higher and fatter, not just more: a small one
+  // is clearly a lap and a big one clearly a wall.
   final speedK = 0.55 + 0.75 * intensity;
   final sizeK = 0.65 + 0.5 * intensity;
 
@@ -79,8 +77,8 @@ void spawnWaveCrash(
     seed: seed,
   );
 
-  // Foam: a fat, slow, white cloud boiling up at the base — alpha, because
-  // foam blocks light, it does not glow.
+  // Foam: a fat, slow, white cloud boiling up at the base; alpha,
+  // because foam blocks light rather than glowing.
   final foam = fx.ParticleSystem(
     maxParticles: foamN,
     shape: fx.ConeShape(angle: 0.85, radius: 1.0),
@@ -115,9 +113,8 @@ void spawnWaveCrash(
     seed: seed + 1,
   );
 
-  // Mist: a wide, faint haze that hangs and drifts UP off the break after
-  // the spray has fallen — the fine stuff the wind carries. Low alpha, big
-  // and soft, long-lived; a veil, not a cloud.
+  // Mist: a wide faint haze that drifts up off the break after the spray
+  // has fallen. Low alpha, big and soft, long-lived; a veil, not a cloud.
   final mist = fx.ParticleSystem(
     maxParticles: mistN,
     shape: fx.ConeShape(angle: 1.05, radius: 1.6),
@@ -138,11 +135,9 @@ void spawnWaveCrash(
       fx.SizeOverLifeModule(
         fx.CurveFloat(fx.ParticleCurve.linear(from: 0.8, to: 2.2)),
       ),
-      // DIM ADDITIVE (see the material below). Alpha-blended, the mist sat
-      // over the bright cliff-gap sky, where source-over can only tint
-      // DOWN toward the sprite's colour — so a pale veil read as a black
-      // smear. Additive only ever brightens, so a soft blue-white haze
-      // shows against the sky. Kept dim, and few, so it does not blow out.
+      // Dim additive on purpose: alpha-blended mist over the bright sky
+      // could only darken it, reading as a black smear. Additive only
+      // brightens; kept dim and few so it does not blow out.
       fx.ColorOverLifeModule(
         fx.GradientColor(
           fx.ColorGradient([

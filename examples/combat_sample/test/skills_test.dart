@@ -1,8 +1,6 @@
 /// What points buy, headless: the purchase gate, the cooldown gate, and
-/// what each of the three skills actually does to the pack. Every skill
-/// deals its damage through [HitLanded], so these also pin that skills
-/// go through the same resolution the sword does — kills, scoring and
-/// knockback included.
+/// what each skill does to the pack. Skills damage through [HitLanded],
+/// so they share the sword's resolution (kills, scoring, knockback).
 library;
 
 import 'dart:math' as math;
@@ -36,9 +34,8 @@ void grant(TestGame game, Skill skill, {int level = 1}) {
 }
 
 /// Pumps [steps] fixed steps holding [enemy] where it stands AND at full
-/// health. A long wait otherwise ends with a dead dummy — and a question
-/// about whether an effect interrupts its victim needs a victim that
-/// survives long enough to be interrupted.
+/// health; an interruption test needs a victim that survives long enough
+/// to be interrupted.
 void pumpUnkillable(TestGame game, Entity enemy, {required int steps}) {
   final world = game.world;
   final spot = world.get<SceneTransform>(enemy).translation.clone();
@@ -50,14 +47,8 @@ void pumpUnkillable(TestGame game, Entity enemy, {required int steps}) {
 }
 
 /// Pumps up to [maxSteps] fixed steps until [ready], holding the PLAYER
-/// at full health.
-///
-/// Bounded rather than counted because cooldowns run on GAME time: every
-/// hitstop in the fight going on around the test stretches how many fixed
-/// steps a second of that clock costs, so an exact step count is really a
-/// bet on how often the pack connects. And pinned because an idle player
-/// left to the pack loses the run, which stops `castSkills` — and with it
-/// the cooldown the caller is waiting on.
+/// at full health. Bounded because hitstop stretches game time; pinned
+/// because losing the run stops `castSkills` and its cooldowns.
 void pumpUntil(TestGame game, bool Function() ready, {required int maxSteps}) {
   final health = game.world.get<Health>(playerOf(game.world));
   for (var i = 0; i < maxSteps && !ready(); i++) {
@@ -199,11 +190,9 @@ void main() {
     expect(health.current, afterBurn, reason: 'the fire is out');
   });
 
-  /// Damage-over-time carries `stagger: false` for a reason: a burn ticks
-  /// every 0.5 s and lava every 0.4 s, both well inside the 0.8 s stagger,
-  /// so a tick that staggered would hold its victim down for the whole
-  /// effect — and, since `coordinateAggro` releases a staggered holder,
-  /// would quietly make fire gush the best crowd control in the game.
+  /// DoT ticks land faster than the stagger runs out, so a staggering
+  /// tick would stunlock its victim for the whole effect and quietly
+  /// make fire gush the best crowd control in the game.
   test('a burn hurts without stunlocking what it is burning', () {
     final game = boot();
     final world = game.world;
@@ -433,12 +422,9 @@ void main() {
     });
     expect(launched, 4);
 
-    // The throw has to CARRY. Airborne knockback does not decay (ground
-    // friction needs ground), so by the time they land they are well
-    // outside where they were standing — the difference between a throw
-    // and a hop.
-    // Hang time is 2 * lift / gravity — derived, not a magic number, so
-    // retuning the arc cannot silently make this assertion vacuous.
+    // The throw has to CARRY: airborne knockback does not decay, so they
+    // land well outside where they stood. Hang time is 2 * lift / gravity,
+    // derived so retuning the arc cannot make this assertion vacuous.
     game.pumpFixed(steps: ticksFor(2 * windBlastLift / knockbackGravity) + 8);
     world.query2<Knockback, SceneTransform>(require: const [Enemy]).each((
       entity,
@@ -465,9 +451,8 @@ void main() {
     final knockback = world.get<Knockback>(enemy);
     expect(knockback.airborne, isTrue);
 
-    // Ride out the flight. On landing it is still incapacitated — the
-    // whole point: hang time alone let them pop upright the instant they
-    // touched the floor.
+    // Ride out the flight. On landing it is still incapacitated; hang
+    // time alone let them pop upright the instant they touched the floor.
     game.pumpFixed(steps: ticksFor(2 * windBlastLift / knockbackGravity) + 4);
     expect(knockback.airborne, isFalse, reason: 'landed');
     expect(knockback.incapacitated, isTrue, reason: 'still on the floor');
@@ -509,8 +494,8 @@ void main() {
       HitLanded(playerOf(game.world), damage, heavy: heavy, impact: impact),
     );
     // A few steps for resolution to settle. Blows no longer freeze the
-    // clock (the hitstop read as lag), so there is no frozen window to pump
-    // past — a plain pump is enough.
+    // clock (the hitstop read as lag), so there is no frozen window to
+    // pump past; a plain pump is enough.
     game.pumpFixed(steps: 3);
   }
 
@@ -521,7 +506,7 @@ void main() {
   test('the shield mount stands the slab up and faces it forward', () {
     // Identity is the trap: the shield's face normal is its local +Z, and
     // the slot sends +Z straight up, so an unrotated shield is carried
-    // flat like a tray. A yaw cannot fix that — it only spins the tray.
+    // flat like a tray. A yaw cannot fix that; it only spins the tray.
     final flat = throughHandSlot(Vector3(0, 0, 1));
     expect(flat.y, closeTo(1, 1e-6), reason: 'unrotated: face to the sky');
 
@@ -647,7 +632,7 @@ void main() {
     game.pump();
     game.pump();
     // `requestRestart` gates on the state, and the transition it is
-    // waiting for only applies on the following frame — restarting
+    // waiting for only applies on the following frame; restarting
     // before `lost` has landed consumes the event and does nothing.
     expect(world.state<GameStatus>(), GameStatus.lost);
 

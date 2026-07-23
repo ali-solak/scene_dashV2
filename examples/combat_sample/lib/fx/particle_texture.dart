@@ -42,13 +42,10 @@ Texture2D? _softDot;
 Texture2D softDotTexture() =>
     _softDot ??= Texture2D.fromPixels(_softDotPixels(64), 64, 64);
 
-/// A flame tongue: a teardrop that tapers to a point, so a spray of them
-/// reads as licking spikes instead of a bank of round blobs. Wide and
-/// bright at the base (v = 0), pinched and dim at the tip.
-///
-/// The round dot is right for sparks and dust; fire has a SHAPE, and a
-/// cloud of soft circles is exactly the "white mist" a gush of them turns
-/// into.
+/// A flame tongue: a teardrop tapering to a point, so a spray reads as
+/// licking spikes rather than round blobs. Wide and bright at the base
+/// (v = 0), pinched and dim at the tip. Soft round dots turn a gush of
+/// fire into white mist.
 Uint8List _flamePixels(int size) {
   final pixels = Uint8List(size * size * 4);
   for (var y = 0; y < size; y++) {
@@ -90,12 +87,9 @@ SpriteMaterial flameAdditiveSprite() =>
     _flameSprite ??= SpriteMaterial(colorTexture: flameTexture())
       ..blendMode = SpriteBlendMode.additive;
 
-/// A CRISP blob: opaque through most of its radius with only a thin
-/// antialiasing rim, shaded slightly brighter toward the top-left so it
-/// reads as a ball rather than a flat coin.
-///
-/// The soft dot's whole radius is falloff, which is what makes a cluster
-/// of them bloom into one another. This one has an edge.
+/// A crisp blob: opaque through most of its radius with a thin
+/// antialiasing rim, shaded brighter top-left so it reads as a ball.
+/// Unlike the soft dot it has an edge, so clusters do not bloom together.
 Uint8List _crispDotPixels(int size) {
   final pixels = Uint8List(size * size * 4);
   final center = (size - 1) / 2.0;
@@ -137,14 +131,10 @@ SpriteMaterial crispAlphaSprite() =>
     _crispSprite ??= SpriteMaterial(colorTexture: crispDotTexture())
       ..blendMode = SpriteBlendMode.alpha;
 
-/// A PUFF: a rounded body with a soft but definite edge and internal
-/// shading, so a cluster of them reads as tumbling volumes of burning gas
-/// rather than as overlapping discs.
-///
-/// Between the two extremes that both failed: the soft dot is all falloff
-/// (every puff dissolves into its neighbours — "cloudy"), the crisp glob
-/// is nearly hard-edged (fine for molten rock, too solid for flame). This
-/// keeps the glob's shading and takes a wider rim.
+/// A puff: a rounded body with a soft but definite edge and internal
+/// shading, so a cluster reads as tumbling volumes of burning gas.
+/// Sits between the soft dot (all falloff, cloudy) and the crisp glob
+/// (too solid for flame): the glob's shading with a wider rim.
 Uint8List _puffPixels(int size) {
   final pixels = Uint8List(size * size * 4);
   final center = (size - 1) / 2.0;
@@ -179,34 +169,26 @@ Texture2D puffTexture() =>
 
 SpriteMaterial? _puffSprite;
 
-/// Puffs under ALPHA blending — the lava globs' recipe applied to flame.
-///
-/// Additive fire is what produced every "white/cloudy" complaint in this
-/// directory: overlapping puffs sum toward white and lose their edges
-/// entirely. Alpha-blended puffs OCCLUDE each other, so the near ones
-/// read in front of the far ones and the mass has depth.
+/// Puffs under alpha blending. Additive fire sums toward white where
+/// puffs overlap; alpha puffs occlude each other, so the mass keeps its
+/// edges and depth.
 SpriteMaterial puffAlphaSprite() =>
     _puffSprite ??= SpriteMaterial(colorTexture: puffTexture())
       ..blendMode = SpriteBlendMode.alpha;
 
 SpriteMaterial? _alphaSprite;
 
-/// The soft dot under ALPHA blending: the sprite occludes what is behind
-/// it instead of adding to it. For dust and thrown earth — additive dirt
-/// would glow, which is the one thing dirt does not do.
+/// The soft dot under alpha blending, for dust and thrown earth:
+/// additive dirt would glow, which is the one thing dirt does not do.
 SpriteMaterial softAlphaSprite() =>
     _alphaSprite ??= SpriteMaterial(colorTexture: softDotTexture())
       ..blendMode = SpriteBlendMode.alpha;
 
 SpriteMaterial? _sprite;
 
-/// The shared soft additive sprite material carrying the dot.
-///
-/// One instance for every emitter in the game, not one per spawn. Impact
-/// bursts fire on EVERY connect, and building a fresh material per hit
-/// meant GPU-side setup in the middle of a swing — the stutter reads as
-/// the game lagging on heavy attacks. Nothing mutates this material after
-/// construction, so sharing it is safe.
+/// The shared soft additive sprite material. One instance for every
+/// emitter: building a fresh material per hit caused GPU setup stutter
+/// mid-swing. Nothing mutates it after construction, so sharing is safe.
 SpriteMaterial softAdditiveSprite() =>
     _sprite ??= SpriteMaterial(colorTexture: softDotTexture())
       ..blendMode = SpriteBlendMode.additive;

@@ -137,7 +137,7 @@ void main() {
       reason: 'swings connect',
     );
     // Poise: an ordinary barbarian swing hurts and shoves but must NOT
-    // cancel what the player was doing — only a heavy blow (over
+    // cancel what the player was doing; only a heavy blow (over
     // `playerPoiseThreshold`) breaks through.
     expect(
       sawStagger,
@@ -246,7 +246,7 @@ void main() {
     world.get<Health>(enemy).current = 10; // the next strike kills
 
     // Lock onto it first so the death also releases the lock: park it
-    // right in front of the camera — nearest-in-front wins acquisition.
+    // right in front of the camera, where nearest-in-front wins acquisition.
     final playerTransform = world.get<SceneTransform>(player);
     final enemyTransform = world.get<SceneTransform>(enemy);
     final facing = world.get<PlayerMotion>(player).facing;
@@ -282,7 +282,7 @@ void main() {
     expect(world.get<Fighter>(player).stance, Stance.free);
 
     // The corpse lies through the delay, dissolves, and the death clock
-    // expires with the entity — waves own the field now, so a corpse is
+    // expires with the entity: waves own the field now, so a corpse is
     // gone for good and its model slot returns to the pool.
     game.pumpFixed(steps: ticksFor(dissolveDelaySeconds + dissolveSeconds) + 8);
     expect(world.tryGet<Health>(enemy), isNull, reason: 'the corpse despawns');
@@ -330,9 +330,8 @@ void main() {
     expect(world.state<GameStatus>(), GameStatus.lost);
     expect(world.clock.timeScale, lessThan(1), reason: 'slow-mo on death');
 
-    // Restart: fighting again, full health, a clean clock, the score and
-    // the wave counter back to the start — and wave 1 fielded fresh. The
-    // old barbarians were despawned, so these are new entities.
+    // Restart: a clean run, wave 1 fielded fresh. The old barbarians
+    // were despawned, so these are new entities.
     game.emit(const RestartRequested());
     game.pump();
     game.pump();

@@ -45,7 +45,7 @@ void main() {
           expect(r, inInclusiveRange(scatterInner, scatterOuter));
         case PropKind.bush:
           // Scatter bushes start at the arena edge; underbrush hugs the
-          // treeline — the union of both bands.
+          // treeline. The range is the union of both bands.
           expect(
             r,
             inInclusiveRange(

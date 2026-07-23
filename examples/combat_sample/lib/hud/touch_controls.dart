@@ -19,7 +19,7 @@ class TouchControls extends StatelessWidget {
   /// Normalized stick position: x right, y forward (up on screen).
   final void Function(double x, double y) onMove;
 
-  /// Held state — press and hold charges the heavy, exactly like the
+  /// Held state; press and hold charges the heavy, exactly like the
   /// mouse button.
   final ValueChanged<bool> onAttackChanged;
 

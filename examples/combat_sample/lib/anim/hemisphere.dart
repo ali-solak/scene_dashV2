@@ -1,33 +1,17 @@
-/// Canonicalises the SIGN of every rotation keyframe, so cross-clip
+/// Canonicalises the sign of every rotation keyframe, so cross-clip
 /// blending takes the short way round.
 ///
-/// ## The bug this exists for
+/// `q` and `-q` are the same rotation, so exporters emit either.
+/// flutter_scene 0.19's `slerp` does not negate antipodal inputs, so
+/// blending clips with opposite-signed quaternions travels the long way
+/// round the hypersphere: the model folds flat for a few frames, the
+/// "pancake" of NOTES.md B1. Until the one-line upstream fix lands, this
+/// flips keyframes in place (`dot < 0` against a per-joint reference) so
+/// no two clips ever hold antipodal quaternions for the same joint. The
+/// pose is unchanged, only the representation.
 ///
-/// A quaternion and its negation describe the same orientation, so an
-/// exporter is free to emit either. flutter_scene 0.19's `slerp`
-/// (`math_extensions.dart`) does not negate for antipodal inputs, so when
-/// two clips happen to hold opposite-signed quaternions for the same
-/// joint, blending between them travels the LONG way — all the way around
-/// the hypersphere instead of across the short arc. On a character rig
-/// that reads as the model folding flat for a few frames: the "pancake"
-/// that cost this sample its animation blending entirely (NOTES.md B1).
-///
-/// The upstream fix is one line in `slerp`. Until it lands, we can get
-/// the same result from the other side: if no two clips ever hold
-/// antipodal quaternions for the same joint, `slerp` is never handed a
-/// pair it would take the long way between.
-///
-/// ## What this does
-///
-/// Picks a reference orientation per joint and flips every keyframe that
-/// points into the opposite hemisphere (`dot < 0`), in place. The pose is
-/// completely unchanged — `q` and `-q` are the same rotation — only the
-/// representation is. Within a clip, each keyframe is aligned to the one
-/// before it, so intra-clip slerp is short-path too.
-///
-/// Uses implementation imports for the same reason `fx/particles.dart`
-/// does: the keyframe types are not exported from the barrel. The
-/// exception is confined to this file.
+/// Implementation imports for the same reason as `fx/particles.dart`:
+/// the keyframe types are not exported from the barrel.
 library;
 
 // ignore_for_file: implementation_imports
@@ -37,18 +21,16 @@ import 'package:flutter_scene/src/animation.dart'
     show AnimationProperty, RotationTimelineResolver;
 import 'package:vector_math/vector_math.dart' show Quaternion;
 
-/// Aligns every rotation channel across [animations] to a shared
-/// hemisphere, per joint.
-///
-/// Call ONCE per set of clips that will ever be blended together (they
-/// have to agree with each other, so a per-clip pass would be useless),
-/// after loading and before any clip is instantiated.
-/// Flip to true to have the pass report what it saw. If `channels` is 0
-/// the clips are not carrying `RotationTimelineResolver`s and this whole
-/// file is a no-op; if `flipped` is 0 the exporter was already
-/// consistent and the pancake is NOT a sign problem.
+/// Flip to true to have the pass report what it saw. `channels` 0 means
+/// the clips carry no `RotationTimelineResolver`s and this file is a
+/// no-op; `flipped` 0 means the exporter was already consistent and the
+/// pancake is not a sign problem.
 const bool debugHemispheres = false;
 
+/// Aligns every rotation channel across [animations] to a shared
+/// hemisphere, per joint. Call once per set of clips that will ever be
+/// blended together (they have to agree with each other), after loading
+/// and before any clip is instantiated.
 void harmoniseRotationHemispheres(Iterable<Animation> animations) {
   var seenChannels = 0;
   var seenKeys = 0;
@@ -56,7 +38,7 @@ void harmoniseRotationHemispheres(Iterable<Animation> animations) {
   var skipped = 0;
   // nodeName -> the orientation every clip's keyframes for that joint are
   // measured against. The first clip to mention a joint sets it, which is
-  // arbitrary but consistent — all that matters is that everyone agrees.
+  // arbitrary but consistent; all that matters is that everyone agrees.
   final reference = <String, Quaternion>{};
 
   for (final animation in animations) {
@@ -69,22 +51,16 @@ void harmoniseRotationHemispheres(Iterable<Animation> animations) {
       }
       seenChannels++;
 
-      // `values` hands back an unmodifiable LIST, but the quaternions in
-      // it are the live objects — mutating them in place is how this
+      // `values` hands back an unmodifiable list, but the quaternions in
+      // it are the live objects; mutating them in place is how this
       // reaches the keyframes at all.
       final keys = resolver.values;
       if (keys.isEmpty) continue;
 
       final node = channel.bindTarget.nodeName;
-      // The shared anchor is set by the FIRST clip to mention this joint
-      // and never moves again.
-      //
-      // It used to be overwritten with each clip's first keyframe, which
-      // is exactly the drift it was meant to prevent: clip B aligned to
-      // A, then became the anchor for C, so C could end up antipodal to
-      // A even though every individual step looked aligned. That is what
-      // left the barbarians pancaking on their attack clip while the
-      // player looked fine.
+      // The anchor is set by the first clip to mention this joint and
+      // never moves again; re-anchoring per clip lets a later clip end
+      // up antipodal to the first (the barbarian pancake).
       final anchor = reference.putIfAbsent(node, () => keys.first.clone());
 
       // Align this clip's first keyframe to the shared anchor, then chain

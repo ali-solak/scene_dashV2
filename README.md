@@ -1,6 +1,6 @@
 # Scene-Dash v2
 
-![Scene-Dash v2 — the combat sample](combat_sample_game.gif)
+![Scene-Dash v2: the combat sample](combat_sample_game.gif)
 
 An entity-component-system runtime for
 [`flutter_scene`](https://pub.dev/packages/flutter_scene).
@@ -59,7 +59,7 @@ When a feature spawned the entity (nothing in `main` holds the handle),
 ```dart
 EntityBuilder<Health, double>.matching(
   require: const [Player],            // the first entity with Health + Player,
-  select: (h) => h.current,           //   re-resolved each frame — a respawned
+  select: (h) => h.current,           //   re-resolved each frame; a respawned
   builder: (context, hp) =>           //   player is picked up automatically
       HealthBar(hp),
   absent: const RespawnCountdown(),   // no match, dead, or Health gone
@@ -91,7 +91,7 @@ class PauseButton extends StatelessWidget {                 // const: no
     onPressed: () => GameScope.of(context).emit(const PauseRequested()),
     child: Text('score ${context.world.resource<Score>().value}'),
   );                             // context.world / context.game: the same
-}                                //   lookup, one-off reads (not reactive —
+}                                //   lookup, one-off reads (not reactive;
                                  //   for that use the builders above)
 ```
 
@@ -175,6 +175,22 @@ flutter run --enable-flutter-gpu
 ---
 
 # Reference
+
+[Setup](#application-setup) ·
+[Features and systems](#features-and-systems) ·
+[Queries](#queries) ·
+[Components](#components-tags-bundles) ·
+[Scheduling](#scheduling-sets-and-run-conditions) ·
+[Events](#events) ·
+[Input](#input) ·
+[Resources](#resources) ·
+[States](#states) ·
+[Time](#time) ·
+[Machine](#machine) ·
+[Physics](#physics) ·
+[Debugging](#debugging) ·
+[Testing](#testing) ·
+[Rendering bridge](#the-rendering-bridge)
 
 The reference builds **one small game** across its sections: a fighter
 who rolls through the swings of advancing enemies and strikes back.
@@ -373,7 +389,7 @@ List<Object> combatantBundle({required Node node, required double maxHealth}) =>
 List<Object> playerBundle(Node body) => [
   const Player(),                        // present for the whole lifetime
   ...combatantBundle(node: body, maxHealth: 100),
-  Fighter(),                             // the state machine (see Time)
+  Fighter(),                             // the state machine (see Machine)
 ];
 
 List<Object> enemyBundle(Node node, {required Entity target}) => [
@@ -479,7 +495,7 @@ WorldEventListener<EnemyKilled>(              // and in the UI
     onEvent: (context, event) => confetti(), child: const ScorePanel())
 ```
 
-The longer version — both ends of every loop: `applyDamage` consumes what the fighter's strike
+The longer version, both ends of the loop: `applyDamage` consumes what the fighter's strike
 emits (Physics, below) and produces what `awardBounty` and
 `recoverFromStun` consume.
 
@@ -544,7 +560,7 @@ widgets use `WorldEventListener`.
 ## Input
 
 Held state → a `ButtonInput` resource. Discrete intents → events.
-Buffered presses → `InputBuffer`. The fighter's machine (Time, below)
+Buffered presses → `InputBuffer`. The fighter's machine (Machine, below)
 consumes all three.
 
 ```dart
@@ -566,7 +582,7 @@ final strafe = world.buttons<PlayerAction>()
 
 ```dart
 // buffered: a roll pressed during a strike must fire the instant the
-// strike ends; the fighter consumes it when its machine allows (Time)
+// strike ends; the fighter consumes it when its machine allows (Machine)
 if (edge == ButtonEdge.pressed) {
   world.buffer<PlayerAction>().record(PlayerAction.roll);   // widget side
 }
@@ -583,7 +599,7 @@ final x = world.axes<GameAxis>().value(GameAxis.moveX);  // 0.0 if never written
 
 ## Resources
 
-One instance per world, keyed by type — the game's singletons (score,
+One instance per world, keyed by type: the game's singletons (score,
 wave number, settings). Any system reaches one without a query:
 
 ```dart
@@ -608,7 +624,7 @@ final class ScoreCubit extends Cubit<int> implements Disposable {
 ```
 
 Framework state is promoted to members (`world.dt`, `world.clock`,
-`world.buttons`, `world.physics`, `world.gizmos`) — never `resource<T>()`.
+`world.buttons`, `world.physics`, `world.gizmos`), never `resource<T>()`.
 
 ## States
 
@@ -687,14 +703,48 @@ void enemyAttacks(World world) {
 }
 ```
 
-The fighter has *modes*, so it is a `Machine`, `GameTimer`'s sibling:
-`elapsed` is seconds in the current state (zeroed by `go`), and an edge
-(`justEntered`/`justExited`) is true from `go()` until the machine's next
-tick. Transitions can come from input, time, or events:
+```dart
+// cheatsheet: the timer family (all tick with world.dt)
+GameTimer(0.4)             // one-shot: finished / justFinished / reset()
+GameTimer.repeating(1.5)   // completionsThisTick, can be >1 after a hitch
+GameStopwatch()            // counts up: elapsed
+DespawnAfter(2.0)          // component: timed despawn (muzzle flash, corpse)
+Machine<S>(initial)        // modes; own section below
+// system-level cadence → runIf: every(seconds), never a timer resource
+```
+
+## Machine
+
+`GameTimer`'s sibling, for anything with modes. Lives on a component,
+ticks with `world.dt`:
 
 ```dart
 enum FighterPhase { idle, striking, rolling, staggered }
 
+final phase = Machine<FighterPhase>(FighterPhase.idle);
+
+phase.tick(world.dt);                // top of its system, every run
+phase.state                          // the current mode
+phase.elapsed                        // seconds in it, zeroed by go()
+phase.go(FighterPhase.striking);     // transition
+phase.justEntered(FighterPhase.striking)  // true from go() until the next
+phase.justExited(FighterPhase.idle)       //   tick, so edges fire exactly once
+
+// the state machine shape: switch on state, `when` guards the transition
+switch (phase.state) {
+  case FighterPhase.idle when attackPressed:                   // yours
+    phase.go(FighterPhase.striking);
+  case FighterPhase.striking when phase.elapsed >= 0.25:       // timed exit
+    phase.go(FighterPhase.idle);
+  default:
+    break;
+}
+```
+
+The fighter runs on one machine. Transitions come from input, time, or
+events:
+
+```dart
 const strikeSeconds = 0.25, rollSeconds = 0.5, staggerSeconds = 0.4;
 const iFrameStart = 0.05, iFrameEnd = 0.35;
 
@@ -718,8 +768,7 @@ void fighterActions(World world) {
   }
 
   switch (phase.state) {
-    // input-driven; `when` guards the case: it matches only while the
-    // condition also holds
+    // input-driven; `when` guards the case
     case FighterPhase.idle
         when world.buffer<PlayerAction>().consume(PlayerAction.roll):
       phase.go(FighterPhase.rolling);
@@ -745,7 +794,7 @@ void fighterActions(World world) {
 ```
 
 ```dart
-// cheatsheet: consumeAny — the boolean shape of world.events
+// cheatsheet: consumeAny, the boolean shape of world.events
 world.consumeAny<AttackPressed>();  // any since this system's last read?
                                     //   true consumes them; same
                                     //   per-registration cursor as events()
@@ -753,16 +802,6 @@ world.consumeAny<AttackPressed>();  // any since this system's last read?
 
 The strike itself resolves in Physics, below, gated on
 `justEntered(striking)`.
-
-```dart
-// cheatsheet: the timer family (all tick with world.dt)
-GameTimer(0.4)             // one-shot: finished / justFinished / reset()
-GameTimer.repeating(1.5)   // completionsThisTick, can be >1 after a hitch
-GameStopwatch()            // counts up: elapsed
-DespawnAfter(2.0)          // component: timed despawn (muzzle flash, corpse)
-Machine<S>(initial)        // modes: state / elapsed / go / justEntered / justExited
-// system-level cadence → runIf: every(seconds), never a timer resource
-```
 
 ## Physics
 

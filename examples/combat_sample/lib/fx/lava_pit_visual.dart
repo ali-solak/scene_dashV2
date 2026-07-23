@@ -1,14 +1,11 @@
 /// The lava pit's body: a crust on a ground disc, with globs of molten
 /// rock bubbling up out of it and falling back in.
 ///
-/// Split from the skills feature the same way the impact burst is split
-/// from the rules: emitter construction and material parameters are
-/// GPU-side, and keeping them here leaves the pit's damage logic fully
-/// testable headless.
-///
-/// The crust falls back to a generated lava texture when the `.fmat` is
-/// unavailable. The fallback is not a nicety — the pit is a damage zone,
-/// and a zone you cannot see is worse than an ugly one.
+/// Split from the skills feature because emitters and material
+/// parameters are GPU-side; the pit's damage logic stays testable
+/// headless. The crust falls back to a generated lava texture when the
+/// `.fmat` is unavailable: the pit is a damage zone, and a zone you
+/// cannot see is worse than an ugly one.
 library;
 
 import 'package:flutter_scene/scene.dart';
@@ -25,13 +22,13 @@ import 'particles.dart' as fx;
 /// additive blobs is how a lava pit turns into a white smear.
 const int _globCount = 26;
 
-/// The one-shot when the pit opens. Denser than the idle bubbling — this
+/// The one-shot when the pit opens. Denser than the idle bubbling: this
 /// is the ground breaking, and it only happens once.
 const int _eruptionCount = 70;
 const double _eruptionLifetime = 2.2;
 
 /// Builds one pit node: the crust disc, plus the globs bubbling in it.
-/// [center] is the pit's world position on the ground plane — the crust
+/// [center] is the pit's world position on the ground plane; the crust
 /// shades from world coordinates, so it needs to know where it is.
 Node buildLavaPitNode({
   required PreprocessedMaterial? material,
@@ -68,7 +65,7 @@ Node buildLavaPitNode({
 }
 
 /// Sets the pit's clock on its crust. A no-op on the generated fallback
-/// (no parameters to drive) — the pit still reads as alive there through
+/// (no parameters to drive); the pit still reads as alive there through
 /// the globs.
 void setLavaPitHeat(Node node, {required double time, required double heat}) {
   final material = node
@@ -84,8 +81,8 @@ void setLavaPitHeat(Node node, {required double time, required double heat}) {
 }
 
 /// Globs: fat blobs of molten rock that swell up out of the pool, hang,
-/// and fall back into it. The pit is a liquid, and a liquid BUBBLES —
-/// embers drifting off the top read as a campfire instead.
+/// and fall back into it. The pit is a liquid, and a liquid bubbles;
+/// embers drifting off the top would read as a campfire instead.
 fx.ParticleEmitterComponent _globs() {
   final system = fx.ParticleSystem(
     maxParticles: _globCount,
@@ -110,17 +107,13 @@ fx.ParticleEmitterComponent _globs() {
     ),
     modules: [
       // Swells as it clears the surface, then necks down as it falls
-      // back — a bubble rising and collapsing.
+      // back: a bubble rising and collapsing.
       fx.SizeOverLifeModule(
         fx.CurveFloat(fx.ParticleCurve.linear(from: 0.7, to: 1.25)),
       ),
-      // ColorOverLifeModule REPLACES the colour (see impact_burst.dart),
-      // so the molten gradient lives here.
-      //
-      // Every value is at or UNDER 1. Over-bright colours are what the
-      // tonemapper turns into bloom, and bloom is exactly what dissolves
-      // a glob's edge into the glob next to it. Molten rock is bright
-      // ORANGE, not a light source.
+      // ColorOverLifeModule replaces the colour, so the molten gradient
+      // lives here. Every value at or under 1: over-bright colours turn
+      // into bloom, and bloom dissolves a glob's edge into its neighbour.
       fx.ColorOverLifeModule(
         fx.GradientColor(
           fx.ColorGradient([
@@ -140,19 +133,16 @@ fx.ParticleEmitterComponent _globs() {
   );
   return fx.ParticleEmitterComponent(
     system: system,
-    // Crisp and ALPHA-blended: globs occlude each other and the crust,
-    // so each one keeps its own outline. Additive soft dots were the
-    // bloom — every overlap adding up until the pool was one glow.
+    // Crisp and alpha-blended: globs occlude each other and the crust,
+    // keeping their outlines; additive soft dots summed into one glow.
     material: crispAlphaSprite(),
   );
 }
 
-/// The pit ARRIVING: a burst of molten rock thrown up and outward as the
-/// ground splits, on its own short-lived entity.
-///
-/// Without this the pit simply appears, fully formed, which reads as a
-/// decal being switched on rather than as something happening. The
-/// eruption is pure theater — the damage starts on the pit's own tick.
+/// The pit arriving: a burst of molten rock thrown up and outward as the
+/// ground splits, on its own short-lived entity. Without it the pit just
+/// appears, like a decal switching on. Pure theater; the damage starts
+/// on the pit's own tick.
 void spawnLavaEruption(World world, Vector3 position) {
   if (!world.hasResource<Scene>()) return;
   final system = fx.ParticleSystem(
@@ -203,14 +193,9 @@ void spawnLavaEruption(World world, Vector3 position) {
   world.spawn([SceneNode(node), DespawnAfter(_eruptionLifetime)]);
 }
 
-/// When the `.fmat` is unavailable: a generated crust texture rather than
-/// a flat fill. The previous fallback was a solid orange disc, which is
-/// what "the lava pit is just an orange circle" means — if you are seeing
-/// a flat colour, the shader did not load and this is what you are
-/// looking at.
-///
-/// The generated crust is static where the authored one flows, but it is
-/// unmistakably lava, and the embers on top supply the movement.
+/// When the `.fmat` is unavailable: a generated crust texture rather
+/// than a flat fill. Static where the authored one flows, but
+/// unmistakably lava; the globs supply the movement.
 Material _fallbackCrust() {
   return UnlitMaterial(colorTexture: lavaCrustTexture())
     // Above 1 so the channels bloom a little against the dark grass.

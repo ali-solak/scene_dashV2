@@ -1,12 +1,6 @@
-/// The pancake fix, headless.
-///
-/// `harmoniseRotationHemispheres` exists to make cross-clip blending take
-/// the short path around the hypersphere (NOTES.md B1). Two properties
-/// have to hold, and the second is the one that matters most: it must
-/// NOT change any pose. `q` and `-q` are the same rotation, so flipping a
-/// keyframe's sign is free — unless the implementation flips something it
-/// should not, in which case every animation in the game is silently
-/// wrong and nothing else would catch it.
+/// The pancake fix (NOTES.md B1): `harmoniseRotationHemispheres` makes
+/// cross-clip blending take the short slerp path. Above all it must NOT
+/// change any pose; a bad sign flip silently breaks every animation.
 library;
 
 // ignore_for_file: implementation_imports
@@ -49,13 +43,13 @@ double dot(Quaternion a, Quaternion b) =>
 
 Quaternion negated(Quaternion q) => Quaternion(-q.x, -q.y, -q.z, -q.w);
 
-/// Where [q] sends a probe vector — the pose, independent of sign.
+/// Where [q] sends a probe vector: the pose, independent of sign.
 Vector3 posed(Quaternion q) => q.rotated(Vector3(1, 2, 3));
 
 void main() {
   test('clips holding antipodal quaternions end up in one hemisphere', () {
     final upright = Quaternion.axisAngle(Vector3(0, 1, 0), 0.4)..normalize();
-    // The same orientation, written the other way round — exactly what an
+    // The same orientation, written the other way round: exactly what an
     // exporter is free to emit and what sends slerp the long way.
     final flipped = negated(upright);
 
@@ -98,7 +92,7 @@ void main() {
 
   test('successive keyframes within a clip stay short-path to each other', () {
     // A joint winding steadily past 180°, written with signs that flip
-    // partway — the intra-clip case.
+    // partway: the intra-clip case.
     final keys = <Quaternion>[];
     for (var i = 0; i < 8; i++) {
       final q = Quaternion.axisAngle(Vector3(0, 1, 0), i * 0.5)..normalize();
@@ -119,12 +113,9 @@ void main() {
   });
 
   test('the anchor does NOT drift as clips are aligned in turn', () {
-    // The bug this pins: the shared reference used to be overwritten with
-    // each clip's first keyframe. Clip B aligned to A and then became the
-    // anchor for C — so with B more than 90 degrees from A, C could come
-    // out antipodal to A while every individual step looked correct.
-    // Every clip must end up aligned to the FIRST one, not to its
-    // predecessor in load order.
+    // The bug this pins: the anchor used to be overwritten by each clip's
+    // first keyframe, so C aligned to B instead of A and could come out
+    // antipodal to A. Every clip must align to the FIRST clip.
     final a = Quaternion.axisAngle(Vector3(0, 1, 0), 0.0)..normalize();
     final b = Quaternion.axisAngle(Vector3(0, 1, 0), 2.6)..normalize();
     final c = Quaternion.axisAngle(Vector3(0, 1, 0), 5.2)..normalize();
@@ -148,7 +139,7 @@ void main() {
 
   test('a joint no clip mentions is simply left alone', () {
     final clip = clipOf('idle', 'spine', [Quaternion.identity()]);
-    // Nothing to align against, nothing to do — and no crash.
+    // Nothing to align against, nothing to do, and no crash.
     harmoniseRotationHemispheres([clip]);
     expect(keysOf(clip), hasLength(1));
   });

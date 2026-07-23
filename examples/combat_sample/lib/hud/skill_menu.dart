@@ -1,10 +1,6 @@
 /// The pause screen: spend what the run has earned. The world is frozen
-/// behind it — the menu is a [GameStatus], not an overlay with a flag.
-///
-/// A light, rounded "shop" panel: ring-icon nodes for every skill on the
-/// left, a detail card for the selected one on the right, a coin purse in
-/// the header and the graphics dial tucked under the grid. Deliberately its
-/// OWN palette (warm cream, not the fight HUD's dark ink) — it is the one
+/// behind it (the menu is a [GameStatus], not an overlay with a flag).
+/// A light "shop" panel with its own warm-cream palette: it is the one
 /// screen you sit and read, so it gets to feel like a workbench.
 library;
 
@@ -30,7 +26,7 @@ const _goldDeep = Color(0xFFDBA43A);
 const _green = Color(0xFF84C24E);
 const _greenDeep = Color(0xFF6FB03E);
 
-/// Points, vitality level and what is already owned — everything the menu
+/// Points, vitality level and what is already owned: everything the menu
 /// needs to decide what is affordable. A value type, so `WorldBuilder`
 /// rebuilds only on real change.
 @immutable
@@ -66,7 +62,7 @@ _MenuState _selectMenu(World world) {
   ], world.resource<GraphicsQuality>().level);
 }
 
-/// One thing you can buy — a skill or vitality — flattened so the node grid
+/// One thing you can buy (a skill or vitality), flattened so the node grid
 /// and the detail card read the same source.
 @immutable
 class _Item {
@@ -106,7 +102,7 @@ class SkillMenu extends StatefulWidget {
 }
 
 class _SkillMenuState extends State<SkillMenu> {
-  /// Which item the detail card shows. Local UI state — the world only
+  /// Which item the detail card shows. Local UI state; the world only
   /// cares what you buy, not what you are looking at.
   int _selected = 0;
 
@@ -180,9 +176,9 @@ class _SkillMenuState extends State<SkillMenu> {
       builder: (context, state) {
         final items = _items(context, state);
         final selected = items[_selected.clamp(0, items.length - 1)];
-        // A phone in landscape has little height to spare, so a short screen
-        // gets a tighter panel — smaller header, nodes and card — that fits
-        // the grid and detail side by side with little or no scrolling.
+        // A phone in landscape has little height to spare, so a short
+        // screen gets a tighter panel (smaller header, nodes and card)
+        // that fits the grid and detail side by side without scrolling.
         final compact = MediaQuery.sizeOf(context).height < 560;
         return Stack(
           fit: StackFit.expand,
@@ -509,7 +505,7 @@ class _Node extends StatelessWidget {
   }
 }
 
-/// The little corner coin on an owned node — its level, or a tick at max.
+/// The little corner coin on an owned node: its level, or a tick at max.
 class _LevelBadge extends StatelessWidget {
   const _LevelBadge({required this.item});
 
@@ -749,8 +745,7 @@ class _BuyButton extends StatelessWidget {
   }
 }
 
-/// The graphics dial, kept from the old menu but restyled — the fight still
-/// needs it reachable, mockup or no. A quiet chip row under the grid.
+/// The graphics dial: a quiet chip row under the grid.
 class _QualityStrip extends StatelessWidget {
   const _QualityStrip({required this.level});
 
@@ -932,7 +927,7 @@ class _Cta extends StatelessWidget {
   }
 }
 
-/// A gold coin — the purse's and the price's shared unit. Optional [letter]
+/// A gold coin, the purse's and the price's shared unit. Optional [letter]
 /// stamps it (the header's "P").
 class _Coin extends StatelessWidget {
   const _Coin({required this.size, this.letter});

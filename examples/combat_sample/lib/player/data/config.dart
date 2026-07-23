@@ -2,7 +2,7 @@ part of '../player.dart';
 
 // --- Locomotion (task 9) ---
 
-// Scaled with the 2.6 u fighter — a bigger body covering the same ground
+// Scaled with the 2.6 u fighter: a bigger body covering the same ground
 // per second reads as wading.
 const double freeMoveSpeed = 6.2;
 
@@ -59,13 +59,11 @@ const double lookPitchSensitivity = 0.0045;
 const double cameraKickDecay = 7;
 
 /// How long the flinch reads for after a blow that did not stagger.
-/// Short: it is a wince, and a long one would look like a stagger the
-/// fighter can act out of, which is exactly the wrong message.
+/// Short: a long wince would look like a stagger the fighter can act out of.
 const double flinchSeconds = 0.28;
 
-/// The camera's own reaction to the player being hit. Smaller than a
-/// heavy connect's kick — TAKING a blow should read, but the screen must
-/// not lurch harder for being hit than for landing one.
+/// Camera kick when the player is hit. Smaller than a heavy connect's:
+/// the screen must not lurch harder for taking a blow than landing one.
 const double hurtCameraKick = 0.4;
 
 /// How far the locked camera's focus slides from the player toward the
@@ -73,9 +71,7 @@ const double hurtCameraKick = 0.4;
 const double lockedCameraBias = 0.5;
 
 /// Metres the locked camera pulls back per metre between the fighters,
-/// and the ceiling on that. Without this the camera holds a fixed leash
-/// and the target simply walks out of frame — the lock stops framing the
-/// fight and just points at it.
+/// and the ceiling on that. Without it the target walks out of frame.
 const double lockedDistanceGain = 0.55;
 const double maxLockedCameraDistance = 16;
 
@@ -86,17 +82,14 @@ const double maxLockedCameraDistance = 16;
 const double titleCameraDistance = 26;
 const double titleCameraPitch = 0.42;
 
-/// Radians per second the title shot drifts around the clearing. Slow —
-/// it should read as a held shot breathing, not as a turntable.
+/// Radians per second the title shot drifts around the clearing. Slow:
+/// a held shot breathing, not a turntable.
 const double titleOrbitRate = 0.08;
 
-/// The opening push-in when the run starts: how long the camera takes to
-/// travel from the title framing down onto the fighter, and the (much
-/// slower than gameplay) blend it flies on while it does.
-///
-/// Both are needed. Dropping the desired framing alone would let the
-/// normal `cameraPositionSharpness` of 14 snap the camera in over about
-/// three frames, which reads as a cut, not as an arrival.
+/// The opening push-in: travel time from the title framing onto the
+/// fighter, and the slower blend it flies on. Without the slow blend the
+/// normal sharpness snaps the camera in over a few frames, a cut not an
+/// arrival.
 const double introZoomSeconds = 1.6;
 const double introCameraSharpness = 2.2;
 
@@ -107,64 +100,22 @@ const double playerCapsuleHeight = 0.95;
 
 const double playerMaxHealth = 100;
 
-// --- Animation mapper (task 15; timings stay phase-driven — L2) ---
+// --- Animation mapper (task 15; timings stay phase-driven, L2) ---
 
-/// Real crossfades — restored.
-///
-/// These were pinned at 0.001 (a hard, sub-frame cut) to dodge the
-/// pancake: upstream's slerp takes the LONG path between antipodal
-/// quaternions, so any cross-clip blend could fold joints the wrong way
-/// round. Snapping meant no clip ever held a mid-blend, and the artefact
-/// had nowhere to happen — at the cost of every transition in the game
-/// being a visible cut.
-///
-/// `harmoniseRotationHemispheres` (anim/hemisphere.dart) now removes the
-/// cause instead of avoiding it: no two clips hold opposite-signed
-/// quaternions for the same joint any more, so slerp is never handed a
-/// pair it would take the long way between.
-///
-/// AND IT CAME BACK. Restored to the hard snap.
-///
-/// The alignment pass is still in place and still correct as far as its
-/// own tests go, but the pancake reappeared on device the moment these
-/// were raised — on the barbarians' attack (a skinned mesh collapsing
-/// along an axis, reported as "becoming slimmer") and on their corpses.
-/// So the sign mismatch is either not the cause, or not the only one.
-///
-/// Flip `debugHemispheres` in anim/hemisphere.dart to find out which: if
-/// it reports 0 flips, the exporter was already consistent and the whole
-/// theory is wrong. Until that question is answered these stay at the
-/// value that is known to work, because a game with cut transitions
-/// ships and a game with folding characters does not.
+/// Pinned at a hard sub-frame cut: cross-clip blends can fold joints (the
+/// long-path slerp "pancake"), and it reappeared on device whenever these
+/// were raised, even with the hemisphere alignment pass in place (see
+/// NOTES.md B1). Cut transitions ship; folding characters do not.
 const double locomotionFadeSeconds = 0.001;
 const double oneShotFadeSeconds = 0.001;
 
-/// No exception any more: the tail snaps too.
-///
-/// This was 0.12 on the theory that a clip being blended AWAY from could
-/// not pancake, because there is no long-path target to travel to. That
-/// was wrong, and the way it was caught is worth keeping: with every
-/// other fade pinned at 0.001, this tail was the ONLY cross-clip blend
-/// left in the game — and the fold appeared exactly where it ran, in the
-/// beat after a dodge finished. One blend, one artefact, same place.
-///
-/// Two things follow. The artefact really is a blending problem, not
-/// something else wearing its coat. And `harmoniseRotationHemispheres`
-/// does NOT prevent it, so sign mismatch is not the cause, or not the
-/// whole cause — see NOTES.md B1.
-///
-/// Snapping costs nothing here now. The tail existed because clips were
-/// being cut off mid-follow-through, and that was fixed properly instead:
-/// the attack windows in `combat.dart` are sized so the clip REACHES its
-/// last frame just as the machine returns to idle, and the roll's 0.40 s
-/// clip already fits inside its 0.45 s window. There is nothing left to
-/// ride out.
+/// The tail snaps too: it was the last cross-clip blend left and the fold
+/// showed up exactly where it ran. Snapping costs nothing now that the
+/// attack windows in `combat.dart` are sized so clips finish on their own.
 const double oneShotFadeOutSeconds = 0.001;
 
 /// Ground speed each loop clip was authored for: playback scales with
-/// actual speed so feet stop sliding ("clips a bit" = stride mismatch).
-/// Scaled with the character — a 1.44× taller fighter covers 1.44× the
-/// ground per stride cycle.
+/// actual speed so feet stop sliding. Scaled with the character height.
 const double walkStrideSpeed = 2.4;
 const double runStrideSpeed = 6.0;
 const double strafeStrideSpeed = 4.3;
@@ -173,27 +124,22 @@ const double backpedalStrideSpeed = 2.2;
 /// Free-stance speed above which the run clip takes over from the walk.
 const double runBlendSpeed = 4.8;
 
-/// Clip lengths (read from the rig files, docs/asset_inventory.md); the
-/// mapper scales playback so the clip spans the machine's phase windows —
-/// never the reverse (L2). Two-handed set, to match the 2H axe.
+/// Clip lengths (from the rig files, docs/asset_inventory.md); the mapper
+/// scales playback so the clip spans the machine's phase windows, never
+/// the reverse (L2). Two-handed set, to match the 2H axe.
 const double strikeClipSeconds = 1.10; // Melee_2H_Attack_Slice
 const double heavyClipSeconds = 2.40; // Melee_2H_Attack_Spin
 const double rollClipSeconds = 0.40;
 const double hitClipSeconds = 0.67;
 const double windCastClipSeconds = 1.167; // Jump_Full_Short (the cast leap)
 
-/// Peak height of the wind-gust hop — a leap of about three-quarters of a
-/// metre before the gust lands.
+/// Peak height of the wind-gust hop before the gust lands.
 const double windCastHopHeight = 0.8;
 
-/// The hop is a REAL ballistic arc: the fighter leaves the ground at this
-/// speed and falls back under [knockbackGravity] (the same gravity the
-/// launch physics uses), so the height falls out of the motion rather than
-/// being drawn on. `updatePlayerMotion` integrates it and, while it lasts,
-/// owns `transform.y` — the knockback step would otherwise read a rising y
-/// as a launch and fight it. Kept off the Knockback itself on purpose, so
-/// a hop never flags the fighter airborne (no tumble, no fall pose, no
-/// lockout — you keep control through it).
+/// The hop is a real ballistic arc under [knockbackGravity]. While it
+/// lasts the movement system owns `transform.y` (the knockback step would
+/// read a rising y as a launch and fight it). Kept off Knockback on
+/// purpose so a hop never flags the fighter airborne; you keep control.
 final double windCastJumpSpeed = math.sqrt(
   2 * knockbackGravity * windCastHopHeight,
 );
@@ -203,23 +149,15 @@ final double windCastJumpSpeed = math.sqrt(
 final double windCastSeconds = 2 * windCastJumpSpeed / knockbackGravity;
 
 /// Dodge clips play at this speed instead of being stretched across the
-/// full window. The directional dodge clip IS the dash — no procedural
-/// tumble/lean.
-///
-/// One, for the same reason as [maxOneShotPlaybackScale]: the 0.40 s clip
-/// already fits inside the 0.45 s roll window, so speeding it up bought
-/// nothing except the fast-forwarded look.
+/// full window; the directional dodge clip is the dash. One because the
+/// 0.40 s clip already fits the 0.45 s roll window, so speeding it up
+/// only looked fast-forwarded.
 const double rollPlaybackScale = 1.0;
 
-/// Ceiling on one-shot playback: a clip is never sped past this to fit
-/// its (short) gameplay window.
-///
-/// Slightly brisk, never fast-forwarded. The attack windows in
-/// `combat.dart` are sized so that clip/window lands AT this number:
-/// 1.10/0.71 and 1.63/1.05 both come out at ~1.55. That is the whole
-/// point — the swing plays a touch quick and reaches its last frame just
-/// as the machine returns to idle, so it neither sprints nor stops
-/// halfway.
+/// Ceiling on one-shot playback: a clip is never sped past this to fit a
+/// short gameplay window. The attack windows in `combat.dart` are sized
+/// so clip/window lands at ~1.55: a swing plays a touch quick and reaches
+/// its last frame just as the machine returns to idle.
 const double maxOneShotPlaybackScale = 1.55;
 
 /// Radians per second a thrown body turns over onto its back. Slow
@@ -233,7 +171,7 @@ const double proneSettleRate = 2.6;
 final Vector4 lightTrailTint = Vector4(0.80, 0.90, 1.0, 0.75);
 final Vector4 heavyTrailTint = Vector4(1.0, 0.62, 0.22, 0.9);
 
-/// You keep some purchase while winding up and recovering — attacks are
-/// committing, not a full stop. Zero during the active frames (that IS
-/// the commitment) and while staggered.
+/// You keep some purchase while winding up and recovering; attacks are
+/// committing, not a full stop. Zero during the active frames and while
+/// staggered.
 const double attackMoveFactor = 0.35;

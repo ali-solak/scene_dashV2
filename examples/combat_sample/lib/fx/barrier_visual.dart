@@ -1,22 +1,17 @@
 /// The shield's light sphere: a mostly-clear bubble of rippling blue that
 /// throws a ring outward from wherever a blow lands on it.
 ///
-/// Like the burn's flame this is attached to an existing body rather than
-/// spawned as its own entity — it has to follow the fighter, and the
-/// barrier component's lifetime decides when it goes.
-///
-/// The look is the authored `assets/materials/barrier.fmat`. The plain
-/// [UnlitMaterial] path below is the fallback for when the DataAssets
-/// bundle is unavailable, and it is deliberately kept: the lava pit ships
-/// a visible fallback for the same reason (NOTES.md B4 — an authored
-/// `.fmat` has silently failed to render in this sample before, and a
-/// skill you paid points for must never be invisible).
+/// Attached to an existing body rather than spawned as its own entity;
+/// it has to follow the fighter, and the barrier component decides when
+/// it goes. The look is the authored `barrier.fmat`; the [UnlitMaterial]
+/// path is a deliberate fallback for when that fails to load (NOTES.md
+/// B4): a skill you paid points for must never be invisible.
 library;
 
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 
-/// Fallback tint — cold steel-blue, the HUD's accent rather than another
+/// Fallback tint: cold steel-blue, the HUD's accent rather than another
 /// fire.
 final Vector4 _fallbackTint = Vector4(0.42, 0.72, 1.0, 1);
 
@@ -81,8 +76,8 @@ void setBarrierCharge(
     return;
   }
 
-  // Fallback: no ripple to drive, so the whole shell carries the state —
-  // dimmer as it wears, and pushed toward white on a block.
+  // Fallback: no ripple to drive, so the whole shell carries the state,
+  // dimmer as it wears and pushed toward white on a block.
   if (material is! UnlitMaterial) return;
   final base = _alphaLast + (_alphaFull - _alphaLast) * charge;
   material.baseColorFactor = Vector4(

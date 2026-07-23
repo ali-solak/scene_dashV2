@@ -17,7 +17,7 @@ const List<String> _rigFiles = [
   'assets/animation/Rig_Medium_MovementBasic.glb',
   'assets/animation/Rig_Medium_MovementAdvanced.glb',
   'assets/animation/Rig_Medium_CombatMelee.glb',
-  // Carries EXPERIMENTAL_Medium_Transform (1.00 s) — the giant's
+  // Carries EXPERIMENTAL_Medium_Transform (1.00 s): the giant's
   // transformation.
   'assets/animation/Rig_Medium_Special.glb',
 ];
@@ -32,14 +32,10 @@ class CharacterAssets {
     this.shield,
   });
 
-  /// Model instances. The knight is used directly (one player); each
-  /// barbarian gets its OWN import — `Node.clone()` of a skinned model
-  /// broke the second clone's skin binding (an invisible body under a
-  /// visible, unskinned axe), so instances never share a skeleton.
-  ///
-  /// Because they cannot be cloned, waves RECYCLE them: [takeBarbarian]
-  /// lends one out, [releaseBarbarian] takes it back when the enemy
-  /// despawns. The pool size is therefore the concurrent-barbarian cap.
+  /// Model instances. Each barbarian gets its own import: `Node.clone()`
+  /// of a skinned model broke the clone's skin binding, so waves recycle
+  /// instead ([takeBarbarian] lends, [releaseBarbarian] returns). Pool
+  /// size is the concurrent-barbarian cap.
   final Node knight;
   final List<Node> barbarians;
 
@@ -49,10 +45,9 @@ class CharacterAssets {
     growable: true,
   );
 
-  /// Appends a background-loaded model to the pool. [loadCharacterAssets]
-  /// warms a few barbarians at boot and fills the rest across the title
-  /// screen through this, so the loading screen no longer freezes on ten
-  /// glTF imports.
+  /// Appends a background-loaded model to the pool: a few are warmed at
+  /// boot, the rest stream in behind the title screen so the loading
+  /// screen never freezes on ten glTF imports.
   void addBarbarian(Node node) {
     barbarians.add(node);
     _lent.add(false);
@@ -80,8 +75,8 @@ class CharacterAssets {
 
   /// Weapon templates for the `handslot.r` joint (each wielder clones its
   /// own). The player carries the [sword]; every barbarian carries the
-  /// [axe]. Null when the glTF fails to import — the fight goes bare-handed,
-  /// not down.
+  /// [axe]. Null when the glTF fails to import: the fight goes
+  /// bare-handed, not down.
   final Node? sword;
   final Node? axe;
 
@@ -102,11 +97,9 @@ class CharacterAssets {
   }
 }
 
-/// Barbarians warmed synchronously at boot before the rest of the pool
-/// streams in behind the title screen. Early waves are small
-/// ([baseWaveEnemies]), so this covers the opening even if the player
-/// starts at once; a later wave that outruns the fill just borrows graybox
-/// capsules for a beat.
+/// Barbarians warmed synchronously at boot. Early waves are small
+/// ([baseWaveEnemies]), so this covers the opening; a wave that outruns
+/// the background fill borrows graybox capsules for a beat.
 const int _warmBarbarians = 4;
 
 Future<CharacterAssets> loadCharacterAssets({
@@ -125,10 +118,8 @@ Future<CharacterAssets> loadCharacterAssets({
       clips[animation.name] = animation;
     }
   }
-  // Every clip here can end up blended against every other, so they all
-  // have to agree on quaternion sign before any of them is instantiated.
-  // This is what lets the fades below be real crossfades instead of the
-  // hard snap the pancake forced (see anim/hemisphere.dart).
+  // Every clip can blend against every other, so they must agree on
+  // quaternion sign before instantiation (see anim/hemisphere.dart).
   harmoniseRotationHemispheres(clips.values);
   final assets = CharacterAssets(
     knight: knight,
@@ -142,9 +133,8 @@ Future<CharacterAssets> loadCharacterAssets({
     // reads as a missing material rather than as a shield.
     shield: await _loadWeapon('shield_square_color'),
   );
-  // The remaining pool fills in the BACKGROUND — one import per turn of the
-  // event loop, so a frame renders between each and the surf/title animate
-  // instead of the loading screen freezing on all ten imports up front.
+  // The rest of the pool fills in the background, one import per turn of
+  // the event loop, so a frame renders between each.
   unawaited(_fillBarbarianPool(assets, barbarianCount - warm));
   return assets;
 }

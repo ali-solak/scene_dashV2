@@ -1,8 +1,7 @@
 part of '../player.dart';
 
-/// The player's spawn list: pure data — the graybox body is attached
-/// scene-side by [attachPlayerVisuals], so headless suites drive the same
-/// spawn path.
+/// The player's spawn list: pure data. The body is attached scene-side by
+/// [attachPlayerVisuals], so headless suites drive the same spawn path.
 List<Object> playerBundle() => [
   const Player(),
   Fighter(),

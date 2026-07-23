@@ -41,7 +41,7 @@ const List<(double, double, double)> _canopyTones = [
 ];
 final Vector4 _rockTone = Vector4(0.45, 0.44, 0.42, 1);
 final Vector4 _bushTone = Vector4(0.18, 0.30, 0.14, 1);
-// The cliff boulders read wet and in shadow — darker and cooler.
+// The cliff boulders read wet and in shadow: darker and cooler.
 final Vector4 _cliffRockTone = Vector4(0.24, 0.25, 0.28, 1);
 
 /// Bakes [placements] into one mesh node. The vertices land in the node's
@@ -50,7 +50,7 @@ final Vector4 _cliffRockTone = Vector4(0.24, 0.25, 0.28, 1);
 Node buildForestBatch(List<PropPlacement> placements) {
   // Base shapes, built once and read back on the CPU. Fixed-storage shape
   // geometries retain their attributes at construction, so `extractMeshData`
-  // works before the first draw. Kept low-poly — this is background dressing.
+  // works before the first draw. Kept low-poly; this is background dressing.
   final trunk = _shape(
     CylinderGeometry(
       bottomRadius: _trunkBottomRadius,
@@ -126,10 +126,10 @@ Node buildForestBatch(List<PropPlacement> placements) {
 }
 
 /// Big wet boulders and sea stacks massed at the foot of the cliff in the
-/// treeline gap — where the surf breaks. One baked mesh, like the ring.
+/// treeline gap, where the surf breaks. One baked mesh, like the ring.
 /// Deterministic from a fixed seed so they stand in the same place each run.
 Node buildCliffRocks() {
-  // A unit sphere at ONE subdivision — few, big facets, so the radial jag
+  // A unit sphere at one subdivision: few, big facets, so the radial jag
   // reads as bold crags rather than fine noise (and it stays cheap).
   final rock = _shape(IcosphereGeometry(radius: 1, subdivisions: 1));
   final rng = math.Random(41);
@@ -139,7 +139,7 @@ Node buildCliffRocks() {
         cliffAzimuth + (rng.nextDouble() - 0.5) * 2 * cliffHalfAngle * 0.9;
     final radius =
         groundIslandRadius + (rng.nextDouble() - 0.5) * cliffRockRadialSpread;
-    // DOWN the cliff face: most sit in the surf below the rim, and only the
+    // Down the cliff face: most sit in the surf below the rim, and only the
     // tallest stacks poke up into view from the isle above.
     final y = oceanLevel - 3.5 + rng.nextDouble() * 5.5;
     final size =
@@ -182,9 +182,9 @@ class _Mesher {
       var ly = p[i + 1];
       var lz = p[i + 2];
       if (jag != null) {
-        // Shove the vertex radially — the base shape is a UNIT sphere, so its
-        // position IS its outward direction: out for spikes, in for crevices,
-        // a craggy silhouette off a smooth ball.
+        // Shove the vertex radially; on a unit sphere the position is its
+        // own outward direction. Out for spikes, in for crevices: a craggy
+        // silhouette off a smooth ball.
         final d = 1 + (jag.nextDouble() - 0.35) * jagAmount;
         lx *= d;
         ly *= d;
@@ -207,8 +207,9 @@ class _Mesher {
   }
 
   Node toNode(String name) {
-    // `MeshData.build` generates area-weighted normals from the merged faces
-    // — props share no vertices, so each still shades as its own smooth shape.
+    // `MeshData.build` generates area-weighted normals from the merged
+    // faces; props share no vertices, so each still shades as its own
+    // smooth shape.
     final geometry = MeshGeometry.fromMeshData(
       MeshData.build(
         positions: Float32List.fromList(_positions),

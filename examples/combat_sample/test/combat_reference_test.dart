@@ -1,10 +1,7 @@
-/// The lifted combat reference suite: the framework's
-/// `combat_machine_reference_test`, now running against the slice's real
-/// `player/combat/combat.dart` (this was the "written to be lifted"
-/// moment). The scenario systems and scoreboard stay test-side; the
-/// fighter, its constants, and the driver/hit/buffer systems are the
-/// game's own. Boundaries stay frame-exact: expected tick counts are
-/// computed from the constants by [ticksFor], never assumed.
+/// The framework's `combat_machine_reference_test`, lifted to run against
+/// the game's real `player/combat/combat.dart`. Scenario systems and the
+/// scoreboard stay test-side; tick counts come from [ticksFor], never
+/// assumed.
 library;
 
 import 'package:combat_sample/player/combat/combat.dart';
@@ -36,7 +33,7 @@ int frozenPumpsFor(double freeze) {
   return pumps;
 }
 
-/// Pumps until exactly [ticks] more fixed steps have run — machine time,
+/// Pumps until exactly [ticks] more fixed steps have run: machine time,
 /// transparent to any hitstop frames interleaved by the clock.
 void pumpMachineTicks(TestGame game, CombatLog log, int ticks) {
   final target = log.steps + ticks;
@@ -45,7 +42,7 @@ void pumpMachineTicks(TestGame game, CombatLog log, int ticks) {
   }
 }
 
-/// Scoreboard + hitbox window bookkeeping — test instrumentation over the
+/// Scoreboard + hitbox window bookkeeping; test instrumentation over the
 /// game systems' edges.
 final class CombatLog {
   int steps = 0;
@@ -229,7 +226,7 @@ void main() {
 
       // Recovery cancel (a sample addition): committing to a swing is never a
       // trap you cannot roll out of, so a roll buffered in the follow-through
-      // does NOT wait for idle — it fires on the very next tick.
+      // does NOT wait for idle; it fires on the very next tick.
       game.world.buffer<CombatAction>().record(CombatAction.roll);
       game.pumpFixed(steps: 1);
       expect(
@@ -274,7 +271,7 @@ void main() {
     game.pumpFixed(steps: 1); // lands: staggered (the sample no longer freezes)
 
     // Hits stopped freezing the clock (the hitstop read as lag), but the
-    // freeze is a framework mechanic in its own right — drive it directly
+    // freeze is a framework mechanic in its own right: drive it directly
     // and prove frozen frames still run no fixed step.
     const freezeSeconds = 0.05;
     game.world.clock.freezeFor(freezeSeconds);
@@ -296,7 +293,7 @@ void main() {
       reason: 'resumes on the very next pump: shift == frozen frames',
     );
 
-    // The stagger still serves its full duration in machine ticks — every
+    // The stagger still serves its full duration in machine ticks: every
     // boundary after the freeze lands the frozen count later in wall
     // frames, and exactly on time in machine time.
     game.pumpFixed(steps: ticksFor(staggerSeconds) - 2); // one already ran

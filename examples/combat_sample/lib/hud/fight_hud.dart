@@ -78,7 +78,7 @@ class FightHud extends StatelessWidget {
 
 /// Opens the skill menu (pause). A cream disc in the shop panel's own
 /// colours, so the button reads as the door to that screen rather than a
-/// stray HUD control — and a pause glyph, because pausing is what it does.
+/// stray HUD control.
 class _PauseButton extends StatelessWidget {
   const _PauseButton();
 
@@ -112,7 +112,7 @@ class _PauseButton extends StatelessWidget {
   }
 }
 
-/// (health fraction, heavy-charge 0–1, heavy committed) — a record, so
+/// (health fraction, heavy charge 0..1, heavy committed): a record, so
 /// `WorldBuilder`'s `==` compare rebuilds only on real change.
 typedef _HudState = (double hp, double charge, bool heavy);
 
@@ -132,12 +132,9 @@ _HudState _selectHud(World world) {
   return (hp, charge, fighter.heavy);
 }
 
-/// (wave, spendable points, seconds left of the breather) — the run
-/// readout.
-///
-/// Shows [Score.points] (what you can spend), NOT [Score.earned] (the
-/// lifetime total). Two different numbers both labelled "pts" — one here
-/// and one in the menu — just reads as a bug.
+/// (wave, spendable points, seconds left of the breather): the run
+/// readout. Shows [Score.points], not [Score.earned]; two different
+/// numbers both labelled "pts" would read as a bug.
 typedef _RunState = (int wave, int points, int breather);
 
 _RunState _selectRun(World world) {
@@ -225,15 +222,10 @@ class _Bar extends StatelessWidget {
   }
 }
 
-/// A red bloom in from the screen edges whenever health drops.
-///
-/// The third leg of the hit reaction, with the fighter's flinch and the
-/// camera's kick. It exists because poise means most blows do NOT stagger
-/// you, and without something at the screen level the only evidence you
-/// were hit was a bar moving in a corner you were not looking at.
-///
-/// A vignette rather than a full-screen wash: it has to be unmissable in
-/// peripheral vision without covering the fight you are trying to read.
+/// A red bloom in from the screen edges whenever health drops. Poise
+/// means most blows do not stagger you, so without this the only evidence
+/// of a hit was a bar in a corner. A vignette, not a full wash: it must
+/// be unmissable without covering the fight.
 class _HurtFlash extends StatefulWidget {
   const _HurtFlash();
 
@@ -273,7 +265,7 @@ class _HurtFlashState extends State<_HurtFlash>
   }
 }
 
-/// Split out so `didUpdateWidget` sees the previous fraction — a drop is
+/// Split out so `didUpdateWidget` sees the previous fraction; a drop is
 /// only visible by comparing frames.
 class _Flash extends StatefulWidget {
   const _Flash({required this.controller, required this.hp});

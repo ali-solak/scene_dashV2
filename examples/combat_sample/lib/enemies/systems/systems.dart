@@ -1,16 +1,14 @@
 part of '../enemies.dart';
 
-/// Startup: only the aggro coordinator — the barbarians themselves are
-/// fielded by the WAVES feature, which owns how many arrive and how
-/// strong they are.
+/// Startup: only the aggro coordinator. The waves feature fields the
+/// barbarians themselves and owns how many arrive and how strong they are.
 void spawnEnemies(World world) {
   world.spawn([AggroCoordinator()]);
 }
 
-/// `OnEnter(fighting)` — boot and every restart: hand the token
-/// coordinator a clean slate. The barbarians themselves are cleared and
-/// re-fielded by the waves feature (`resetWaves`), so there is nothing to
-/// resurrect here.
+/// `OnEnter(fighting)`, boot and every restart: hand the token
+/// coordinator a clean slate. The waves feature clears and re-fields the
+/// barbarians themselves, so there is nothing to resurrect here.
 void resetEncounter(World world) {
   final coordinator = world.query<AggroCoordinator>().firstOrNull?.$2;
   if (coordinator == null) return;
@@ -19,13 +17,13 @@ void resetEncounter(World world) {
     ..cooldown = 0;
 }
 
-/// OnEnter(fighting), scene-gated: a Barbarian clone per enemy (clips
-/// bound to the clone, mapper attached) — or the reddish capsule with a
-/// private emissive material when character assets are absent.
+/// Scene-gated, per frame: a barbarian model per enemy (clips bound to
+/// it, mapper attached), or the reddish capsule with a private emissive
+/// material when character assets are absent.
 void attachEnemyVisuals(World world) {
   final hasCharacters = world.hasResource<CharacterAssets>();
   world.entitiesWith(require: const [Enemy]).each((enemy) {
-    // Already bodied — skip.
+    // Already bodied: skip.
     if (world.tryGet<SceneNode>(enemy) != null) return;
     final assets = hasCharacters ? world.resource<CharacterAssets>() : null;
     final brawler = world.tryGet<Brawler>(enemy);
@@ -108,8 +106,8 @@ void _attachHealthBar(
   world.add(enemy, EnemyHealthBar(fraction: fraction, node: barNode));
 }
 
-/// Task 17: push each barbarian's health fraction into its bar, hide the
-/// bar on death, and yaw the bar to face the camera (the parent node
+/// Pushes each barbarian's health fraction into its bar, hides the bar
+/// on death, and yaws the bar to face the camera (the parent node
 /// carries the barbarian's own facing, so the local yaw cancels it).
 void updateHealthBars(World world) {
   final rig = world.resource<CameraRig>();
@@ -123,7 +121,7 @@ void updateHealthBars(World world) {
     bar.node.visible = alive;
     if (!alive) return;
     final fraction = (health.current / health.max).clamp(0.0, 1.0);
-    // A drop is a hit — kick off the punch. (Healing on the breather lifts
+    // A drop is a hit: kick off the punch. (Healing on the breather lifts
     // it, which must not react.)
     if (fraction < bar.lastFraction - 1e-4) bar.sinceHit = 0;
     bar.lastFraction = fraction;
@@ -137,10 +135,9 @@ void updateHealthBars(World world) {
       rig.position.z - transform.translation.z,
     );
 
-    // The hit reaction: a scale POP and a slash TILT in the screen plane,
-    // both decaying over the window. The tilt rides local Z (which points
-    // at the camera after the yaw), so it reads as a diagonal jolt rather
-    // than a yaw wobble.
+    // The hit reaction: a scale pop and a slash tilt, decaying over the
+    // window. The tilt rides local Z (pointing at the camera after the
+    // yaw), so it reads as a diagonal jolt rather than a yaw wobble.
     var scale = 1.0;
     var roll = 0.0;
     if (bar.sinceHit < healthBarShakeSeconds) {
@@ -167,19 +164,17 @@ void updateHealthBars(World world) {
   });
 }
 
-/// `observe<ModelSlot>(onRemove:)` — fires when a barbarian despawns:
+/// `observe<ModelSlot>(onRemove:)`: fires when a barbarian despawns, and
 /// its pooled model goes back so the next wave can borrow it.
 void releaseEnemyModel(World world, Entity entity, ModelSlot slot) {
   if (!world.hasResource<CharacterAssets>()) return;
   world.resource<CharacterAssets>().releaseBarbarian(slot.index);
 }
 
-/// Death hands the corpse to RAPIER: a dynamic body carrying the killing
-/// blow's shove plus a hop and a tumble, with a BOX collider (a vertical
-/// capsule settles upright — "stands up"; a box tips and lies). The
-/// `PhysicsDriven` tag releases the node from the transform sync, so the
-/// simulation owns the fall, and the mapper freezes the skeleton so the
-/// physics orientation IS the body's pose. Runs once per death.
+/// Death hands the corpse to Rapier: a dynamic body carrying the killing
+/// blow's shove plus a hop and a tumble, with a box collider (a capsule
+/// would settle upright). `PhysicsDriven` releases the node from the
+/// transform sync so the simulation owns the fall. Runs once per death.
 void launchRagdolls(World world) {
   world.query3<Brawler, Knockback, SceneNode>(require: const [Enemy]).each((
     enemy,
@@ -212,24 +207,15 @@ void launchRagdolls(World world) {
       ..addComponent(collider);
     world.add(enemy, const PhysicsDriven());
     world.add(enemy, Ragdoll(body: body));
-    // NOT frozen here. `updateEnemyAnimation` is registered after this
-    // system, so freezing on the frame death starts meant it returned
-    // early on `frozen` and the death clip never played a single frame —
-    // the corpse was locked into whatever pose it held when it died,
-    // usually a half-finished blend. That is the pancaked corpse.
-    //
-    // The skeleton keeps animating through the fall (limbs going limp
-    // while the body tumbles reads fine) and `settleRagdolls` freezes it
-    // once the body comes to rest.
+    // Not frozen here: freezing on the death frame would lock the pose
+    // before the death clip played a single frame. The skeleton animates
+    // through the fall; `settleRagdolls` freezes it once the body rests.
   });
 }
 
-/// Lets a corpse tumble for [corpseSettleSeconds], then nails it down.
-///
-/// Damping alone never brings a frictionless body to rest — it decays the
-/// velocity toward zero without reaching it, so the corpse keeps creeping
-/// for as long as it exists. This ends the simulation instead of trying
-/// to slow it further.
+/// Lets a corpse tumble for [corpseSettleSeconds], then nails it down;
+/// damping alone never brings a frictionless body fully to rest, so this
+/// ends the simulation instead.
 void settleRagdolls(World world) {
   final dt = world.dt;
   world.query<Ragdoll>(require: const [Enemy]).each((entity, ragdoll) {
@@ -242,8 +228,7 @@ void settleRagdolls(World world) {
   });
 }
 
-/// The barbarian mapper system (task 15): render-side consumer of the
-/// brawl machine + velocity.
+/// Render-side consumer of the brawl machine + velocity.
 void updateEnemyAnimation(World world) {
   final dt = world.dt;
   world.query2<Brawler, EnemyAnimator>(require: const [Enemy]).each((
@@ -259,10 +244,9 @@ void updateEnemyAnimation(World world) {
   });
 }
 
-/// The giant's growth (task: "grow with the animation"): while the
-/// `Transforming` clock runs, the body swells from normal size to its
-/// giant base scale — the framework timer driving the transform clip and
-/// the scale from the same clock, so they finish together.
+/// The giant's growth: while the `Transforming` clock runs, the body
+/// swells from normal size to its giant base scale. The clip and the
+/// scale share the same clock, so they finish together.
 void updateGiantGrowth(World world) {
   world.query2<Brawler, BrawlerVisuals>(require: const [Enemy]).each((
     enemy,
@@ -281,9 +265,9 @@ void updateGiantGrowth(World world) {
   });
 }
 
-/// The brawl machine: approach → circle → (token) telegraph → swing →
-/// recover → circle; stagger and death arrive via `applyDamage`. Every
-/// timing is `phase.elapsed`-driven (L2).
+/// The brawl machine: approach, circle, (token) telegraph, swing,
+/// recover, back to circle; stagger and death arrive via `applyDamage`.
+/// Every timing is `phase.elapsed`-driven.
 void brawlerDriver(World world) {
   final playerRow = world
       .query<SceneTransform>(require: const [Player])
@@ -307,11 +291,9 @@ void brawlerDriver(World world) {
     // Mid-transformation: the giant is busy growing, not fighting.
     if (world.expiryOf<Transforming>(entity) != null) return;
 
-    // AIRBORNE. A wind blast throws a barbarian for well over a second,
-    // and the stagger it landed with is half that — so without this the
-    // machine walks straight back out of `staggered` and starts
-    // circling, telegraphing and swinging on the way down. It is not
-    // getting up until it has hit the ground.
+    // Airborne: the throw outlasts the stagger, so without this hold the
+    // machine would walk out of `staggered` and start circling and
+    // swinging on the way down. It stays staggered until it lands.
     if (world.tryGet<Knockback>(entity)?.incapacitated ?? false) {
       if (phase.state != BrawlPhase.staggered) {
         phase.go(BrawlPhase.staggered);
@@ -358,10 +340,10 @@ void brawlerDriver(World world) {
   });
 }
 
-/// The aggro token (~task 12): one holder at a time. Returned on the
-/// holder's recover/stagger entry edge or death, with a cooldown before
-/// the next grant; granted to the nearest circling, living barbarian. The
-/// token holder may *enter telegraph*; everyone else keeps circling.
+/// The aggro token: one holder at a time. Returned on the holder's
+/// recover/stagger entry or death, with a cooldown before the next grant;
+/// granted to the nearest circling, living barbarian. Only the holder may
+/// enter telegraph; everyone else keeps circling.
 void coordinateAggro(World world) {
   final coordinator = world.query<AggroCoordinator>().firstOrNull?.$2;
   if (coordinator == null) return;
@@ -414,7 +396,7 @@ void coordinateAggro(World world) {
     }
   }
 
-  // Mirror the grant onto the brawlers EVERY tick — this system is the
+  // Mirror the grant onto the brawlers every tick: this system is the
   // flag's single writer, and a stale flag on a released brawler would
   // let two attack at once.
   final granted = coordinator.holder;
@@ -488,7 +470,7 @@ void moveBrawlers(World world) {
       case BrawlPhase.taunting:
         brawler.facing = math.atan2(dx, dz); // roots, but taunts at its mark
       case BrawlPhase.rising:
-        break; // on the floor hauling itself up — no drift, no aim yet
+        break; // on the floor hauling itself up; no drift, no aim yet
       case BrawlPhase.swing ||
           BrawlPhase.recover ||
           BrawlPhase.staggered ||
@@ -496,9 +478,9 @@ void moveBrawlers(World world) {
         break; // rooted, facing frozen
     }
 
-    // Bogged down in a lava pit — a hard slog. Only the ground speed is
-    // mired; the facing/aim above stay full, so it still turns to track the
-    // player as it wades, and a wind blast can still launch it.
+    // Bogged down in a lava pit. Only the ground speed is mired; the
+    // facing/aim above stay full, so it still tracks the player as it
+    // wades, and a wind blast can still launch it.
     if (world.has<Mired>(entity)) {
       velocityX *= miredSpeedFactor;
       velocityZ *= miredSpeedFactor;
@@ -522,18 +504,15 @@ void moveBrawlers(World world) {
     // Each barbarian spins at its own rate (off the wobble seed), so a
     // blast throws a crowd rather than a formation.
     if (knockback != null && knockback.airborne) {
-      // Tips over ONCE on the way down, at its own rate, rather than
-      // spinning: a thrown body turns over and lands on its back. The
-      // continuous spin read as a rotating prop, not a person.
+      // Tips over once on the way down, at its own rate; a continuous
+      // spin read as a rotating prop, not a person.
       brawler.tumble = _towardProne(
         brawler.tumble,
         dt * (0.75 + brawler.wobbleSeed % 0.5),
       );
     } else if (knockback != null && knockback.downed > 0) {
-      // LANDED. Settle flat on the floor and stay there for the whole
-      // downed beat, the way the death animation ends up — a body that
-      // was just thrown across the clearing should not be standing
-      // upright the moment it touches down, waiting to get up.
+      // Landed: settle flat and stay down for the whole downed beat; a
+      // thrown body should not pop upright the moment it touches down.
       brawler.tumble = _towardProne(brawler.tumble, dt);
     } else {
       brawler.tumble = 0;
@@ -549,7 +528,7 @@ void moveBrawlers(World world) {
   });
 }
 
-/// Eases a tumbling body down onto its back. Fast — this is the flop at
+/// Eases a tumbling body down onto its back. Fast: this is the flop at
 /// the end of the arc, not a lie-down.
 double _towardProne(double tumble, double dt) {
   const prone = math.pi / 2;
@@ -563,13 +542,10 @@ final Vector3 _upAxis = Vector3(0, 1, 0);
 /// Head over heels, not a flat spin.
 final Vector3 _tumbleAxis = Vector3(1, 0, 0);
 
-/// The death effect (L3): once the `removeAfter:` clock enters the death
-/// window (after the corpse delay), the body SINKS and SHRINKS into the
-/// ground, driven by `expiryOf<Dissolving>` — a transform effect that
-/// renders on any mesh (the authored dissolve `.fmat` was not reading on
-/// the skinned body). The graybox capsule's telegraph tell stays an
-/// emissive ramp on its private material; imported bodies tell through the
-/// highlight system.
+/// Past the corpse delay, `expiryOf<Dissolving>` drives the body's sink
+/// into the ground; a transform effect works on any mesh (the authored
+/// dissolve `.fmat` did not read on the skinned body). Also ramps the
+/// graybox capsule's emissive telegraph tell.
 void updateBrawlerMaterials(World world) {
   world.query2<Brawler, BrawlerVisuals>(require: const [Enemy]).each((
     entity,

@@ -12,13 +12,11 @@ part 'data/config.dart';
 part 'data/resources.dart';
 part 'systems/systems.dart';
 
-/// Installs the wave loop — the thing that turns the fight into a game:
-/// barbarians arrive in waves that grow in size, health and power, giants
-/// show up every few waves, and kills pay points (banked in [Score] and
-/// spent on skills).
-///
-/// The feature owns [WaveState] and the spawning; the enemies feature
-/// still owns how a barbarian behaves once it is on the field.
+/// Installs the wave loop: barbarians arrive in waves that grow in size,
+/// health and power, giants show up every few waves, and kills pay
+/// points (banked in [Score], spent on skills). This feature owns
+/// [WaveState] and the spawning; enemies owns how a barbarian behaves
+/// once it is on the field.
 void installWaves(GameBuilder game) {
   game
     ..registerComponent<Transforming>()

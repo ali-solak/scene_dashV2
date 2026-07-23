@@ -1,20 +1,19 @@
 part of '../player.dart';
 
-/// Startup: the player spawns as pure data — headless suites drive the
-/// same path; the graybox body arrives in [attachPlayerVisuals].
+/// Startup: the player spawns as pure data, so headless suites drive the
+/// same path; the body arrives in [attachPlayerVisuals].
 void spawnPlayer(World world) {
   world.spawn(playerBundle());
 }
 
 /// Per frame, scene-gated: give the player the Knight (clips bound by
-/// node name, mapper attached) — or the graybox capsule when character
-/// assets are absent. Skips anyone already bodied, so this is one query
-/// once the knight exists. Runs from the title screen on, so the fighter
-/// is standing in the clearing before the run begins.
+/// node name), or the graybox capsule when character assets are absent.
+/// Skips anyone already bodied. Runs from the title screen on, so the
+/// fighter is in the clearing before the run begins.
 void attachPlayerVisuals(World world) {
   final player = world.entitiesWith(require: const [Player]).firstOrNull;
   if (player == null) return;
-  // Already bodied (a restart re-enters this state) — skip.
+  // Already bodied (a restart re-enters this state); skip.
   if (world.tryGet<SceneNode>(player) != null) return;
 
   if (world.hasResource<CharacterAssets>()) {
@@ -37,9 +36,8 @@ void attachPlayerVisuals(World world) {
     world.add(player, SceneNode(Node(name: 'player')..add(wrapper)));
     world.add(player, buildPlayerAnimator(assets, model));
     if (weapon != null) {
-      // The ribbon hangs in WORLD space, not off the hand: it is a
-      // record of where the blade has been, so it must not travel with
-      // the fighter after the fact.
+      // The ribbon hangs in world space, not off the hand: it records
+      // where the blade has been, so it must not travel with the fighter.
       final trail = SwordTrail.create();
       world.resource<Scene>().add(trail.node);
       world.add(player, BladeTrail(weapon: weapon, trail: trail));
@@ -76,8 +74,8 @@ void attachPlayerVisuals(World world) {
 }
 
 /// Resets the player to a clean, full-health idle at the spawn mark
-/// (boot and every restart). Called by rules' `startRun` — the run owner
-/// drives every feature's reset from one system, so they never collide.
+/// (boot and every restart). Called by rules' `startRun`: one system
+/// drives every feature's reset, so they never collide.
 void resetPlayerRun(World world) {
   final row = world
       .query3<Fighter, PlayerMotion, Health>(require: const [Player])
@@ -104,13 +102,10 @@ void resetPlayerRun(World world) {
   world.tryGet<PlayerAnimator>(player)?.reset();
 }
 
-/// The i-frame ghost (task 19): while the roll's i-frame window is open,
-/// the player glows a ghostly cyan rim (`Node.highlightColor`, the
-/// engine's fresnel-style selection outline) so the invulnerability
-/// reads. Materials/render follow gameplay (L3): the system sets the
-/// color from `Fighter.iFramed`, the body never touches it. A deliberate
-/// deviation from an authored ghost `.fmat` — the outline is the
-/// lightweight read; swap in a fresnel `.fmat` if it wants more.
+/// The i-frame ghost: while the roll's i-frame window is open the player
+/// glows a cyan rim (`Node.highlightColor`) so the invulnerability reads.
+/// The system sets the color from `Fighter.iFramed`; the body never
+/// touches it (L3).
 void updatePlayerGhost(World world) {
   final row = world
       .query2<Fighter, SceneNode>(require: const [Player])
@@ -126,9 +121,9 @@ void updatePlayerGhost(World world) {
   );
 }
 
-/// The mapper system (task 15): render-side consumer of the fixed-step
-/// gameplay state. Hitstop freezes the clips for free — the scene tick
-/// receives the scaled delta.
+/// The mapper system: render-side consumer of the fixed-step gameplay
+/// state. Hitstop freezes the clips for free; the scene tick receives the
+/// scaled delta.
 void updatePlayerAnimation(World world) {
   final dt = world.dt;
   world
@@ -138,13 +133,12 @@ void updatePlayerAnimation(World world) {
       });
 }
 
-/// Locomotion + stance (task 9), one fixed step at a time:
+/// Locomotion + stance, one fixed step at a time:
 ///
-///  * free stance — camera-relative move, turn toward velocity;
-///  * locked stance — strafe-set velocity facing the target, back-off walk
-///    slower;
-///  * rolling — the direction committed on entry, at roll speed;
-///  * any other action phase — rooted, and never auto-turned.
+///  * free stance: camera-relative move, turn toward velocity;
+///  * locked stance: strafe-set velocity facing the target, slower back-off;
+///  * rolling: the direction committed on entry, at roll speed;
+///  * any other action phase: rooted, and never auto-turned.
 void movePlayer(World world) {
   final axes = world.axes<MoveAxis>();
   final rig = world.resource<CameraRig>();
@@ -238,8 +232,7 @@ void movePlayer(World world) {
         }
 
         final knockback = world.tryGet<Knockback>(entity);
-        // Airborne: the launch owns you — no steering mid-flight.
-        // No steering while thrown OR while still on the floor from it.
+        // No steering while thrown or still on the floor from it.
         final grounded = knockback == null || !knockback.incapacitated;
         if (grounded) {
           transform.translation
@@ -284,13 +277,9 @@ void movePlayer(World world) {
 }
 
 /// Kicks up earth on the frame a dodge commits (a no-op headless).
-///
-/// Off the machine's entry edge rather than off the input: a buffered
-/// roll can fire a frame or two after the press, and the dirt belongs on
-/// the frame the dodge actually started.
-///
-/// (The swing's crescent is the rules feature's — it is built from the
-/// reach and arc of the hit check, which live there.)
+/// Off the machine's entry edge, not the input: a buffered roll can fire
+/// a frame or two after the press. (The swing's crescent lives in the
+/// rules feature, built from the hit check's reach and arc.)
 void spawnPlayerFx(World world) {
   final row = world
       .query3<Fighter, PlayerMotion, SceneTransform>(require: const [Player])
@@ -302,8 +291,7 @@ void spawnPlayerFx(World world) {
     spawnDashDust(
       world,
       transform.translation.clone(),
-      // The direction the dodge committed to, which is what the dirt
-      // should be thrown away from.
+      // dirt is thrown away from the committed dodge direction.
       motion.rollDirection.clone(),
     );
   }
@@ -333,13 +321,11 @@ void updateBladeTrail(World world) {
   blade.trail.rebuild(fighter.heavy ? heavyTrailTint : lightTrailTint);
 }
 
-/// Lock-on (task 10, press semantics per feel review). [LockPressed]
-/// toggles: free = acquire the nearest living enemy within
-/// [lockAcquireRange] and the view cone about the facing; locked =
-/// release. [LockCycled] switches to the next candidate sorted by angle
-/// around the player (wrapping). The lock also drops itself on target
-/// death or a [lockBreakRange] break. [Fighter.stance] is derived here and
-/// read everywhere else.
+/// Lock-on. [LockPressed] toggles: acquire the nearest living enemy in
+/// [lockAcquireRange], or release. [LockCycled] steps to the next
+/// candidate by angle (wrapping). The lock drops itself on target death
+/// or a [lockBreakRange] break. [Fighter.stance] is derived here and read
+/// everywhere else.
 void lockOnSystem(World world) {
   final pressed = world.consumeAny<LockPressed>();
   final cycled = world.consumeAny<LockCycled>();
@@ -360,10 +346,9 @@ void lockOnSystem(World world) {
     if (held != null) {
       held = null; // toggle off
     } else {
-      // One rule, no cone gate: prefer whatever is in front of the camera
-      // (within the half-plane), nearest first; behind-the-camera targets
-      // only when nothing is in front. A press always locks something in
-      // range; a press while locked always releases.
+      // No cone gate: nearest in front of the camera wins; behind-camera
+      // targets only when nothing is in front. A press always locks
+      // something in range.
       final cameraYaw = world.resource<CameraRig>().yaw;
       _Candidate? bestInView;
       _Candidate? bestBehind;
@@ -408,13 +393,11 @@ void lockOnSystem(World world) {
   fighter.stance = held != null ? Stance.locked : Stance.free;
 }
 
-/// Follows the fight (update schedule, writes the [CameraRig] the
-/// `cameraBuilder` in `main` reads) with a souls orbit: the camera rides a
-/// yaw/pitch sphere around the fighter's chest, position-smoothed so it
-/// trails motion instead of snapping. Free = pointer-owned yaw and pitch
-/// (mouse hover/drag, touch swipe); locked = yaw steered from the player
-/// toward the target, pitch eased to its combat elevation, focus slid
-/// toward the pair's midpoint so both fighters stay framed.
+/// Follows the fight (writes the [CameraRig] that `cameraBuilder` in
+/// `main` reads) with a souls orbit: a yaw/pitch sphere around the
+/// fighter's chest, position-smoothed. Free = pointer-owned yaw and
+/// pitch; locked = yaw steered toward the target, focus slid toward the
+/// pair's midpoint so both fighters stay framed.
 void updateCameraRig(World world) {
   final rig = world.resource<CameraRig>();
   final look = world.resource<LookInput>();
@@ -427,9 +410,8 @@ void updateCameraRig(World world) {
   final position = transform.translation;
   final dt = world.dt;
 
-  // The title shot: a wide, slowly drifting orbit of the whole clearing.
-  // It frames the PLACE, not the fighter — the push-in when the run
-  // starts is what introduces him.
+  // The title shot: a wide, slow orbit of the clearing. It frames the
+  // place, not the fighter; the push-in at run start introduces him.
   if (world.state<GameStatus>() == GameStatus.title) {
     rig
       ..yaw += titleOrbitRate * dt
@@ -476,18 +458,9 @@ void updateCameraRig(World world) {
   // Heavy connects punch the camera up briefly; the impulse decays fast.
   rig.kick *= math.exp(-cameraKickDecay * dt);
 
-  // The orbit point on the yaw/pitch sphere around the FOCUS, chased with
-  // its own smoothing so movement reads as the camera trailing the run.
-  //
-  // Around the focus, not around the player. Orbiting the player while
-  // merely LOOKING at a point biased toward the target framed neither
-  // fighter: the camera sat behind the player at a fixed distance and the
-  // enemy fell wherever it fell — usually off the top of the screen once
-  // it was more than a few metres out.
-  //
-  // Locked, the distance also grows with how far apart the two are, so
-  // the pair stays in frame instead of the camera holding a fixed leash
-  // and letting the target walk out of it.
+  // Orbit around the focus, not the player: orbiting the player while
+  // merely looking toward the target framed neither fighter. Locked, the
+  // distance also grows with separation so the pair stays in frame.
   var distance = cameraDistance;
   if (targetTransform != null) {
     final dx = targetTransform.translation.x - position.x;
@@ -503,9 +476,8 @@ void updateCameraRig(World world) {
   // rig.target.y already carries cameraFocusHeight.
   final desiredY = rig.target.y + distance * math.sin(rig.pitch) + rig.kick;
   final desiredZ = rig.target.z - math.cos(rig.yaw) * horizontal;
-  // The opening push-in rides the smoothing that already exists: the
-  // desired framing is the gameplay one from the first frame of the run,
-  // and only the RATE differs while the intro clock runs.
+  // The opening push-in rides the existing smoothing: same desired
+  // framing from the first frame, only the rate differs during the intro.
   var sharpness = cameraPositionSharpness;
   if (rig.intro > 0) {
     rig.intro = math.max(0, rig.intro - dt);
@@ -519,11 +491,10 @@ void updateCameraRig(World world) {
   );
 }
 
-/// Outlines via `Node.highlightColor` (set on every mesh-bearing node —
-/// the engine reads it per mesh component): gold for the locked enemy, and
-/// a rising orange telegraph pulse that overrides it — the readability
-/// tell works on any body, imported meshes included, without cloning
-/// materials per enemy (L3: one system owns the color).
+/// Outlines via `Node.highlightColor` (set on every mesh-bearing node):
+/// gold for the locked enemy, a rising orange telegraph pulse overriding
+/// it. Works on any body without cloning materials per enemy (L3: one
+/// system owns the color).
 void updateEnemyHighlights(World world) {
   final player = world.entitiesWith(require: const [Player]).firstOrNull;
   final locked = player == null ? null : world.tryGet<Target>(player)?.entity;

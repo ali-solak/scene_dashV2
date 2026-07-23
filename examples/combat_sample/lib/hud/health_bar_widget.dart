@@ -1,14 +1,9 @@
-/// The in-world barbarian health bar — a `WidgetComponent` surface driven
-/// by a `ValueListenable<double>` the health system pushes each frame
-/// (the reticle's model-push idiom; no reactive `EntityBuilder` inside, so
-/// no `GameScope` re-provision needed). Kept opaque-cored so the 0.19
-/// premultiplied-alpha widget-capture quirk doesn't darken it.
-///
-/// The HIT reaction is a world-space punch on the bar's NODE (a scale pop
-/// and a slash tilt in `updateHealthBars`), not a widget transform: the bar
-/// renders as a small billboard, so a few logical pixels of jitter inside
-/// the capture were invisible — and unreliable on web, where the surface
-/// is not re-captured every frame. Scaling the quad reads at any distance.
+/// The in-world barbarian health bar: a `WidgetComponent` driven by a
+/// `ValueListenable<double>` the health system pushes each frame. Kept
+/// opaque-cored so the 0.19 premultiplied-alpha capture quirk doesn't
+/// darken it. The hit reaction is a punch on the bar's NODE (see
+/// `updateHealthBars`), not a widget transform: pixel jitter inside the
+/// tiny capture was invisible, and web doesn't re-capture every frame.
 library;
 
 import 'package:flutter/foundation.dart' show ValueListenable;

@@ -19,8 +19,8 @@ const int _clodCount = 90;
 const double _entityLifetime = 1.6;
 
 /// Spawns the scuff at [position] (the player's feet), kicked away along
-/// [heading] — the direction the dash is travelling, so the dirt flies
-/// out behind it.
+/// [heading] (the direction the dash travels), so the dirt flies out
+/// behind it.
 void spawnDashDust(World world, Vector3 position, Vector3 heading) {
   if (!world.hasResource<Scene>()) return;
   final system = fx.ParticleSystem(
@@ -45,10 +45,8 @@ void spawnDashDust(World world, Vector3 position, Vector3 heading) {
       fx.SizeOverLifeModule(
         fx.CurveFloat(fx.ParticleCurve.linear(from: 1, to: 0.35)),
       ),
-      // NOTE: ColorOverLifeModule REPLACES the particle colour outright —
-      // it does not modulate `startColor`. A white curve here renders white
-      // no matter what `startColor` says, which is why every effect in this
-      // directory once looked like grey mist. Carry the real colour here.
+      // ColorOverLifeModule replaces the particle colour outright, it
+      // does not modulate `startColor`: carry the real colour here.
       fx.ColorOverLifeModule(
         fx.GradientColor(
           fx.ColorGradient([

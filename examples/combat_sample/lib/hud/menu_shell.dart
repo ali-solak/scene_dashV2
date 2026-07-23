@@ -1,5 +1,5 @@
 /// Shared menu chrome. [MenuShell] frames the title, skill and death
-/// screens alike — the scrim, the SafeArea, and the panel with a scrolling
+/// screens alike: the scrim, the SafeArea, and the panel with a scrolling
 /// body over a pinned footer. [BracketAction] is the `[ LABEL ]` text
 /// button those screens act with, deliberately not a filled pill.
 library;
@@ -21,13 +21,9 @@ class MenuShell extends StatelessWidget {
   /// The scrolling part.
   final Widget child;
 
-  /// PINNED below [child], never scrolled away.
-  ///
-  /// This is what makes the menus usable in landscape. A phone on its
-  /// side has roughly 320dp of usable height and the title panel wants
-  /// ~440dp, so with everything in one scroll view the START button sat
-  /// below the fold with nothing to suggest it was there. The action a
-  /// screen exists for must not be the thing you have to discover.
+  /// Pinned below [child], never scrolled away: in landscape the panel is
+  /// taller than the screen, and the screen's primary action must not sit
+  /// below the fold.
   final Widget? footer;
 
   final Color scrim;
@@ -76,9 +72,8 @@ class MenuShell extends StatelessWidget {
   }
 }
 
-/// A bracketed text action — `[ BUY ]`. Deliberately not a filled pill:
-/// the panel is a ledger, and a column of Material buttons drags it
-/// straight back to looking like a settings screen.
+/// A bracketed text action, `[ BUY ]`. Deliberately not a filled pill:
+/// a column of Material buttons would read like a settings screen.
 class BracketAction extends StatelessWidget {
   const BracketAction({
     super.key,
@@ -90,24 +85,23 @@ class BracketAction extends StatelessWidget {
 
   final String label;
 
-  /// Null renders the action disabled — it keeps its FULL size (so a row
+  /// Null renders the action disabled; it keeps its full size (so a row
   /// never resizes as it becomes affordable) but does not respond.
   final VoidCallback? onPressed;
   final Color color;
 
-  /// Trims the tall touch padding for use INLINE in a slim ledger row (the
-  /// BUY/MAX beside the price). The standalone actions — START, BACK TO THE
-  /// FIGHT — stay full-size for the 48dp target.
+  /// Trims the tall touch padding for use inline in a slim ledger row (the
+  /// BUY/MAX beside the price). Standalone actions (START, BACK TO THE
+  /// FIGHT) stay full-size for the 48dp target.
   final bool dense;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onPressed,
-      // 48dp minimum touch target for the standalone actions. The text
-      // stays the same size; only the tappable area grows — on a phone a
-      // 20dp-tall target is a miss waiting to happen. [dense] trades this
-      // down for the inline BUY, where the row height is the constraint.
+      // 48dp minimum touch target: only the tappable area grows, not the
+      // text. [dense] trades this down for the inline BUY, where the row
+      // height is the constraint.
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 12, vertical: dense ? 8 : 15),
         child: Text(

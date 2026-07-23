@@ -28,12 +28,9 @@ int ticksFor(double seconds) {
   return n;
 }
 
-/// Boots the same cascade `main` does, minus the assets.
-///
-/// Defaults to [GameStatus.fighting] rather than to `main`'s title
-/// screen: almost every suite here is about the fight, and making each
-/// one press START first would be ceremony. Pass [initial] to exercise
-/// the shell instead.
+/// Boots the same cascade `main` does, minus the assets. Defaults to
+/// [GameStatus.fighting] so suites skip pressing START; pass [initial]
+/// to exercise the shell instead.
 TestGame boot({GameStatus initial = GameStatus.fighting}) {
   final game = TestGame.headless(
     fixedDt: combatFixedDt,

@@ -1,10 +1,8 @@
 /// The hit's visual punch: a spark burst at the point of contact.
 ///
-/// A no-op headless (`hasResource<Scene>`) — emitter construction builds
-/// GPU-side billboard geometry — so the hit logic that calls it stays
-/// fully testable. The burst entity's [DespawnAfter] is the whole
-/// cleanup: the built-in ticker despawns it once the sparks die and the
-/// node (emitter included) unmounts with it.
+/// A no-op headless (`hasResource<Scene>`), since emitter construction
+/// builds GPU-side geometry; the hit logic that calls it stays fully
+/// testable. The burst entity's [DespawnAfter] is the whole cleanup.
 library;
 
 import 'package:flutter_scene/scene.dart';
@@ -14,22 +12,22 @@ import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 import 'particle_texture.dart';
 import 'particles.dart' as fx;
 
-// Kept modest on purpose: a burst is built PER CONNECT, and the particle
-// system allocates its buffers at construction. Every particle here is
-// paid for in the middle of a swing.
+// Kept modest on purpose: a burst is built per connect, and the particle
+// system allocates its buffers at construction, so every particle here
+// is paid for in the middle of a swing.
 const int _lightCount = 28;
 const int _heavyCount = 38;
 const double _burstEntityLifetime = 1.2;
 
 /// Spawns one impact burst at [position]. A heavy connect throws a bigger,
-/// hotter, faster spray — the visual half of the hit's weight.
+/// hotter, faster spray: the visual half of the hit's weight.
 void spawnImpactBurst(World world, Vector3 position, {bool heavy = false}) {
   if (!world.hasResource<Scene>()) return;
   final count = heavy ? _heavyCount : _lightCount;
   final system = fx.ParticleSystem(
     maxParticles: count,
     // A zero-radius sphere degenerates to a point emitting uniformly in
-    // every direction — a clean point burst.
+    // every direction: a clean point burst.
     shape: const fx.SphereShape(radius: 0),
     spawner: fx.Spawner(bursts: [fx.ParticleBurst(time: 0, count: count)]),
     looping: false,
@@ -60,10 +58,8 @@ void spawnImpactBurst(World world, Vector3 position, {bool heavy = false}) {
       fx.SizeOverLifeModule(
         fx.CurveFloat(fx.ParticleCurve.linear(from: 1, to: 0.2)),
       ),
-      // NOTE: ColorOverLifeModule REPLACES the particle colour outright —
-      // it does not modulate `startColor`. A white curve here renders white
-      // no matter what `startColor` says, which is why every effect in this
-      // directory once looked like grey mist. Carry the real colour here.
+      // ColorOverLifeModule replaces the particle colour outright, it
+      // does not modulate `startColor`: carry the real colour here.
       fx.ColorOverLifeModule(
         fx.GradientColor(
           fx.ColorGradient([

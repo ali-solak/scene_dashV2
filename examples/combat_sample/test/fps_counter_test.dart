@@ -1,10 +1,6 @@
-/// The frame-rate readout.
-///
-/// Worth a test for one reason: the counter shipped broken and stuck at
-/// 0, because its `Ticker` lived in a `late final` initialiser. A `late`
-/// field is constructed on first READ, and nothing read the ticker except
-/// `dispose` — so it was never started and never ticked. Nothing about
-/// that is visible in the source; only running it shows it.
+/// The frame-rate readout. Here because the counter once shipped stuck
+/// at 0: its `Ticker` lived in a `late final` field nothing read except
+/// `dispose`, so it was never started. Only running it shows that.
 library;
 
 import 'package:combat_sample/hud/fps.dart';

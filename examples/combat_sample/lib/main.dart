@@ -4,7 +4,7 @@
 //
 //   flutter run --enable-flutter-gpu
 //
-// Input handling lives in `game/controls.dart` — this file is composition.
+// Input handling lives in `game/controls.dart`; this file is composition.
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart'
@@ -110,10 +110,9 @@ Future<SceneGame> _bootGame() async {
             GameSets.waves,
           ])
           ..configureSets(Schedules.update, [GameSets.logic])
-          // Input surfaces: written by the widgets in `game/controls.dart`,
-          // read by the player and camera systems. Inserted here so both
-          // sides find the same instance (buffer and rig need non-default
-          // construction, so they cannot be left to lazy creation).
+          // Input surfaces: controls.dart writes, player/camera systems read.
+          // Inserted here so both sides share one instance (buffer and rig
+          // need non-default construction, so no lazy creation).
           ..world.insert(ButtonInput<CombatAction>())
           ..world.insert(AxisInput<MoveAxis>())
           ..world.insert(InputBuffer<CombatAction>(window: bufferWindow))

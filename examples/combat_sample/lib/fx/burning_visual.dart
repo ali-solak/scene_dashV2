@@ -1,10 +1,10 @@
 /// Fire on a burning body: a small looping flame that rides the victim
 /// for as long as the burn ticks.
 ///
-/// Unlike the one-shot bursts, this one is attached to and detached from
-/// an existing node rather than spawned as its own entity — the flame has
-/// to follow the barbarian around, and the burn's own `removeAfter:` clock
-/// decides when it stops.
+/// Unlike the one-shot bursts, this one is attached to an existing node
+/// rather than spawned as its own entity; the flame has to follow the
+/// barbarian around, and the burn's own `removeAfter:` clock decides
+/// when it stops.
 library;
 
 import 'package:flutter_scene/scene.dart';
@@ -13,10 +13,8 @@ import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 import 'particle_texture.dart';
 import 'particles.dart' as fx;
 
-/// Enough to read as a body ON FIRE at combat distance. The old count was
-/// kept low to avoid additive stacking, but small soft sprites at low
-/// density just produce a dim haze you cannot see — the fix for stacking
-/// is short-lived SPARKS, not fewer clouds.
+/// Enough to read as a body on fire at combat distance; the fix for
+/// additive stacking is short-lived sparks, not fewer clouds.
 const int _flameCount = 70;
 
 /// Roughly the middle of the 2.6u body, so the fire wraps the torso
@@ -47,8 +45,8 @@ Node buildBurnFlame() {
       fx.SizeOverLifeModule(
         fx.CurveFloat(fx.ParticleCurve.linear(from: 1.2, to: 0.15)),
       ),
-      // Fire colours, blue near zero — see the note in fire_gush.dart on
-      // why a white-ish curve here renders as white mist.
+      // Fire colours, blue near zero; see fire_gush.dart on why a
+      // white-ish curve here renders as white mist.
       fx.ColorOverLifeModule(
         fx.GradientColor(
           fx.ColorGradient([
