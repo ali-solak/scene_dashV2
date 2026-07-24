@@ -66,14 +66,6 @@ final class Brawler {
   /// Accumulated circling time driving the wobble (advanced by movement).
   double wobble = 0;
 
-  /// Set when death has flung the corpse (see the knockout in
-  /// `moveBrawlers`), so the launch fires exactly once.
-  bool corpseLaunched = false;
-
-  /// The knockout's pitch direction, latched at launch (see
-  /// [corpseTumblePitch]); never flips mid-air.
-  double corpseTumbleSign = 1;
-
   /// Facing yaw; forward is `(sin facing, 0, cos facing)`. Frozen from the
   /// swing on, so a roll sidesteps a committed arc.
   double facing = 0;
@@ -154,6 +146,11 @@ final class Dissolving {
   const Dissolving();
 }
 
+/// Short hit-reaction delay before the physics handoff.
+final class PendingCorpse {
+  const PendingCorpse();
+}
+
 /// The body's scene handles: the model wrapper node the death effect
 /// sinks (base transform captured so a restart puts it back), plus, for
 /// the graybox capsule fallback only, its private material for the
@@ -185,4 +182,3 @@ final class BrawlerVisuals {
 
   void hide() => bodyRoot.visible = false;
 }
-

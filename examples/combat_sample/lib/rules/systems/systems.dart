@@ -203,7 +203,13 @@ void applyDamage(World world) {
 
     // The shove: the physical half of the feedback.
     final push = hit.knockback;
-    if (push != null) world.tryGet<Knockback>(hit.target)?.shove(push);
+    if (push != null) {
+      final knockback = world.tryGet<Knockback>(hit.target);
+      knockback?.shove(push);
+      if (knockback != null && push.y > 0) {
+        triggerAirborneFlail(world, hit.target, knockback, push);
+      }
+    }
 
     // The sparks: the visual half (a no-op headless).
     final at = hit.impact ? world.tryGet<SceneTransform>(hit.target) : null;
@@ -234,6 +240,11 @@ void applyDamage(World world) {
     if (brawler != null && wasAlive) {
       if (health != null && !health.alive) {
         brawler.phase.go(BrawlPhase.dying);
+        world.add(
+          hit.target,
+          const PendingCorpse(),
+          removeAfter: corpseHitSeconds,
+        );
         // The kill pays out; the wave watches the living count.
         world.resource<Score>().award(
           brawler.giant ? giantPoints : enemyPoints,

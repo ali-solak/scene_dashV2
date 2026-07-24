@@ -5,7 +5,7 @@ part of '../enemies.dart';
 /// combat.
 enum BrawlerLoco { idle, walk, run, strafeLeft, strafeRight }
 
-enum BrawlerShot { rise, taunt, attack, hit, death, fall, corpse, transform }
+enum BrawlerShot { rise, taunt, attack, hit, death, fall, transform }
 
 final class EnemyAnimator {
   EnemyAnimator({required this.locomotion, required this.shots});
@@ -14,8 +14,10 @@ final class EnemyAnimator {
   final Map<BrawlerShot, AnimationClip> shots;
 
   BrawlerShot? active;
+  bool frozen = false;
 
   void update(Brawler brawler, double dt, {bool transforming = false}) {
+    if (frozen) return;
     final phase = brawler.phase.state;
 
     BrawlerShot? desired;
@@ -42,29 +44,16 @@ final class EnemyAnimator {
     }
     switch (phase) {
       case BrawlPhase.rising:
-        // Climbing out of the floor; snapped on so frame one is already
-        // prone (see the snap set below), not the standing idle sinking.
         desired = BrawlerShot.rise;
       case BrawlPhase.taunting:
         desired = BrawlerShot.taunt;
       case BrawlPhase.telegraph || BrawlPhase.swing || BrawlPhase.recover:
-        // One clip spans the whole arc: the slow windup IS the telegraph,
-        // the contact rides the swing window, the tail is the recover.
         desired = BrawlerShot.attack;
       case BrawlPhase.staggered:
         desired = BrawlerShot.hit;
       case BrawlPhase.dying:
-        // Mid-fling the body skydives like any thrown one; touchdown
-        // crossfades to the authored corpse pose over the landing beat
-        // ([corpseLandFadeSeconds], riding the tumble unwind) and holds
-        // it until the dissolve takes it. A held Jump_Idle read as a
-        // T-posed mannequin; Death_B's standing opening cancelled the
-        // prone pitch and stood the corpse up.
-        desired = brawler.airborne ? BrawlerShot.fall : BrawlerShot.corpse;
+        desired = BrawlerShot.hit;
       case BrawlPhase.approach || BrawlPhase.circle:
-        // The fire/lava flinch: a non-staggering tick still jolts the body,
-        // but only while walking or circling; a barbarian mid-swing swings
-        // through the burn, exactly as the player does (poise).
         desired = brawler.sinceHurt < brawlerFlinchSeconds
             ? BrawlerShot.hit
             : null;
@@ -77,6 +66,11 @@ final class EnemyAnimator {
       desired = brawler.airborne ? BrawlerShot.fall : BrawlerShot.death;
     }
 
+    shots[BrawlerShot.hit]!.playbackTimeScale = hitBClipSeconds /
+        (phase == BrawlPhase.dying
+            ? corpseHitSeconds
+            : brawlStaggerSeconds);
+
     if (desired != active) {
       active = desired;
       final clip = desired == null ? null : shots[desired];
@@ -85,9 +79,10 @@ final class EnemyAnimator {
         if (desired == BrawlerShot.hit ||
             desired == BrawlerShot.death ||
             desired == BrawlerShot.rise) {
-          // Stagger and death snap hard; the rise snaps so its prone
-          // first frame is not preceded by a stand. The landed corpse is
-          // NOT here: it crossfades over the landing beat below.
+          // Every one-shot entry here snaps: a real crossfade on this
+          // rig's mirrored bones lerps negative scale through zero and
+          // flattens the model (flutter_scene #249), so the sample never
+          // blends between poses.
           clip.weight = 1;
           for (final other in shots.values) {
             if (!identical(other, clip)) other.weight = 0;
@@ -100,13 +95,7 @@ final class EnemyAnimator {
     }
 
     if (active != null) {
-      // The landed corpse eases in over the landing beat; every other
-      // one-shot is effectively a snap.
-      final fade =
-          dt /
-          (active == BrawlerShot.corpse
-              ? corpseLandFadeSeconds
-              : brawlerOneShotFadeSeconds);
+      final fade = dt / brawlerOneShotFadeSeconds;
       final activeClip = shots[active]!;
       for (final clip in shots.values) {
         clip.weight = _approach(
@@ -178,6 +167,7 @@ final class EnemyAnimator {
 
   /// Restart resurrection: back to a clean idle.
   void reset() {
+    frozen = false;
     active = null;
     for (final clip in shots.values) {
       clip.stop();
@@ -187,6 +177,17 @@ final class EnemyAnimator {
       entry.value
         ..weight = entry.key == BrawlerLoco.idle ? 1 : 0
         ..play();
+    }
+  }
+
+  /// Holds the final hit pose while Rapier tumbles the whole body.
+  void freeze() {
+    frozen = true;
+    for (final clip in shots.values) {
+      clip.pause();
+    }
+    for (final clip in locomotion.values) {
+      clip.pause();
     }
   }
 
@@ -237,17 +238,11 @@ EnemyAnimator buildEnemyAnimator(CharacterAssets assets, Node model) {
       attackWindow,
     ),
     BrawlerShot.hit: shot('Hit_B', hitBClipSeconds, brawlStaggerSeconds),
-    // A barbarian collapse, not the skeleton death: this body falls in one
-    // piece. Plays in real time; the corpse then lies through the dissolve
-    // delay.
+
     BrawlerShot.death: shot('Death_B', deathBClipSeconds, deathBClipSeconds),
-    // The mid-air hang while a wind blast carries the body. Loops: a
-    // one-shot would finish mid-flight and drop the body to its bind pose.
+
     BrawlerShot.fall: loop('Jump_Idle'),
-    // The authored single-frame corpse pose a knockout lands in. Swap to
-    // 'Death_B_Pose' if the lie direction reads wrong against the
-    // backward tumble.
-    BrawlerShot.corpse: shot('Death_A_Pose', 1, 1),
+
     // The giant's growth spurt, spanning exactly the transform window.
     BrawlerShot.transform: shot(
       'EXPERIMENTAL_Medium_Transform',

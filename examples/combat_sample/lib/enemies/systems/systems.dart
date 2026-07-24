@@ -338,8 +338,8 @@ void coordinateAggro(World world) {
 /// Barbarian locomotion, one fixed step at a time: approach closes in,
 /// circle orbits at a breathing radius, everything from the telegraph on
 /// is rooted (facing frozen from the swing so rolls beat committed arcs).
-/// A dying body is handed to [_driveCorpse]; the living walk through
-/// [_steer] → integrate → [_advanceTumble] → [_applyFacingAndTumble].
+/// Death stops this controller; [launchPhysicsCorpse] hands the body to
+/// Rapier after the hit reaction.
 void moveBrawlers(World world) {
   final playerRow = world
       .query<SceneTransform>(require: const [Player])
@@ -354,7 +354,7 @@ void moveBrawlers(World world) {
     transform,
   ) {
     if (brawler.phase.state == BrawlPhase.dying) {
-      _driveCorpse(world, entity, brawler, transform, dt);
+      brawler.velocity.setZero();
       return;
     }
     if (world.expiryOf<Transforming>(entity) != null) {
@@ -385,10 +385,10 @@ void moveBrawlers(World world) {
     }
     clampToArena(transform.translation);
 
-    _advanceTumble(brawler, knockback, dt, corpse: false);
+    _advanceTumble(brawler, knockback, dt);
     brawler.downed = knockback?.incapacitated ?? false;
     brawler.airborne = knockback?.airborne ?? false; // falls vs lies
-    _applyFacingAndTumble(brawler, transform, sign: 1);
+    _applyFacingAndTumble(brawler, transform);
   });
 }
 
@@ -460,102 +460,32 @@ void moveBrawlers(World world) {
   return (velocityX, velocityZ);
 }
 
-/// The knockout: launch once on the killing blow, fly the same kinematic
-/// arc a live throw uses, stop dead on touchdown, and hold the authored
-/// corpse pose until the dissolve takes it.
-void _driveCorpse(
-  World world,
-  Entity entity,
-  Brawler brawler,
-  SceneTransform transform,
-  double dt,
-) {
-  final knockback = world.tryGet<Knockback>(entity);
-  if (knockback == null) return;
-  if (!brawler.corpseLaunched) _launchCorpse(brawler, knockback);
-
-  final wasAirborne = knockback.airborne;
-  knockback.step(dt, transform.translation);
-  if (wasAirborne && !knockback.airborne) {
-    // Dead weight stops dead on touchdown — no carry, no skate. The
-    // flight pitch is NOT snapped out here: it unwinds over the landing
-    // beat (see [_advanceTumble]) while the pose crossfades to the
-    // corpse (the animator's dying case)
-    knockback.velocity.x = 0;
-    knockback.velocity.z = 0;
-  }
-  // Keep the flags honest while dying: the animator reads them to pick
-  // the skydive vs the landed collapse.
-  brawler.downed = knockback.incapacitated;
-  brawler.airborne = knockback.airborne;
-
-  _advanceTumble(brawler, knockback, dt, corpse: true);
-  clampToArena(transform.translation);
-  _applyFacingAndTumble(brawler, transform, sign: brawler.corpseTumbleSign);
-}
-
-void _launchCorpse(Brawler brawler, Knockback knockback) {
-  brawler.corpseLaunched = true;
-  final seed = brawler.wobbleSeed + brawler.wobble;
-  final bigHit = (seed * 3.7) % 1.0 > 0.82;
-  final fling = corpseFlingSpeed * (bigHit ? 1.7 : 0.8 + (seed * 7.31) % 0.5);
-  final hop = corpseHopSpeed * (bigHit ? 1.3 : 0.85 + (seed * 11.7) % 0.4);
-  final spray = ((seed * 5.13) % 0.7) - 0.35;
-
-  var flingX = knockback.velocity.x;
-  var flingZ = knockback.velocity.z;
-  final shoved = math.sqrt(flingX * flingX + flingZ * flingZ);
-  if (shoved > 1e-3) {
-    final nx = flingX / shoved;
-    final nz = flingZ / shoved;
-    final cosS = math.cos(spray);
-    final sinS = math.sin(spray);
-    flingX = (nx * cosS - nz * sinS) * fling;
-    flingZ = (nx * sinS + nz * cosS) * fling;
-  }
-  brawler.corpseTumbleSign = brawler.tumble == 0 ? corpseTumblePitch : 1;
-  knockback.shove(Vector3(flingX, math.max(knockback.velocity.y, hop), flingZ));
-}
-
-/// The one-way tip toward prone: seeded per body through the air (a
-/// blast throws a crowd, not a formation), a flat settle through the
-/// living's downed beat, and the snap back upright once free. A landed
-/// corpse unwinds its flight pitch over the landing beat instead — the
-/// authored corpse pose lies the skeleton down, so the node pitch must
-/// leave, but leaving in one frame read as snapping flat.
+/// The one-way tip toward prone for a living wind-blast throw.
 void _advanceTumble(
   Brawler brawler,
   Knockback? knockback,
-  double dt, {
-  required bool corpse,
-}) {
+  double dt,
+) {
   if (knockback != null && knockback.airborne) {
     brawler.tumble = towardProne(
       brawler.tumble,
       dt * (0.75 + brawler.wobbleSeed % 0.5),
-      rate: proneSettleRate,
+      rate: airborneProneRate,
     );
-  } else if (!corpse && knockback != null && knockback.downed > 0) {
+  } else if (knockback != null && knockback.downed > 0) {
     brawler.tumble = towardProne(brawler.tumble, dt, rate: proneSettleRate);
-  } else if (corpse) {
-    brawler.tumble = math.max(0, brawler.tumble - dt * corpseTumbleUnwindRate);
   } else {
     brawler.tumble = 0;
   }
 }
 
-/// Yaw to the stored facing, then the tumble pitch on top ([sign] flips
-/// it backward for the knockout).
-void _applyFacingAndTumble(
-  Brawler brawler,
-  SceneTransform transform, {
-  required double sign,
-}) {
+/// Yaw to the stored facing, then apply a living throw's tumble pitch.
+void _applyFacingAndTumble(Brawler brawler, SceneTransform transform) {
   transform.rotation.setAxisAngle(_upAxis, brawler.facing);
   if (brawler.tumble != 0) {
     transform.rotation.setFrom(
       transform.rotation *
-          Quaternion.axisAngle(_tumbleAxis, sign * brawler.tumble),
+          Quaternion.axisAngle(_tumbleAxis, brawler.tumble),
     );
   }
 }
@@ -564,6 +494,80 @@ final Vector3 _upAxis = Vector3(0, 1, 0);
 
 /// Head over heels, not a flat spin.
 final Vector3 _tumbleAxis = Vector3(1, 0, 0);
+
+/// `PendingCorpse` expiry hands one dying enemy to Rapier.
+void launchPhysicsCorpse(
+  World world,
+  Entity entity,
+  PendingCorpse pending,
+) {
+  final row = world.tryGet3<Brawler, SceneNode, Knockback>(entity);
+  if (row == null || world.has<PhysicsDriven>(entity)) return;
+  final (brawler, ref, knockback) = row;
+  final seed = brawler.wobbleSeed + brawler.wobble;
+  final (velocity, spin) = _corpseMotion(
+    knockback.velocity,
+    brawler.facing,
+    seed,
+  );
+
+  final halfExtents = corpseHalfExtents.clone();
+  if (brawler.giant) halfExtents.scale(giantScale);
+  final body = RapierRigidBody(
+    type: BodyType.dynamic_,
+    linearVelocity: velocity,
+    angularVelocity: spin,
+    linearDamping: corpseLinearDamping,
+    angularDamping: corpseAngularDamping,
+    ccdEnabled: true,
+  );
+  final collider = RapierCollider(
+    shape: BoxShape(halfExtents: halfExtents),
+    material: corpseMaterial,
+    collisionLayer: PhysicsLayers.fighter,
+    collisionMask: PhysicsLayers.ground,
+    localPose: Matrix4.translation(Vector3(0, halfExtents.y, 0)),
+  );
+  final commands = world.resource<SceneCommands>();
+
+  world.tryGet<EnemyAnimator>(entity)?.freeze();
+  _triggerLimbFlail(
+    world,
+    entity,
+    body: body,
+    seed: seed,
+    kickStrength: flailKick,
+    impactKick: flailImpactKick,
+  );
+  world.add(entity, const PhysicsDriven());
+  commands
+    ..attach(ref.node, body)
+    ..attach(ref.node, collider);
+}
+
+(Vector3, Vector3) _corpseMotion(
+  Vector3 incoming,
+  double facing,
+  double seed,
+) {
+  final velocity = Vector3(0, math.max(incoming.y, corpseHopVelocity), 0);
+  final spin = Vector3(math.cos(facing), 0, -math.sin(facing))
+    ..scale(corpseTumbleMin);
+  final horizontal = Vector3(incoming.x, 0, incoming.z);
+  if (horizontal.length2 > 1e-6) {
+    horizontal.normalize();
+    velocity
+      ..x = horizontal.x * corpseLaunchSpeed
+      ..z = horizontal.z * corpseLaunchSpeed;
+    spin
+      ..setValues(horizontal.z, 0, -horizontal.x)
+      ..scale(
+        math.max(corpseTumbleMin, corpseLaunchSpeed * corpseTumbleFactor),
+      );
+  }
+  spin.y = math.sin(seed * 12.9898) * 0.5 * corpseYawSpin;
+  return (velocity, spin);
+}
 
 /// Past the corpse delay, `expiryOf<Dissolving>` drives the body's sink
 /// into the ground; a transform effect works on any mesh (the authored

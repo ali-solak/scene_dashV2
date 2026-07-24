@@ -60,24 +60,42 @@ const double aggroCooldownSeconds = 1.2;
 
 // ── Death: dissolve clocks ──────────────────────────────────────────────
 
-/// Shortened so the field clears fast: the corpse is gone ~2 s after the
-/// kill. The delay must outlast the knockout's flight (a home-run arc is
-/// ~0.9 s) or the body starts sinking mid-air.
+/// Leaves the body visible through its first floor bounce.
 const double dissolveSeconds = 1.1;
-const double dissolveDelaySeconds = 0.9;
+const double dissolveDelaySeconds = 1.25;
 const double deathSinkDepth = 2.2;
 
-// ── Death: the knockout ─────────────────────────────────────────────────
+// ── Death: the physics corpse ───────────────────────────────────────────
 
-const double corpseFlingSpeed = 6.5;
-const double corpseHopSpeed = 6.0;
-const double corpseTumblePitch = -1;
+/// After the hit flinch the body IS a physics object: a Rapier box
+/// launched with the blow, bouncing and tumbling against the ground
+/// collider until it rests.
+final Vector3 corpseHalfExtents = Vector3(0.45, 1.2, 0.35);
+const double corpseHitSeconds = 0.08;
+const double corpseLaunchSpeed = 7.0;
+const double corpseHopVelocity = 5.2;
+const double corpseTumbleFactor = 1.1;
+const double corpseTumbleMin = 5.5;
+const double corpseYawSpin = 1.8;
+const double corpseLinearDamping = 0.25;
+const double corpseAngularDamping = 0.9;
 
-/// The landing beat: over ~a tenth the flight pitch unwinds and the
-/// skydive pose crossfades into the corpse pose, instead of both
-/// hard-cutting on the impact frame (which read as snapping flat).
-const double corpseTumbleUnwindRate = 8.0;
-const double corpseLandFadeSeconds = 0.12;
+/// Rapier owns both the bounce and the floor grip.
+const PhysicsMaterial corpseMaterial = PhysicsMaterial(
+  friction: 1,
+  restitution: 0.8,
+  density: 1.5,
+);
+
+// Limb follow-through layered over the rigid torso.
+const double flailKick = 12;
+const double flailImpactKick = 14;
+const double flailStiffness = 25;
+const double flailDamping = 3.5;
+const double flailMaxAngle = 1.1;
+const double flailImpactMinFallSpeed = 2.2;
+const double airborneFlailKickPerLift = 0.65;
+const double airborneFlailImpactPerLift = 0.55;
 
 // ── Animation: blends & strides ─────────────────────────────────────────
 
@@ -106,7 +124,7 @@ const double tauntIntervalSeconds = 7.0;
 
 const double brawlerFlinchSeconds = 0.32;
 
-/// How fast a thrown body tips over prone (and settles flat on landing).
+const double airborneProneRate = 5.0;
 const double proneSettleRate = 2.6;
 
 // ── Material tells ──────────────────────────────────────────────────────

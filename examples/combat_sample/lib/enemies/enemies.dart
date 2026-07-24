@@ -1,8 +1,10 @@
 import 'dart:math' as math;
+import 'dart:typed_data' show Float64List;
 
 import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:flutter/widgets.dart' show Size;
 import 'package:flutter_scene/scene.dart';
+import 'package:flutter_scene_rapier/flutter_scene_rapier.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart'
     show Matrix4, Quaternion, Vector3, Vector4;
@@ -12,6 +14,7 @@ import '../game/camera_rig.dart';
 import '../game/combat_math.dart';
 import '../game/character_assets.dart';
 import '../game/game_state.dart';
+import '../game/physics_layers.dart';
 import '../game/sets.dart';
 import '../hud/health_bar_widget.dart';
 import '../world/data/arena.dart';
@@ -24,6 +27,7 @@ part 'data/components.dart';
 part 'data/config.dart';
 part 'data/bundles.dart';
 part 'systems/systems.dart';
+part 'animation/flail.dart';
 
 /// Installs the barbarians: the brawl machine, the aggro-token
 /// coordinator, pack locomotion, and the material tells. Stagger and
@@ -38,12 +42,16 @@ void installEnemies(GameBuilder game) {
     ..registerComponent<BrawlerVisuals>()
     ..registerComponent<EnemyAnimator>()
     ..registerComponent<EnemyHealthBar>()
+    ..registerComponent<LimbFlail>()
     ..registerComponent<ModelSlot>()
     ..registerComponent<Dissolving>()
+    ..registerComponent<PendingCorpse>()
     ..registerComponent<Mired>()
     // A despawned barbarian hands its pooled model back, so the next
     // wave can borrow it (imported skinned models cannot be cloned).
     ..observe<ModelSlot>(onRemove: releaseEnemyModel)
+    ..observe<LimbFlail>(onRemove: _detachLimbFlail)
+    ..observe<PendingCorpse>(onRemove: launchPhysicsCorpse)
     ..addSystem(
       Schedules.startup,
       spawnEnemies,

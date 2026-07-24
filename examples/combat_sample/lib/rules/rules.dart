@@ -53,8 +53,16 @@ void installRules(GameBuilder game) {
       Schedules.fixedUpdate,
       applyDamage,
       inSet: GameSets.resolution,
-      reads: const {Enemy},
-      writes: const {Fighter, Brawler, Health, Knockback, Barrier},
+      reads: const {Enemy, SceneNode},
+      writes: const {
+        Fighter,
+        Brawler,
+        Health,
+        Knockback,
+        Barrier,
+        LimbFlail,
+        PendingCorpse,
+      },
       after: const [resolveStrikes],
       runIf: inState(GameStatus.fighting),
     )

@@ -277,7 +277,11 @@ void _integrateMotion(
   clampToArena(transform.translation);
 
   if (knockback != null && knockback.incapacitated) {
-    motion.tumble = towardProne(motion.tumble, dt, rate: proneSettleRate);
+    motion.tumble = towardProne(
+      motion.tumble,
+      dt,
+      rate: knockback.airborne ? airborneProneRate : proneSettleRate,
+    );
   } else {
     motion.tumble = 0;
   }

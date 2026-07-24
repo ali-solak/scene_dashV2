@@ -86,6 +86,7 @@ const double rollPlaybackScale = 1.0;
 
 const double maxOneShotPlaybackScale = 1.55;
 
+const double airborneProneRate = 5.0;
 const double proneSettleRate = 2.6;
 
 final Vector4 lightTrailTint = Vector4(0.80, 0.90, 1.0, 0.75);
