@@ -6,6 +6,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_scene/fscene.dart'
+    show SceneDocument, readFsceneb, realizeSceneAsync;
 import 'package:flutter_scene/scene.dart';
 
 import '../anim/hemisphere.dart';
@@ -21,9 +23,17 @@ const List<String> _rigFiles = [
 ];
 
 const int _openingBarbarians = 2;
-const int _barbarianSlots = 10;
 
-String _barbarianScene(int index) => 'assets/characters/Barbarian_$index.glb';
+/// One cooked asset serves the whole pool, but each barbarian must be
+/// realized with its OWN resource realizer, not through
+/// [SceneRegistry.loadScene]: instances realized off one cached template
+/// share their `SkinnedGeometry`, and per-frame joint textures are written
+/// through it, so a pack loaded that way renders as a single body
+/// (flutter_scene #257 — the same defect `clone()` has). The fix (PR #263,
+/// joint state per render item) is merged upstream but unreleased; once it
+/// ships, collapse this back to `scenes.loadScene(_barbarianScene)` per
+/// instance and the pack shares GPU geometry/textures again.
+const String _barbarianScene = 'assets/characters/Barbarian.glb';
 
 class CharacterAssets {
   CharacterAssets({
@@ -100,24 +110,21 @@ Future<CharacterAssets> loadCharacterAssets({
   required int barbarianCount,
   ResourceGroup? loading,
 }) async {
-  if (barbarianCount > _barbarianSlots) {
-    throw ArgumentError.value(
-      barbarianCount,
-      'barbarianCount',
-      'the build hook provides $_barbarianSlots independent scene slots',
-    );
-  }
   final scenes = await SceneRegistry.load();
   final knightFuture = _track(
     loading,
     scenes.loadScene('assets/characters/Knight.glb'),
   );
   final knight = await knightFuture;
+  // Parsed once; realized once per barbarian (see [_barbarianScene]).
+  final barbarianDocument = readFsceneb(
+    await _assetBytes(scenes.resolveKey(_barbarianScene)),
+  );
   final openingCount = math.min(_openingBarbarians, barbarianCount);
   final barbarians = <Node>[];
   for (var i = 0; i < openingCount; i++) {
     barbarians.add(
-      await _track(loading, scenes.loadScene(_barbarianScene(i))),
+      await _track(loading, realizeSceneAsync(barbarianDocument)),
     );
   }
 
@@ -145,12 +152,8 @@ Future<CharacterAssets> loadCharacterAssets({
   );
   // Two bodies cover the opening wave. The app realizes the reserve only after
   // its first rendered frames, so it cannot hold the loading cover.
-  assets._loadReserve = () => _fillBarbarianPool(
-    assets,
-    scenes,
-    openingCount,
-    barbarianCount - openingCount,
-  );
+  assets._loadReserve = () =>
+      _fillBarbarianPool(assets, barbarianDocument, barbarianCount - openingCount);
   return assets;
 }
 
@@ -159,16 +162,13 @@ Future<T> _track<T>(ResourceGroup? loading, Future<T> load) =>
 
 Future<void> _fillBarbarianPool(
   CharacterAssets assets,
-  SceneRegistry scenes,
-  int start,
+  SceneDocument document,
   int remaining,
 ) async {
   for (var i = 0; i < remaining; i++) {
     await Future<void>.delayed(Duration.zero);
     try {
-      assets.addBarbarian(
-        await scenes.loadScene(_barbarianScene(start + i)),
-      );
+      assets.addBarbarian(await realizeSceneAsync(document));
     } on Object catch (error) {
       debugPrint('combat_sample: background barbarian load failed: $error');
       return;

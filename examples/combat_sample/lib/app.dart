@@ -1,38 +1,33 @@
+/// The app shell: widget lifecycle around the game. Boot itself lives in
+/// `game/boot.dart`; the cover/failure screen in `hud/loading_screen.dart`.
+///
+/// The shell walks four phases:
+///
+///  1. boot     — [bootCombatGame] runs behind the loading cover
+///  2. cover    — the game renders its first frames still covered, so
+///                pipeline compiles and warmups never jank on screen
+///  3. reveal   — after two scene ticks the cover lifts
+///  4. reserve  — one frame later the pooled barbarian reserve realizes,
+///                off the critical path of the first visible frame
+library;
+
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart'
-    show
-        TargetPlatform,
-        ValueNotifier,
-        debugPrint,
-        defaultTargetPlatform,
-        kIsWeb;
+    show TargetPlatform, ValueNotifier, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_scene/scene.dart';
-import 'package:flutter_scene_rapier/flutter_scene_rapier.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
-import 'package:vector_math/vector_math.dart' show Vector3;
 
-import 'decor/decor.dart';
-import 'enemies/enemies.dart';
+import 'game/boot.dart';
 import 'game/camera.dart';
 import 'game/camera_rig.dart';
 import 'game/character_assets.dart';
 import 'game/controls.dart';
-import 'game/game_state.dart';
-import 'game/inputs.dart';
-import 'game/sets.dart';
 import 'hud/game_hud.dart';
-import 'hud/ink.dart';
-import 'player/player.dart';
-import 'rules/rules.dart';
-import 'skills/skills.dart';
-import 'waves/waves.dart';
-import 'world/data/assets.dart';
+import 'hud/loading_screen.dart';
 import 'world/data/config.dart' as config;
-import 'world/world.dart';
 
 Future<void> runCombatApp() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,6 +42,13 @@ Future<void> runCombatApp() async {
   runApp(const CombatApp());
 }
 
+/// On-screen sticks/buttons: forced on for touch platforms, and available
+/// anywhere via `--dart-define=touchControls=true`.
+final bool _showTouchControls =
+    const bool.fromEnvironment('touchControls') ||
+    defaultTargetPlatform == TargetPlatform.android ||
+    defaultTargetPlatform == TargetPlatform.iOS;
+
 class CombatApp extends StatefulWidget {
   const CombatApp({super.key});
 
@@ -54,19 +56,17 @@ class CombatApp extends StatefulWidget {
   State<CombatApp> createState() => _CombatAppState();
 }
 
-final bool _showTouchControls =
-    const bool.fromEnvironment('touchControls') ||
-    defaultTargetPlatform == TargetPlatform.android ||
-    defaultTargetPlatform == TargetPlatform.iOS;
-
 class _CombatAppState extends State<CombatApp> {
+  // Owned for the app's whole life; the game arrives asynchronously.
   late final Scene _scene;
   late final ResourceGroup _loading;
   late final Future<void> _bootFuture;
   final ValueNotifier<String> _bootStage = ValueNotifier('renderer');
 
+  // Boot lands in exactly one of these.
   SceneGame? _game;
   Object? _error;
+
   int _sceneTicks = 0;
   bool _coverScene = true;
 
@@ -81,7 +81,7 @@ class _CombatAppState extends State<CombatApp> {
 
   Future<void> _boot() async {
     try {
-      final game = await _bootCombatGame(_scene, _loading, _bootStage);
+      final game = await bootCombatGame(_scene, _loading, _bootStage);
       if (mounted) {
         setState(() => _game = game);
       } else {
@@ -95,6 +95,7 @@ class _CombatAppState extends State<CombatApp> {
   @override
   void dispose() {
     unawaited(_game?.shutdown());
+    // The boot future captures both; they must outlive a mid-boot dispose.
     unawaited(
       _bootFuture.whenComplete(() {
         _loading.dispose();
@@ -113,194 +114,57 @@ class _CombatAppState extends State<CombatApp> {
   }
 
   Widget _surface() {
-    final error = _error;
-    if (error != null) return _LoadingScreen(error: error);
-
+    if (_error != null) return LoadingScreen(error: _error);
     final game = _game;
-    if (game == null) return _LoadingScreen(stage: _bootStage);
-
-    final cameraRig = game.world.resource<CameraRig>();
-    final sceneView = SceneView(
-      _scene,
-      cameraBuilder: (elapsed) => buildCombatCamera(elapsed, cameraRig),
-      onTick: _onSceneTick,
+    if (game == null) return LoadingScreen(stage: _bootStage);
+    return Stack(
+      fit: StackFit.expand,
+      children: [_gameView(game), if (_coverScene) _bootCover()],
     );
+  }
 
-    final hosted = GameHost(
+  /// The running game: scene view under controls under HUD, scoped by
+  /// [GameHost].
+  Widget _gameView(SceneGame game) {
+    final cameraRig = game.world.resource<CameraRig>();
+    return GameHost(
       game: game,
       child: GameControls(
         showTouchControls: _showTouchControls,
-        scene: sceneView,
+        scene: SceneView(
+          _scene,
+          cameraBuilder: (elapsed) => buildCombatCamera(elapsed, cameraRig),
+          onTick: _onSceneTick,
+        ),
         hud: const GameHud(),
       ),
     );
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        hosted,
-        if (_coverScene)
-          ColoredBox(
-            color: Colors.black,
-            child: _LoadingScreen(stage: _bootStage),
-          ),
-      ],
-    );
   }
+
+  /// The loading screen held over the already-rendering scene (phase 2).
+  Widget _bootCover() =>
+      ColoredBox(color: Colors.black, child: LoadingScreen(stage: _bootStage));
 
   void _onSceneTick(Duration elapsed, double deltaSeconds) {
     _game?.onTick(elapsed, deltaSeconds);
-    _sceneTicks++;
-    if (_sceneTicks != 2) return;
+    // Two covered ticks: the first real frame plus one for the warmup
+    // draws to reach the GPU.
+    if (++_sceneTicks == 2) _revealScene();
+  }
+
+  /// Phase 3 → 4: lift the cover, then realize the barbarian reserve one
+  /// frame later so the uncovered scene reaches the screen first.
+  void _revealScene() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_coverScene) return;
       setState(() => _coverScene = false);
-      // Let the uncovered scene reach the screen before realizing the
-      // precompiled reserve bodies.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        final game = _game;
-        if (game != null && game.world.hasResource<CharacterAssets>()) {
-          game.world.resource<CharacterAssets>().loadReserve();
+        final world = _game?.world;
+        if (world != null && world.hasResource<CharacterAssets>()) {
+          world.resource<CharacterAssets>().loadReserve();
         }
       });
     });
-  }
-}
-
-Future<SceneGame> _bootCombatGame(
-  Scene scene,
-  ResourceGroup loading,
-  ValueNotifier<String> stage,
-) async {
-  stage.value = 'renderer';
-  await Scene.initializeStaticResources();
-  stage.value = 'physics';
-  await RapierWorld.ensureInitialized();
-
-  stage.value = 'world materials';
-  final assets = await loadWorldAssets(loading: loading);
-  stage.value = 'character rigs';
-  final characters = await _loadCharacters(loading);
-
-  stage.value = 'the clearing';
-  final game = await SceneGame.boot(
-    scene: scene,
-    physics: RapierWorld(gravity: Vector3(0, -config.gravityStrength, 0)),
-    strictAccess: true,
-    accessConflictPolicy: AccessConflictPolicy.error,
-    features: [
-      _configureCombat(characters),
-      installWorld(assets),
-      installDecor,
-      installPlayer,
-      installEnemies,
-      installWaves,
-      installSkills,
-      installRules,
-    ],
-  );
-  stage.value = 'first frame';
-  return game;
-}
-
-Future<CharacterAssets?> _loadCharacters(ResourceGroup loading) async {
-  try {
-    return await loadCharacterAssets(
-      barbarianCount: barbarianPoolSize,
-      loading: loading,
-    );
-  } on Object catch (error) {
-    debugPrint('combat_sample: character assets unavailable: $error');
-    return null;
-  }
-}
-
-Feature _configureCombat(CharacterAssets? characters) => (game) {
-  game
-    ..addState<GameStatus>(GameStatus.title)
-    ..configureSets(Schedules.fixedUpdate, [
-      GameSets.movement,
-      GameSets.enemyMovement,
-      GameSets.actions,
-      GameSets.resolution,
-      GameSets.waves,
-    ])
-    ..configureSets(Schedules.update, [GameSets.logic])
-    ..world.insert(ButtonInput<CombatAction>())
-    ..world.insert(AxisInput<MoveAxis>())
-    ..world.insert(InputBuffer<CombatAction>(window: bufferWindow))
-    ..world.insert(LookInput())
-    ..world.insert(CameraRig()..yaw = math.pi);
-  if (characters != null) game.world.insert(characters);
-};
-
-class _LoadingScreen extends StatelessWidget {
-  const _LoadingScreen({this.error, this.stage});
-
-  final Object? error;
-  final ValueNotifier<String>? stage;
-
-  @override
-  Widget build(BuildContext context) {
-    final failed = error != null;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            'Defend the isle',
-            style: TextStyle(
-              color: HudInk.bone,
-              fontSize: 30,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 12,
-              height: 1,
-            ),
-          ),
-          const SizedBox(height: 18),
-          if (failed)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                '$error',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: HudInk.ash, fontSize: 12),
-              ),
-            )
-          else
-            SizedBox(
-              width: 150,
-              child: LinearProgressIndicator(
-                minHeight: 2,
-                backgroundColor: HudInk.ruleFaint,
-                color: HudInk.steel,
-              ),
-            ),
-          const SizedBox(height: 14),
-          Text(
-            failed ? 'FAILED TO START' : 'LOADING',
-            style: const TextStyle(
-              color: HudInk.ash,
-              fontSize: 11,
-              letterSpacing: 4,
-            ),
-          ),
-          if (!failed && stage != null) ...[
-            const SizedBox(height: 6),
-            ValueListenableBuilder<String>(
-              valueListenable: stage!,
-              builder: (context, value, _) => Text(
-                value.toUpperCase(),
-                style: const TextStyle(
-                  color: HudInk.steel,
-                  fontSize: 9,
-                  letterSpacing: 3,
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
   }
 }

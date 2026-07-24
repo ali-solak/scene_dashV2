@@ -99,7 +99,7 @@ void installSkills(GameBuilder game) {
       Schedules.update,
       updateBurnFlames,
       inSet: GameSets.logic,
-      reads: const {Burning, SceneNode},
+      reads: const {Enemy, Burning, SceneNode},
       runIf: hasResource<Scene>(),
     )
     ..addSystem(
