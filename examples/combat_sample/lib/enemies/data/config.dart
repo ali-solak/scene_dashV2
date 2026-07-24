@@ -73,6 +73,12 @@ const double corpseFlingSpeed = 6.5;
 const double corpseHopSpeed = 6.0;
 const double corpseTumblePitch = -1;
 
+/// The landing beat: over ~a tenth the flight pitch unwinds and the
+/// skydive pose crossfades into the corpse pose, instead of both
+/// hard-cutting on the impact frame (which read as snapping flat).
+const double corpseTumbleUnwindRate = 8.0;
+const double corpseLandFadeSeconds = 0.12;
+
 // ── Animation: blends & strides ─────────────────────────────────────────
 
 const double brawlerLocomotionFadeSeconds = 0.001;

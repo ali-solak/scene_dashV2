@@ -55,10 +55,11 @@ final class EnemyAnimator {
         desired = BrawlerShot.hit;
       case BrawlPhase.dying:
         // Mid-fling the body skydives like any thrown one; touchdown
-        // hard-cuts to the authored corpse pose (the impact frame hides
-        // the switch) and holds it until the dissolve takes it. A held
-        // Jump_Idle read as a T-posed mannequin; Death_B's standing
-        // opening cancelled the prone pitch and stood the corpse up.
+        // crossfades to the authored corpse pose over the landing beat
+        // ([corpseLandFadeSeconds], riding the tumble unwind) and holds
+        // it until the dissolve takes it. A held Jump_Idle read as a
+        // T-posed mannequin; Death_B's standing opening cancelled the
+        // prone pitch and stood the corpse up.
         desired = brawler.airborne ? BrawlerShot.fall : BrawlerShot.corpse;
       case BrawlPhase.approach || BrawlPhase.circle:
         // The fire/lava flinch: a non-staggering tick still jolts the body,
@@ -83,10 +84,10 @@ final class EnemyAnimator {
         clip.replay();
         if (desired == BrawlerShot.hit ||
             desired == BrawlerShot.death ||
-            desired == BrawlerShot.corpse ||
             desired == BrawlerShot.rise) {
-          // Stagger, death, and the landed corpse snap hard; the rise
-          // snaps so its prone first frame is not preceded by a stand.
+          // Stagger and death snap hard; the rise snaps so its prone
+          // first frame is not preceded by a stand. The landed corpse is
+          // NOT here: it crossfades over the landing beat below.
           clip.weight = 1;
           for (final other in shots.values) {
             if (!identical(other, clip)) other.weight = 0;
@@ -99,7 +100,13 @@ final class EnemyAnimator {
     }
 
     if (active != null) {
-      final fade = dt / brawlerOneShotFadeSeconds;
+      // The landed corpse eases in over the landing beat; every other
+      // one-shot is effectively a snap.
+      final fade =
+          dt /
+          (active == BrawlerShot.corpse
+              ? corpseLandFadeSeconds
+              : brawlerOneShotFadeSeconds);
       final activeClip = shots[active]!;
       for (final clip in shots.values) {
         clip.weight = _approach(

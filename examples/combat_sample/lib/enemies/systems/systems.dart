@@ -477,13 +477,12 @@ void _driveCorpse(
   final wasAirborne = knockback.airborne;
   knockback.step(dt, transform.translation);
   if (wasAirborne && !knockback.airborne) {
-    // Dead weight stops dead on touchdown — no carry, no skate — and the
-    // node's tumble snaps out in the same frame: from here the authored
-    // corpse pose owns the lying body (see the animator's dying case),
-    // and the impact hides both cuts.
+    // Dead weight stops dead on touchdown — no carry, no skate. The
+    // flight pitch is NOT snapped out here: it unwinds over the landing
+    // beat (see [_advanceTumble]) while the pose crossfades to the
+    // corpse (the animator's dying case)
     knockback.velocity.x = 0;
     knockback.velocity.z = 0;
-    brawler.tumble = 0;
   }
   // Keep the flags honest while dying: the animator reads them to pick
   // the skydive vs the landed collapse.
@@ -495,12 +494,6 @@ void _driveCorpse(
   _applyFacingAndTumble(brawler, transform, sign: brawler.corpseTumbleSign);
 }
 
-/// The one-shot fling on the killing blow's direction, at its own speed
-/// (the stagger shoves are ~3 m/s — a nudge, not a launch). A kill with
-/// no shove behind it just hops and crumples in place. Seeded per kill
-/// (slot seed + circling time at death): speed, arc height, and a
-/// sideways deflection all vary so a crowd of kills sprays instead of
-/// repeating, with the odd home run.
 void _launchCorpse(Brawler brawler, Knockback knockback) {
   brawler.corpseLaunched = true;
   final seed = brawler.wobbleSeed + brawler.wobble;
@@ -527,8 +520,9 @@ void _launchCorpse(Brawler brawler, Knockback knockback) {
 /// The one-way tip toward prone: seeded per body through the air (a
 /// blast throws a crowd, not a formation), a flat settle through the
 /// living's downed beat, and the snap back upright once free. A landed
-/// corpse holds zero — the authored corpse pose lies the skeleton down,
-/// so any node pitch on top would double-rotate it.
+/// corpse unwinds its flight pitch over the landing beat instead — the
+/// authored corpse pose lies the skeleton down, so the node pitch must
+/// leave, but leaving in one frame read as snapping flat.
 void _advanceTumble(
   Brawler brawler,
   Knockback? knockback,
@@ -543,6 +537,8 @@ void _advanceTumble(
     );
   } else if (!corpse && knockback != null && knockback.downed > 0) {
     brawler.tumble = towardProne(brawler.tumble, dt, rate: proneSettleRate);
+  } else if (corpse) {
+    brawler.tumble = math.max(0, brawler.tumble - dt * corpseTumbleUnwindRate);
   } else {
     brawler.tumble = 0;
   }
