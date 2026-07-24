@@ -156,60 +156,6 @@ void releaseEnemyModel(World world, Entity entity, ModelSlot slot) {
   world.resource<CharacterAssets>().releaseBarbarian(slot.index);
 }
 
-/// Death hands the corpse to Rapier: a dynamic body carrying the killing
-/// blow's shove plus a hop and a tumble, with a box collider (a capsule
-/// would settle upright). `PhysicsDriven` releases the node from the
-/// transform sync so the simulation owns the fall. Runs once per death.
-void launchRagdolls(World world) {
-  world.query3<Brawler, Knockback, SceneNode>(require: const [Enemy]).each((
-    enemy,
-    brawler,
-    knockback,
-    ref,
-  ) {
-    if (brawler.phase.state != BrawlPhase.dying) return;
-    if (world.tryGet<Ragdoll>(enemy) != null) return; // already launched
-
-    // The corpse carries the killing blow's shove (a hit flings it off; a
-    // burn kill, with no knockback, just drops), plus a hop and a tumble.
-    // The sink in `updateBrawlerMaterials` takes it under once it settles.
-    final push = knockback.velocity * corpseLaunchFactor;
-    final body = RapierRigidBody(
-      type: BodyType.dynamic_,
-      linearVelocity: Vector3(push.x, corpseHopVelocity, push.z),
-      // Tumble about the axis perpendicular to the shove: it pitches over.
-      angularVelocity: Vector3(push.z, 0, -push.x)..scale(corpseTumbleFactor),
-      linearDamping: corpseLinearDamping,
-      angularDamping: corpseAngularDamping,
-    );
-    final collider = RapierCollider(
-      shape: BoxShape(halfExtents: corpseHalfExtents),
-      localPose: Matrix4.translation(Vector3(0, corpseHalfExtents.y, 0)),
-      collisionLayer: PhysicsLayers.fighter,
-    );
-    ref.node
-      ..addComponent(body)
-      ..addComponent(collider);
-    world.add(enemy, const PhysicsDriven());
-    world.add(enemy, Ragdoll(body: body));
-    // Not frozen here: freezing on the death frame would lock the pose
-    // before the death clip played a single frame. The skeleton animates
-    // through the fall; `settleRagdolls` freezes it once the body rests.
-  });
-}
-
-/// Stops a corpse simulation after [corpseSettleSeconds].
-void settleRagdolls(World world) {
-  final dt = world.dt;
-  world.query<Ragdoll>(require: const [Enemy]).each((entity, ragdoll) {
-    if (ragdoll.settled) return;
-    ragdoll.age += dt;
-    if (ragdoll.age < corpseSettleSeconds) return;
-    ragdoll.settle();
-    world.tryGet<EnemyAnimator>(entity)?.freeze();
-  });
-}
-
 /// Render-side consumer of the brawl machine + velocity.
 void updateEnemyAnimation(World world) {
   final dt = world.dt;
@@ -270,6 +216,8 @@ void brawlerDriver(World world) {
       phase.go(BrawlPhase.dying);
       return;
     }
+
+    if (phase.state == BrawlPhase.dying) return;
     // Mid-transformation: the giant is busy growing, not fighting.
     if (world.expiryOf<Transforming>(entity) != null) return;
 
@@ -390,6 +338,8 @@ void coordinateAggro(World world) {
 /// Barbarian locomotion, one fixed step at a time: approach closes in,
 /// circle orbits at a breathing radius, everything from the telegraph on
 /// is rooted (facing frozen from the swing so rolls beat committed arcs).
+/// A dying body is handed to [_driveCorpse]; the living walk through
+/// [_steer] → integrate → [_advanceTumble] → [_applyFacingAndTumble].
 void moveBrawlers(World world) {
   final playerRow = world
       .query<SceneTransform>(require: const [Player])
@@ -403,71 +353,24 @@ void moveBrawlers(World world) {
     brawler,
     transform,
   ) {
-    final dx = playerPosition.x - transform.translation.x;
-    final dz = playerPosition.z - transform.translation.z;
-    final distance = math.sqrt(dx * dx + dz * dz).clamp(1e-6, double.infinity);
-    final towardX = dx / distance;
-    final towardZ = dz / distance;
-
-    // A dying body is frozen where it fell (Rapier owns it); a giant
-    // mid-transformation is rooted while it swells.
-    if (brawler.phase.state == BrawlPhase.dying) return;
+    if (brawler.phase.state == BrawlPhase.dying) {
+      _driveCorpse(world, entity, brawler, transform, dt);
+      return;
+    }
     if (world.expiryOf<Transforming>(entity) != null) {
       brawler.velocity.setZero();
       return;
     }
 
-    var velocityX = 0.0;
-    var velocityZ = 0.0;
-    switch (brawler.phase.state) {
-      case BrawlPhase.approach:
-        velocityX = towardX * approachSpeed;
-        velocityZ = towardZ * approachSpeed;
-        brawler.facing = math.atan2(dx, dz);
-      case BrawlPhase.circle:
-        if (brawler.hasToken) {
-          // The token holder closes in to strike range.
-          velocityX = towardX * tokenCloseSpeed;
-          velocityZ = towardZ * tokenCloseSpeed;
-        } else {
-          brawler.wobble += dt;
-          final radiusTarget =
-              circleRadius +
-              circleWobbleAmplitude *
-                  math.sin(
-                    brawler.wobbleSeed +
-                        brawler.wobble * circleWobbleRate * 2 * math.pi,
-                  );
-          // Tangential orbit plus a radial correction toward the target
-          // radius.
-          final tangentX = -towardZ * brawler.circleDirection;
-          final tangentZ = towardX * brawler.circleDirection;
-          final radial = (distance - radiusTarget).clamp(-1.0, 1.0);
-          velocityX = tangentX * circleSpeed + towardX * radial * circleSpeed;
-          velocityZ = tangentZ * circleSpeed + towardZ * radial * circleSpeed;
-        }
-        brawler.facing = math.atan2(dx, dz);
-      case BrawlPhase.telegraph:
-        brawler.facing = math.atan2(dx, dz); // the tell tracks its mark
-      case BrawlPhase.taunting:
-        brawler.facing = math.atan2(dx, dz); // roots, but taunts at its mark
-      case BrawlPhase.rising:
-        break; // on the floor hauling itself up; no drift, no aim yet
-      case BrawlPhase.swing ||
-          BrawlPhase.recover ||
-          BrawlPhase.staggered ||
-          BrawlPhase.dying:
-        break; // rooted, facing frozen
-    }
-
-    // Bogged down in a lava pit. Only the ground speed is mired; the
-    // facing/aim above stay full, so it still tracks the player as it
-    // wades, and a wind blast can still launch it.
-    if (world.has<Mired>(entity)) {
-      velocityX *= miredSpeedFactor;
-      velocityZ *= miredSpeedFactor;
-    }
+    final (velocityX, velocityZ) = _steer(
+      brawler,
+      transform,
+      playerPosition,
+      dt,
+      mired: world.has<Mired>(entity),
+    );
     brawler.velocity.setValues(velocityX, 0, velocityZ);
+
     final knockback = world.tryGet<Knockback>(entity);
     // Sent flying (a wind blast): the arc owns them until they land.
     if (knockback == null || !knockback.airborne) {
@@ -482,33 +385,183 @@ void moveBrawlers(World world) {
     }
     clampToArena(transform.translation);
 
-    // Thrown: the body tumbles through the arc and snaps flat on landing.
-    // Each barbarian spins at its own rate (off the wobble seed), so a
-    // blast throws a crowd rather than a formation.
-    if (knockback != null && knockback.airborne) {
-      // Tips over once on the way down, at its own rate; a continuous
-      // spin read as a rotating prop, not a person.
-      brawler.tumble = towardProne(
-        brawler.tumble,
-        dt * (0.75 + brawler.wobbleSeed % 0.5),
-        rate: proneSettleRate,
-      );
-    } else if (knockback != null && knockback.downed > 0) {
-      // Landed: settle flat and stay down for the whole downed beat; a
-      // thrown body should not pop upright the moment it touches down.
-      brawler.tumble = towardProne(brawler.tumble, dt, rate: proneSettleRate);
-    } else {
-      brawler.tumble = 0;
-    }
+    _advanceTumble(brawler, knockback, dt, corpse: false);
     brawler.downed = knockback?.incapacitated ?? false;
     brawler.airborne = knockback?.airborne ?? false; // falls vs lies
-    transform.rotation.setAxisAngle(_upAxis, brawler.facing);
-    if (brawler.tumble != 0) {
-      transform.rotation.setFrom(
-        transform.rotation * Quaternion.axisAngle(_tumbleAxis, brawler.tumble),
-      );
-    }
+    _applyFacingAndTumble(brawler, transform, sign: 1);
   });
+}
+
+/// The living brawler's per-phase steering: ground velocity out, facing
+/// written in place. Everything from the telegraph on is rooted.
+(double, double) _steer(
+  Brawler brawler,
+  SceneTransform transform,
+  Vector3 playerPosition,
+  double dt, {
+  required bool mired,
+}) {
+  final dx = playerPosition.x - transform.translation.x;
+  final dz = playerPosition.z - transform.translation.z;
+  final distance = math.sqrt(dx * dx + dz * dz).clamp(1e-6, double.infinity);
+  final towardX = dx / distance;
+  final towardZ = dz / distance;
+
+  var velocityX = 0.0;
+  var velocityZ = 0.0;
+  switch (brawler.phase.state) {
+    case BrawlPhase.approach:
+      velocityX = towardX * approachSpeed;
+      velocityZ = towardZ * approachSpeed;
+      brawler.facing = math.atan2(dx, dz);
+    case BrawlPhase.circle:
+      if (brawler.hasToken) {
+        // The token holder closes in to strike range.
+        velocityX = towardX * tokenCloseSpeed;
+        velocityZ = towardZ * tokenCloseSpeed;
+      } else {
+        brawler.wobble += dt;
+        final radiusTarget =
+            circleRadius +
+            circleWobbleAmplitude *
+                math.sin(
+                  brawler.wobbleSeed +
+                      brawler.wobble * circleWobbleRate * 2 * math.pi,
+                );
+        // Tangential orbit plus a radial correction toward the target
+        // radius.
+        final tangentX = -towardZ * brawler.circleDirection;
+        final tangentZ = towardX * brawler.circleDirection;
+        final radial = (distance - radiusTarget).clamp(-1.0, 1.0);
+        velocityX = tangentX * circleSpeed + towardX * radial * circleSpeed;
+        velocityZ = tangentZ * circleSpeed + towardZ * radial * circleSpeed;
+      }
+      brawler.facing = math.atan2(dx, dz);
+    case BrawlPhase.telegraph:
+      brawler.facing = math.atan2(dx, dz); // the tell tracks its mark
+    case BrawlPhase.taunting:
+      brawler.facing = math.atan2(dx, dz); // roots, but taunts at its mark
+    case BrawlPhase.rising:
+      break; // on the floor hauling itself up; no drift, no aim yet
+    case BrawlPhase.swing ||
+        BrawlPhase.recover ||
+        BrawlPhase.staggered ||
+        BrawlPhase.dying:
+      break; // rooted, facing frozen
+  }
+
+  // Bogged down in a lava pit. Only the ground speed is mired; the
+  // facing/aim above stay full, so it still tracks the player as it
+  // wades, and a wind blast can still launch it.
+  if (mired) {
+    velocityX *= miredSpeedFactor;
+    velocityZ *= miredSpeedFactor;
+  }
+  return (velocityX, velocityZ);
+}
+
+/// The knockout: launch once on the killing blow, fly the same kinematic
+/// arc a live throw uses, stop dead on touchdown, and hold the authored
+/// corpse pose until the dissolve takes it.
+void _driveCorpse(
+  World world,
+  Entity entity,
+  Brawler brawler,
+  SceneTransform transform,
+  double dt,
+) {
+  final knockback = world.tryGet<Knockback>(entity);
+  if (knockback == null) return;
+  if (!brawler.corpseLaunched) _launchCorpse(brawler, knockback);
+
+  final wasAirborne = knockback.airborne;
+  knockback.step(dt, transform.translation);
+  if (wasAirborne && !knockback.airborne) {
+    // Dead weight stops dead on touchdown — no carry, no skate — and the
+    // node's tumble snaps out in the same frame: from here the authored
+    // corpse pose owns the lying body (see the animator's dying case),
+    // and the impact hides both cuts.
+    knockback.velocity.x = 0;
+    knockback.velocity.z = 0;
+    brawler.tumble = 0;
+  }
+  // Keep the flags honest while dying: the animator reads them to pick
+  // the skydive vs the landed collapse.
+  brawler.downed = knockback.incapacitated;
+  brawler.airborne = knockback.airborne;
+
+  _advanceTumble(brawler, knockback, dt, corpse: true);
+  clampToArena(transform.translation);
+  _applyFacingAndTumble(brawler, transform, sign: brawler.corpseTumbleSign);
+}
+
+/// The one-shot fling on the killing blow's direction, at its own speed
+/// (the stagger shoves are ~3 m/s — a nudge, not a launch). A kill with
+/// no shove behind it just hops and crumples in place. Seeded per kill
+/// (slot seed + circling time at death): speed, arc height, and a
+/// sideways deflection all vary so a crowd of kills sprays instead of
+/// repeating, with the odd home run.
+void _launchCorpse(Brawler brawler, Knockback knockback) {
+  brawler.corpseLaunched = true;
+  final seed = brawler.wobbleSeed + brawler.wobble;
+  final bigHit = (seed * 3.7) % 1.0 > 0.82;
+  final fling = corpseFlingSpeed * (bigHit ? 1.7 : 0.8 + (seed * 7.31) % 0.5);
+  final hop = corpseHopSpeed * (bigHit ? 1.3 : 0.85 + (seed * 11.7) % 0.4);
+  final spray = ((seed * 5.13) % 0.7) - 0.35;
+
+  var flingX = knockback.velocity.x;
+  var flingZ = knockback.velocity.z;
+  final shoved = math.sqrt(flingX * flingX + flingZ * flingZ);
+  if (shoved > 1e-3) {
+    final nx = flingX / shoved;
+    final nz = flingZ / shoved;
+    final cosS = math.cos(spray);
+    final sinS = math.sin(spray);
+    flingX = (nx * cosS - nz * sinS) * fling;
+    flingZ = (nx * sinS + nz * cosS) * fling;
+  }
+  brawler.corpseTumbleSign = brawler.tumble == 0 ? corpseTumblePitch : 1;
+  knockback.shove(Vector3(flingX, math.max(knockback.velocity.y, hop), flingZ));
+}
+
+/// The one-way tip toward prone: seeded per body through the air (a
+/// blast throws a crowd, not a formation), a flat settle through the
+/// living's downed beat, and the snap back upright once free. A landed
+/// corpse holds zero — the authored corpse pose lies the skeleton down,
+/// so any node pitch on top would double-rotate it.
+void _advanceTumble(
+  Brawler brawler,
+  Knockback? knockback,
+  double dt, {
+  required bool corpse,
+}) {
+  if (knockback != null && knockback.airborne) {
+    brawler.tumble = towardProne(
+      brawler.tumble,
+      dt * (0.75 + brawler.wobbleSeed % 0.5),
+      rate: proneSettleRate,
+    );
+  } else if (!corpse && knockback != null && knockback.downed > 0) {
+    brawler.tumble = towardProne(brawler.tumble, dt, rate: proneSettleRate);
+  } else {
+    brawler.tumble = 0;
+  }
+}
+
+/// Yaw to the stored facing, then the tumble pitch on top ([sign] flips
+/// it backward for the knockout).
+void _applyFacingAndTumble(
+  Brawler brawler,
+  SceneTransform transform, {
+  required double sign,
+}) {
+  transform.rotation.setAxisAngle(_upAxis, brawler.facing);
+  if (brawler.tumble != 0) {
+    transform.rotation.setFrom(
+      transform.rotation *
+          Quaternion.axisAngle(_tumbleAxis, sign * brawler.tumble),
+    );
+  }
 }
 
 final Vector3 _upAxis = Vector3(0, 1, 0);

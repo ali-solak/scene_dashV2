@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:flutter/widgets.dart' show Size;
 import 'package:flutter_scene/scene.dart';
-import 'package:flutter_scene_rapier/flutter_scene_rapier.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart'
     show Matrix4, Quaternion, Vector3, Vector4;
@@ -11,7 +10,6 @@ import 'package:vector_math/vector_math.dart'
 import '../game/actors.dart';
 import '../game/camera_rig.dart';
 import '../game/combat_math.dart';
-import '../game/physics_layers.dart';
 import '../game/character_assets.dart';
 import '../game/game_state.dart';
 import '../game/sets.dart';
@@ -40,7 +38,6 @@ void installEnemies(GameBuilder game) {
     ..registerComponent<BrawlerVisuals>()
     ..registerComponent<EnemyAnimator>()
     ..registerComponent<EnemyHealthBar>()
-    ..registerComponent<Ragdoll>()
     ..registerComponent<ModelSlot>()
     ..registerComponent<Dissolving>()
     ..registerComponent<Mired>()
@@ -93,44 +90,20 @@ void installEnemies(GameBuilder game) {
       after: const [brawlerDriver],
       runIf: inState(GameStatus.fighting),
     )
-    // Hands death to Rapier: registered before the material/death system,
-    // which orders itself after it.
-    ..addSystem(
-      Schedules.update,
-      launchRagdolls,
-      inSet: GameSets.logic,
-      reads: const {Enemy, Brawler, Knockback, SceneNode},
-      writes: const {Ragdoll, EnemyAnimator},
-      runIf: hasResource<Scene>(),
-    )
-    ..addSystem(
-      Schedules.update,
-      settleRagdolls,
-      inSet: GameSets.logic,
-      reads: const {Enemy},
-      writes: const {Ragdoll, EnemyAnimator},
-      after: const [launchRagdolls],
-      runIf: hasResource<Scene>(),
-    )
     ..addSystem(
       Schedules.update,
       updateBrawlerMaterials,
       inSet: GameSets.logic,
       reads: const {Enemy, Brawler, Dissolving},
       writes: const {BrawlerVisuals},
-      after: const [launchRagdolls],
       runIf: hasResource<Scene>(),
     )
-    // After both ragdoll systems: `settleRagdolls` sets `frozen` once the
-    // body rests, and this mapper must run after it to see the flag and
-    // leave the final pose alone.
     ..addSystem(
       Schedules.update,
       updateEnemyAnimation,
       inSet: GameSets.logic,
       reads: const {Enemy, Brawler},
       writes: const {EnemyAnimator},
-      after: const [launchRagdolls, settleRagdolls],
       runIf: hasResource<Scene>(),
     )
     ..addSystem(

@@ -60,24 +60,18 @@ const double aggroCooldownSeconds = 1.2;
 
 // ── Death: dissolve clocks ──────────────────────────────────────────────
 
-const double dissolveSeconds = 1.8;
-const double dissolveDelaySeconds = 0.7;
+/// Shortened so the field clears fast: the corpse is gone ~2 s after the
+/// kill. The delay must outlast the knockout's flight (a home-run arc is
+/// ~0.9 s) or the body starts sinking mid-air.
+const double dissolveSeconds = 1.1;
+const double dissolveDelaySeconds = 0.9;
 const double deathSinkDepth = 2.2;
 
-// ── Death: the corpse ragdoll ───────────────────────────────────────────
+// ── Death: the knockout ─────────────────────────────────────────────────
 
-final Vector3 corpseHalfExtents = Vector3(0.45, 1.2, 0.35);
-
-/// The launch: the killing blow's shove scaled down, plus a hop and a
-/// tumble.
-const double corpseLaunchFactor = 0.45;
-const double corpseHopVelocity = 3.4;
-const double corpseTumbleFactor = 1.6;
-
-const double corpseLinearDamping = 2.4;
-const double corpseAngularDamping = 1.4;
-
-const double corpseSettleSeconds = 1.4;
+const double corpseFlingSpeed = 6.5;
+const double corpseHopSpeed = 6.0;
+const double corpseTumblePitch = -1;
 
 // ── Animation: blends & strides ─────────────────────────────────────────
 

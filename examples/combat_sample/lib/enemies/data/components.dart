@@ -66,6 +66,14 @@ final class Brawler {
   /// Accumulated circling time driving the wobble (advanced by movement).
   double wobble = 0;
 
+  /// Set when death has flung the corpse (see the knockout in
+  /// `moveBrawlers`), so the launch fires exactly once.
+  bool corpseLaunched = false;
+
+  /// The knockout's pitch direction, latched at launch (see
+  /// [corpseTumblePitch]); never flips mid-air.
+  double corpseTumbleSign = 1;
+
   /// Facing yaw; forward is `(sin facing, 0, cos facing)`. Frozen from the
   /// swing on, so a roll sidesteps a committed arc.
   double facing = 0;
@@ -178,27 +186,3 @@ final class BrawlerVisuals {
   void hide() => bodyRoot.visible = false;
 }
 
-/// The Rapier body handed to a corpse, kept so [settle] can nail it down
-/// once it has come to rest.
-final class Ragdoll {
-  Ragdoll({required this.body});
-
-  final RapierRigidBody body;
-
-  /// Seconds since the corpse was handed to physics.
-  double age = 0;
-
-  bool settled = false;
-
-  /// Nails the corpse down where it came to rest. The colliders have no
-  /// friction, so damping alone never reaches zero and the body creeps
-  /// forever; turning it fixed ends the simulation outright.
-  void settle() {
-    if (settled) return;
-    settled = true;
-    body
-      ..linearVelocity = Vector3.zero()
-      ..angularVelocity = Vector3.zero()
-      ..type = BodyType.fixed;
-  }
-}
