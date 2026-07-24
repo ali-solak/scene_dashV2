@@ -1,0 +1,365 @@
+{
+  "barrier": {
+    "name": "barrier",
+    "domain": "surface",
+    "shading_model": "unlit",
+    "blending": "alpha",
+    "culling": "back",
+    "uniform_block": "MaterialParams",
+    "parameters": [
+      {
+        "name": "time",
+        "type": "float",
+        "default": 0.0
+      },
+      {
+        "name": "charge",
+        "type": "float",
+        "default": 1.0,
+        "hint": {
+          "kind": "range",
+          "min": 0.0,
+          "max": 1.0,
+          "step": 0.01
+        }
+      },
+      {
+        "name": "hit",
+        "type": "float",
+        "default": 0.0,
+        "hint": {
+          "kind": "range",
+          "min": 0.0,
+          "max": 1.0,
+          "step": 0.01
+        }
+      },
+      {
+        "name": "hit_dir",
+        "type": "vec3",
+        "default": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "name": "cool_color",
+        "type": "vec3",
+        "default": [
+          0.16,
+          0.42,
+          0.95
+        ]
+      },
+      {
+        "name": "hot_color",
+        "type": "vec3",
+        "default": [
+          0.8,
+          0.96,
+          1.35
+        ]
+      }
+    ],
+    "samplers": []
+  },
+  "dissolve": {
+    "name": "dissolve",
+    "domain": "surface",
+    "shading_model": "unlit",
+    "blending": "opaque",
+    "culling": "none",
+    "uniform_block": "MaterialParams",
+    "parameters": [
+      {
+        "name": "progress",
+        "type": "float",
+        "default": 0.0,
+        "hint": {
+          "kind": "range",
+          "min": 0.0,
+          "max": 1.0,
+          "step": 0.01
+        }
+      },
+      {
+        "name": "base_color",
+        "type": "vec3",
+        "default": [
+          0.55,
+          0.16,
+          0.12
+        ]
+      },
+      {
+        "name": "edge_color",
+        "type": "vec3",
+        "default": [
+          1.4,
+          0.6,
+          0.18
+        ]
+      },
+      {
+        "name": "noise_scale",
+        "type": "float",
+        "default": 5.0,
+        "hint": {
+          "kind": "range",
+          "min": 0.5,
+          "max": 12.0,
+          "step": 0.1
+        }
+      }
+    ],
+    "samplers": []
+  },
+  "grass_sway": {
+    "name": "grass_sway",
+    "domain": "surface",
+    "shading_model": "lit",
+    "blending": "opaque",
+    "culling": "back",
+    "uniform_block": "MaterialParams",
+    "vertex": {
+      "unskinned": "grass_swayUnskinnedVertex",
+      "skinned": "grass_swaySkinnedVertex",
+      "depth": "grass_swayUnskinnedDepthVertex"
+    },
+    "parameters": [
+      {
+        "name": "time",
+        "type": "float",
+        "default": 0.0
+      },
+      {
+        "name": "wind_strength",
+        "type": "float",
+        "default": 0.35,
+        "hint": {
+          "kind": "range",
+          "min": 0.0,
+          "max": 2.0,
+          "step": 0.01
+        }
+      },
+      {
+        "name": "wind_dir",
+        "type": "vec2",
+        "default": [
+          0.8,
+          0.6
+        ]
+      },
+      {
+        "name": "sway_scale",
+        "type": "float",
+        "default": 0.3,
+        "hint": {
+          "kind": "range",
+          "min": 0.01,
+          "max": 2.0,
+          "step": 0.01
+        }
+      }
+    ],
+    "samplers": [
+      {
+        "name": "blade_texture",
+        "type": "sampler2D",
+        "hint": {
+          "kind": "default_white"
+        }
+      }
+    ]
+  },
+  "ground_noise": {
+    "name": "ground_noise",
+    "domain": "surface",
+    "shading_model": "lit",
+    "blending": "opaque",
+    "culling": "back",
+    "uniform_block": "MaterialParams",
+    "parameters": [
+      {
+        "name": "base_a",
+        "type": "vec3",
+        "default": [
+          0.1,
+          0.32,
+          0.06
+        ]
+      },
+      {
+        "name": "base_b",
+        "type": "vec3",
+        "default": [
+          0.34,
+          0.22,
+          0.09
+        ]
+      },
+      {
+        "name": "noise_scale",
+        "type": "float",
+        "default": 0.16,
+        "hint": {
+          "kind": "range",
+          "min": 0.01,
+          "max": 2.0,
+          "step": 0.01
+        }
+      },
+      {
+        "name": "detail_scale",
+        "type": "float",
+        "default": 1.6,
+        "hint": {
+          "kind": "range",
+          "min": 0.1,
+          "max": 8.0,
+          "step": 0.1
+        }
+      }
+    ],
+    "samplers": []
+  },
+  "lava": {
+    "name": "lava",
+    "domain": "surface",
+    "shading_model": "unlit",
+    "blending": "opaque",
+    "culling": "none",
+    "uniform_block": "MaterialParams",
+    "parameters": [
+      {
+        "name": "time",
+        "type": "float",
+        "default": 0.0
+      },
+      {
+        "name": "heat",
+        "type": "float",
+        "default": 1.0,
+        "hint": {
+          "kind": "range",
+          "min": 0.0,
+          "max": 1.0,
+          "step": 0.01
+        }
+      },
+      {
+        "name": "radius",
+        "type": "float",
+        "default": 3.4
+      },
+      {
+        "name": "center",
+        "type": "vec2",
+        "default": [
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "name": "crust_color",
+        "type": "vec3",
+        "default": [
+          0.1,
+          0.05,
+          0.05
+        ]
+      },
+      {
+        "name": "lava_color",
+        "type": "vec3",
+        "default": [
+          1.4,
+          0.3,
+          0.05
+        ]
+      },
+      {
+        "name": "hot_color",
+        "type": "vec3",
+        "default": [
+          3.0,
+          1.8,
+          0.45
+        ]
+      }
+    ],
+    "samplers": []
+  },
+  "ocean": {
+    "name": "ocean",
+    "domain": "surface",
+    "shading_model": "unlit",
+    "blending": "opaque",
+    "culling": "none",
+    "uniform_block": "MaterialParams",
+    "vertex": {
+      "unskinned": "oceanUnskinnedVertex",
+      "skinned": "oceanSkinnedVertex",
+      "depth": "oceanUnskinnedDepthVertex"
+    },
+    "parameters": [
+      {
+        "name": "time",
+        "type": "float",
+        "default": 0.0
+      },
+      {
+        "name": "wave_height",
+        "type": "float",
+        "default": 0.65,
+        "hint": {
+          "kind": "range",
+          "min": 0.0,
+          "max": 2.0,
+          "step": 0.01
+        }
+      },
+      {
+        "name": "wave_scale",
+        "type": "float",
+        "default": 0.045,
+        "hint": {
+          "kind": "range",
+          "min": 0.001,
+          "max": 0.5,
+          "step": 0.001
+        }
+      },
+      {
+        "name": "deep_color",
+        "type": "vec3",
+        "default": [
+          0.05,
+          0.17,
+          0.26
+        ]
+      },
+      {
+        "name": "swell_color",
+        "type": "vec3",
+        "default": [
+          0.12,
+          0.34,
+          0.4
+        ]
+      },
+      {
+        "name": "sparkle_color",
+        "type": "vec3",
+        "default": [
+          1.0,
+          0.95,
+          0.8
+        ]
+      }
+    ],
+    "samplers": []
+  }
+}
