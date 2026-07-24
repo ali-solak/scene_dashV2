@@ -12,32 +12,31 @@ const List<String> _flailBones = [
 ];
 
 /// Small spring-driven limb motion over the frozen hit pose.
-final class LimbFlail extends Component {
+final class LimbFlail {
   LimbFlail({
-    required this.bones,
-    required this.axes,
+    required int limbCount,
     this.body,
     this.knockback,
     required this.seed,
     required this.impactKick,
     required double kickStrength,
-  }) {
+  }) : angles = Float64List(limbCount),
+       velocities = Float64List(limbCount) {
     _resetImpactTracking();
-    kick(kickStrength, seed);
+    _kick(kickStrength, seed);
   }
 
-  final List<Node> bones;
-  final List<Vector3> axes;
   RapierRigidBody? body;
   Knockback? knockback;
   double seed;
   double impactKick;
-  final Float64List angles = Float64List(_flailBones.length);
-  final Float64List velocities = Float64List(_flailBones.length);
+  final Float64List angles;
+  final Float64List velocities;
 
   double previousVerticalVelocity = 0;
   bool wasAirborne = false;
   bool impacted = false;
+  _LimbFlailDriver? _driver;
 
   void launch({
     RapierRigidBody? body,
@@ -52,10 +51,10 @@ final class LimbFlail extends Component {
     this.impactKick = impactKick;
     impacted = false;
     _resetImpactTracking();
-    kick(kickStrength, seed);
+    _kick(kickStrength, seed);
   }
 
-  void kick(double strength, double salt) {
+  void _kick(double strength, double salt) {
     for (var i = 0; i < velocities.length; i++) {
       final hash = math.sin(salt * 12.9898 + i * 78.233) * 43758.5453;
       final random = hash - hash.floorToDouble();
@@ -68,7 +67,7 @@ final class LimbFlail extends Component {
     }
   }
 
-  void detectImpact() {
+  void _detectImpact() {
     if (impacted) return;
     final rigidBody = body;
     if (rigidBody != null) {
@@ -92,7 +91,7 @@ final class LimbFlail extends Component {
 
   void _impact() {
     impacted = true;
-    kick(impactKick, seed + 19.7);
+    _kick(impactKick, seed + 19.7);
   }
 
   void _resetImpactTracking() {
@@ -100,11 +99,10 @@ final class LimbFlail extends Component {
     wasAirborne = knockback?.airborne ?? false;
   }
 
-  @override
-  void update(double deltaSeconds) {
-    detectImpact();
+  void _advance(double deltaSeconds) {
+    _detectImpact();
     final dt = math.min(deltaSeconds, 1 / 30);
-    for (var i = 0; i < bones.length; i++) {
+    for (var i = 0; i < angles.length; i++) {
       var velocity = velocities[i];
       var angle = angles[i];
       velocity += (-flailStiffness * angle - flailDamping * velocity) * dt;
@@ -113,6 +111,22 @@ final class LimbFlail extends Component {
           .toDouble();
       velocities[i] = velocity;
       angles[i] = angle;
+    }
+  }
+}
+
+final class _LimbFlailDriver extends Component {
+  _LimbFlailDriver(this.flail, this.bones, this.axes);
+
+  final LimbFlail flail;
+  final List<Node> bones;
+  final List<Vector3> axes;
+
+  @override
+  void update(double deltaSeconds) {
+    flail._advance(deltaSeconds);
+    for (var i = 0; i < bones.length; i++) {
+      final angle = flail.angles[i];
       if (angle.abs() < 1e-4) continue;
       bones[i].localTransform.multiply(
         Matrix4.compose(
@@ -127,12 +141,16 @@ final class LimbFlail extends Component {
 }
 
 void _detachLimbFlail(World world, Entity entity, LimbFlail flail) {
-  if (flail.isAttached) flail.node.removeComponent(flail);
+  final driver = flail._driver;
+  if (driver != null && driver.isAttached) {
+    driver.node.removeComponent(driver);
+  }
 }
 
 LimbFlail? _buildLimbFlail(
+  World world,
+  Entity entity,
   Node sceneRoot, {
-  required SceneCommands commands,
   RapierRigidBody? body,
   Knockback? knockback,
   required double seed,
@@ -157,15 +175,17 @@ LimbFlail? _buildLimbFlail(
   }
 
   final flail = LimbFlail(
-    bones: bones,
-    axes: axes,
+    limbCount: bones.length,
     body: body,
     knockback: knockback,
     seed: seed,
     kickStrength: kickStrength,
     impactKick: impactKick,
   );
-  commands.attach(model.children.first, flail);
+  // The parent's animation player writes the base pose first.
+  final driver = _LimbFlailDriver(flail, bones, axes);
+  flail._driver = driver;
+  world.resource<SceneCommands>().attach(model.children.first, driver);
   return flail;
 }
 
@@ -193,8 +213,9 @@ void _triggerLimbFlail(
   final ref = world.tryGet<SceneNode>(entity);
   if (ref == null) return;
   final flail = _buildLimbFlail(
+    world,
+    entity,
     ref.node,
-    commands: world.resource<SceneCommands>(),
     body: body,
     knockback: knockback,
     seed: seed,
