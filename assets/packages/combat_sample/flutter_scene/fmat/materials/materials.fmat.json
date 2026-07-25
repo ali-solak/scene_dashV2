@@ -120,7 +120,7 @@
     "domain": "surface",
     "shading_model": "lit",
     "blending": "opaque",
-    "culling": "none",
+    "culling": "back",
     "uniform_block": "MaterialParams",
     "vertex": {
       "unskinned": "grass_swayUnskinnedVertex",
@@ -199,7 +199,7 @@
       {
         "name": "height_low",
         "type": "float",
-        "default": 0.8,
+        "default": 0.75,
         "hint": {
           "kind": "range",
           "min": 0.3,
@@ -210,7 +210,7 @@
       {
         "name": "height_high",
         "type": "float",
-        "default": 1.35,
+        "default": 1.15,
         "hint": {
           "kind": "range",
           "min": 1.0,
