@@ -19,10 +19,6 @@ class CameraRig {
   /// looks down on them. Player-controlled free, eased while locked.
   double pitch = 0.3;
 
-  /// Impulse set by heavy connects (rules); the camera system rides and
-  /// decays it.
-  double kick = 0;
-
   /// Seconds left of the opening push-in from the title framing onto the
   /// fighter. The camera system counts it down and blends slower while it
   /// runs, so the arrival reads as a move rather than a cut.

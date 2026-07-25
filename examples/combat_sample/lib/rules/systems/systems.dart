@@ -206,9 +206,6 @@ void applyDamage(World world) {
     if (push != null) {
       final knockback = world.tryGet<Knockback>(hit.target);
       knockback?.shove(push);
-      if (knockback != null && push.y > 0) {
-        triggerAirborneFlail(world, hit.target, knockback, push);
-      }
     }
 
     // The sparks: the visual half (a no-op headless).
@@ -233,7 +230,6 @@ void applyDamage(World world) {
     // machine.
     if (fighter != null && hit.damage > 0) {
       fighter.sinceHurt = 0;
-      if (hit.impact) _kickCamera(world, hurtCameraKick);
     }
 
     final brawler = world.tryGet<Brawler>(hit.target);
@@ -262,13 +258,6 @@ void applyDamage(World world) {
         brawler.phase.go(BrawlPhase.staggered);
       }
     }
-
-    // Your connects landing on enemies kick the camera; the light kicks
-    // too, since without hitstop that little punch is what gives a quick
-    // slice some weight.
-    if (hit.impact && world.has<Enemy>(hit.target)) {
-      _kickCamera(world, hit.heavy ? heavyCameraKick : lightCameraKick);
-    }
   }
 }
 
@@ -291,13 +280,4 @@ void driveWind(World world) {
       : (telegraphing ? windCalmStrength : windGustStrength);
   wind.strength +=
       (target - wind.strength) * (1 - math.exp(-windEaseRate * dt));
-}
-
-/// Punches the camera, keeping whatever bigger kick is already riding.
-/// Resource-guarded: the headless test suite boots a world with no
-/// camera at all, and a hit resolving there must not throw.
-void _kickCamera(World world, double amount) {
-  if (!world.hasResource<CameraRig>()) return;
-  final rig = world.resource<CameraRig>();
-  rig.kick = math.max(rig.kick, amount);
 }

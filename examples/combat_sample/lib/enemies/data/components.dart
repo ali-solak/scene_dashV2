@@ -151,6 +151,20 @@ final class PendingCorpse {
   const PendingCorpse();
 }
 
+/// A corpse handed to Rapier, kept so the dust system can watch the body
+/// slam into the ground.
+final class PhysicsCorpse {
+  PhysicsCorpse(this.body);
+
+  final RapierRigidBody body;
+
+  /// Last frame's vertical velocity; a hard fall going flat is a landing.
+  double fallSpeed = 0;
+
+  /// Puffs spent, so a long bounce chain does not smoke forever.
+  int bursts = 0;
+}
+
 /// The body's scene handles: the model wrapper node the death effect
 /// sinks (base transform captured so a restart puts it back), plus, for
 /// the graybox capsule fallback only, its private material for the

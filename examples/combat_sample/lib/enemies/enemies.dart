@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:typed_data' show Float64List;
 
 import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:flutter/widgets.dart' show Size;
@@ -16,6 +15,7 @@ import '../game/character_assets.dart';
 import '../game/game_state.dart';
 import '../game/physics_layers.dart';
 import '../game/sets.dart';
+import '../fx/dash_dust.dart';
 import '../hud/health_bar_widget.dart';
 import '../world/data/arena.dart';
 import '../world/data/config.dart' show characterModelYaw, characterScale;
@@ -27,7 +27,6 @@ part 'data/components.dart';
 part 'data/config.dart';
 part 'data/bundles.dart';
 part 'systems/systems.dart';
-part 'animation/flail.dart';
 
 /// Installs the barbarians: the brawl machine, the aggro-token
 /// coordinator, pack locomotion, and the material tells. Stagger and
@@ -42,15 +41,14 @@ void installEnemies(GameBuilder game) {
     ..registerComponent<BrawlerVisuals>()
     ..registerComponent<EnemyAnimator>()
     ..registerComponent<EnemyHealthBar>()
-    ..registerComponent<LimbFlail>()
     ..registerComponent<ModelSlot>()
     ..registerComponent<Dissolving>()
     ..registerComponent<PendingCorpse>()
+    ..registerComponent<PhysicsCorpse>()
     ..registerComponent<Mired>()
     // A despawned barbarian hands its pooled model back, so the next
     // wave can borrow it (imported skinned models cannot be cloned).
     ..observe<ModelSlot>(onRemove: releaseEnemyModel)
-    ..observe<LimbFlail>(onRemove: _detachLimbFlail)
     ..observe<PendingCorpse>(onRemove: launchPhysicsCorpse)
     ..addSystem(
       Schedules.startup,
@@ -121,6 +119,14 @@ void installEnemies(GameBuilder game) {
       reads: const {Enemy, Brawler, Transforming},
       writes: const {BrawlerVisuals},
       after: const [updateBrawlerMaterials],
+      runIf: hasResource<Scene>(),
+    )
+    ..addSystem(
+      Schedules.update,
+      dustCorpseLandings,
+      inSet: GameSets.logic,
+      reads: const {Enemy},
+      writes: const {PhysicsCorpse},
       runIf: hasResource<Scene>(),
     )
     ..addSystem(

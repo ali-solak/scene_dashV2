@@ -12,7 +12,4 @@ const double playerPoiseThreshold = 24;
 
 const double impactBurstHeight = 1.5;
 
-const double lightCameraKick = 0.3;
-const double heavyCameraKick = 0.75;
-
 const double loseSlowMoTimeScale = 0.32;

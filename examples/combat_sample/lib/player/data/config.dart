@@ -32,11 +32,7 @@ const double cameraPitchSharpness = 6;
 const double lookYawSensitivity = 0.006;
 const double lookPitchSensitivity = 0.0045;
 
-const double cameraKickDecay = 7;
-
 const double flinchSeconds = 0.28;
-
-const double hurtCameraKick = 0.4;
 
 const double lockedCameraBias = 0.5;
 

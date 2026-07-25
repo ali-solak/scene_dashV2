@@ -80,22 +80,23 @@ const double corpseYawSpin = 1.8;
 const double corpseLinearDamping = 0.25;
 const double corpseAngularDamping = 0.9;
 
+/// The dropped axe: its own physics object, tossed clear of the body.
+final Vector3 axeHalfExtents = Vector3(0.06, 0.42, 0.06);
+const double axeDropCarry = 0.55;
+const double axeDropToss = 2.6;
+const double axeDropSpin = 9.0;
+
+/// Ground dust when the corpse (or a bounce) slams down: it needs a real
+/// fall behind it, and only the first few impacts smoke.
+const double corpseDustMinFallSpeed = 3.0;
+const int corpseDustMaxBursts = 2;
+
 /// Rapier owns both the bounce and the floor grip.
 const PhysicsMaterial corpseMaterial = PhysicsMaterial(
   friction: 1,
   restitution: 0.8,
   density: 1.5,
 );
-
-// Limb follow-through layered over the rigid torso.
-const double flailKick = 12;
-const double flailImpactKick = 14;
-const double flailStiffness = 25;
-const double flailDamping = 3.5;
-const double flailMaxAngle = 1.1;
-const double flailImpactMinFallSpeed = 2.2;
-const double airborneFlailKickPerLift = 0.65;
-const double airborneFlailImpactPerLift = 0.55;
 
 // ── Animation: blends & strides ─────────────────────────────────────────
 

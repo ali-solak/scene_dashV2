@@ -66,10 +66,9 @@ final class EnemyAnimator {
       desired = brawler.airborne ? BrawlerShot.fall : BrawlerShot.death;
     }
 
-    shots[BrawlerShot.hit]!.playbackTimeScale = hitBClipSeconds /
-        (phase == BrawlPhase.dying
-            ? corpseHitSeconds
-            : brawlStaggerSeconds);
+    shots[BrawlerShot.hit]!.playbackTimeScale =
+        hitBClipSeconds /
+        (phase == BrawlPhase.dying ? corpseHitSeconds : brawlStaggerSeconds);
 
     if (desired != active) {
       active = desired;

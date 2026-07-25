@@ -56,13 +56,12 @@ void main() {
     );
   });
 
-  test('a heavy connect does heavy damage and kicks the camera', () {
+  test('a heavy connect does heavy damage', () {
     final game = boot();
     final world = game.world;
     final enemy = world.entitiesWith(require: const [Enemy]).firstOrNull!;
     landPlayerStrike(game, enemy, heavy: true);
     expect(world.get<Health>(enemy).current, enemyMaxHealth - heavyDamage);
-    expect(world.resource<CameraRig>().kick, greaterThan(0));
   });
 
   test('the heavy spin connects several times over its sweep', () {

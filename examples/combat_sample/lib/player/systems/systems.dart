@@ -477,9 +477,6 @@ void updateCameraRig(World world) {
     );
   }
 
-  // Heavy connects punch the camera up briefly; the impulse decays fast.
-  rig.kick *= math.exp(-cameraKickDecay * dt);
-
   // Orbit around the focus, not the player: orbiting the player while
   // merely looking toward the target framed neither fighter. Locked, the
   // distance also grows with separation so the pair stays in frame.
@@ -496,7 +493,7 @@ void updateCameraRig(World world) {
   final horizontal = distance * math.cos(rig.pitch);
   final desiredX = rig.target.x - math.sin(rig.yaw) * horizontal;
   // rig.target.y already carries cameraFocusHeight.
-  final desiredY = rig.target.y + distance * math.sin(rig.pitch) + rig.kick;
+  final desiredY = rig.target.y + distance * math.sin(rig.pitch);
   final desiredZ = rig.target.z - math.cos(rig.yaw) * horizontal;
   // The opening push-in rides the existing smoothing: same desired
   // framing from the first frame, only the rate differs during the intro.

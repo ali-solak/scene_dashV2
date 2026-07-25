@@ -123,9 +123,7 @@ Future<CharacterAssets> loadCharacterAssets({
   final openingCount = math.min(_openingBarbarians, barbarianCount);
   final barbarians = <Node>[];
   for (var i = 0; i < openingCount; i++) {
-    barbarians.add(
-      await _track(loading, realizeSceneAsync(barbarianDocument)),
-    );
+    barbarians.add(await _track(loading, realizeSceneAsync(barbarianDocument)));
   }
 
   final clips = <String, Animation>{};
@@ -152,8 +150,11 @@ Future<CharacterAssets> loadCharacterAssets({
   );
   // Two bodies cover the opening wave. The app realizes the reserve only after
   // its first rendered frames, so it cannot hold the loading cover.
-  assets._loadReserve = () =>
-      _fillBarbarianPool(assets, barbarianDocument, barbarianCount - openingCount);
+  assets._loadReserve = () => _fillBarbarianPool(
+    assets,
+    barbarianDocument,
+    barbarianCount - openingCount,
+  );
   return assets;
 }
 

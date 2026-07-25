@@ -60,7 +60,6 @@ void installRules(GameBuilder game) {
         Health,
         Knockback,
         Barrier,
-        LimbFlail,
         PendingCorpse,
       },
       after: const [resolveStrikes],
