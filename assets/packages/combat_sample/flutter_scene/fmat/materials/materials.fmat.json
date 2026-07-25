@@ -120,7 +120,7 @@
     "domain": "surface",
     "shading_model": "lit",
     "blending": "opaque",
-    "culling": "back",
+    "culling": "none",
     "uniform_block": "MaterialParams",
     "vertex": {
       "unskinned": "grass_swayUnskinnedVertex",
@@ -259,15 +259,7 @@
         ]
       }
     ],
-    "samplers": [
-      {
-        "name": "blade_texture",
-        "type": "sampler2D",
-        "hint": {
-          "kind": "default_white"
-        }
-      }
-    ]
+    "samplers": []
   },
   "ground_noise": {
     "name": "ground_noise",
