@@ -48,8 +48,10 @@ vertex {
     // only samplers are bare identifiers.
     float time = material_params.time;
     vec2 wind = material_params.wind_dir;
-    // Roots pinned, tips free: uv.y is 1 at the root, 0 at the tip.
-    float bend = 1.0 - vertex.uv.y;
+    // Roots are authored at object y = 0 and tips above it. Derive bend from
+    // position rather than UV: the opaque material's position-only shadow
+    // variant has no UV stream, so UV-based bend detached its shadows.
+    float bend = step(0.001, vertex.position.y);
 
     // Sampled before the sway displaces the blade, so it keeps its
     // region's look instead of shifting palette as it waves.

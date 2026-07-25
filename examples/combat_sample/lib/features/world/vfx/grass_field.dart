@@ -6,14 +6,13 @@ import 'dart:typed_data';
 
 /// Flat vertex arrays for a baked field of tapered grass blades.
 ///
-/// Each blade has two root vertices and one tip. Both triangle windings are
-/// indexed so the blades remain visible to the camera and shadow passes from
-/// either side. Sway weight is encoded in uv.y (0 tip, 1 pinned root).
+/// Each blade has two root vertices at y = 0 and one tip above them. Both
+/// triangle windings are indexed so the blades remain visible to the camera
+/// and shadow passes from either side.
 class GrassField {
   GrassField({
     required this.positions,
     required this.normals,
-    required this.texCoords,
     required this.colors,
     required this.indices,
   });
@@ -23,7 +22,6 @@ class GrassField {
 
   final Float32List positions;
   final Float32List normals;
-  final Float32List texCoords;
   final Float32List colors;
   final Uint32List indices;
 
@@ -47,13 +45,11 @@ GrassField buildGrassField(
   final rng = math.Random(seed);
   final positions = Float32List(blades * GrassField.verticesPerBlade * 3);
   final normals = Float32List(blades * GrassField.verticesPerBlade * 3);
-  final texCoords = Float32List(blades * GrassField.verticesPerBlade * 2);
   final colors = Float32List(blades * GrassField.verticesPerBlade * 4);
   final indices = Uint32List(blades * GrassField.indicesPerBlade);
   var vertexCount = 0;
   var positionOffset = 0;
   var normalOffset = 0;
-  var texCoordOffset = 0;
   var colorOffset = 0;
   var indexOffset = 0;
 
@@ -61,8 +57,6 @@ GrassField buildGrassField(
     double x,
     double y,
     double z,
-    double u,
-    double v,
     double red,
     double green,
     double blue,
@@ -74,8 +68,6 @@ GrassField buildGrassField(
     normals[normalOffset++] = 0;
     normals[normalOffset++] = 1;
     normals[normalOffset++] = 0;
-    texCoords[texCoordOffset++] = u;
-    texCoords[texCoordOffset++] = v;
     colors[colorOffset++] = red;
     colors[colorOffset++] = green;
     colors[colorOffset++] = blue;
@@ -122,8 +114,6 @@ GrassField buildGrassField(
         cx - sideX * halfRoot,
         0,
         cz - sideZ * halfRoot,
-        0,
-        1,
         red,
         green,
         blue,
@@ -132,8 +122,6 @@ GrassField buildGrassField(
         cx + sideX * halfRoot,
         0,
         cz + sideZ * halfRoot,
-        1,
-        1,
         red,
         green,
         blue,
@@ -142,8 +130,6 @@ GrassField buildGrassField(
         cx + sideX * curve,
         height,
         cz + sideZ * curve,
-        0.5,
-        0,
         red,
         green,
         blue,
@@ -163,7 +149,6 @@ GrassField buildGrassField(
   return GrassField(
     positions: Float32List.sublistView(positions, 0, positionOffset),
     normals: Float32List.sublistView(normals, 0, normalOffset),
-    texCoords: Float32List.sublistView(texCoords, 0, texCoordOffset),
     colors: Float32List.sublistView(colors, 0, colorOffset),
     indices: Uint32List.sublistView(indices, 0, indexOffset),
   );

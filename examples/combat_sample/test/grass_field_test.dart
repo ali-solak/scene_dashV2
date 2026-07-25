@@ -9,7 +9,6 @@ void main() {
     final field = buildGrassField(98, radius: 10);
     expect(field.positions.length, 98 * GrassField.verticesPerBlade * 3);
     expect(field.normals.length, 98 * GrassField.verticesPerBlade * 3);
-    expect(field.texCoords.length, 98 * GrassField.verticesPerBlade * 2);
     expect(field.colors.length, 98 * GrassField.verticesPerBlade * 4);
     expect(field.indices.length, 98 * GrassField.indicesPerBlade);
   });
@@ -26,17 +25,17 @@ void main() {
     }
   });
 
-  test('indices are valid and sway runs from pinned root to tip', () {
+  test('indices are valid and roots stay distinguishable from tips', () {
     final field = buildGrassField(49, radius: 5);
     final vertexCount = field.positions.length ~/ 3;
     for (final index in field.indices) {
       expect(index, lessThan(vertexCount));
     }
-    for (var v = 0; v < vertexCount; v++) {
-      final uvY = field.texCoords[v * 2 + 1];
-      final y = field.positions[v * 3 + 1];
-      expect(uvY, anyOf(0.0, 1.0));
-      expect(y == 0, uvY == 1.0);
+    for (var blade = 0; blade < field.bladeCount; blade++) {
+      final base = blade * GrassField.verticesPerBlade * 3;
+      expect(field.positions[base + 1], 0);
+      expect(field.positions[base + 4], 0);
+      expect(field.positions[base + 7], greaterThan(0));
     }
   });
 

@@ -237,7 +237,6 @@ void _bakeGrass(Node node, Material material, int blades) {
       MeshGeometry.fromArrays(
         positions: field.positions,
         normals: field.normals,
-        texCoords: field.texCoords,
         colors: field.colors,
         indices: field.indices,
       ),
