@@ -93,7 +93,7 @@ void applyGraphicsQuality(World world) {
 /// Applies `qualityPresets[level]` to the live scene.
 ///
 /// The grass re-bake is the expensive half (a full vertex-buffer upload),
-/// so it is skipped when the new preset asks for the same card count.
+/// so it is skipped when the new preset asks for the same blade count.
 void _applyQuality(Scene scene, Node? grass, int fromLevel, int toLevel) {
   final preset = qualityPresets[toLevel];
   // Everything here is a flag flip except the render scale, which
@@ -105,8 +105,8 @@ void _applyQuality(Scene scene, Node? grass, int fromLevel, int toLevel) {
     ..godRays.enabled = preset.godRays;
 
   if (grass == null) return;
-  if (qualityPresets[fromLevel].cards == preset.cards) return;
+  if (qualityPresets[fromLevel].blades == preset.blades) return;
   final material = grass.mesh?.primitives.first.material;
   if (material == null) return;
-  _bakeGrass(grass, material, preset.cards);
+  _bakeGrass(grass, material, preset.blades);
 }

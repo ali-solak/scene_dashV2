@@ -67,8 +67,6 @@ void spawnClearing(World world) {
   world.spawn([const Ocean(), SceneNode(_buildOcean(assets))]);
 }
 
-Texture2D? _bladeTexture;
-
 /// The forest: an evenly-spaced jittered pine ring with rocks and bushes
 /// scattered up to the treeline, all statically batched into one mesh.
 /// Placement comes from the pure [layoutClearing].
@@ -201,9 +199,7 @@ Node _buildGrass(WorldAssets assets) {
   final grass = assets.grassMaterial;
   final Material material;
   if (grass != null) {
-    _bladeTexture ??= Texture2D.fromPixels(bladePixels(64), 64, 64);
     grass.parameters
-      ..setTexture('blade_texture', _bladeTexture!.gpuTexture)
       ..setVec2('wind_dir', windDirection.normalized())
       ..setFloat('wind_strength', grassWindStrength)
       ..setFloat('sway_scale', grassSwayScale);
@@ -211,25 +207,26 @@ Node _buildGrass(WorldAssets assets) {
   } else {
     material = PhysicallyBasedMaterial()
       ..baseColorFactor = Vector4(0.35, 0.5, 0.2, 1)
-      ..roughnessFactor = 1;
+      ..roughnessFactor = 1
+      ..doubleSided = true;
   }
   // Deliberately NOT shadowStatic: the sway is a vertex displacement, and
   // cached shadow tiles would not follow it.
   final node = Node(name: 'grass');
-  _bakeGrass(node, material, qualityPresets[defaultQualityLevel].cards);
+  _bakeGrass(node, material, qualityPresets[defaultQualityLevel].blades);
   return node;
 }
 
-/// Bakes [cards] worth of field onto [node]. Zero is a real setting:
+/// Bakes [blades] worth of field onto [node]. Zero is a real setting:
 /// rather than feed `MeshGeometry.fromArrays` empty buffers, the node is
 /// simply hidden.
-void _bakeGrass(Node node, Material material, int cards) {
-  if (cards <= 0) {
+void _bakeGrass(Node node, Material material, int blades) {
+  if (blades <= 0) {
     node.visible = false;
     return;
   }
   final field = buildGrassField(
-    cards,
+    blades,
     radius: grassFieldRadius,
     falloffStart: grassFalloffStart,
     seed: grassFieldSeed,

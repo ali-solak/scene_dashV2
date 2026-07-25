@@ -104,11 +104,11 @@ const double sceneVignetteIntensity = 0.22;
 const double sceneVignetteRadius = 0.85;
 const double sceneVignetteSmoothness = 0.6;
 
-const int grassCardCount = 8000;
+const int grassBladeCount = 32000;
 
 typedef QualityPreset = ({
   String label,
-  int cards,
+  int blades,
   double renderScale,
   bool ambientOcclusion,
   bool godRays,
@@ -117,28 +117,28 @@ typedef QualityPreset = ({
 const List<QualityPreset> qualityPresets = [
   (
     label: 'LOW',
-    cards: 0,
+    blades: 0,
     renderScale: 0.6,
     ambientOcclusion: false,
     godRays: false,
   ),
   (
     label: 'MED',
-    cards: 4000,
+    blades: 16000,
     renderScale: 0.75,
     ambientOcclusion: false,
     godRays: false,
   ),
   (
     label: 'HIGH',
-    cards: 6000,
+    blades: 24000,
     renderScale: 0.85,
     ambientOcclusion: true,
     godRays: false,
   ),
   (
     label: 'ULTRA',
-    cards: grassCardCount,
+    blades: grassBladeCount,
     renderScale: 1.0,
     ambientOcclusion: true,
     godRays: true,
