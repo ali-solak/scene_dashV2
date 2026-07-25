@@ -104,7 +104,7 @@ const double sceneVignetteIntensity = 0.22;
 const double sceneVignetteRadius = 0.85;
 const double sceneVignetteSmoothness = 0.6;
 
-const int grassBladeCount = 32000;
+const int grassBladeCount = 64000;
 
 typedef QualityPreset = ({
   String label,
@@ -124,14 +124,14 @@ const List<QualityPreset> qualityPresets = [
   ),
   (
     label: 'MED',
-    blades: 16000,
+    blades: 32000,
     renderScale: 0.75,
     ambientOcclusion: false,
     godRays: false,
   ),
   (
     label: 'HIGH',
-    blades: 24000,
+    blades: 48000,
     renderScale: 0.85,
     ambientOcclusion: true,
     godRays: false,
@@ -153,11 +153,6 @@ const double grassFalloffStart = arenaRadius;
 const int grassFieldSeed = 11;
 const double grassWindStrength = 0.28;
 const double grassSwayScale = 0.3;
-
-const double windGustStrength = 1.35;
-const double windCalmStrength = 0.35;
-
-const double windEaseRate = 2.5;
 
 final Vector2 windDirection = Vector2(0.8, 0.6);
 

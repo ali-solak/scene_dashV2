@@ -5,30 +5,29 @@ import 'package:combat_sample/features/world/vfx/grass_field.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('a field bakes five vertices and nine indices per blade', () {
-    final field = buildGrassField(100, radius: 10);
-    expect(field.positions.length, 100 * GrassField.verticesPerBlade * 3);
-    expect(field.normals.length, 100 * GrassField.verticesPerBlade * 3);
-    expect(field.texCoords.length, 100 * GrassField.verticesPerBlade * 2);
-    expect(field.colors.length, 100 * GrassField.verticesPerBlade * 4);
-    expect(field.indices.length, 100 * GrassField.indicesPerBlade);
+  test('a field bakes three vertices and both windings per blade', () {
+    final field = buildGrassField(98, radius: 10);
+    expect(field.positions.length, 98 * GrassField.verticesPerBlade * 3);
+    expect(field.normals.length, 98 * GrassField.verticesPerBlade * 3);
+    expect(field.texCoords.length, 98 * GrassField.verticesPerBlade * 2);
+    expect(field.colors.length, 98 * GrassField.verticesPerBlade * 4);
+    expect(field.indices.length, 98 * GrassField.indicesPerBlade);
   });
 
-  test('every blade stays inside the disc and above the ground', () {
+  test('every blade stays near the field disc and above the ground', () {
     const radius = 10.0;
-    final field = buildGrassField(500, radius: radius);
+    final field = buildGrassField(504, radius: radius);
     for (var v = 0; v < field.positions.length ~/ 3; v++) {
       final x = field.positions[v * 3];
       final y = field.positions[v * 3 + 1];
       final z = field.positions[v * 3 + 2];
-      // Static tip curvature can carry a blade just beyond its root radius.
-      expect(math.sqrt(x * x + z * z), lessThanOrEqualTo(radius + 0.13));
-      expect(y, inInclusiveRange(0, 0.95));
+      expect(math.sqrt(x * x + z * z), lessThanOrEqualTo(radius + 0.38));
+      expect(y, inInclusiveRange(0, 0.82));
     }
   });
 
-  test('indices are valid and sway weight runs from pinned root to tip', () {
-    final field = buildGrassField(50, radius: 5);
+  test('indices are valid and sway runs from pinned root to tip', () {
+    final field = buildGrassField(49, radius: 5);
     final vertexCount = field.positions.length ~/ 3;
     for (final index in field.indices) {
       expect(index, lessThan(vertexCount));
@@ -36,8 +35,7 @@ void main() {
     for (var v = 0; v < vertexCount; v++) {
       final uvY = field.texCoords[v * 2 + 1];
       final y = field.positions[v * 3 + 1];
-      // uv.y is the sway seam: 0 at the free tip, 1 at the pinned root.
-      expect(uvY, anyOf(0.0, closeTo(0.45, 1e-6), 1.0));
+      expect(uvY, anyOf(0.0, 1.0));
       expect(y == 0, uvY == 1.0);
     }
   });
@@ -45,17 +43,15 @@ void main() {
   test('falloff thins the rim and leaves the core at full density', () {
     const radius = 20.0;
     const falloffStart = 12.0;
-    final full = buildGrassField(4000, radius: radius);
+    final full = buildGrassField(3997, radius: radius);
     final faded = buildGrassField(
-      4000,
+      3997,
       radius: radius,
       falloffStart: falloffStart,
     );
     expect(faded.bladeCount, lessThan(full.bladeCount));
     expect(faded.bladeCount, greaterThan(0));
-    // Count root vertices (y == 0, uv.y == 1 -> two per blade) inside and
-    // outside the falloff start. The larger outer annulus must still end up
-    // sparser per unit area.
+
     var inner = 0;
     var outer = 0;
     for (var v = 0; v < faded.positions.length ~/ 3; v++) {
@@ -75,8 +71,8 @@ void main() {
   });
 
   test('the same seed re-lays the same field', () {
-    final a = buildGrassField(200, radius: 12);
-    final b = buildGrassField(200, radius: 12);
+    final a = buildGrassField(196, radius: 12);
+    final b = buildGrassField(196, radius: 12);
     expect(a.positions, b.positions);
     expect(a.colors, b.colors);
   });

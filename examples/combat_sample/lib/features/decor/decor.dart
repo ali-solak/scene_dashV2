@@ -7,7 +7,6 @@ import 'package:vector_math/vector_math.dart' show Matrix4, Vector4;
 
 import '../../common/sets.dart';
 import '../world/data/config.dart' show windDirection;
-import '../world/data/resources.dart' show WindState;
 import 'vfx/leaf_texture.dart';
 
 part 'data/resources.dart';
@@ -17,9 +16,8 @@ part 'systems/systems.dart';
 ///
 /// Each leaf is its own [Node] sharing one quad and a few materials; a
 /// translucent `InstancedMesh` buys nothing here and a per-leaf draw of
-/// one two-triangle quad is cheap. They ride the fight's own [WindState]
-/// rather than a private clock, so the leaves gust when the pack circles
-/// and settle while a barbarian telegraphs.
+/// one two-triangle quad is cheap. Their ambient drift stays independent
+/// from the state of the fight.
 void installDecor(GameBuilder game) {
   game
     ..world.insert(LeafField())

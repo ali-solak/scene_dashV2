@@ -5,7 +5,6 @@ part of '../world.dart';
 void installWeather(GameBuilder game) {
   game
     ..world.insert(GrassWind())
-    ..world.insert(WindState())
     ..world.insert(WaveClock())
     ..addSystem(
       Schedules.update,
@@ -28,25 +27,19 @@ void installWeather(GameBuilder game) {
 /// everything else, and a hitstop's 0.05 s pause is imperceptible.
 void updateWindMaterials(World world) {
   final wind = world.resource<GrassWind>()..time += world.dt;
-  final windState = world.resource<WindState>();
-  // The grass strength: the dramaturgy multiplier over the base sway.
-  final grassStrength = grassWindStrength * windState.strength;
 
-  void drive(SceneNode ref, {double? strength}) {
+  void drive(SceneNode ref) {
     final material = ref.node.mesh?.primitives.first.material;
     if (material is PreprocessedMaterial) {
       material.parameters.setFloat('time', wind.time);
-      if (strength != null) {
-        material.parameters.setFloat('wind_strength', strength);
-      }
     }
   }
 
   world.query<SceneNode>(require: const [Grass]).each((entity, ref) {
-    drive(ref, strength: grassStrength);
+    drive(ref);
   });
   world.query<SceneNode>(require: const [Ocean]).each((entity, ref) {
-    drive(ref); // the ocean has no wind_strength parameter
+    drive(ref);
   });
 }
 

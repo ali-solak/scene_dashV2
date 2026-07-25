@@ -15,7 +15,6 @@ import 'package:combat_sample/features/player/player.dart';
 import 'package:combat_sample/features/rules/rules.dart'
     show playerPoiseThreshold;
 import 'package:combat_sample/features/waves/waves.dart';
-import 'package:combat_sample/features/world/data/resources.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 
@@ -286,27 +285,6 @@ void main() {
     // gone for good and its model slot returns to the pool.
     game.pumpFixed(steps: ticksFor(dissolveDelaySeconds + dissolveSeconds) + 8);
     expect(world.tryGet<Health>(enemy), isNull, reason: 'the corpse despawns');
-  });
-
-  test('wind gusts by default and calms on a telegraph', () {
-    final game = boot();
-    final world = game.world;
-    final wind = world.resource<WindState>();
-    final enemy = world.entitiesWith(require: const [Enemy]).firstOrNull!;
-
-    // No telegraph: the strength eases up to a gust.
-    for (var i = 0; i < 24; i++) {
-      game.pump();
-    }
-    final gust = wind.strength;
-    expect(gust, greaterThan(1), reason: 'the circling pack gusts');
-
-    // A telegraph holds the breath: the strength eases back down.
-    world.get<Brawler>(enemy).phase.go(BrawlPhase.telegraph);
-    for (var i = 0; i < 24; i++) {
-      game.pump();
-    }
-    expect(wind.strength, lessThan(gust), reason: 'the telegraph calms it');
   });
 
   test('restart wipes the field, refields wave 1 and revives the player', () {

@@ -1,7 +1,7 @@
 part of '../rules.dart';
 
 /// The run's shape: the title/restart/menu intents, the per-run clock
-/// reset, the death slow-motion, and the wind that swells with the fight.
+/// reset, and the death slow-motion.
 void installRunFlow(GameBuilder game) {
   game
     ..addSystem(Schedules.frameStart, requestStart, reads: const {})
@@ -19,8 +19,7 @@ void installRunFlow(GameBuilder game) {
       checkPlayerDeath,
       reads: const {Player, Health},
       runIf: inState(GameStatus.fighting),
-    )
-    ..addSystem(Schedules.update, driveWind, reads: const {Enemy, Brawler});
+    );
 }
 
 /// Leaves the title screen (frameStart, alongside the other intents).
@@ -40,10 +39,6 @@ void requestRestart(World world) {
   world.setState(GameStatus.fighting);
 }
 
-/// Opens and closes the skill menu. The menu is just a state: everything
-/// that fights gates on `fighting`, so the world stops the moment it
-/// opens and resumes where it was on close. Ignored while lost; the
-/// death panel owns that screen.
 void toggleSkillMenu(World world) {
   if (!world.consumeAny<SkillMenuToggled>()) return;
   switch (world.state<GameStatus>()) {
@@ -77,25 +72,4 @@ void checkPlayerDeath(World world) {
   if (health != null && !health.alive) {
     world.setState(GameStatus.lost);
   }
-}
-
-/// Wind dramaturgy: the strength eases toward a gust while the pack
-/// circles and toward near-still while one telegraphs (the held breath
-/// before a swing). Writes the resource the grass material reads, so
-/// neither feature imports the other.
-void driveWind(World world) {
-  final wind = world.resource<WindState>();
-  final dt = world.dt;
-  var telegraphing = false;
-  var anyLiving = false;
-  world.query<Brawler>(require: const [Enemy]).each((entity, brawler) {
-    if (brawler.phase.state == BrawlPhase.dying) return;
-    anyLiving = true;
-    if (brawler.phase.state == BrawlPhase.telegraph) telegraphing = true;
-  });
-  final target = !anyLiving
-      ? 1.0
-      : (telegraphing ? windCalmStrength : windGustStrength);
-  wind.strength +=
-      (target - wind.strength) * (1 - math.exp(-windEaseRate * dt));
 }

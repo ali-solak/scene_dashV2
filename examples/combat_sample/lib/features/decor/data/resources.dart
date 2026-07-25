@@ -17,9 +17,7 @@ const double _leafCeiling = 5.5;
 const double _fallSlowest = 0.55;
 const double _fallFastest = 1.25;
 
-/// How hard the wind pushes a leaf sideways, per unit of
-/// `WindState.strength`. The gust the grass leans in is the same gust
-/// that carries these.
+/// How hard the constant ambient wind pushes a leaf sideways.
 const double _windPush = 1.7;
 
 /// Radians per second of tumble, and how far a leaf swings side to side

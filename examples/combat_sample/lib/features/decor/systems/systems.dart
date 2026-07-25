@@ -60,18 +60,14 @@ void spawnLeaves(World world) {
 /// Update: fall, sway, tumble, and wrap back to the ceiling.
 ///
 /// Allocation-free per leaf; each node's transform is rewritten in
-/// place. Reads the fight's [WindState], so the drift picks up when the
-/// pack circles and settles when one telegraphs.
+/// place. Ambient drift is deliberately independent from combat.
 void animateLeaves(World world) {
   final field = world.resource<LeafField>();
   if (field.leaves.isEmpty) return;
 
   final dt = world.dt;
-  final wind = world.hasResource<WindState>()
-      ? world.resource<WindState>().strength
-      : 1.0;
-  final windX = windDirection.x * wind * _windPush;
-  final windZ = windDirection.y * wind * _windPush;
+  final windX = windDirection.x * _windPush;
+  final windZ = windDirection.y * _windPush;
 
   for (var i = 0; i < _leafCount; i++) {
     final phase = field.phase[i] + field.sway[i] * dt;

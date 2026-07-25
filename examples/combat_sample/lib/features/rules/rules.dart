@@ -12,9 +12,6 @@ import '../../common/score.dart';
 import '../../common/sets.dart';
 import '../player/player.dart';
 import '../skills/skills.dart';
-import '../world/data/config.dart'
-    show windCalmStrength, windEaseRate, windGustStrength;
-import '../world/data/resources.dart' show WindState;
 
 part 'data/config.dart';
 part 'systems/flow.dart';
