@@ -8,11 +8,12 @@ import 'package:flutter/foundation.dart' show immutable, listEquals;
 import 'package:flutter/material.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 
-import '../game/game_state.dart';
-import '../game/score.dart';
-import '../skills/skills.dart';
-import '../world/data/config.dart' show qualityPresets;
-import '../world/data/resources.dart' show GraphicsQuality, QualityRequested;
+import '../common/game_state.dart';
+import '../common/score.dart';
+import '../features/skills/skills.dart';
+import '../features/world/data/config.dart' show qualityPresets;
+import '../features/world/data/resources.dart'
+    show GraphicsQuality, QualityRequested;
 import 'leaves.dart';
 
 // --- The shop's palette (light; local to this screen) ---

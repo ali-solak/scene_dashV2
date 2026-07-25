@@ -1,9 +1,3 @@
-/// The fire gush's flame: a cone of burning particles thrown along the
-/// player's facing.
-///
-/// A no-op headless (`hasResource<Scene>`), like the impact burst; the
-/// skill's damage does not depend on it. The entity's [DespawnAfter] is
-/// the whole cleanup.
 library;
 
 import 'dart:math' as math;
@@ -13,7 +7,7 @@ import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart'
     show Matrix4, Quaternion, Vector3, Vector4;
 
-import '../skills/skills.dart' show fireGushHalfArc, fireGushRange;
+import '../features/skills/skills.dart' show fireGushHalfArc, fireGushRange;
 import 'particle_texture.dart';
 import 'particles.dart' as fx;
 
@@ -69,8 +63,11 @@ void spawnFireGush(World world, Vector3 position, double facing) {
         fx.GradientColor(
           fx.ColorGradient([
             // Red-dominant with green low and blue off, so the stack
-            // cannot climb toward yellow or white.
-            fx.ColorStop(0, Vector4(1.00, 0.45, 0.08, 1.0)),
+            // cannot climb toward yellow or white. Green sits higher at
+            // birth than the later stops: the sprite now bakes its own
+            // blackbody ramp, and crushing green here would multiply the
+            // hot core back down to flat red.
+            fx.ColorStop(0, Vector4(1.00, 0.62, 0.14, 1.0)),
             fx.ColorStop(0.3, Vector4(0.95, 0.16, 0.02, 1.0)),
             fx.ColorStop(0.7, Vector4(0.55, 0.05, 0.01, 0.85)),
             // Dies down to smoke rather than to haze.

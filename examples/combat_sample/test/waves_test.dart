@@ -5,11 +5,11 @@ library;
 
 import 'dart:math' as math;
 
-import 'package:combat_sample/enemies/enemies.dart';
-import 'package:combat_sample/game/actors.dart';
-import 'package:combat_sample/game/score.dart';
-import 'package:combat_sample/player/player.dart';
-import 'package:combat_sample/waves/waves.dart';
+import 'package:combat_sample/features/enemies/enemies.dart';
+import 'package:combat_sample/common/actors.dart';
+import 'package:combat_sample/common/score.dart';
+import 'package:combat_sample/features/player/player.dart';
+import 'package:combat_sample/features/waves/waves.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 

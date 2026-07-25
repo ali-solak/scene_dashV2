@@ -3,11 +3,11 @@
 // clearing layout respects its rings, and the arena clamp holds fighters in.
 import 'dart:math' as math;
 
-import 'package:combat_sample/world/data/arena.dart';
-import 'package:combat_sample/world/data/assets.dart';
-import 'package:combat_sample/world/data/config.dart';
-import 'package:combat_sample/world/data/layout.dart';
-import 'package:combat_sample/world/world.dart';
+import 'package:combat_sample/features/world/data/arena.dart';
+import 'package:combat_sample/features/world/data/assets.dart';
+import 'package:combat_sample/features/world/data/config.dart';
+import 'package:combat_sample/features/world/data/layout.dart';
+import 'package:combat_sample/features/world/world.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart' show Vector3;

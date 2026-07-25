@@ -13,7 +13,8 @@ import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart'
     show Matrix4, Vector2, Vector3, Vector4;
 
-import '../skills/skills.dart' show lavaPitLift, lavaPitRadius, lavaPitSeconds;
+import '../features/skills/skills.dart'
+    show lavaPitLift, lavaPitRadius, lavaPitSeconds;
 import 'lava_texture.dart';
 import 'particle_texture.dart';
 import 'particles.dart' as fx;

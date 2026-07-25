@@ -4,11 +4,11 @@
 /// and the opening camera push-in is armed exactly once.
 library;
 
-import 'package:combat_sample/enemies/enemies.dart';
-import 'package:combat_sample/game/camera_rig.dart';
-import 'package:combat_sample/game/game_state.dart';
-import 'package:combat_sample/game/score.dart';
-import 'package:combat_sample/waves/waves.dart';
+import 'package:combat_sample/features/enemies/enemies.dart';
+import 'package:combat_sample/common/camera_rig.dart';
+import 'package:combat_sample/common/game_state.dart';
+import 'package:combat_sample/common/score.dart';
+import 'package:combat_sample/features/waves/waves.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 

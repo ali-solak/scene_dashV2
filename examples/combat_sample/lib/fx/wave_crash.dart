@@ -62,12 +62,14 @@ void spawnWaveCrash(
       ),
       // ColorOverLifeModule REPLACES the colour (see impact_burst.dart), so
       // the whole sea-white gradient lives here.
+      // Kept under 1 so a dense burst of droplets adds up to bright
+      // rather than each one clipping to white on its own.
       fx.ColorOverLifeModule(
         fx.GradientColor(
           fx.ColorGradient([
-            fx.ColorStop(0, Vector4(1.1, 1.2, 1.35, 1)),
-            fx.ColorStop(0.4, Vector4(0.7, 0.88, 1.0, 0.9)),
-            fx.ColorStop(1, Vector4(0.4, 0.62, 0.8, 0)),
+            fx.ColorStop(0, Vector4(0.85, 0.95, 1.1, 1)),
+            fx.ColorStop(0.4, Vector4(0.6, 0.78, 0.95, 0.85)),
+            fx.ColorStop(1, Vector4(0.34, 0.55, 0.75, 0)),
           ]),
         ),
       ),
@@ -162,7 +164,9 @@ void spawnWaveCrash(
         ..addComponent(
           fx.ParticleEmitterComponent(
               system: spray,
-              material: softAdditiveSprite(),
+              // Droplets, not sparks: the soft dot's hot core reads as a
+              // spray of hard bright points at this distance.
+              material: dropletAdditiveSprite(),
             )
             ..facing = BillboardFacing.velocityStretched
             ..velocityStretch = 0.08,

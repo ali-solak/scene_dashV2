@@ -3,7 +3,7 @@
 // exercised on device.
 import 'dart:math' as math;
 
-import 'package:combat_sample/world/vfx/grass_field.dart';
+import 'package:combat_sample/features/world/vfx/grass_field.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

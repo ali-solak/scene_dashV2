@@ -9,7 +9,7 @@ import 'package:flutter_scene/scene.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 
-import '../skills/skills.dart' show windBlastRadius;
+import '../features/skills/skills.dart' show windBlastRadius;
 import 'particle_texture.dart';
 import 'particles.dart' as fx;
 

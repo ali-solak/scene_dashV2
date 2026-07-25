@@ -5,18 +5,19 @@ library;
 
 import 'dart:math' as math;
 
-import 'package:combat_sample/enemies/enemies.dart';
-import 'package:combat_sample/game/camera_rig.dart';
-import 'package:combat_sample/game/game_state.dart';
-import 'package:combat_sample/game/inputs.dart';
-import 'package:combat_sample/game/sets.dart';
-import 'package:combat_sample/player/player.dart';
-import 'package:combat_sample/world/data/assets.dart';
-import 'package:combat_sample/rules/rules.dart';
-import 'package:combat_sample/skills/skills.dart';
-import 'package:combat_sample/waves/waves.dart';
-import 'package:combat_sample/world/data/config.dart' show arenaBoundsRadius;
-import 'package:combat_sample/world/world.dart';
+import 'package:combat_sample/features/enemies/enemies.dart';
+import 'package:combat_sample/common/camera_rig.dart';
+import 'package:combat_sample/common/game_state.dart';
+import 'package:combat_sample/common/inputs.dart';
+import 'package:combat_sample/common/sets.dart';
+import 'package:combat_sample/features/player/player.dart';
+import 'package:combat_sample/features/world/data/assets.dart';
+import 'package:combat_sample/features/rules/rules.dart';
+import 'package:combat_sample/features/skills/skills.dart';
+import 'package:combat_sample/features/waves/waves.dart';
+import 'package:combat_sample/features/world/data/config.dart'
+    show arenaBoundsRadius;
+import 'package:combat_sample/features/world/world.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 

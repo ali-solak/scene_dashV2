@@ -7,10 +7,10 @@ library;
 import 'package:flutter/material.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 
-import '../game/game_state.dart';
-import '../game/score.dart';
-import '../player/player.dart';
-import '../waves/waves.dart';
+import '../common/game_state.dart';
+import '../common/score.dart';
+import '../features/player/player.dart';
+import '../features/waves/waves.dart';
 import 'ink.dart';
 import 'skill_bar.dart';
 

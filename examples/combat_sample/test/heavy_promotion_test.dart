@@ -1,7 +1,7 @@
 /// The heavy attack (task 8): one button, hold-to-commit, frame-exact.
 library;
 
-import 'package:combat_sample/player/combat/combat.dart';
+import 'package:combat_sample/features/player/combat/combat.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 

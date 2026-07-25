@@ -22,11 +22,11 @@ library;
 import 'dart:io' show Platform;
 import 'dart:math' as math;
 
-import 'package:combat_sample/enemies/enemies.dart';
-import 'package:combat_sample/game/game_state.dart';
-import 'package:combat_sample/player/player.dart' show Player;
-import 'package:combat_sample/skills/skills.dart' show LavaPit;
-import 'package:combat_sample/waves/waves.dart' show WaveState;
+import 'package:combat_sample/features/enemies/enemies.dart';
+import 'package:combat_sample/common/game_state.dart';
+import 'package:combat_sample/features/player/player.dart' show Player;
+import 'package:combat_sample/features/skills/skills.dart' show LavaPit;
+import 'package:combat_sample/features/waves/waves.dart' show WaveState;
 import 'package:flutter/foundation.dart'
     show debugPrint, kProfileMode, kReleaseMode;
 import 'package:flutter_test/flutter_test.dart';

@@ -12,8 +12,8 @@ import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 
-import '../player/player.dart';
-import '../skills/skills.dart';
+import '../features/player/player.dart';
+import '../features/skills/skills.dart';
 import 'ink.dart';
 
 /// Per-skill (level, readiness), plus blocks left on the barrier — the

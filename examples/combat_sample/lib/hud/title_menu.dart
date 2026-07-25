@@ -5,7 +5,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 
-import '../game/game_state.dart';
+import '../common/game_state.dart';
 import 'ink.dart';
 import 'menu_shell.dart';
 

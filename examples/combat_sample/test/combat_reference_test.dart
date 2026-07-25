@@ -4,8 +4,8 @@
 /// assumed.
 library;
 
-import 'package:combat_sample/player/combat/combat.dart';
-import 'package:combat_sample/rules/rules.dart' show applyDamage;
+import 'package:combat_sample/features/player/combat/combat.dart';
+import 'package:combat_sample/features/rules/rules.dart' show applyDamage;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 
