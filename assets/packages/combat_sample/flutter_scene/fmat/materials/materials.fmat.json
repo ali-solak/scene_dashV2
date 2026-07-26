@@ -199,7 +199,7 @@
       {
         "name": "height_low",
         "type": "float",
-        "default": 0.75,
+        "default": 0.7,
         "hint": {
           "kind": "range",
           "min": 0.3,
@@ -210,7 +210,7 @@
       {
         "name": "height_high",
         "type": "float",
-        "default": 1.15,
+        "default": 1.65,
         "hint": {
           "kind": "range",
           "min": 1.0,
