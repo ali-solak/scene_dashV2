@@ -5,7 +5,7 @@ import 'package:scene_dash_v2/scene_dash_v2.dart';
 /// The game's current mode.
 enum GameStatus { title, fighting, lost, skillMenu }
 
-/// Whether entering `fighting` starts a new run rather than resuming a menu.
+/// Whether entering combat starts a new run.
 bool freshRun(World world) =>
     world.previousState<GameStatus>() != GameStatus.skillMenu;
 

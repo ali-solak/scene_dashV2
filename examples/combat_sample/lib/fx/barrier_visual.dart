@@ -1,31 +1,20 @@
-/// The shield's light sphere: a mostly-clear bubble of rippling blue that
-/// throws a ring outward from wherever a blow lands on it.
-///
-/// Attached to an existing body rather than spawned as its own entity;
-/// it has to follow the fighter, and the barrier component decides when
-/// it goes. The look is the authored `barrier.fmat`; the [UnlitMaterial]
-/// path is a deliberate fallback for when that fails to load (NOTES.md
-/// B4): a skill you paid points for must never be invisible.
+/// Builds the shield barrier.
 library;
 
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 
-/// Fallback tint: cold steel-blue, the HUD's accent rather than another
-/// fire.
+/// Fallback barrier color.
 final Vector4 _fallbackTint = Vector4(0.42, 0.72, 1.0, 1);
 
-/// Fallback alpha at full charge and at the last one. Low: the fighter
-/// inside is what the player is reading.
+/// Fallback alpha range.
 const double _alphaFull = 0.20;
 const double _alphaLast = 0.07;
 
 /// What a block adds on top of the fallback, decaying over the flash.
 const double _flashAlpha = 0.45;
 
-/// Builds the bubble. [authored] is the compiled `.fmat` when it loaded;
-/// the material comes back with the node so the driver below can push
-/// state into whichever one was used.
+/// Builds the barrier bubble.
 ({Node node, Material material}) buildBarrierSphere({
   required double radius,
   required double height,
@@ -42,9 +31,7 @@ const double _flashAlpha = 0.45;
           name: 'barrier',
           localTransform: Matrix4.translation(Vector3(0, height, 0)),
         )
-        // No shadow to opt out of: the shadow encoder skips anything
-        // whose material is not opaque, so a blended bubble never casts
-        // the dark smear a solid one would put under the fighter.
+        // Transparent bubble.
         ..mesh = Mesh(
           SphereGeometry(radius: radius, segments: 32, rings: 16),
           material,
@@ -76,8 +63,7 @@ void setBarrierCharge(
     return;
   }
 
-  // Fallback: no ripple to drive, so the whole shell carries the state,
-  // dimmer as it wears and pushed toward white on a block.
+  // Fallback shell state.
   if (material is! UnlitMaterial) return;
   final base = _alphaLast + (_alphaFull - _alphaLast) * charge;
   material.baseColorFactor = Vector4(

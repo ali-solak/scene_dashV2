@@ -1,9 +1,7 @@
 import 'package:scene_dash_v2_core/advanced.dart';
 import 'package:test/test.dart';
 
-/// A base shared by two event types, so a `cond ? Pinged() : Ponged()`
-/// expression is statically typed as [Signal] — the exact widening that broke
-/// static-type-routed dispatch.
+/// Base type shared by two events.
 sealed class Signal {
   const Signal();
 }
@@ -172,12 +170,7 @@ void main() {
 
     test('a reader that only drains on fixed steps loses a narrow-retention '
         'event across a zero-step frame', () {
-      // The hazard the wide default exists for: an edge is sent between
-      // frames, but the reader consumes only on fixed steps. Each frame's
-      // updateEvents is a channel.update(); a frame that runs no fixed step
-      // is an update() with no intervening drain — under a two-pass window
-      // the edge expires before its reader ever gets a turn (the blaster
-      // fire-drop; the combat sample's cast keys and wind leap at 144 Hz).
+      // Events can expire while fixed steps are skipped.
       final channel = EventChannel<Pinged>(retainedUpdates: 2);
       final reader = channel.reader();
       channel.send(const Pinged(1)); // dispatched from a widget between frames
@@ -212,19 +205,20 @@ void main() {
       expect(reader.consume(), isFalse, reason: 'expired unread at pass 8');
     });
 
-    test('null retention keeps an edge until the fixed-step reader takes it', () {
-      // The fix: fire edges are registered with retainedUpdates: null, so a
-      // release survives any number of zero-step frames until the blaster reads
-      // it — held is false, released is true on that step, and the shot fires.
-      final channel = EventChannel<Pinged>(retainedUpdates: null);
-      final reader = channel.reader();
-      channel.send(const Pinged(1));
+    test(
+      'null retention keeps an edge until the fixed-step reader takes it',
+      () {
+        // Persistent events survive frames without fixed steps.
+        final channel = EventChannel<Pinged>(retainedUpdates: null);
+        final reader = channel.reader();
+        channel.send(const Pinged(1));
 
-      channel.update();
-      channel.update();
-      channel.update();
-      expect(reader.consume(), isTrue, reason: 'retained until consumed');
-    });
+        channel.update();
+        channel.update();
+        channel.update();
+        expect(reader.consume(), isTrue, reason: 'retained until consumed');
+      },
+    );
 
     test('consume leaves other readers untouched', () {
       final channel = EventChannel<Pinged>();
@@ -312,24 +306,26 @@ void main() {
   });
 
   group('World.sendEvent (runtime-type routing)', () {
-    test('a value typed as a supertype still lands in its concrete channel', () {
-      final world = World()
-        ..registerEvent<Pinged>()
-        ..registerEvent<Ponged>();
-      final pings = world.eventChannel<Pinged>().reader();
-      final pongs = world.eventChannel<Ponged>().reader();
+    test(
+      'a value typed as a supertype still lands in its concrete channel',
+      () {
+        final world = World()
+          ..registerEvent<Pinged>()
+          ..registerEvent<Ponged>();
+        final pings = world.eventChannel<Pinged>().reader();
+        final pongs = world.eventChannel<Ponged>().reader();
 
-      // Statically typed as Signal (their common base) — a send that routed by
-      // static type would misdeliver both. sendEvent routes by runtime type.
-      final Signal a = _pick(true);
-      final Signal b = _pick(false);
-      world
-        ..sendEvent(a)
-        ..sendEvent(b);
+        // Runtime types route events to the correct channel.
+        final Signal a = _pick(true);
+        final Signal b = _pick(false);
+        world
+          ..sendEvent(a)
+          ..sendEvent(b);
 
-      expect(pings.drain().map((e) => e.id), <int>[1]);
-      expect(pongs.drain().map((e) => e.id), <int>[2]);
-    });
+        expect(pings.drain().map((e) => e.id), <int>[1]);
+        expect(pongs.drain().map((e) => e.id), <int>[2]);
+      },
+    );
 
     test('throws for an unregistered runtime type', () {
       final world = World();
@@ -338,6 +334,5 @@ void main() {
   });
 }
 
-/// Returns a [Signal] whose static type hides which concrete event it is —
-/// mirroring `cond ? Pinged() : Ponged()`.
+/// Returns either event through its base type.
 Signal _pick(bool ping) => ping ? const Pinged(1) : const Ponged(2);

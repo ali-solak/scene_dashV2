@@ -20,7 +20,7 @@ import '../data/config.dart'
         oceanLevel;
 import '../data/layout.dart';
 
-// --- Dimensions (world units; placements add scale + yaw on top) ---
+// Dimensions
 const double _trunkHeight = 2.2;
 const double _trunkBottomRadius = 0.3;
 const double _trunkTopRadius = 0.2;
@@ -31,9 +31,9 @@ const List<double> _coneRadii = [2.0, 1.55, 1.1];
 const double _rockRadius = 0.7;
 const double _bushRadius = 0.55;
 
-// --- Tones, baked per vertex so one material paints the whole ring ---
+// Colors
 final Vector4 _trunkTone = Vector4(0.36, 0.25, 0.16, 1);
-// A few canopy tones so the ring reads as many trees, not one copy.
+// Canopy colors.
 const List<(double, double, double)> _canopyTones = [
   (0.20, 0.34, 0.15),
   (0.16, 0.30, 0.18),
@@ -44,9 +44,7 @@ final Vector4 _bushTone = Vector4(0.18, 0.30, 0.14, 1);
 // The cliff boulders read wet and in shadow: darker and cooler.
 final Vector4 _cliffRockTone = Vector4(0.24, 0.25, 0.28, 1);
 
-/// Bakes [placements] into one mesh node. The vertices land in the node's
-/// local space (which is the clearing's, at the origin), so the returned
-/// node needs no transform of its own.
+/// Bakes [placements] into one mesh.
 Node buildForestBatch(List<PropPlacement> placements) {
   // Base shapes, built once and read back on the CPU. Fixed-storage shape
   // geometries retain their attributes at construction, so `extractMeshData`
@@ -125,12 +123,9 @@ Node buildForestBatch(List<PropPlacement> placements) {
   return mesher.toNode('forest');
 }
 
-/// Big wet boulders and sea stacks massed at the foot of the cliff in the
-/// treeline gap, where the surf breaks. One baked mesh, like the ring.
-/// Deterministic from a fixed seed so they stand in the same place each run.
+/// Builds the cliff rocks.
 Node buildCliffRocks() {
-  // A unit sphere at one subdivision: few, big facets, so the radial jag
-  // reads as bold crags rather than fine noise (and it stays cheap).
+  // Low detail rock shape.
   final rock = _shape(IcosphereGeometry(radius: 1, subdivisions: 1));
   final rng = math.Random(41);
   final mesher = _Mesher();

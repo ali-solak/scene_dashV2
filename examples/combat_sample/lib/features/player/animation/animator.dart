@@ -1,8 +1,6 @@
 part of '../player.dart';
 
-/// The player's animation mapper: looping locomotion clips blended by
-/// weight, one-shots fired from machine-phase changes. Animation follows
-/// gameplay (L2); no timing here feeds back into combat.
+/// Maps player state to animation.
 enum PlayerLoco { idle, walk, run, strafeLeft, strafeRight, backpedal }
 
 enum PlayerShot {
@@ -81,14 +79,13 @@ final class PlayerAnimator {
       final clip = desired == null ? null : shots[desired];
       if (clip != null) {
         if (promoted) {
-          // Mid-windup promotion continues the raise instead of visibly
-          // restarting the swing from frame zero.
+          // Continue the heavy windup.
           clip.gotoAndPlay(fighter.phase.elapsed * clip.playbackTimeScale);
         } else {
           clip.replay();
         }
         if (desired == PlayerShot.hit) {
-          // Stagger snaps; no ease-in (L2).
+          // Snap into stagger.
           clip.weight = 1;
           for (final other in shots.values) {
             if (!identical(other, clip)) other.weight = 0;
@@ -156,9 +153,7 @@ final class PlayerAnimator {
     _stride(PlayerLoco.backpedal, speed, backpedalStrideSpeed);
 
     final fade = dt / locomotionFadeSeconds;
-    // The swing's tail rides out on its own fade so the follow-through is
-    // never cut mid-clip. Fading in stays a hard snap (see
-    // `oneShotFadeSeconds`): an attack must start on the frame you press.
+    // Fade the attack follow through.
     final tail = dt / oneShotFadeOutSeconds;
     for (final clip in shots.values) {
       clip.weight = _approach(clip.weight, 0, tail);
@@ -179,10 +174,7 @@ final class PlayerAnimator {
     _fillIdle();
   }
 
-  /// Guards against the bind-pose ("T-pose") flash: the AnimationPlayer
-  /// only normalizes weights down, so a weight sum below 1 shows the rig
-  /// snapping to bind for a beat. Idle carries the residual so the total
-  /// is always at least 1.
+  /// Fills unused animation weight with idle.
   void _fillIdle() {
     var sum = 0.0;
     for (final clip in shots.values) {
@@ -222,8 +214,7 @@ final class PlayerAnimator {
         motion.rollDirection.x * forwardX + motion.rollDirection.z * forwardZ;
     final side =
         motion.rollDirection.x * forwardZ - motion.rollDirection.z * forwardX;
-    // Same frame as the locomotion pick: positive `side` is the fighter's
-    // right, so the right-hand dodge plays when the roll goes right.
+    // Select the directional roll.
     return forward.abs() >= side.abs()
         ? (forward >= 0 ? PlayerShot.rollForward : PlayerShot.rollBack)
         : (side >= 0 ? PlayerShot.rollRight : PlayerShot.rollLeft);
@@ -249,9 +240,7 @@ PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
         ..loop = true
         ..weight = 0
         ..play();
-  // Windows in combat.dart are sized so clip/window lands at or under
-  // `maxOneShotPlaybackScale`: a swing plays slightly brisk and finishes.
-  // If a clip is swapped for a longer one, its window must grow with it.
+  // Limit one shot playback speed.
   AnimationClip shot(String name, double clipSeconds, double windowSeconds) =>
       model.createAnimationClip(assets.clip(name))
         ..loop = false

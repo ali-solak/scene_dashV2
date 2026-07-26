@@ -1,7 +1,4 @@
-/// Combat input outside the fight must be inert: the widget gate stops
-/// new intents on the title/menu/death screens, and `OnExit(fighting)`
-/// wipes what was already banked — a press made on the way out (inside
-/// the 0.75 s wall-clock window) must never fire on the way back in.
+/// Combat input is ignored outside a fight.
 library;
 
 import 'package:combat_sample/features/enemies/enemies.dart';

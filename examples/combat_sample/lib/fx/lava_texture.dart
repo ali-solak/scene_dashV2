@@ -1,9 +1,4 @@
-/// A procedurally generated lava crust: cooled black rock cracked open by
-/// glowing molten channels.
-///
-/// Exists because authored `.fmat`s have silently failed to render before
-/// (NOTES.md B4), and a damage zone you cannot see is worse than an ugly
-/// one. Generated pixels also keep the CC0 asset fence (L5) intact.
+/// Generates a lava crust texture.
 library;
 
 import 'dart:math' as math;
@@ -11,8 +6,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_scene/scene.dart';
 
-/// Cheap deterministic value noise, hand-seeded so the crust is the same
-/// every run; a pit that changed per cast would read as flicker.
+/// Deterministic value noise.
 double _hash(int x, int y, int seed) {
   var h = x * 374761393 + y * 668265263 + seed * 1274126177;
   h = (h ^ (h >> 13)) * 1274126177;
@@ -46,9 +40,7 @@ double _fbm(double x, double y, int seed) {
   return sum;
 }
 
-/// RGBA pixels for a [size]×[size] lava crust, mapped over the pit's
-/// disc. The rim cools to rock so the pool has an edge rather than
-/// stopping dead.
+/// Builds lava crust pixels.
 Uint8List lavaCrustPixels(int size) {
   final pixels = Uint8List(size * size * 4);
   final center = (size - 1) / 2.0;

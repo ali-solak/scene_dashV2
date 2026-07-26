@@ -1,12 +1,4 @@
-/// The combat reference: a complete souls-style fighter built on
-/// [Machine] alone — tests only, no game code. This suite is
-/// simultaneously the primitive's stress proof and the seed artifact of a
-/// future combat game; it is written to be lifted.
-///
-/// Boundaries are asserted frame-exact. A 1/60 step is not an exact
-/// binary float, so expected tick counts are *computed from the
-/// constants* by [ticksFor], which replays the machine's own
-/// accumulation — never assumed from real division.
+/// Combat machine tests.
 library;
 
 import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
@@ -53,8 +45,7 @@ int frozenPumpsFor(double freeze) {
   return pumps;
 }
 
-/// Pumps until exactly [ticks] more fixed steps have run — machine time,
-/// transparent to any hitstop frames interleaved by the clock.
+/// Pumps [ticks] fixed steps.
 void pumpMachineTicks(TestGame game, CombatLog log, int ticks) {
   final target = log.steps + ticks;
   while (log.steps < target) {
@@ -133,8 +124,7 @@ void applyIncomingHits(World world) {
   }
 }
 
-/// Getting staggered wipes buffered intent — a stale press must never
-/// fire out of a hit. Reads the entry edge the same frame it was raised.
+/// Clears buffered input when staggered.
 void clearBufferOnStagger(World world) {
   final buffer = world.buffer<CombatAction>();
   world.query<AttackState>().each((entity, attack) {
@@ -142,9 +132,7 @@ void clearBufferOnStagger(World world) {
   });
 }
 
-/// The hitbox window IS the edge pair: opens on `justEntered(active)`,
-/// closes on `justExited(active)`; one swing lands exactly once — on the
-/// open, with no per-swing dedup set needed.
+/// Opens and closes the hitbox with the active state.
 void hitboxSystem(World world) {
   final log = world.resource<CombatLog>();
   world.query<AttackState>().each((entity, attack) {
@@ -346,9 +334,7 @@ void main() {
       reason: 'resumes on the very next pump: shift == frozen frames',
     );
 
-    // The stagger still serves its full duration in machine ticks — every
-    // boundary after the freeze lands the frozen count later in wall
-    // frames, and exactly on time in machine time.
+    // The freeze does not shorten the stagger.
     game.pumpFixed(steps: ticksFor(staggerSeconds) - 2); // one already ran
     expect(log.trace.last, CombatPhase.staggered, reason: 'last stagger tick');
     game.pumpFixed(steps: 1);

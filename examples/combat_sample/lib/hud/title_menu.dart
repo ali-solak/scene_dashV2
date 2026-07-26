@@ -1,5 +1,4 @@
-/// The start screen. Same panel, rules and inks as the skill menu: it is
-/// the same interface seen earlier, not a separate title treatment.
+/// Start screen.
 library;
 
 import 'package:flutter/material.dart';
@@ -9,20 +8,17 @@ import '../common/game_state.dart';
 import 'ink.dart';
 import 'menu_shell.dart';
 
-/// Deliberately NOT a full-bleed scrim: the clearing is the point of this
-/// screen, so the panel sits over it and lets the camera's slow orbit
-/// carry the background.
+/// Start menu over the clearing.
 class TitleMenu extends StatelessWidget {
   const TitleMenu({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MenuShell(
-      // Lighter than the other screens' scrims: the clearing stays visible.
+      // Keep the clearing visible.
       scrim: const Color(0x660B0C0D),
       maxWidth: 460,
-      // START is pinned: in landscape the control list is taller than the
-      // screen, and the button must not sit below the fold.
+      // Keep Start visible.
       footer: Container(
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: HudInk.rule)),

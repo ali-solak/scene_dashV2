@@ -1,7 +1,6 @@
 part of '../skills.dart';
 
-/// The three castable skills. Cost and cooldown ride on the value so the
-/// menu, the HUD and the cast system all read one source.
+/// Castable skills.
 enum Skill {
   fireGush(
     label: 'FIRE GUSH',
@@ -46,9 +45,7 @@ enum Skill {
   /// What the FIRST level costs.
   final int cost;
 
-  /// Added to the price for every level already owned, so a skill you
-  /// keep pouring points into competes with the ones you have not
-  /// touched yet.
+  /// Price added per owned level.
   final int costStep;
 
   final double cooldownSeconds;
@@ -57,12 +54,7 @@ enum Skill {
   int costAt(int level) => cost + costStep * level;
 }
 
-/// What the player has bought, at what level, and what is off cooldown.
-/// A resource: the menu and HUD read it through a `WorldBuilder`,
-/// `castSkills` mutates it.
-///
-/// Skills level rather than toggle: level 0 is "not bought", every level
-/// after makes the same skill heavier, so late-run points stay useful.
+/// Skill levels and cooldowns.
 final class SkillBook {
   final Map<Skill, int> _levels = <Skill, int>{};
   final Map<Skill, double> _cooldowns = <Skill, double>{};
@@ -80,9 +72,7 @@ final class SkillBook {
   /// What the next level of [skill] costs.
   int priceOf(Skill skill) => skill.costAt(levelOf(skill));
 
-  /// Level scale for this skill's numbers: the authored values are level
-  /// 1 (so 1.0), each level after adds [skillPowerPerLevel]. Zero when
-  /// unbought so a stray cast past the gate does nothing.
+  /// Skill power at its current level.
   double powerOf(Skill skill) {
     final level = levelOf(skill);
     return level <= 0 ? 0 : 1 + skillPowerPerLevel * (level - 1);
@@ -117,15 +107,13 @@ final class SkillBook {
   }
 }
 
-/// Cast intent (the number keys / HUD buttons). Ignored unless the skill
-/// is bought and off cooldown.
+/// Requests a skill cast.
 final class SkillCast {
   const SkillCast(this.skill);
   final Skill skill;
 }
 
-/// Menu intent: buy the next level of [skill] with banked points. The
-/// first purchase unlocks it; the rest make it heavier.
+/// Requests a skill upgrade.
 final class SkillUpgradeRequested {
   const SkillUpgradeRequested(this.skill);
   final Skill skill;

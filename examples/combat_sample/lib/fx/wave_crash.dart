@@ -1,12 +1,4 @@
-/// A wave breaking against the cliff: fine spray thrown up the rock
-/// face, a slower foam boiling at its foot, and a soft mist hanging
-/// after.
-///
-/// `intensity` scales the throw and `seed` re-rolls the spread, so no
-/// two crashes read the same. A no-op headless like the other fx; the
-/// entity's [DespawnAfter] is its whole cleanup. Sized for distance: it
-/// breaks at the cliff, ~30 units off, so a combat-scale puff would
-/// vanish.
+/// Cliff wave effect.
 library;
 
 import 'package:flutter_scene/scene.dart';
@@ -21,8 +13,8 @@ const int _foamCount = 56;
 const int _mistCount = 40;
 const double _entityLifetime = 3.6;
 
-/// Breaks a wave at [position] (a point on the cliff face near sea level).
-/// [intensity] (~0.5 small, ~1.4 big) scales the throw; [seed] re-rolls it.
+/// Breaks a wave at [position].
+/// Spawns a wave crash with the given [intensity] and [seed].
 void spawnWaveCrash(
   World world,
   Vector3 position, {
@@ -60,10 +52,7 @@ void spawnWaveCrash(
       fx.SizeOverLifeModule(
         fx.CurveFloat(fx.ParticleCurve.linear(from: 1, to: 0.3)),
       ),
-      // ColorOverLifeModule REPLACES the colour (see impact_burst.dart), so
-      // the whole sea-white gradient lives here.
-      // Kept under 1 so a dense burst of droplets adds up to bright
-      // rather than each one clipping to white on its own.
+      // Sea spray gradient.
       fx.ColorOverLifeModule(
         fx.GradientColor(
           fx.ColorGradient([
@@ -79,8 +68,7 @@ void spawnWaveCrash(
     seed: seed,
   );
 
-  // Foam: a fat, slow, white cloud boiling up at the base; alpha,
-  // because foam blocks light rather than glowing.
+  // Foam.
   final foam = fx.ParticleSystem(
     maxParticles: foamN,
     shape: fx.ConeShape(angle: 0.85, radius: 1.0),
@@ -115,8 +103,7 @@ void spawnWaveCrash(
     seed: seed + 1,
   );
 
-  // Mist: a wide faint haze that drifts up off the break after the spray
-  // has fallen. Low alpha, big and soft, long-lived; a veil, not a cloud.
+  // Mist.
   final mist = fx.ParticleSystem(
     maxParticles: mistN,
     shape: fx.ConeShape(angle: 1.05, radius: 1.6),
@@ -124,7 +111,7 @@ void spawnWaveCrash(
     looping: false,
     duration: 0.1,
     lifetime: const fx.UniformFloat(1.6, 3.0),
-    // Enough push to lift the veil UP off the break, not sit at the base.
+    // Lift mist from the break.
     startSpeed: const fx.UniformFloat(2.5, 6.0),
     startSize: fx.UniformFloat(2.2 * sizeK, 5.0 * sizeK),
     startColor: fx.GradientColor(
@@ -137,9 +124,7 @@ void spawnWaveCrash(
       fx.SizeOverLifeModule(
         fx.CurveFloat(fx.ParticleCurve.linear(from: 0.8, to: 2.2)),
       ),
-      // Dim additive on purpose: alpha-blended mist over the bright sky
-      // could only darken it, reading as a black smear. Additive only
-      // brightens; kept dim and few so it does not blow out.
+      // Dim additive mist.
       fx.ColorOverLifeModule(
         fx.GradientColor(
           fx.ColorGradient([
@@ -151,7 +136,7 @@ void spawnWaveCrash(
       ),
       fx.LinearDragModule(1.1),
     ],
-    // Rises and hangs: mist lifts off the water rather than falling back.
+    // Rising mist.
     gravity: Vector3(0, 1.8, 0),
     seed: seed + 2,
   );

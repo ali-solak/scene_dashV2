@@ -1,6 +1,4 @@
-/// The v2 verbs on [World]: events, state sugar, resource insertion and
-/// the structural verbs. What systems and features use; `Commands`,
-/// `EventReader` and the state resources stay internal machinery.
+/// Common [World] helpers.
 library;
 
 import '../entity/entity.dart';
@@ -19,27 +17,16 @@ import 'observers.dart';
 import 'remove_after.dart';
 import 'spawning.dart';
 
-/// The Part 1 world surface.
 extension WorldSurface on World {
   /// Sends [event] to its channel, registering the channel on first use.
-  ///
-  /// Registration needs the static type [E]; when the call site widened
-  /// the value ([E] differs from the runtime type) and no channel exists
-  /// yet, the core `sendEvent` throws with its usual guidance.
   void emit<E extends Object>(E event) {
     if (E == event.runtimeType) registerEvent<E>();
     sendEvent(event);
   }
 
-  /// Every [E] event this system has not seen yet, in emission order.
+  /// Unread [E] events for the current system.
   ///
-  /// Cursors are memoized per registration — the same system reading every
-  /// frame never misses an event and never sees one twice, across the
-  /// fixed-step loop included. The carried channel semantics (retention
-  /// windows, multi-reader independence, lagging-reader diagnostics) apply
-  /// unchanged. Throws outside a running system: cursors belong to
-  /// registrations, so free-standing code holds its own `EventReader`
-  /// (advanced tier) instead.
+  /// Throws outside a running system.
   Iterable<E> events<E extends Object>() {
     final host = runningSystem;
     if (host is! EventCursorHost) {
@@ -59,13 +46,7 @@ extension WorldSurface on World {
     return host.readerFor<E>(this).drain();
   }
 
-  /// Whether any [E] events arrived since this system's last read,
-  /// consuming them — the boolean shape of [events] for edge-like signals
-  /// where only "did one arrive?" matters, not the payloads.
-  ///
-  /// Same per-registration cursor, same channel semantics, same
-  /// outside-a-system guard: a `true` here drains the channel exactly like
-  /// a full [events] read.
+  /// Consumes unread [E] events and reports whether any existed.
   bool consumeAny<E extends Object>() {
     var any = false;
     for (final _ in events<E>()) {
@@ -74,51 +55,33 @@ extension WorldSurface on World {
     return any;
   }
 
-  /// Queues a transition for the state machine of [S] — sugar for
-  /// `NextState<S>.set`; applied at the frame boundary.
+  /// Queues a state change.
   void setState<S extends Object>(S value) =>
       resources.get<NextState<S>>().set(value);
 
-  /// The active value of the state machine for [S] — sugar for
-  /// `CurrentState<S>.value`.
+  /// The active value for state [S].
   S state<S extends Object>() => resources.get<CurrentState<S>>().value;
 
-  /// The value the machine for [S] held before its most recent transition,
-  /// or `null` before the first — sugar for `CurrentState<S>.previous`.
-  /// Inside `OnEnter`/`OnExit` systems it names the other side of the
-  /// transition being applied, so an enter system can tell a resume from
-  /// a fresh run without a hand-rolled flag.
+  /// The previous value for state [S].
   S? previousState<S extends Object>() =>
       resources.get<CurrentState<S>>().previous;
 
-  /// Inserts (or replaces) the resource of type [T] — the feature-install
-  /// shorthand for `resources.insert`.
+  /// Inserts or replaces [resource].
   void insert<T extends Object>(T resource) => resources.insert<T>(resource);
 
-  /// Reserves an entity now, applies [parts] (component values, tag
-  /// instances) at the next command boundary, and returns the handle.
-  /// Bundles are functions returning lists; composition is a spread.
-  /// With [ownedBy], the new entity despawns automatically when its owner
-  /// dies (see [OwnedBy]).
+  /// Spawns an entity with [parts].
+  ///
+  /// [ownedBy] links its lifetime to another entity.
   Entity spawn(List<Object> parts, {Entity? ownedBy}) =>
       SpawnQueue.of(this).enqueue(parts, ownedBy: ownedBy);
 
   /// Queues despawning [entity], applied at the next command flush.
   void despawn(Entity entity) => commands.despawn(entity);
 
-  /// Queues adding [component] to live [entity], applied at the next
-  /// command boundary (D10). The component's runtime type must have a
-  /// registered store by then (spawn a value of the type, query it, or
-  /// `registerComponent<T>()` at install); parked otherwise, like a
-  /// spawn-list part.
+  /// Adds [component] to [entity] at the next command flush.
   ///
-  /// With [removeAfter], the component is removed again that many seconds
-  /// of *fixed-step game time* later (pause and hitstop do not consume the
-  /// duration), through a deferred remove at the step's command boundary —
-  /// `onRemove` observers fire there. Adding over an existing component
-  /// replaces the value and the lifetime policy together: a new
-  /// [removeAfter] refreshes the deadline (S4), omitting it cancels any
-  /// tracked deadline. [expiryOf] reads the time remaining.
+  /// [removeAfter] removes it after that many seconds of fixed game time.
+  /// Adding it again without [removeAfter] cancels the deadline.
   void add(Entity entity, Object component, {double? removeAfter}) {
     SpawnQueue.of(this).addPart(entity, component);
     if (removeAfter != null) {
@@ -133,22 +96,13 @@ extension WorldSurface on World {
     }
   }
 
-  /// Queues removing the component of type [T] from [entity], applied at
-  /// the next command flush (D10). Cancels any `removeAfter:` deadline
-  /// tracked for it.
+  /// Removes [T] from [entity] at the next command flush.
   void remove<T>(Entity entity) {
     resources.tryGet<RemoveAfterTracker>()?.cancel(entity, T);
     commands.remove<T>(entity);
   }
 
-  /// Seconds until the `removeAfter:` deadline removes [T] from [entity],
-  /// or `null` when no deadline is tracked (never added with
-  /// `removeAfter:`, canceled, expired, or the entity died).
-  ///
-  /// [DespawnAfter] is the one timed lifetime whose clock lives on the
-  /// component itself rather than in the tracker; asking for it reads the
-  /// store, so both timed-lifetime mechanisms answer through this one
-  /// call.
+  /// Time until [T] is removed from [entity].
   double? expiryOf<T>(Entity entity) {
     if (T == DespawnAfter) {
       final remaining = tryGet<DespawnAfter>(entity)?.remaining;
@@ -157,12 +111,9 @@ extension WorldSurface on World {
     return resources.tryGet<RemoveAfterTracker>()?.expiryOf(entity, T);
   }
 
-  // ── component singletons (S9) ─────────────────────────────────────────
+  // Single components
 
-  /// The sole [T] component in the world, unwrapped — what makes an
-  /// entity-condition or process singleton as ergonomic as the resource it
-  /// replaces. Sugar over `query<T>().single`: throws with the actual
-  /// count when zero or several entities carry [T].
+  /// The only [T] in the world.
   T single<T extends Object>() {
     final store = SpawnQueue.of(this).ensureStore<T>();
     if (store.length != 1) {
@@ -174,9 +125,7 @@ extension WorldSurface on World {
     return store.valueAt(0);
   }
 
-  /// The sole [T] component, or `null` when none exists. Still throws when
-  /// more than one entity carries [T] — absence is expected, duplication
-  /// is a bug.
+  /// The only [T], or `null` when none exists.
   T? singleOrNull<T extends Object>() {
     final store = SpawnQueue.of(this).ensureStore<T>();
     if (store.length > 1) {
@@ -188,10 +137,9 @@ extension WorldSurface on World {
     return store.length == 0 ? null : store.valueAt(0);
   }
 
-  // ── time (D9) ─────────────────────────────────────────────────────────
+  // Time
 
-  /// The delta you type: `FixedTime.delta` inside a fixed schedule,
-  /// `FrameTime.delta` elsewhere — schedule-aware like `every()` (D7).
+  /// Delta for the current schedule.
   double get dt => fixedContext
       ? resources.get<FixedTime>().delta
       : resources.get<FrameTime>().delta;
@@ -202,15 +150,13 @@ extension WorldSurface on World {
   /// The fixed timestep, explicitly (see [dt]).
   double get fixedDelta => resources.get<FixedTime>().delta;
 
-  /// This frame's wall-clock delta, unscaled by the [clock] — for HUD,
-  /// camera shake and anything that keeps moving through pause, slow
-  /// motion and hitstop (sugar for `FrameTime.unscaledDelta`).
+  /// This frame's unscaled delta.
   double get unscaledDelta => resources.get<FrameTime>().unscaledDelta;
 
   /// The gameplay clock (pause, `timeScale`, `freezeFor` hitstop).
   GameClock get clock => resources.get<GameClock>();
 
-  // ── input helpers (D8) ────────────────────────────────────────────────
+  // Input
 
   /// The held-action resource for action type [A], created on first use.
   ButtonInput<A> buttons<A extends Object>() =>
@@ -225,12 +171,9 @@ extension WorldSurface on World {
   InputBuffer<A> buffer<A extends Object>() =>
       resources.getOrInsert<InputBuffer<A>>(InputBuffer<A>.new);
 
-  // ── tag-only iteration ────────────────────────────────────────────────
+  // Entity filters
 
-  /// The entities carrying every type in [require] (tags or components)
-  /// and none in [exclude] — v1's `EntityQuery`, for match sets with no
-  /// component value to hand out. (Named `entitiesWith` because `entities`
-  /// is the carried registry member.)
+  /// Entities with every [require] type and no [exclude] type.
   EntityQuery entitiesWith({
     required List<Type> require,
     List<Type> exclude = const <Type>[],

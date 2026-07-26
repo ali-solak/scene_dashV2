@@ -1,30 +1,4 @@
-/// Scene-Dash v2: the `flutter_scene` integration package.
-///
-/// Wires the headless core (`scene_dash_v2_core`) to the `flutter_scene`
-/// lifecycle:
-///
-/// * [Game] — the internal engine facade wrapping an `App`, attaching the
-///   scene driver and exposing `onTick` for `SceneView` (Phase 2 wraps it in
-///   `SceneGame.boot`);
-/// * [SceneTransform] / [SceneNode] / [PhysicsDriven] — bind entities to
-///   nodes and mark physics-owned transforms; the driver syncs
-///   [SceneTransform]'s local translation, rotation and scale and mounts
-///   bound nodes automatically ([CustomSceneSyncPlugin] covers non-standard
-///   transform types);
-/// * [SceneCommands] — deferred scene-graph mutations;
-/// * [PhysicsPlugin] / [PhysicsEventBridge] — optional one-world convenience
-///   for exposing a generic `PhysicsWorld` resource and buffering raw
-///   `CollisionEvent`s into ECS events;
-/// * [EntityCollisionPlugin] / [EntityCollision] — an optional layer on top
-///   that resolves each collision's nodes back to entities;
-/// * [EntityOverlapQueries] — `overlapSphereEntities` / `overlapBoxEntities`
-///   extensions on `PhysicsWorld`: immediate overlap queries delivered as
-///   entities;
-/// * [Gizmos] — immediate-mode debug shapes.
-///
-/// Re-exports the core user surface, so game code needs exactly one import.
-/// Imports `package:flutter_scene/scene.dart` (note: the 0.18.x library is
-/// `scene.dart`, not `flutter_scene.dart`).
+/// Flutter Scene support for Scene Dash.
 library;
 
 export 'package:scene_dash_v2_core/advanced.dart' show EcsFrameLoop;

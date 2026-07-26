@@ -3,11 +3,7 @@ part of 'system_profiler.dart';
 /// A reusable, read-only timing record for a single (system, schedule) pair,
 /// accumulated across frames.
 ///
-/// One [SystemTiming] is created per (system, schedule) the first time it runs
-/// under profiling and then updated in place by its owning [SystemProfiler] — the
-/// profiler never allocates a fresh record per frame. Durations are stored as
-/// microsecond integers (no [Duration] allocation on the hot path) and exposed
-/// through [Duration] getters for display.
+/// Timing data for one system and schedule.
 ///
 /// The counters are read-only to outside code: the profiler is exposed as a
 /// `@Resource()`, so only it (in this library) may mutate the record.

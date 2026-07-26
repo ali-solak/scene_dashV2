@@ -61,9 +61,7 @@ void main() {
     world.eventChannel<String>().send('hit');
     expect(condition(world), isTrue);
 
-    // v2: with no readers, maintenance expires by the retention window —
-    // per-registration cursors are created lazily on a system's first run,
-    // so fresh events must survive to it — then drops.
+    // Unread events expire after the retention window.
     world.updateEvents();
     expect(condition(world), isTrue);
     world.updateEvents();

@@ -1,7 +1,7 @@
 import 'package:scene_dash_v2_core/advanced.dart';
 import 'package:test/test.dart';
 
-/// A no-op adapter, used to verify run counting.
+/// Test adapter.
 final class _NoopAdapter implements SystemAdapter {
   @override
   void initialize(World world) {}

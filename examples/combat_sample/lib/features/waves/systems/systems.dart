@@ -38,8 +38,7 @@ void _healPlayer(World world) {
   });
 }
 
-/// Barbarians still standing (a corpse mid-dissolve does not count; the
-/// next wave should not wait on the ragdoll).
+/// Counts living enemies.
 int _livingEnemies(World world) {
   var living = 0;
   world.query2<Brawler, Health>(require: const [Enemy]).each((

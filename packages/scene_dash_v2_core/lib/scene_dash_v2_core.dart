@@ -1,19 +1,4 @@
-/// Scene-Dash v2: honest ECS, no codegen — the headless core.
-///
-/// This is the Part 1 user surface (see `docs/design.md`): entities, plain
-/// components, stateless systems registered with `addSystem`, record
-/// queries, `world.emit`/`world.events`, the carried state machinery with
-/// `setState`/`state` sugar, and the gameplay toolkit (clock, timers,
-/// inputs, despawn scoping). Game code and headless tests import just this
-/// library:
-///
-/// ```dart
-/// import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
-/// ```
-///
-/// The machinery underneath (stores, `SystemAdapter`, the arity query
-/// classes, the command buffer, schedule internals, `EcsFrameLoop`) is
-/// exported by `advanced.dart` and nowhere else.
+/// Core ECS APIs.
 library;
 
 export 'src/diagnostics/app_diagnostics.dart' show AppDiagnostics;
@@ -25,9 +10,7 @@ export 'src/input/axis_input.dart';
 export 'src/input/button_input.dart';
 export 'src/input/input_buffer.dart';
 export 'src/resources/resources.dart';
-// Boot-parameter types are surface vocabulary: `SceneGame.boot` and
-// `TestGame.headless` take the conflict policy and diagnostics config, so
-// callers must be able to name them without the machinery tier.
+// Used by SceneGame.boot and TestGame.headless.
 export 'src/schedule/access_conflict.dart' show AccessConflictPolicy;
 export 'src/schedule/run_conditions.dart';
 export 'src/schedule/schedule_label.dart';

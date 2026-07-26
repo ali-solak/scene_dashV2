@@ -1,16 +1,10 @@
-// v2: interop tier — exported by advanced.dart, absent from the README.
-
 import '../world/world.dart';
 import 'query_1.dart';
 import 'query_2.dart';
 import 'query_3.dart';
 import 'query_4.dart';
 
-/// The classic typed-query constructors, moved verbatim off [World] so the
-/// v2 record-query surface can own the `query2`/`query3`/`query4` names
-/// (Dart instance members always win over extensions). Existing call sites
-/// are source-compatible: `world.query2<A, B>(...)` resolves here wherever
-/// this extension is in scope and the record surface is not.
+/// Query constructors that return query classes.
 extension ClassicWorldQueries on World {
   /// Creates a single-component query over component type [A].
   Query1<A> query1<A>({

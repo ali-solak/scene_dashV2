@@ -4,11 +4,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-/// Flat vertex arrays for a baked field of tapered grass blades.
-///
-/// Each blade has two root vertices at y = 0 and one tip above them. Both
-/// triangle windings are indexed so the blades remain visible to the camera
-/// and shadow passes from either side.
+/// Vertex data for tapered grass blades.
 class GrassField {
   GrassField({
     required this.positions,
@@ -29,11 +25,7 @@ class GrassField {
   int get bladeCount => positions.length ~/ (verticesPerBlade * 3);
 }
 
-/// Bakes up to [blades] real blade triangles over a disc of [radius].
-///
-/// Seven independently oriented blades share a loose placement tuft. That
-/// recovers the old grass's packed clumps without returning to alpha cards.
-/// With [falloffStart], whole tufts thin toward the treeline.
+/// Bakes grass blade tufts over a disc.
 GrassField buildGrassField(
   int blades, {
   required double radius,
@@ -41,7 +33,8 @@ GrassField buildGrassField(
   int seed = 11,
 }) {
   const bladesPerTuft = 7;
-  const tuftRadius = 0.28;
+  // Tuft size.
+  const tuftRadius = 0.24;
   final rng = math.Random(seed);
   final positions = Float32List(blades * GrassField.verticesPerBlade * 3);
   final normals = Float32List(blades * GrassField.verticesPerBlade * 3);
@@ -64,7 +57,7 @@ GrassField buildGrassField(
     positions[positionOffset++] = x;
     positions[positionOffset++] = y;
     positions[positionOffset++] = z;
-    // Up normals retain the old grass's even, ground-like lighting.
+    // Use even ground lighting.
     normals[normalOffset++] = 0;
     normals[normalOffset++] = 1;
     normals[normalOffset++] = 0;
@@ -76,7 +69,7 @@ GrassField buildGrassField(
   }
 
   for (var tuft = 0; tuft < blades; tuft += bladesPerTuft) {
-    // sqrt keeps tuft centres uniform instead of centre-heavy.
+    // Uniform tuft distribution.
     final r = radius * math.sqrt(rng.nextDouble());
     final theta = rng.nextDouble() * math.pi * 2;
     if (falloffStart != null && r > falloffStart) {

@@ -1,6 +1,4 @@
-/// The loss screen: `YOU DIED` over a dimmed scrim with a restart prompt.
-/// Bare text on a scrim rather than the bordered panel: the run is over,
-/// there is nothing to read here, only the choice to go again.
+/// Loss screen.
 library;
 
 import 'package:flutter/material.dart';
@@ -21,9 +19,7 @@ class DeathPanel extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Shrinks rather than clipping: at 52pt with this letter
-          // spacing the word is ~300px, which a narrow phone does not
-          // have once the shell's padding is taken out.
+          // Fit narrow screens.
           const FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(

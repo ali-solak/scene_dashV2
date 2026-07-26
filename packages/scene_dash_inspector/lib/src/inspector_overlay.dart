@@ -12,20 +12,7 @@ import 'package:scene_dash_v2_core/advanced.dart'
         SnapshotCollector,
         SystemSnapshot;
 
-/// A toggleable, phone-usable inspector panel for a `Stack` (I4).
-///
-/// ```dart
-/// Stack(children: [
-///   GameView(...),
-///   InspectorOverlay(visible: showInspector),
-/// ])
-/// ```
-///
-/// Resolves the game through [GameScope] and polls the core snapshot
-/// boundary on [pollInterval] (default 4 Hz) while [visible]; hidden it
-/// renders nothing, runs no timer and collects nothing. Read-only by
-/// design: it consumes [InspectorSnapshot]s only and never touches the
-/// world directly.
+/// Displays a live game inspector.
 class InspectorOverlay extends StatefulWidget {
   const InspectorOverlay({
     super.key,
@@ -33,8 +20,7 @@ class InspectorOverlay extends StatefulWidget {
     this.pollInterval = const Duration(milliseconds: 250),
   });
 
-  /// Whether the panel is shown (and polling). Wire it to your debug
-  /// toggle.
+  /// Whether the panel is shown.
   final bool visible;
 
   /// How often the overlay collects a fresh snapshot while visible.
@@ -85,8 +71,7 @@ class _InspectorOverlayState extends State<InspectorOverlay> {
       _collector = collector;
       _snapshot = null;
     }
-    // First frame after becoming visible: collect synchronously so the
-    // panel has content; the timer refreshes from then on.
+    // Show content immediately.
     final snapshot = _snapshot ??= collector.collect();
     _timer ??= Timer.periodic(widget.pollInterval, (_) => _refresh());
     return Align(
@@ -106,14 +91,7 @@ class _InspectorOverlayState extends State<InspectorOverlay> {
 
 enum _InspectorTab { entities, resources, systems, events }
 
-/// The snapshot-driven panel behind [InspectorOverlay]: tabs for
-/// entities (filter by `Name` substring, tap for detail), resources,
-/// system timings (sortable by ms) and event channels.
-///
-/// Takes a fixed [snapshot] plus a [describe] callback — invoked only
-/// when an entity is selected, keeping detail collection lazy (I2). Its
-/// only input is snapshot data, which is what lets widget tests drive it
-/// without a game and keeps the I1 boundary honest.
+/// Displays an inspector snapshot.
 class InspectorPanel extends StatefulWidget {
   const InspectorPanel({
     super.key,
@@ -123,8 +101,7 @@ class InspectorPanel extends StatefulWidget {
 
   final InspectorSnapshot snapshot;
 
-  /// Detail provider for a selected entity — `SnapshotCollector
-  /// .describeEntity` in the overlay, a fake in tests.
+  /// Loads details for a selected entity.
   final EntityDetailSnapshot Function(int index, int generation) describe;
 
   @override
@@ -142,9 +119,7 @@ class _InspectorPanelState extends State<InspectorPanel> {
     super.didUpdateWidget(oldWidget);
     final detail = _detail;
     if (detail != null && !identical(oldWidget.snapshot, widget.snapshot)) {
-      // A fresh snapshot arrived while a detail view is open: re-describe
-      // the same selection so the values stay live (still detail-lazy —
-      // only the selected entity is rendered).
+      // Refresh the selected entity.
       _detail = widget.describe(detail.index, detail.generation);
     }
   }
@@ -200,8 +175,7 @@ class _InspectorPanelState extends State<InspectorPanel> {
     );
   }
 
-  /// Picks the widget for the selected tab: it returns one of the list
-  /// widgets below and builds no tree of its own.
+  /// Builds the selected tab.
   Widget _tabBody() {
     final snapshot = widget.snapshot;
     switch (_tab) {

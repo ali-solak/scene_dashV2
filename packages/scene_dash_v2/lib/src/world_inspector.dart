@@ -4,15 +4,7 @@ import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
 import 'game_scope.dart';
 import 'scene_game.dart';
 
-/// The minimal debug inspector: a plain, toggleable entity list — every
-/// named entity's `debugDescribe` line. The data already exists; this
-/// widget only renders it.
-///
-/// Cheap by construction: the lines are re-derived once per rendered frame
-/// and the list only rebuilds when they changed. Named entities (carrying
-/// [Name]) appear; anonymous entities are noise and are left out. Wrap it
-/// in your own toggle/positioning chrome; it has no visual opinion beyond
-/// a scrollable text column.
+/// Displays named entity debug data.
 final class WorldInspector extends StatefulWidget {
   const WorldInspector({super.key, this.maxEntities = 200});
 

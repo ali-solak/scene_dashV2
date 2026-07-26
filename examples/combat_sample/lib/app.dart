@@ -1,11 +1,4 @@
-/// Where the app starts, and what owns the game's loading lifecycle.
-///
-/// Follows the README's asset-backed shape: create the [Scene] and
-/// [ResourceGroup] first, track every load in the group, and mount the
-/// [SceneView] immediately. The view owns progress, reveal and pipeline
-/// warm-up — the app never counts frames or draws its own progress bar.
-/// Once boot lands, [GameScreen] wraps that same view in `GameHost` so the
-/// HUD and controls can reach the world.
+/// Loads and displays the game.
 library;
 
 import 'dart:async';
@@ -51,13 +44,9 @@ class _CombatAppState extends State<CombatApp> {
   late final Future<SceneGame> _booting;
   final ValueNotifier<String> _bootStage = ValueNotifier('renderer');
 
-  /// Owned here rather than by the boot feature: the view mounts before the
-  /// game exists, and its `cameraBuilder` needs a rig from the first build.
   final CameraRig _cameraRig = CameraRig()..yaw = math.pi;
   final GlobalKey _viewKey = GlobalKey();
 
-  /// Set the moment boot lands, for the view's `onTick`. The view does not
-  /// tick while it is gated, so this is never read as null in practice.
   SceneGame? _game;
 
   @override
@@ -65,8 +54,6 @@ class _CombatAppState extends State<CombatApp> {
     super.initState();
     _scene = Scene();
     _loading = ResourceGroup();
-    // Tracked so the view's reveal waits for the whole boot, not just the
-    // individual asset loads. A failure is recorded, never rethrown.
     _booting = _loading.add(_boot());
   }
 

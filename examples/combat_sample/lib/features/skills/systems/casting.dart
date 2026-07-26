@@ -51,8 +51,7 @@ void buyUpgrades(World world) {
     if (book.vitalityLevel >= maxVitalityLevel) continue;
     if (!score.spend(vitalityCost(book.vitalityLevel))) continue;
     book.vitalityLevel++;
-    // The point of the buy: a taller bar, and the difference handed over
-    // now rather than at the next wave.
+    // Apply vitality immediately.
     world.query<Health>(require: const [Player]).each((entity, health) {
       health.max += vitalityHealthPerLevel;
       health.current += vitalityHealthPerLevel;
@@ -74,14 +73,12 @@ void castSkills(World world) {
   for (final cast in world.events<SkillCast>()) {
     if (!book.isReady(cast.skill)) continue;
     book.trigger(cast.skill);
-    // Every skill scales off its own level; the authored numbers are
-    // level 1, so this is 1.0 on a fresh purchase.
+    // Scale by skill level.
     final power = book.powerOf(cast.skill);
     switch (cast.skill) {
       case Skill.fireGush:
         _castFireGush(world, motion, transform, power);
-        // Muzzle recoil: a firm shove backward (opposite the cone's facing),
-        // so the gush kicks. A decaying knockback, like a slight roll-back.
+        // Fire gush recoil.
         world.tryGet<PlayerAnimator>(player)?.playBackwardDash();
         world
             .tryGet<Knockback>(player)
@@ -95,9 +92,7 @@ void castSkills(World world) {
       case Skill.lavaPit:
         _openLavaPit(world, motion, transform, power);
       case Skill.windBlast:
-        // The player leaps NOW; the gust itself waits for the landing (see
-        // firePendingWindBlast), so it reads as thrown down on impact. The
-        // cost and cooldown still commit on the button.
+        // Delay the gust until landing.
         world.add(player, PendingWindBlast(power));
         world.emit(const CastLeap());
 
@@ -123,9 +118,7 @@ void firePendingWindBlast(World world) {
   }
 }
 
-/// Raises the barrier. Charges come from the level, not `powerOf`: this
-/// skill scales by a count, and a fractional block is not a thing.
-/// Re-adding replaces, so a cast while one is up refreshes it to full.
+/// Raises or refreshes the barrier.
 void _raiseBarrier(World world, Entity player, int level) {
   world.add(player, Barrier(shieldChargesFor(level)));
 }
@@ -163,7 +156,7 @@ void _castFireGush(
         stagger: false,
       ),
     );
-    // Re-applying refreshes the clock instead of stacking a second fire.
+    // Refresh the burn.
     world.add(enemy, Burning(burnTickDamage * power), removeAfter: burnSeconds);
   });
   spawnFireGush(
@@ -188,15 +181,12 @@ void _openLavaPit(
 ) {
   final x = origin.translation.x + math.sin(motion.facing) * lavaPitDistance;
   final z = origin.translation.z + math.cos(motion.facing) * lavaPitDistance;
-  // The ground breaking open (a no-op headless), so the pit arrives
-  // instead of simply being switched on.
+  // Spawn the opening effect.
   spawnLavaEruption(world, Vector3(x, 0, z));
   world.spawn([
     LavaPit(lavaTickDamage * power),
     SceneTransform(x, 0, z),
-    // The pit's own clock is its whole lifetime. No DespawnOnExit:
-    // opening the skill menu leaves `fighting`, and a pause must not
-    // swallow a pit you already paid for.
+    // Keep the pit through pauses.
     DespawnAfter(lavaPitSeconds),
   ]);
 }
@@ -212,8 +202,7 @@ void _castWindBlast(World world, SceneTransform origin, double power) {
   ) {
     if (!health.alive) return;
     if (planarDistance(origin, at) > windBlastRadius) return;
-    // The throw itself gets heavier: further out and higher up, so a
-    // levelled blast clears more of the field for longer.
+    // Scale launch strength.
     final push = awayFrom(origin, at, windBlastSpeed * power)
       ..y = windBlastLift * power;
     world.emit(HitLanded(enemy, windBlastDamage * power, knockback: push));

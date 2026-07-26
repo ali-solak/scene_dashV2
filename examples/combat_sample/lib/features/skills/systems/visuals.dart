@@ -37,9 +37,7 @@ void installSkillVisuals(GameBuilder game) {
     );
 }
 
-/// Lights up whoever is burning and puts the fire out when the burn's
-/// clock ends (a no-op headless). Driven off the presence of [Burning],
-/// so a burn refreshed mid-fire never restarts the flame.
+/// Updates attached burn flames.
 void updateBurnFlames(World world) {
   world.query<SceneNode>(require: const [Enemy]).each((entity, ref) {
     final burning = world.tryGet<Burning>(entity) != null;
@@ -55,10 +53,7 @@ void updateBurnFlames(World world) {
   });
 }
 
-/// Raises and drops the light sphere (and the arm shield) with the
-/// barrier itself, and drives the bubble's brightness from what is left
-/// (a no-op headless). Driven off the presence of [Barrier]:
-/// `applyDamage` can remove it anywhere, and the bubble must follow.
+/// Updates barrier visuals.
 void updateBarrierVisual(World world) {
   final dt = world.dt;
   world.query<SceneNode>(require: const [Player]).each((entity, ref) {
@@ -98,10 +93,7 @@ void updateBarrierVisual(World world) {
       current.material,
       time: current.elapsed,
       remaining: barrier.charges / barrier.maxCharges,
-      // 1 on the frame of a block, decaying to 0 over the flash window.
-      // Off the gameplay clock alone: adding this frame's dt would
-      // double-count it, and `sinceBlock` starts at infinity so a fresh
-      // barrier reads 0 here.
+      // Block flash strength.
       flash: 1 - barrier.sinceBlock / shieldFlashSeconds,
       hitFrom: barrier.hitFrom,
     );
@@ -147,8 +139,7 @@ void attachLavaVisuals(World world) {
   });
 }
 
-/// Drives the crust's `time` and its swell-in/cool-down (L3: the material
-/// follows the pit's clock, the pit never asks the material anything).
+/// Updates lava materials.
 void updateLavaMaterials(World world) {
   world.query2<LavaPit, SceneNode>().each((entity, pit, ref) {
     final remaining = world.expiryOf<DespawnAfter>(entity) ?? lavaPitSeconds;

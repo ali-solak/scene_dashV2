@@ -32,7 +32,7 @@ const double groundThickness = 1;
 
 const int clearingSeed = 41;
 
-const double treeRingInner = 17;
+const double treeRingInner = 20;
 const double treeRingOuter = 24;
 const int treeCount = 64;
 
@@ -104,7 +104,8 @@ const double sceneVignetteIntensity = 0.22;
 const double sceneVignetteRadius = 0.85;
 const double sceneVignetteSmoothness = 0.6;
 
-const int grassBladeCount = 64000;
+/// Grass blades used by the ultra quality preset.
+const int grassBladeCount = 96000;
 
 typedef QualityPreset = ({
   String label,

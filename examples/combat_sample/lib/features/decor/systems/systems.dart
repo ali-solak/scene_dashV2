@@ -1,11 +1,6 @@
 part of '../decor.dart';
 
-/// Startup: scatter the leaves through the column above the clearing, one
-/// node each. A no-op headless: decoration needs a scene.
-///
-/// The quad and the leaf mask are shared; only the tint materials differ,
-/// so this is [_leafCount] draws of two triangles rather than
-/// [_leafCount] uploads.
+/// Spawns ambient leaves.
 void spawnLeaves(World world) {
   final scene = world.resource<Scene>();
   final field = world.resource<LeafField>();
@@ -40,8 +35,7 @@ void spawnLeaves(World world) {
     field.phase[i] = random.nextDouble() * math.pi * 2;
     field.spin[i] = random.nextDouble() * math.pi * 2;
 
-    // A random tumble axis, so leaves turn over rather than spinning like
-    // pinwheels on one plane.
+    // Random tumble axis.
     final ax = random.nextDouble() * 2 - 1;
     final ay = random.nextDouble() * 2 - 1;
     final az = random.nextDouble() * 2 - 1;
@@ -57,10 +51,7 @@ void spawnLeaves(World world) {
   }
 }
 
-/// Update: fall, sway, tumble, and wrap back to the ceiling.
-///
-/// Allocation-free per leaf; each node's transform is rewritten in
-/// place. Ambient drift is deliberately independent from combat.
+/// Updates ambient leaves.
 void animateLeaves(World world) {
   final field = world.resource<LeafField>();
   if (field.leaves.isEmpty) return;
@@ -74,15 +65,13 @@ void animateLeaves(World world) {
     field.phase[i] = phase;
     field.spin[i] = field.spin[i] + field.tumble[i] * dt;
 
-    // The sway is perpendicular to the wind, so a leaf slaloms across the
-    // drift instead of just wobbling along it.
+    // Sideways sway.
     final slalom = math.sin(phase) * _swayAmplitude;
     var x = field.position[i * 3] + (windX - windZ * slalom * 0.35) * dt;
     var y = field.position[i * 3 + 1] - field.fall[i] * dt;
     var z = field.position[i * 3 + 2] + (windZ + windX * slalom * 0.35) * dt;
 
-    // Landed, or blown off the field: back to the ceiling somewhere new.
-    // Recycling beats spawning; the count stays flat all run.
+    // Recycle leaves at the field edge.
     if (y <= 0 || (x * x + z * z) > _leafFieldRadius * _leafFieldRadius) {
       final radius = _leafFieldRadius * math.sqrt(_wrapRandom.nextDouble());
       final theta = _wrapRandom.nextDouble() * math.pi * 2;
@@ -144,7 +133,7 @@ void _setLeafTransform(
   storage[15] = 1;
 }
 
-/// Respawn jitter. Seeded, so a run is reproducible.
+/// Leaf respawn randomizer.
 final math.Random _wrapRandom = math.Random(97);
 
 /// One leaf: a quad carrying the mask, emitted both ways round. A

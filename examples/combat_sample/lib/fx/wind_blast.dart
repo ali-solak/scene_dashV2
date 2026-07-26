@@ -1,8 +1,4 @@
-/// The wind blast's shockwave: a ring of dust driven outward at ankle
-/// height, so the skill reads as a wave LEAVING the player rather than a
-/// flash on top of them.
-///
-/// A no-op headless, like the other fx.
+/// Wind blast dust ring.
 library;
 
 import 'package:flutter_scene/scene.dart';
@@ -16,7 +12,7 @@ import 'particles.dart' as fx;
 const int _dustCount = 220;
 const double _entityLifetime = 2.0;
 
-/// Spawns the ring at [position] (the player's feet).
+/// Spawns the ring at [position].
 void spawnWindBlast(World world, Vector3 position) {
   if (!world.hasResource<Scene>()) return;
   final system = fx.ParticleSystem(
@@ -28,8 +24,7 @@ void spawnWindBlast(World world, Vector3 position) {
     looping: false,
     duration: 0.1,
     lifetime: const fx.UniformFloat(0.6, 1.15),
-    // Sized to actually cross the blast's radius inside its lifetime, so
-    // the dust front marks the edge of what got thrown.
+    // Blast sized travel.
     startSpeed: fx.UniformFloat(windBlastRadius * 0.9, windBlastRadius * 1.6),
     startSize: const fx.UniformFloat(0.6, 1.5),
     startColor: fx.GradientColor(
@@ -56,7 +51,7 @@ void spawnWindBlast(World world, Vector3 position) {
       ),
       fx.LinearDragModule(2.6),
     ],
-    // Barely any: the dust hangs and drifts instead of falling.
+    // Light gravity.
     gravity: Vector3(0, -0.6, 0),
     seed: 89,
   );
@@ -71,18 +66,14 @@ void spawnWindBlast(World world, Vector3 position) {
         ..addComponent(
           fx.ParticleEmitterComponent(
               system: system,
-              // Alpha, not additive: kicked-up earth blocks light, it does not
-              // emit it. Additive dust is what "glowing white cloud" is made of.
+              // Alpha dust.
               material: softAlphaSprite(),
             )
-            // Stretched along travel, so the ring reads as a gust driving
-            // outward rather than a puff sitting still.
+            // Stretch along travel.
             ..facing = BillboardFacing.velocityStretched
             ..velocityStretch = 0.05,
         );
 
-  // No DespawnOnExit: leaving `fighting` is routine (the skill menu is a
-  // state), and a pause must not wipe what is on screen. The DespawnAfter
-  // bounds this entity on its own.
+  // Keep the effect through pauses.
   world.spawn([SceneNode(node), DespawnAfter(_entityLifetime)]);
 }

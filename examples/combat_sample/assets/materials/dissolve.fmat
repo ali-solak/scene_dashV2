@@ -1,11 +1,4 @@
-// The death dissolve (L3's flagship): a noise-threshold alpha cut driven
-// entirely from Dart — the framework's `removeAfter:` clock on a dying
-// barbarian's `Dissolving` component maps onto `progress` (0 intact → 1
-// gone), and the shader burns away along world-space noise with a hot rim
-// at the receding edge.
-// UNLIT so the burn reads regardless of scene lighting (the authored
-// color IS the rendered color; a lit swap on a skinned body was not
-// reading on device). The rim is baked straight into base_color.
+// Death dissolve controlled by progress.
 material {
   name: "dissolve",
   shading_model: unlit,

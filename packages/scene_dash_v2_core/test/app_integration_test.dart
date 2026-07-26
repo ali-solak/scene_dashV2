@@ -1,7 +1,7 @@
 import 'package:scene_dash_v2_core/advanced.dart';
 import 'package:test/test.dart';
 
-// --- Components ---
+// Components
 
 final class Position {
   double x;
@@ -19,14 +19,14 @@ final class Player {
   const Player();
 }
 
-// --- Event ---
+// Event
 
 final class PlayerSpawned {
   final Entity entity;
   const PlayerSpawned(this.entity);
 }
 
-// --- Hand-written system adapters (stand-ins for generated code) ---
+// System adapters
 
 final class SpawnPlayerAdapter implements SystemAdapter {
   late final Commands _commands;
@@ -69,7 +69,7 @@ final class MovePlayerAdapter implements SystemAdapter {
   }
 }
 
-// --- Plugins ---
+// Plugins
 
 final class DemoPlugin extends Plugin {
   const DemoPlugin();
@@ -173,8 +173,7 @@ void main() {
 
     test('adding a different instance of the same plugin type throws', () {
       final app = _appWithStores()..addPlugin(ConfiguredPlugin(1));
-      // A second, differently-configured instance would be silently discarded
-      // if it were treated as a duplicate no-op — fail loudly instead.
+      // Differently configured duplicates throw.
       expect(() => app.addPlugin(ConfiguredPlugin(2)), throwsStateError);
     });
   });

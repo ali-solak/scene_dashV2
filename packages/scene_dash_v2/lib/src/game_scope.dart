@@ -3,16 +3,9 @@ import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
 
 import 'scene_game.dart';
 
-/// Exposes the running game to a widget subtree — the game, once,
-/// at the root; every framework primitive below resolves it from context,
-/// and `context.game`/`context.world` cover ad-hoc reads. Nearest-ancestor
-/// wins, so multi-game layouts (split-screen, previews) work for free.
-///
-/// The framework never constructs or wraps `SceneView`: your layout, your
-/// focus, your camera — this widget only provides discovery.
+/// Exposes a game to a widget subtree.
 final class GameScope extends InheritedWidget {
-  /// The game this subtree belongs to — a [SceneGame], or a [WorldGame]
-  /// hosting widgets over a scene-less world.
+  /// The game for this subtree.
   final WorldGame game;
 
   const GameScope({super.key, required this.game, required super.child});
@@ -47,7 +40,7 @@ class GameHost extends StatefulWidget {
   /// The booted game exposed to [child]'s subtree.
   final WorldGame game;
 
-  /// Your widget tree — typically containing your own `SceneView`.
+  /// The hosted widget tree.
   final Widget child;
 
   @override

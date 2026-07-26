@@ -2,16 +2,7 @@ import 'dart:typed_data';
 
 import 'entity.dart';
 
-/// Allocator and validator for generational [Entity] handles.
-///
-/// Backed by packed typed arrays:
-///
-/// * [_generations] — the current generation of each slot.
-/// * [_alive] — `1` if the slot currently holds a live entity, else `0`.
-/// * [_freeIndices] — a stack of slot indices available for reuse.
-///
-/// Indices are reused in LIFO order; each reuse bumps the slot generation so
-/// previously issued handles to that slot stop validating.
+/// Allocates and validates [Entity] handles.
 final class EntityRegistry {
   Uint32List _generations;
   Uint8List _alive;
@@ -31,13 +22,10 @@ final class EntityRegistry {
   /// Number of slots currently occupied by live entities.
   int get aliveCount => _count - _freeCount;
 
-  /// Number of slots ever allocated — the exclusive upper bound for
-  /// [isIndexAlive]. Diagnostics surface: the inspector snapshot walks
-  /// `0..slotCount` to enumerate live entities.
+  /// Number of allocated slots.
   int get slotCount => _count;
 
-  /// Whether slot [index] currently holds a live entity. Diagnostics
-  /// surface — pair with [resolve] to obtain the live handle.
+  /// Whether slot [index] contains a live entity.
   bool isIndexAlive(int index) => index < _count && _alive[index] == 1;
 
   /// Allocates a new live entity, reusing a freed slot when available.
@@ -76,13 +64,7 @@ final class EntityRegistry {
     return true;
   }
 
-  /// Despawns every live entity at once — the entity side of `World.reset`.
-  ///
-  /// Bumps the generation of every live slot, so all previously issued
-  /// handles stop validating exactly as if each entity had been [despawn]ed
-  /// individually, and rebuilds the free stack wholesale (dead slots are
-  /// already stale and keep their generation). Slots are stacked so reuse
-  /// after the reset starts from index 0 upward.
+  /// Despawns every live entity.
   void despawnAll() {
     if (_freeIndices.length < _count) {
       _freeIndices = _grow32(_freeIndices, _count);

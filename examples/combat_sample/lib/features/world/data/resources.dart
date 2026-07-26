@@ -26,11 +26,7 @@ class GraphicsQuality {
   int level;
 }
 
-/// Menu intent: switch to `qualityPresets[level]`.
-///
-/// An event rather than a direct write, for the same reason buying a
-/// skill is one: widgets ask, systems decide. It keeps one write path
-/// into the world even for a setting with no rules to enforce.
+/// Requests a quality preset.
 final class QualityRequested {
   const QualityRequested(this.level);
   final int level;

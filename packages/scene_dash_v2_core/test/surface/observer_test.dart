@@ -190,11 +190,10 @@ void main() {
         'may add an observed component to any number of entities', () {
       final world = World();
       var fires = 0;
-      ObserverRegistry.of(world).observe<Health>(
-        onAdd: (w, entity, health) => fires++,
-      );
-      // A fire cone catching a whole pack: 40 fresh adds of one observed
-      // type in a single boundary — per-entity counting must let it pass.
+      ObserverRegistry.of(
+        world,
+      ).observe<Health>(onAdd: (w, entity, health) => fires++);
+      // Many entities can add the same observed type together.
       for (var i = 0; i < 40; i++) {
         world.spawn([Health(1)]);
       }

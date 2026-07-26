@@ -71,9 +71,7 @@ void lockOnSystem(World world) {
   fighter.stance = held != null ? Stance.locked : Stance.free;
 }
 
-/// Acquire on press: the nearest living enemy in range, preferring those
-/// in front of the camera; behind-camera only when nothing is in front.
-/// No cone gate — a press always locks something in range.
+/// Finds the nearest lock target.
 Entity? _acquireTarget(World world, SceneTransform player) {
   final cameraYaw = world.resource<CameraRig>().yaw;
   _Candidate? bestInView;
@@ -161,10 +159,7 @@ double _angleTo(SceneTransform player, World world, Entity entity) {
   );
 }
 
-/// Outlines via `Node.highlightColor` (set on every mesh-bearing node):
-/// gold for the locked enemy, a rising orange telegraph pulse overriding
-/// it. Works on any body without cloning materials per enemy (L3: one
-/// system owns the color).
+/// Updates enemy highlights.
 ///
 /// The recursive node walk is the expensive part, so steady states (no
 /// highlight, the static lock gold) write once and are remembered in
@@ -199,11 +194,7 @@ void updateEnemyHighlights(World world) {
   });
 }
 
-/// Last highlight state written per enemy, by entity index. Slot reuse is
-/// safe: a fresh enemy's nodes start unhighlighted, which IS the `none`
-/// state, so a stale `none` skipping the first write is correct and any
-/// other stale value mismatches and rewrites. Owned by the player
-/// feature: enemies never read their own outline.
+/// Last enemy highlight states.
 final class EnemyHighlights {
   static const int none = 0;
   static const int locked = 1;
@@ -219,4 +210,4 @@ void _setHighlight(Node node, Vector4? color) {
   }
 }
 
-// --- Helpers ---
+// Helpers

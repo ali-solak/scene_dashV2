@@ -1,10 +1,6 @@
 import 'package:flutter_scene/scene.dart' show Component, Node;
 
 /// A buffer of deferred scene-graph mutations.
-///
-/// ECS systems should not mutate the `flutter_scene` graph mid-frame. They
-/// record operations here; the integration flushes them at a safe scene boundary via
-/// [flush]. Constructed with the default parent [Node] (normally `scene.root`).
 final class SceneCommands {
   final Node _root;
   final List<void Function()> _queue = <void Function()>[];

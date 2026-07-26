@@ -12,8 +12,7 @@ final class Entity {
   /// The generation stamp that disambiguates index reuse.
   final int generation;
 
-  /// Creates an entity handle. Game code should obtain entities from
-  /// [Commands] or the world rather than constructing them directly.
+  /// Creates an entity handle.
   const Entity(this.index, this.generation);
 
   /// A sentinel value representing "no entity".

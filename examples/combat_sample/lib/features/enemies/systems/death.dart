@@ -70,8 +70,7 @@ void _dropAxe(
 ) {
   final axe = world.tryGet<ModelSlot>(entity)?.axe;
   if (axe == null || axe.parent == null) return;
-  // Captured before the reparent; the scene root is the identity frame,
-  // so the world pose becomes the local one under it.
+  // Preserve the axe world pose.
   axe.localTransform = axe.globalTransform.clone();
 
   final body = RapierRigidBody(
@@ -117,7 +116,7 @@ void dustCorpseLandings(World world) {
     corpse.fallSpeed = velocity.y;
     if (!landed) return;
     corpse.bursts++;
-    // Sprayed along the skid, so the puff trails the way the body slid.
+    // Follow the skid direction.
     final heading = Vector3(velocity.x, 0, velocity.z);
     if (heading.length2 < 1e-4) heading.setValues(0, 0, 1);
     // On the floor under the body, not at the tumbling body's origin.

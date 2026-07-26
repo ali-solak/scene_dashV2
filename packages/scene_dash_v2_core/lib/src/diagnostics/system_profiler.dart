@@ -28,17 +28,7 @@ final class SlowSystemEvent {
   }
 }
 
-/// Collects execution timings per (system, schedule), keyed by stable
-/// [SystemLabel] identity plus the [ScheduleLabel] it ran in — so a system
-/// registered in more than one schedule keeps a separate record per schedule.
-///
-/// Profiling is opt-in (see `AppDiagnostics`) and adds no per-system work when
-/// disabled. When enabled, the schedule measures each system with a single
-/// reused [Stopwatch] and calls [record]; timing records are reused across frames
-/// so steady-state profiling does not allocate.
-///
-/// The profiler is also inserted as a `@Resource()`, so a Flutter debug overlay
-/// or a system can read [timings] to display per-system cost.
+/// Collects system timings by schedule.
 final class SystemProfiler {
   SystemProfiler({Duration? slowSystemThreshold, this.onSlowSystem})
     : _slowMicros = slowSystemThreshold?.inMicroseconds;

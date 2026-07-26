@@ -68,8 +68,7 @@ void main() {
       expect(() => world.commands.apply(), returnsNormally);
       expect(world.entities.isAlive(entity), isFalse);
 
-      // The freed slot's next tenant is untouched by the stale command
-      // history: a fresh flush pair despawns only what it targets.
+      // A stale command does not affect a reused slot.
       final reused = world.commands.spawn().entity;
       world.commands.apply();
       expect(reused.index, entity.index);

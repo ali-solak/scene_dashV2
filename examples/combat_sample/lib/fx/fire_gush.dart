@@ -27,15 +27,12 @@ void spawnFireGush(World world, Vector3 position, double facing) {
   if (!world.hasResource<Scene>()) return;
   final system = fx.ParticleSystem(
     maxParticles: _flameCount,
-    // The cone the gameplay check uses, as geometry: same half-angle, so
-    // the flame you see is the flame that burned.
+    // Match the damage cone.
     shape: fx.ConeShape(angle: fireGushHalfArc, radius: 0.25),
     spawner: fx.Spawner(rate: _flameCount / _gushSeconds),
     looping: false,
     duration: _gushSeconds,
-    // Fast enough to cross the cone's reach inside its lifetime, so the
-    // flame front arrives where the damage did; long enough for a puff
-    // to bloom and burn out where you can watch it.
+    // Cross the damage range.
     lifetime: const fx.UniformFloat(0.5, 0.85),
     // Slow: fire rolls out of the hand, it is not shot out of it.
     startSpeed: fx.UniformFloat(fireGushRange * 0.55, fireGushRange * 1.05),
@@ -62,21 +59,16 @@ void spawnFireGush(World world, Vector3 position, double facing) {
       fx.ColorOverLifeModule(
         fx.GradientColor(
           fx.ColorGradient([
-            // Red-dominant with green low and blue off, so the stack
-            // cannot climb toward yellow or white. Green sits higher at
-            // birth than the later stops: the sprite now bakes its own
-            // blackbody ramp, and crushing green here would multiply the
-            // hot core back down to flat red.
+            // Flame gradient.
             fx.ColorStop(0, Vector4(1.00, 0.62, 0.14, 1.0)),
             fx.ColorStop(0.3, Vector4(0.95, 0.16, 0.02, 1.0)),
             fx.ColorStop(0.7, Vector4(0.55, 0.05, 0.01, 0.85)),
-            // Dies down to smoke rather than to haze.
+            // Smoke tail.
             fx.ColorStop(1, Vector4(0.16, 0.13, 0.12, 0)),
           ]),
         ),
       ),
-      // Some drag, so the puffs slow and pile up into a rolling front
-      // rather than flying out like buckshot.
+      // Slow the flame front.
       fx.LinearDragModule(1.9),
     ],
     // Hot gas rises, and it keeps the cone up off the grass.
@@ -102,12 +94,9 @@ void spawnFireGush(World world, Vector3 position, double facing) {
               // Tongues, not dots.
               material: flameAdditiveSprite(),
             )
-            // Stretched along travel: round sprites read as a cloud of balls,
-            // stretched ones read as tongues of flame licking outward.
+            // Stretch along travel.
             ..facing = BillboardFacing.velocityStretched
-            // Hard stretch: this is what turns a dot into a dart. The higher
-            // this is, the more the cone reads as spitting sparks instead of
-            // exhaling smoke.
+            // Flame tongue stretch.
             ..velocityStretch = 0.3,
         );
 

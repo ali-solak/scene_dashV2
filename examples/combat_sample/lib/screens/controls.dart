@@ -28,9 +28,7 @@ import '../common/inputs.dart';
 const double _tapSlopPixels = 16;
 const Duration _tapWindow = Duration(milliseconds: 280);
 
-/// Cast keys, in skill-bar order: digit N casts `Skill.values[N - 1]`, so
-/// a new skill is bound by existing in the enum rather than by being
-/// named here. The HUD numbers its slots off the same index.
+/// Skill keys in bar order.
 const List<LogicalKeyboardKey> _skillKeys = [
   LogicalKeyboardKey.digit1,
   LogicalKeyboardKey.digit2,
@@ -54,8 +52,7 @@ class GameControls extends StatefulWidget {
     this.showTouchControls = false,
   });
 
-  /// The scene view. Only this gets the look/attack pointer handling;
-  /// dragging across the HUD must not swing the camera.
+  /// Scene input surface.
   final Widget scene;
 
   /// Drawn over the scene. Inside the focus-reclaiming listener, so its
@@ -73,10 +70,7 @@ class _GameControlsState extends State<GameControls>
   final FocusNode _focus = FocusNode(debugLabel: 'combat-controls');
   final Set<LogicalKeyboardKey> _pressed = <LogicalKeyboardKey>{};
 
-  // The input surfaces `main` inserted, reached through GameScope. This
-  // widget writes them, the player/camera systems read them (one
-  // direction only). They live for the game's lifetime, so a one-time
-  // resolve is enough.
+  // Game input resources.
   late WorldGame _game;
   late ButtonInput<CombatAction> _buttons;
   late AxisInput<MoveAxis> _axes;
@@ -114,7 +108,7 @@ class _GameControlsState extends State<GameControls>
     super.dispose();
   }
 
-  // --- Focus ---------------------------------------------------------------
+  // Focus
   void _reclaimFocus() => _focus.requestFocus();
 
   @override
@@ -134,7 +128,7 @@ class _GameControlsState extends State<GameControls>
     _axes.clear();
   }
 
-  // --- Attack --------------------------------------------------------------
+  // Attack
 
   bool get _fighting => _game.world.state<GameStatus>() == GameStatus.fighting;
 
@@ -154,7 +148,7 @@ class _GameControlsState extends State<GameControls>
     }
   }
 
-  // --- Keyboard ------------------------------------------------------------
+  // Keyboard
 
   /// A key this game acts on, consumed (returns true) so it never doubles
   /// as focus traversal (Tab) or leaks to a system shortcut.
@@ -170,9 +164,7 @@ class _GameControlsState extends State<GameControls>
       key == LogicalKeyboardKey.keyQ ||
       key == LogicalKeyboardKey.escape;
 
-  /// The global hardware-keyboard handler (see [initState]). Only a
-  /// KeyDownEvent casts; a held key repeats as KeyRepeatEvent, which must
-  /// not spam a skill.
+  /// Handles hardware keyboard input.
   bool _handleKey(KeyEvent event) {
     final key = event.logicalKey;
     if (event is KeyDownEvent) {
@@ -224,7 +216,7 @@ class _GameControlsState extends State<GameControls>
       );
   }
 
-  // --- Pointer (scene only) ------------------------------------------------
+  // Pointer
 
   Offset? _touchDownPosition;
   Duration? _touchDownTime;
@@ -262,9 +254,7 @@ class _GameControlsState extends State<GameControls>
     _touchDownTime = null;
   }
 
-  // Drag-to-look: free hover-look dies at the window edge, so the orbit
-  // is right-button drag on desktop and any swipe on touch (touch attacks
-  // via the HUD button, never the scene). Deltas are ignored while locked.
+  // Drag to look.
   void _onPointerMove(PointerMoveEvent event) {
     if (event.kind == PointerDeviceKind.mouse) {
       if ((event.buttons & kSecondaryButton) != 0) {

@@ -1,7 +1,4 @@
-/// Component observers: typed `onAdd`/`onRemove` callbacks fired during the
-/// command-boundary flush, immediately after the individual change applies
-/// (S1). Registration is explicit and per feature through
-/// `GameBuilder.observe<T>`; this file is the registry underneath.
+/// Component add and remove observers.
 library;
 
 import '../entity/entity.dart';
@@ -9,8 +6,7 @@ import '../storage/component_store.dart';
 import '../world/world.dart';
 import 'tag.dart';
 
-/// An observer callback: the world (post-change), the entity, and the
-/// component instance — for `onRemove`, the still-live removed instance.
+/// Runs after a component is added or removed.
 typedef ComponentObserver<T> =
     void Function(World world, Entity entity, T component);
 
@@ -26,23 +22,14 @@ final class ObserverDispatch {
   static const ObserverDispatch marker = ObserverDispatch._();
 }
 
-/// Per-world observer registration lists, attached to the store seams.
-///
-/// Carried as a resource (created on first `observe`); unobserved component
-/// types keep `null` store hooks and pay nothing. Callbacks fire in
-/// registration order, with [World.runningSystem] set to
-/// [ObserverDispatch.marker] for the duration.
+/// Stores observers for one world.
 final class ObserverRegistry {
   /// The world whose stores this registry is attached to.
   final World world;
 
   final Map<Type, _TypeObservers> _byType = <Type, _TypeObservers>{};
 
-  // Debug cascade guard (S6): per-(type, entity) firing counts within one
-  // outermost flush, reset lazily when the world's flush epoch advances.
-  // Keyed per entity because a loop re-fires the SAME entity's observers;
-  // one system legitimately touching a whole pack (a fire cone catching
-  // twenty enemies) fires each entity once and must never trip.
+  // Detect observer loops in debug mode.
   final Map<Type, Map<int, int>> _fireCounts = <Type, Map<int, int>>{};
   int _guardEpoch = -1;
   static const int _cascadeLimit = 16;
@@ -53,10 +40,7 @@ final class ObserverRegistry {
   static ObserverRegistry of(World world) => world.resources
       .getOrInsert<ObserverRegistry>(() => ObserverRegistry._(world));
 
-  /// Registers [onAdd]/[onRemove] for component type [T]; see
-  /// `GameBuilder.observe` for the authoring-surface contract. Registering
-  /// is also a typed site: the store for [T] is created if it does not
-  /// exist yet (a tag store when [T] implements `Tag`).
+  /// Registers add and remove callbacks for [T].
   void observe<T extends Object>({
     ComponentObserver<T>? onAdd,
     ComponentObserver<T>? onRemove,

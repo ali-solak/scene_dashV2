@@ -11,10 +11,7 @@ const int barbarianPoolSize = maxWaveEnemies + 4;
 double healthForWave(int wave) => enemyMaxHealth * (1 + 0.22 * (wave - 1));
 double powerForWave(int wave) => 1 + 0.09 * (wave - 1);
 
-/// Attack-speed multiplier: later waves wind up, swing, and recover
-/// faster, so the pressure rises through rhythm rather than only through
-/// bigger numbers. Capped, or the telegraph stops being readable and the
-/// fight turns unfair instead of hard.
+/// Maximum enemy speed scaling.
 const double maxWaveTempo = 1.8;
 double tempoForWave(int wave) => math.min(maxWaveTempo, 1 + 0.11 * (wave - 1));
 

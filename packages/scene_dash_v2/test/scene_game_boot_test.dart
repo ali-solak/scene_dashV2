@@ -24,8 +24,11 @@ void main() {
           order.add('a');
           game
             ..addState(RunMode.title)
-            ..addSystem(Schedules.update, (world) => updates++,
-                reads: const {});
+            ..addSystem(
+              Schedules.update,
+              (world) => updates++,
+              reads: const {},
+            );
           game.world.insert(Score());
         },
         (game) => order.add('b'),
@@ -43,14 +46,12 @@ void main() {
   test('physics boot wires the world resource, the collision channels and '
       'the promoted world.physics getter', () async {
     final physics = BasicPhysicsWorld();
-    final game = await WorldGame.boot(
-      physics: physics,
-    );
+    final game = await WorldGame.boot(physics: physics);
     expect(game.world.resource<PhysicsWorld>(), same(physics));
     expect(game.world.physics, same(physics));
     expect(game.engine.root.getComponent<PhysicsWorld>(), same(physics));
     game.world.eventChannel<EntityCollision>();
-    // gizmos are promoted too — headless games get the buffer-only resource.
+    // Headless games still have the gizmo buffer.
     game.world.gizmos.enabled = false;
   });
 
@@ -58,16 +59,13 @@ void main() {
     expect(
       () => WorldGame.boot(
         strictAccess: true,
-        features: [
-          (game) => game.addSystem(Schedules.update, (world) {}),
-        ],
+        features: [(game) => game.addSystem(Schedules.update, (world) {})],
       ),
       throwsA(isA<StateError>()),
     );
   });
 
-  test('frameTick pulses once per frame, after the world resolved',
-      () async {
+  test('frameTick pulses once per frame, after the world resolved', () async {
     final game = await WorldGame.boot();
     var pulses = 0;
     game.frameTick.addListener(() => pulses++);

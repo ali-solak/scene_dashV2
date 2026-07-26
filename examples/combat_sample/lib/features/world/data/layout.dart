@@ -1,5 +1,4 @@
-/// Pure clearing layout: where every tree, rock, and bush stands. Split from
-/// the spawn system so the ring geometry is headless-testable.
+/// Clearing prop layout.
 library;
 
 import 'dart:math' as math;
@@ -26,13 +25,11 @@ class PropPlacement {
   /// Final uniform scale (propScale × jitter).
   final double scale;
 
-  /// Uniform 0..1 roll; the spawner maps it onto its template list, so the
-  /// layout stays independent of how many variants were loaded.
+  /// Uniform variant value.
   final double variantRoll;
 }
 
-/// Whether [theta] falls in the cliff gap: the one sector (toward the
-/// sun) the treeline leaves open, where the plateau drops to the sea.
+/// Whether [theta] is inside the cliff gap.
 bool inCliffSector(double theta) {
   var difference = (theta - cliffAzimuth) % (2 * math.pi);
   if (difference > math.pi) difference -= 2 * math.pi;
@@ -40,11 +37,7 @@ bool inCliffSector(double theta) {
   return difference.abs() < cliffHalfAngle;
 }
 
-/// Lays the clearing out deterministically from [clearingSeed]: a dense,
-/// evenly-spaced jittered tree ring with an underbrush ring at its feet
-/// (the level reads closed), rocks and bushes scattered between arena and
-/// treeline, and nothing at all in the cliff sector, where the view runs
-/// out over the water.
+/// Builds a deterministic clearing layout.
 List<PropPlacement> layoutClearing({int seed = clearingSeed}) {
   final rng = math.Random(seed);
   final placements = <PropPlacement>[];
@@ -94,8 +87,7 @@ PropPlacement _placement(
       rng.nextDouble() * (propScaleJitterMax - propScaleJitterMin);
   return PropPlacement(
     kind: kind,
-    // The codebase's azimuth convention throughout: atan2(x, z), i.e.
-    // x = sin, z = cos, the same space [inCliffSector] tests.
+    // Arena azimuth coordinates.
     x: math.sin(theta) * r,
     z: math.cos(theta) * r,
     yaw: rng.nextDouble() * 2 * math.pi,

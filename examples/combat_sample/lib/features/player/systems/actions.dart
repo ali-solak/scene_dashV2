@@ -1,11 +1,6 @@
 part of '../player.dart';
 
-/// The combat machine and everything hanging off its edges: the windup
-/// broadcast the pack dodges on, the roll dust, and the blade trail.
-///
-/// [fighterDriver] registers here because every other system in this
-/// group orders after it, and `lockOnSystem` exempts this group's
-/// systems by reference, so all of it must be registered before lock-on.
+/// Installs player combat actions.
 void installPlayerActions(GameBuilder game) {
   game
     ..addSystem(
@@ -41,11 +36,7 @@ void installPlayerActions(GameBuilder game) {
     );
 }
 
-/// Kicks up earth on the frame a dodge commits (a no-op headless).
-/// Broadcasts the windup so the pack can read it without depending on
-/// the player feature (see [PlayerWindup]). Emitted every step of the
-/// windup rather than on its entry edge, so a barbarian evaluating its
-/// dodge mid-windup still sees it.
+/// Updates player combat effects.
 void announceWindup(World world) {
   final row = world
       .query2<Fighter, PlayerMotion>(require: const [Player])
@@ -77,11 +68,7 @@ void spawnPlayerFx(World world) {
   }
 }
 
-/// Feeds the blade ribbon (a no-op headless).
-///
-/// Samples while the swing is live and RETRACTS the rest of the time, so
-/// the trail draws itself on during the cut and pulls back in after,
-/// instead of popping in and out.
+/// Updates the sword trail.
 void updateBladeTrail(World world) {
   final row = world
       .query2<Fighter, BladeTrail>(require: const [Player])

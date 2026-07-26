@@ -12,56 +12,10 @@ typedef EntityOverlapCallback = bool Function(Entity entity, OverlapHit hit);
 
 const int _allLayers = 0xFFFFFFFF;
 
-/// Immediate overlap queries that deliver ECS entities instead of raw nodes.
+/// Overlap queries that return ECS entities.
 ///
-/// A plain [PhysicsWorld.overlapSphere] returns node-level [OverlapHit]s, so
-/// every gameplay consumer repeats the same resolution preamble: filter the
-/// hit's collider by layer, call [SceneNodeIndex.entityOf], skip the misses.
-/// These extensions do that once, the synchronous counterpart of what
-/// [EntityCollisionPlugin] does for the async collision stream — hit
-/// detection that runs *inside* a system (melee swings, projectile radii)
-/// cannot wait a frame for an event, so it queries and resolves inline.
-///
-/// This is an extension, not a resource or plugin, on purpose: it is a pure
-/// function of two resources systems already inject, so there is no lifecycle
-/// to register and nothing new to wire —
-///
-/// ```dart
-/// void run(
-///   @Resource() PhysicsWorld physics,
-///   @Resource() SceneNodeIndex index,
-///   ...
-/// ) {
-///   physics.overlapSphereEntities(index, center, radius,
-///       layerMask: Layers.enemy, includeTriggers: false, (entity, hit) {
-///     // e.g. enemies.get(entity, (e, health, _) => health.damage(swing));
-///     return true; // keep scanning; return false to stop early
-///   });
-/// }
-/// ```
-///
-/// Semantics:
-///
-/// * **Only resolved hits are delivered.** A collider whose node (and
-///   ancestors) is not entity-bound — static level geometry — is skipped.
-///   Use the raw overlap query when unmanaged hits matter.
-/// * **[layerMask] is enforced result-side too.** The mask is passed down to
-///   the backend *and* re-checked against [Collider.collisionLayer] on each
-///   hit, because some backends accept the parameter without forwarding it
-///   to their native query (flutter_scene_rapier 0.2.x). The re-check is one
-///   AND on backends that do forward. With a non-default mask, a hit whose
-///   collider is not a [Collider] (layer unknowable) is excluded.
-/// * **One delivery per matching collider,** so a node carrying several
-///   colliders on the queried layer resolves to the same entity more than
-///   once. Consumers that must act once per entity (damage) should dedup
-///   across the attack anyway — a per-swing `Set<Entity>` — which subsumes
-///   per-query dedup.
-/// * The return value is the number of hits delivered to [onHit], counting
-///   the one that stopped the scan.
-///
-/// The backend allocates the underlying hit list per query (upstream
-/// behaviour); the wrapper itself adds only the callback closure at the call
-/// site and iterates without further allocation.
+/// Unbound nodes are skipped.
+/// Results are filtered by [Collider.collisionLayer].
 extension EntityOverlapQueries on PhysicsWorld {
   /// [PhysicsWorld.overlapSphere] with each hit resolved to its ECS entity.
   int overlapSphereEntities(

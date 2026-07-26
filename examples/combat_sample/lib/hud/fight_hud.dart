@@ -76,9 +76,7 @@ class FightHud extends StatelessWidget {
   }
 }
 
-/// Opens the skill menu (pause). A cream disc in the shop panel's own
-/// colours, so the button reads as the door to that screen rather than a
-/// stray HUD control.
+/// Opens the skill menu.
 class _PauseButton extends StatelessWidget {
   const _PauseButton();
 
@@ -222,19 +220,13 @@ class _Bar extends StatelessWidget {
   }
 }
 
-/// A red bloom in from the screen edges whenever health drops. Poise
-/// means most blows do not stagger you, so without this the only evidence
-/// of a hit was a bar in a corner. A vignette, not a full wash: it must
-/// be unmissable without covering the fight.
+/// Flashes the screen edge when health drops.
 class _HurtFlash extends StatelessWidget {
   const _HurtFlash();
 
   @override
   Widget build(BuildContext context) {
-    // Keyed off the OUTCOME (health actually fell), not [HitLanded]: the
-    // event also fires for i-framed rolls and barrier blocks, and neither
-    // of those should flash you red. Only downward healing between
-    // waves must not flash either.
+    // Flash only when health drops.
     return WorldBuilder<double>.pulse(
       select: _playerHealth,
       trigger: (previous, next) => next < previous,

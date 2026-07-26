@@ -1,9 +1,4 @@
-/// The three cast slots shown along the bottom while fighting. Each slot
-/// is the button for its skill (the only way in on touch), pops when the
-/// skill fires, and shows its cooldown sweep, level, or live barrier
-/// charges. Reads the world reactively; the list selection compares by
-/// content through `WorldBuilder`'s `equals:`, so the bar rebuilds only
-/// on real change.
+/// Combat skill bar.
 library;
 
 import 'dart:math' as math;
@@ -16,9 +11,7 @@ import '../features/player/player.dart';
 import '../features/skills/skills.dart';
 import 'ink.dart';
 
-/// Per-skill (level, readiness), plus blocks left on the barrier — the
-/// shield slot shows charges instead of a cooldown sweep while it is up:
-/// mid-fight you need hits left, not time until recast.
+/// Skill levels, cooldowns, and barrier charges.
 typedef _SkillSlots = ({
   List<(int level, double readiness)> slots,
   int barrierCharges,
@@ -36,8 +29,7 @@ _SkillSlots _selectSkills(World world) {
   );
 }
 
-/// The three cast slots. Locked slots stay visible (and greyed) so the
-/// keys mean the same thing all run; a slot on cooldown fills back up.
+/// Skill slots.
 class SkillBar extends StatelessWidget {
   const SkillBar({super.key});
 
@@ -71,10 +63,7 @@ class SkillBar extends StatelessWidget {
   }
 }
 
-/// One slot. The pop rides a `WorldBuilder.pulse` keyed off the CAST, not
-/// the keypress: readiness falls off a cliff only when `castSkills`
-/// actually triggers the skill, so a press rejected for cooldown or cost
-/// never pops the slot.
+/// One skill slot.
 class _SkillSlot extends StatelessWidget {
   const _SkillSlot({
     required this.index,
@@ -108,16 +97,11 @@ class _SkillSlot extends StatelessWidget {
         // The pulse decays 1 → 0; the pop curve wants elapsed 0 → 1.
         final t = 1 - pulse;
         final flash = math.sin(t * math.pi);
-        // Snap out, ease back: a quick overshoot reads as a press. The
-        // flash rides the same curve so the border and the swell are one
-        // gesture rather than two.
+        // Press animation.
         final swell = 1 + 0.34 * flash * (1 - t * 0.35);
         return Transform.scale(
           scale: swell,
-          // The slot IS the button (touch has no number keys). Fires on
-          // pointer-down via a raw Listener: a cast is a panic button, so
-          // it lands the instant you touch the slot. Opaque so the jab
-          // does not fall through to the strike listener beneath.
+          // Cast on touch down.
           child: Listener(
             onPointerDown: (_) => onCast(),
             behavior: HitTestBehavior.opaque,
@@ -135,10 +119,7 @@ class _SkillSlot extends StatelessWidget {
   }
 }
 
-/// The slot's face: the frame, the cooldown sweep or charge pips, the
-/// number and the level. A widget rather than a helper method, so the
-/// pulse rebuilds only this and Flutter can element-match it frame to
-/// frame.
+/// Skill slot contents.
 class _SlotFace extends StatelessWidget {
   const _SlotFace({
     required this.index,
@@ -168,9 +149,7 @@ class _SlotFace extends StatelessWidget {
         color: const Color(0xB2101214),
         // Square: the bar is a rack of slots, not a row of app icons.
         border: Border.all(
-          // The border brightens with the pop. A live barrier holds the
-          // accent outright: a working skill must look different from one
-          // on cooldown.
+          // Skill state border.
           color: Color.lerp(
             ready || holding ? HudInk.steel : HudInk.ruleFaint,
             Colors.white,
@@ -227,8 +206,7 @@ class _SlotFace extends StatelessWidget {
           if (!unlocked)
             const Center(child: Icon(Icons.lock, size: 16, color: HudInk.ash))
           else
-            // The level, so an upgrade is visible without opening the
-            // menu; the bar is where you look mid-fight.
+            // Skill level.
             Align(
               alignment: Alignment.bottomRight,
               child: Padding(

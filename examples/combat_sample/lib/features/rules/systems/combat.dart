@@ -107,10 +107,7 @@ void resolveStrikes(World world) {
   });
 }
 
-/// One tap of the player's swing: a connect to every living enemy inside
-/// the strike arc. Called once for a chop, once per sweep tick for the
-/// spin; every connect staggers, so a body in the spin reacts each time
-/// the axe comes around.
+/// Hits enemies inside the strike arc.
 void _strikeEnemies(
   World world,
   Fighter fighter,
@@ -144,10 +141,7 @@ void _strikeEnemies(
   });
 }
 
-/// Serves every [HitLanded]: an i-framed roll passes through cleanly;
-/// otherwise health drops, the victim staggers, and a barbarian at zero
-/// enters `dying` (falling, then dissolving, then despawning so the waves
-/// feature can recycle its pooled model).
+/// Applies hit damage and reactions.
 void applyDamage(World world) {
   for (final hit in world.events<HitLanded>()) {
     final fighter = world.tryGet<Fighter>(hit.target);
@@ -240,10 +234,6 @@ void applyDamage(World world) {
         world.add(hit.target, const Dissolving(), removeAfter: deathSeconds);
         world.add(hit.target, DespawnAfter(deathSeconds));
       } else if (hit.stagger) {
-        // DoT ticks arrive faster than the stagger window, so an ungated
-        // stagger here stunlocked anything standing in fire. Those ticks
-        // flinch once on the catch instead (a `Burning` onAdd sets
-        // `Brawler.sinceHurt`; see `installSkills`).
         brawler.phase.go(BrawlPhase.staggered);
       }
     }

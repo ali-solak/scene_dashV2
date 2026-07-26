@@ -16,7 +16,7 @@ import '../features/world/data/resources.dart'
     show GraphicsQuality, QualityRequested;
 import 'leaves.dart';
 
-// --- The shop's palette (light; local to this screen) ---
+// Shop colors
 const _cream = Color(0xFFF4EFE4);
 const _card = Color(0xFFFEFCF7);
 const _ink = Color(0xFF4A4034);
@@ -40,7 +40,7 @@ final class _MenuState {
   /// Level per skill, in `Skill.values` order. 0 = not bought.
   final List<int> levels;
 
-  /// Live quality preset index, so the active chip reads as selected.
+  /// Active quality preset.
   final int quality;
 
   @override
@@ -63,8 +63,7 @@ _MenuState _selectMenu(World world) {
   ], world.resource<GraphicsQuality>().level);
 }
 
-/// One thing you can buy (a skill or vitality), flattened so the node grid
-/// and the detail card read the same source.
+/// Purchasable menu item.
 @immutable
 class _Item {
   const _Item({
@@ -177,9 +176,7 @@ class _SkillMenuState extends State<SkillMenu> {
       builder: (context, state) {
         final items = _items(context, state);
         final selected = items[_selected.clamp(0, items.length - 1)];
-        // A phone in landscape has little height to spare, so a short
-        // screen gets a tighter panel (smaller header, nodes and card)
-        // that fits the grid and detail side by side without scrolling.
+        // Compact landscape layout.
         final compact = MediaQuery.sizeOf(context).height < 560;
         return Stack(
           fit: StackFit.expand,

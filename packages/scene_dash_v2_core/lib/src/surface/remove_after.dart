@@ -1,12 +1,4 @@
-/// Timed component removal: the deadline tracker behind
-/// `world.add(entity, component, removeAfter: seconds)`.
-///
-/// Deadlines tick on scaled game time, once per fixed step — the frame
-/// drivers call [tick] after each fixed schedule, so a paused clock or a
-/// hitstop freeze (which run no fixed steps) never consume a duration, the
-/// same rule as every gameplay timer. Expiry enqueues a *deferred* remove,
-/// flushed at the step's normal command boundary, where `onRemove`
-/// observers fire (S7/S1).
+/// Timed component removal.
 library;
 
 import 'dart:typed_data';
@@ -14,11 +6,7 @@ import 'dart:typed_data';
 import '../entity/entity.dart';
 import '../world/world.dart';
 
-/// Per-world deadline rows in parallel arrays (entity index, generation,
-/// component type, seconds remaining) — allocation-free in steady state,
-/// swap-removed like the sparse-set stores. Created on first use and
-/// carried as a resource; games that never pass `removeAfter:` never create
-/// one, and the drivers' [tick] call is a no-op lookup.
+/// Tracks component removal deadlines.
 final class RemoveAfterTracker {
   /// The world whose components this tracker expires.
   final World world;
@@ -38,9 +26,7 @@ final class RemoveAfterTracker {
   /// Number of tracked deadlines.
   int get length => _length;
 
-  /// Starts (or refreshes) the deadline for ([entity], [type]): the
-  /// component is removed [seconds] of fixed-step game time from now. One
-  /// row per (entity, type) — a re-add refreshes in place (S4).
+  /// Removes [type] from [entity] after [seconds].
   void track(Entity entity, Type type, double seconds) {
     final row = _rowOf(entity, type);
     if (row >= 0) {
@@ -55,9 +41,7 @@ final class RemoveAfterTracker {
     _length++;
   }
 
-  /// Drops the deadline for ([entity], [type]), if tracked — the manual
-  /// `remove<T>` cancellation and the latest-add-wins rule (an add without
-  /// `removeAfter:` makes the component permanent again).
+  /// Cancels a removal deadline.
   void cancel(Entity entity, Type type) {
     final row = _rowOf(entity, type);
     if (row >= 0) _removeRow(row);
@@ -73,10 +57,7 @@ final class RemoveAfterTracker {
     return remaining < 0 ? 0 : remaining;
   }
 
-  /// Advances every deadline by [dt] (one fixed step of scaled game time)
-  /// and enqueues a deferred remove for each expiry. Despawn needs no eager
-  /// cleanup: a row whose generation no longer matches is dropped here
-  /// (S7), so slot reuse can never remove from the wrong entity.
+  /// Advances deadlines and queues expired removals.
   void tick(double dt) {
     var i = 0;
     while (i < _length) {

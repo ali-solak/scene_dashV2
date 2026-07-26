@@ -35,9 +35,7 @@ void spawnPlayer(World world) {
   world.spawn(playerBundle());
 }
 
-/// Resets the player to a clean, full-health idle at the spawn mark.
-/// `OnEnter(fighting)` behind [freshRun]: boot, title start and restart —
-/// never a menu-close resume.
+/// Resets the player for a new run.
 void resetPlayerRun(World world) {
   final row = world
       .query3<Fighter, PlayerMotion, Health>(require: const [Player])

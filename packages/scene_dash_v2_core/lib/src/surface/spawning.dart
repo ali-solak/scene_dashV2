@@ -1,12 +1,4 @@
-/// Spawn lists, lazy stores and owned-spawn cleanup — the structural verbs
-/// behind `world.spawn`/`world.despawn`.
-///
-/// A spawn list is type-erased (`List<Object>`), so it cannot create a
-/// typed store. Parts whose type has a registered store insert at the next
-/// command boundary; the rest are *parked* until the first typed use of
-/// their type — a record query naming it, `registerComponent<T>()` — which
-/// registers the store and materializes them. Parts still parked after a
-/// full frame are reported once per type through the diagnostics sink.
+/// Deferred entity spawning.
 library;
 
 import '../diagnostics/name.dart';
@@ -19,13 +11,7 @@ import '../time/frame_time.dart';
 import '../world/world.dart';
 import 'tag.dart';
 
-/// Ties this entity's lifetime to [owner]: when the owner dies — despawn,
-/// `DespawnAfter` expiry, state-scoped despawn — this entity is despawned
-/// automatically at the next command boundary, and chains follow (an owned
-/// entity's own dependents die in the same boundary). Normally added
-/// through `spawn(parts, ownedBy: entity)`; carrying it directly in a
-/// spawn list works too. `World.reset` needs no special handling —
-/// everything dies together.
+/// Despawns this entity when [owner] dies.
 final class OwnedBy {
   /// The entity whose death despawns this one.
   final Entity owner;
@@ -33,10 +19,7 @@ final class OwnedBy {
   const OwnedBy(this.owner);
 }
 
-/// The deferred-spawn machinery for one world: pending spawn lists, parked
-/// parts and the owned-entity sweep. Created on first use and carried as a
-/// resource; `TestGame` and the scene driver call [flush] at every command
-/// boundary.
+/// Stores pending spawns for one world.
 final class SpawnQueue {
   /// The world this queue spawns into.
   final World world;
@@ -68,17 +51,12 @@ final class SpawnQueue {
     return entity;
   }
 
-  /// Queues [part] for existing live [entity], applied at the next
-  /// [flush] — the runtime-typed half of the deferred `world.add` (D10).
+  /// Adds [part] to [entity] during the next [flush].
   void addPart(Entity entity, Object part) {
     _pending.add(_PendingSpawn(entity, <Object>[part], null));
   }
 
-  /// Ensures the object store for component type [T] *and* materializes
-  /// any parked parts of that type — the second half of lazy registration:
-  /// the parked part carried the value, this call carries the static type.
-  /// Every typed site (query construction, `registerComponent`) routes
-  /// here.
+  /// Creates the store for [T] and inserts waiting parts.
   ObjectComponentStore<T> ensureStore<T extends Object>() {
     final store = world.ensureObjectStore<T>();
     if (_parked.isNotEmpty) _claimParked<T>();
@@ -108,15 +86,7 @@ final class SpawnQueue {
     }
   }
 
-  /// Applies everything queued since the last boundary — inserts spawn
-  /// lists, sweeps owned entities whose owner died (looping chains to a
-  /// fixpoint) and reports aged parked parts. The frame driver calls this
-  /// after every schedule's command flush.
-  ///
-  /// The settle loop also drains the world's deferred command buffer, so an
-  /// observer fired by an applied spawn part can `remove`/`despawn` and see
-  /// it land in the *same* boundary (S5) — the two queues reach a joint
-  /// fixpoint before the flush ends.
+  /// Applies pending spawns and owned despawns.
   void flush() {
     world.beginFlush();
     try {
@@ -185,8 +155,7 @@ final class SpawnQueue {
     return true;
   }
 
-  /// Parts parked before the previous frame have had a full frame of
-  /// systems to claim them — report the leftovers once per type.
+  /// Reports parts that still have no store.
   void _reportAgedParked() {
     if (_parked.isEmpty) return;
     final sink = onDiagnostic;
@@ -220,12 +189,7 @@ final class SpawnQueue {
     }
   }
 
-  // ── widget-lifetime event readers ─────────────────────────────────────
-  //
-  // Channels have no reader-removal API, so readers leased to transient
-  // owners (widgets) come back here on dispose: parked readers are advanced
-  // every flush so they never lag a channel or pin its buffer, and the next
-  // lease of the same type recycles one.
+  // Reuses event readers owned by widgets.
 
   final Map<Type, List<EventReader<Object>>> _parkedReaders =
       <Type, List<EventReader<Object>>>{};
@@ -258,8 +222,7 @@ final class SpawnQueue {
     }
   }
 
-  /// `World.reset` interplay: pending and parked spawns are dropped — the
-  /// entities they target are gone.
+  /// Drops all pending spawns.
   void reset() {
     _pending.clear();
     _parked.clear();

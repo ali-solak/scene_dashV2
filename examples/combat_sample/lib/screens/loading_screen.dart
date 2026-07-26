@@ -98,10 +98,7 @@ class _ProgressRuleState extends State<_ProgressRule> {
         color: HudInk.steel,
       );
     }
-    // Only ever advances. Progress is completed-over-tracked and boot
-    // registers loads in waves, so each new wave raises the denominator and
-    // the raw fraction dips — documented behaviour, but a bar that slides
-    // backwards reads as a bug.
+    // Keep progress from moving backwards.
     _highest = progress > _highest ? progress : _highest;
     return LinearProgressIndicator(
       value: _highest,

@@ -1,19 +1,7 @@
 import 'package:flutter_scene/scene.dart' show Node;
 import 'package:scene_dash_v2_core/advanced.dart';
 
-/// Reverse lookup from a scene [Node] back to the ECS [Entity] that owns it
-/// through its `SceneNode`. Injected into systems as an `@Resource()`.
-///
-/// `SceneNode` is entity → node; this is the other direction, which you need
-/// to turn a visual hit back into gameplay. A `Scene.raycast` or `ScenePointer`
-/// hit returns a [Node]; pass it to [entityOf] to get the entity to act on.
-/// [entityOf] walks up ancestors, so a hit on a nested child mesh still resolves
-/// to the bound entity.
-///
-/// The integration maintains it each frame in the mount step (before the
-/// `update` phase), piggybacking on the scan it already does over bound nodes —
-/// no extra per-frame allocation. It therefore reflects the entities bound as of
-/// this frame's mount step.
+/// Resolves scene nodes to entities.
 final class SceneNodeIndex {
   /// Created by the integration; [byNode] is the live map it maintains.
   SceneNodeIndex(this._byNode);

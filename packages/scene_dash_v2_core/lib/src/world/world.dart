@@ -9,14 +9,7 @@ import '../storage/object_store.dart';
 import '../storage/store_registry.dart';
 import '../storage/tag_store.dart';
 
-/// The container for all ECS state: entities, component stores, resources and
-/// event channels.
-///
-/// The world exposes *immediate* structural operations ([insertNow],
-/// [removeNow], [despawnNow]) that mutate storage directly. Game code should
-/// normally go through deferred `Commands` instead; the immediate variants are
-/// what the command buffer and generated bundle adapters call once it is safe
-/// to apply structural changes.
+/// Stores entities, components, resources, and events.
 final class World {
   /// Generational entity allocator.
   final EntityRegistry entities = EntityRegistry();
@@ -27,92 +20,63 @@ final class World {
   /// Singleton application resources.
   final Resources resources = Resources();
 
-  /// The shared deferred-command buffer for this world. Systems record
-  /// structural changes here; the app flushes it after each schedule.
+  /// Queues structural changes.
   late final Commands commands = Commands(this);
 
   final Map<Type, EventChannelMaintenance> _eventChannels =
       <Type, EventChannelMaintenance>{};
 
-  // Parallel registration-order views of _eventChannels, so updateEvents can
-  // iterate without allocating map entries each frame.
+  // Keeps event updates allocation free.
   final List<Type> _eventTypes = <Type>[];
   final List<EventChannelMaintenance> _eventChannelList =
       <EventChannelMaintenance>[];
 
-  /// Called by [updateEvents] when a channel expired events past a lagging
-  /// reader (see [EventChannel.retainedUpdates]): the event type and the
-  /// largest number of unread events one reader lost this pass. Set by the
-  /// app to surface a diagnostic.
+  /// Reports unread events removed by [updateEvents].
   void Function(Type eventType, int skippedEvents)? onEventReaderSkip;
 
-  /// The system currently executing, set by the function-system adapter for
-  /// the duration of its run — what `world.events<T>()` resolves its
-  /// per-registration cursor through, and what the debug access-drift check
-  /// attributes query construction to. `null` between systems.
-  ///
-  /// v2 surface plumbing (see `docs/plan.md` task 5); the engine itself
-  /// never reads it.
+  /// The system currently running.
   Object? runningSystem;
 
-  /// Whether execution is currently inside a fixed schedule — set around
-  /// system bodies and their run conditions by the v2 surface, read by the
-  /// schedule-aware `world.dt` and `every()` (D7/D9). `false` between
-  /// systems and in frame-rate schedules.
+  /// Whether the current schedule uses fixed time.
   bool fixedContext = false;
 
   /// Number of queries currently iterating. Used by debug guards to detect
   /// structural mutation during active iteration.
   int _activeQueries = 0;
 
-  /// Called (debug mode only) the first time a system starts a query
-  /// iteration while another of its queries is still iterating — the
-  /// accidental O(N×M) shape. Set by the app to the diagnostics sink;
-  /// reported once per system.
+  /// Reports nested queries in debug mode.
   void Function(String message)? onNestedQuery;
 
-  // Nested-query tracking (debug only — mutated inside asserts): the
-  // outermost active query, the system it ran under, and the systems
-  // already reported so the diagnostic fires once per system.
+  // Debug state for nested query reports.
   Query? _debugOuterQuery;
   Object? _debugOuterSystem;
   Set<Object>? _debugNestedReported;
 
-  /// Number of command-boundary flushes currently on the stack
-  /// (`Commands.apply`, the spawn-queue flush) — they nest, so the counter
-  /// pairs [beginFlush]/[endFlush].
+  /// Current command flush depth.
   int _flushDepth = 0;
 
-  /// Monotonic counter of *completed* outermost flushes. The observer
-  /// registry's debug cascade guard resets its per-type firing counts when
-  /// this advances, so "fired N times within one flush" is measurable
-  /// without the registry knowing the flush call sites.
+  /// Number of completed outer command flushes.
   int flushEpoch = 0;
 
   /// Marks entry into a command-boundary flush; pairs with [endFlush].
   void beginFlush() => _flushDepth++;
 
-  /// Marks exit from a command-boundary flush; advances [flushEpoch] when
-  /// the outermost flush completes.
+  /// Ends a command flush.
   void endFlush() {
     _flushDepth--;
     if (_flushDepth == 0) flushEpoch++;
   }
 
-  /// Returns the object store for component type [T], registering a fresh one
-  /// if none exists yet. Idempotent. Generated adapters and bundle inserts call
-  /// this so component types are registered on first use.
+  /// Returns the store for [T], creating it when needed.
   ObjectComponentStore<T> ensureObjectStore<T>() => stores.ensureObject<T>();
 
-  /// Returns the tag store for tag type [T], registering a fresh one if none
-  /// exists yet. Idempotent.
+  /// Returns the tag store for [T], creating it when needed.
   TagStore ensureTagStore<T>() => stores.ensureTag<T>();
 
   /// Registers an event channel for event type [T] if one does not yet exist.
   ///
-  /// [retainedUpdates] bounds how many maintenance passes an unread event
-  /// survives (see [EventChannel.retainedUpdates]); `null` retains events until
-  /// every reader has consumed them. Ignored if the channel already exists.
+  /// [retainedUpdates] controls how long unread events remain.
+  /// Use `null` to keep them until every reader consumes them.
   void registerEvent<T>({int? retainedUpdates = 8}) {
     if (_eventChannels.containsKey(T)) return;
     final channel = EventChannel<T>(retainedUpdates: retainedUpdates);
@@ -121,17 +85,9 @@ final class World {
     _eventChannelList.add(channel);
   }
 
-  /// Sends [event] to the channel for its **runtime** type.
+  /// Sends [event] to its runtime type channel.
   ///
-  /// Routing by `event.runtimeType` (rather than a static type argument) is what
-  /// makes `Game.dispatch` robust: a `cond ? A() : B()` argument is statically
-  /// typed as the common supertype of `A` and `B`, so a `send<T>`-style API would
-  /// infer `T` as that supertype and silently deliver to a channel no system
-  /// reads. The concrete instance always knows its own type, so this always hits
-  /// the right channel.
-  ///
-  /// Throws if no channel is registered for the runtime type — register it by
-  /// reading `EventReader<T>` in a system, or with `addEvent<T>()`.
+  /// Throws when the channel is not registered.
   void sendEvent(Object event) {
     final channel = _eventChannels[event.runtimeType];
     if (channel == null) {
@@ -165,10 +121,7 @@ final class World {
     }
   }
 
-  /// Every registered event channel with its event type, in registration
-  /// order. Diagnostics surface — the inspector snapshot reads pending
-  /// counts and lagging-reader flags through it; allocates an iterator, so
-  /// not for per-frame engine code.
+  /// Event channels in registration order.
   Iterable<(Type, EventChannelMaintenance)> get debugEventChannels sync* {
     for (var i = 0; i < _eventChannelList.length; i++) {
       yield (_eventTypes[i], _eventChannelList[i]);
@@ -206,14 +159,7 @@ final class World {
     return stores.object<T>().valueOf(entity.index);
   }
 
-  /// [entity]'s [A] and [B] as a record, or `null` unless *both* are present —
-  /// [tryGet] composed over two components, sharing its null conditions
-  /// (stale entity, unregistered store, missing component).
-  ///
-  /// For one-off multi-component reads outside a query (event handlers,
-  /// setup code). The record fields are the live components, so mutating
-  /// their fields writes through. Cold-path convenience: allocates a record;
-  /// per-frame loops should use a cached query's `get` instead.
+  /// Returns [A] and [B], or `null` when either is missing.
   (A, B)? tryGet2<A, B>(Entity entity) {
     final a = tryGet<A>(entity);
     if (a == null) return null;
@@ -243,13 +189,9 @@ final class World {
   /// Whether a resource of type [T] is registered.
   bool hasResource<T extends Object>() => resources.contains<T>();
 
-  /// Every registered component and tag type live [entity] currently carries,
-  /// in store-registration order; empty for a stale handle.
+  /// Component and tag types on [entity].
   ///
-  /// Debug surface — the answer to "what *is* this entity?" in a log or a
-  /// test failure. Scans every registered store and allocates the list, so
-  /// keep it out of per-frame release code; `debugDescribe` renders the same
-  /// information as one line.
+  /// Returns an empty list for a stale entity.
   List<Type> debugComponentsOf(Entity entity) {
     if (!entities.isAlive(entity)) return const <Type>[];
     final index = entity.index;
@@ -264,10 +206,7 @@ final class World {
   void insertNow<T>(Entity entity, T component) =>
       insertNowByType(T, entity, component);
 
-  /// Non-generic variant of [insertNow], keyed by a runtime [componentType].
-  ///
-  /// Used by the deferred command buffer, which records the component type per
-  /// command instead of capturing it in a closure.
+  /// Inserts a component using its runtime type.
   void insertNowByType(Type componentType, Entity entity, Object? component) {
     assert(
       _activeQueries == 0,
@@ -315,36 +254,11 @@ final class World {
     entities.despawn(entity);
   }
 
-  /// Despawns everything and clears all buffered events, returning the world
-  /// to an empty-but-wired state: stores, event channels, registered readers
-  /// and (by default) resources all stay registered, only their contents go.
+  /// Removes every entity and buffered event.
   ///
-  /// The "restart the run" primitive — new game, back to title, retry from
-  /// checkpoint — replacing hand-written despawn-the-world systems:
-  ///
-  /// * every store is emptied ([ComponentStore.clear]), which bumps its
-  ///   revision — that is what lets the `flutter_scene` mount adapter detach
-  ///   every auto-mounted node on its next run, so no manual scene cleanup is
-  ///   needed;
-  /// * every live entity is despawned with a generation bump
-  ///   ([EntityRegistry.despawnAll]), so handles held across the reset
-  ///   reject instead of addressing respawned entities;
-  /// * every event channel is cleared ([EventChannel.clear]); readers stay
-  ///   registered and simply see nothing until new events arrive.
-  ///
-  /// [keepResources] (the default) preserves all resources — timers, input,
-  /// clocks, and the `CurrentState`/`NextState` machines keep running, so a
-  /// game wanting a state reset queues a `NextState` transition after the
-  /// call. Pass `false` to also drop every resource — [Disposable] ones are
-  /// disposed, in reverse insertion order; only do that when
-  /// re-initialization follows, since initialized systems keep their resolved
-  /// resource references.
-  ///
-  /// Must not be called while a query is iterating, and asserts that no
-  /// deferred commands are pending — resetting with queued structural changes
-  /// is a bug (they would apply to despawned entities), so it fails loudly.
-  /// Call it from a safe boundary such as an `OnEnter` system's body after
-  /// its schedule's commands flushed, or between frames.
+  /// Stores, channels, and readers stay registered.
+  /// Resources remain unless [keepResources] is false.
+  /// Call only when no query or command is active.
   void reset({bool keepResources = true}) {
     assert(_activeQueries == 0, 'World.reset() while a query is iterating.');
     assert(
@@ -362,10 +276,7 @@ final class World {
     if (!keepResources) resources.disposeAll();
   }
 
-  /// Creates an entity-only query over the entities carrying every type in
-  /// [withTypes] (tags or components) and none in [withoutTypes]. For match
-  /// sets defined entirely by tags, where there is no component value to hand
-  /// out; [withTypes] must not be empty — it drives the iteration.
+  /// Queries entities with every [withTypes] entry and no [withoutTypes] entry.
   EntityQuery queryEntities({
     required List<Type> withTypes,
     List<Type> withoutTypes = const <Type>[],
@@ -381,11 +292,6 @@ final class World {
       withoutTypes.map(stores.require).toList(growable: false),
     );
   }
-
-  // v2: the classic query1..query4 conveniences moved verbatim to the
-  // ClassicWorldQueries extension (src/query/world_queries.dart) so the
-  // record-query surface can own the query2/3/4 names — Dart instance
-  // members always win over extensions. Call sites are source-compatible.
 
   /// Begins query iteration (debug guard bookkeeping). Returns when iteration
   /// is allowed to proceed.
@@ -409,11 +315,7 @@ final class World {
     }());
   }
 
-  /// Nested-query detection (I5), debug mode only — every call sits inside
-  /// an assert. Depth is [_activeQueries] scoped to [runningSystem]: an
-  /// iteration beginning while another is active *in the same system* is
-  /// the accidental O(N×M) shape; sequential iterations are fine. Reported
-  /// once per system through [onNestedQuery].
+  /// Reports nested queries in the same system.
   void _debugNoteQueryBegin(Query? query) {
     final system = runningSystem;
     if (query == null || system == null) return;
@@ -437,10 +339,7 @@ final class World {
     );
   }
 
-  /// Short system name for diagnostics: the function-system adapter's
-  /// `toString` is its stable label id (`library#name@N`); everything
-  /// after the `#` is the declared name, minus the numeric registration
-  /// disambiguator.
+  /// Returns a short system name for diagnostics.
   static String _debugSystemName(Object system) {
     final id = system.toString();
     final hash = id.lastIndexOf('#');

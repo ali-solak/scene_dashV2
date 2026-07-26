@@ -403,7 +403,7 @@ void main() {
     });
 
     game.emit(const SkillCast(Skill.windBlast));
-    // The gust now fires when the cast leap lands, not on the button.
+    // The gust fires when the leap lands.
     game.pumpFixed(steps: ticksFor(windCastSeconds) + 4);
 
     var launched = 0;
@@ -479,7 +479,7 @@ void main() {
     expect(world.get<Knockback>(enemy).airborne, isFalse);
   });
 
-  // --- Shield ---------------------------------------------------------------
+  // Shield
 
   /// Hits the player for [damage] through the resolution path a barbarian's
   /// swing uses, so the barrier is tested against a real [HitLanded] rather

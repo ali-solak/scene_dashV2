@@ -24,15 +24,7 @@ const List<String> _rigFiles = [
 
 const int _openingBarbarians = 2;
 
-/// One cooked asset serves the whole pool, but each barbarian must be
-/// realized with its OWN resource realizer, not through
-/// [SceneRegistry.loadScene]: instances realized off one cached template
-/// share their `SkinnedGeometry`, and per-frame joint textures are written
-/// through it, so a pack loaded that way renders as a single body
-/// (flutter_scene #257 — the same defect `clone()` has). The fix (PR #263,
-/// joint state per render item) is merged upstream but unreleased; once it
-/// ships, collapse this back to `scenes.loadScene(_barbarianScene)` per
-/// instance and the pack shares GPU geometry/textures again.
+/// Each barbarian needs independent skin data.
 const String _barbarianScene = 'assets/characters/Barbarian.glb';
 
 class CharacterAssets {
@@ -82,8 +74,7 @@ class CharacterAssets {
     return null;
   }
 
-  /// Returns a model to the pool and unparents it, so the next borrower
-  /// can hang it under a fresh wrapper.
+  /// Returns a model to the pool.
   void releaseBarbarian(int index) {
     if (index < 0 || index >= _lent.length) return;
     _lent[index] = false;
@@ -112,10 +103,7 @@ Future<CharacterAssets> loadCharacterAssets({
 }) async {
   final scenes = await SceneRegistry.load();
 
-  // The knight, the barbarian document, the five rigs and the three
-  // weapons are all independent of each other: start them together and
-  // collect below, so the load costs its slowest member rather than the
-  // sum of all of them.
+  // Start independent loads together.
   final knightFuture = _track(
     loading,
     scenes.loadScene('assets/characters/Knight.glb'),
@@ -129,7 +117,7 @@ Future<CharacterAssets> loadCharacterAssets({
   final shieldFuture = _track(loading, _loadWeapon('shield_square_color'));
 
   final knight = await knightFuture;
-  // Parsed once; realized once per barbarian (see [_barbarianScene]).
+  // Realize each barbarian from one document.
   final barbarianDocument = readFsceneb(await documentBytes);
   final openingCount = math.min(_openingBarbarians, barbarianCount);
   final barbarians = <Node>[];
@@ -137,32 +125,26 @@ Future<CharacterAssets> loadCharacterAssets({
     barbarians.add(await _track(loading, realizeSceneAsync(barbarianDocument)));
   }
 
-  // Awaited in list order even though they loaded concurrently: the rigs
-  // share clip names (every one carries a T-Pose), so a later file is
-  // meant to win, and that only holds if insertion follows [_rigFiles].
+  // Merge clips in rig order.
   final clips = <String, Animation>{};
   for (final rigFuture in rigFutures) {
     for (final animation in (await rigFuture).parsedAnimations) {
       clips[animation.name] = animation;
     }
   }
-  // Every clip can blend against every other, so they must agree on
-  // quaternion sign before instantiation (see anim/hemisphere.dart).
+  // Align clip rotations before blending.
   harmoniseRotationHemispheres(clips.values);
   final assets = CharacterAssets(
     knight: knight,
     barbarians: barbarians,
     clips: clips,
-    // Two-handed: the player's sword, the barbarians' axe. The reach sells
-    // the wide swings.
+    // Two handed weapons.
     sword: await swordFuture,
     axe: await axeFuture,
-    // The coloured variant: the plain one is untextured white, which
-    // reads as a missing material rather than as a shield.
+    // Colored shield.
     shield: await shieldFuture,
   );
-  // Two bodies cover the opening wave. The app realizes the reserve only after
-  // its first rendered frames, so it cannot hold the loading cover.
+  // Load reserve bodies after startup.
   assets._loadReserve = () => _fillBarbarianPool(
     assets,
     barbarianDocument,

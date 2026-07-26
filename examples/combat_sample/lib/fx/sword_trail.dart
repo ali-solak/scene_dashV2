@@ -1,8 +1,4 @@
-/// The blade's trail: a ribbon of light rebuilt every frame from where
-/// the sword actually is. Samples the sword node's world transform each
-/// frame and stitches the samples into a strip, so the ribbon is the
-/// path the weapon swept. One `GeometryStorage.updatable` mesh, rebuilt
-/// in place; no per-frame allocation, no entity churn.
+/// Sword trail ribbon.
 library;
 
 import 'dart:typed_data';
@@ -10,9 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 
-/// How many samples the ribbon remembers. At a 60 Hz fixed step this is
-/// the trail's length in frames: long enough to arc, short enough to
-/// read as a whip rather than a scarf.
+/// Number of remembered blade samples.
 const int trailSamples = 14;
 
 /// Where the blade's tip sits in the sword node's local space. The
@@ -101,8 +95,7 @@ class SwordTrail {
     if (_live < trailSamples) _live++;
   }
 
-  /// Drops the oldest rung, so the ribbon retracts after the swing
-  /// instead of vanishing all at once.
+  /// Drops the oldest rung.
   void retract() {
     if (_live > 0) _live--;
     if (_live == 0) _rungs.clear();

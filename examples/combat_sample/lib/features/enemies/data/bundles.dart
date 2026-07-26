@@ -1,9 +1,6 @@
 part of '../enemies.dart';
 
-/// A barbarian's spawn list: pure data, body attached scene-side.
-/// [index] alternates the circle direction so a pack flanks instead of
-/// stacking; [health] and [power] are the wave's scaling, and [giant]
-/// marks the one that grows.
+/// Builds enemy spawn components.
 List<Object> enemyBundle(
   double x,
   double z, {

@@ -1,11 +1,7 @@
 import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
 import 'package:test/test.dart';
 
-/// The nested-query diagnostic (I5): a query iteration beginning while
-/// another is active in the same system is the accidental O(N×M) shape,
-/// reported once per system through the diagnostics sink. Product-mode
-/// silence is by construction — the tracking runs entirely inside
-/// `assert(() {...}())`, so release builds compile it out.
+/// Nested query diagnostic tests.
 final class _PA {}
 
 final class _PB {}
@@ -34,8 +30,7 @@ void main() {
       onDiagnostic: messages.add,
       features: [
         (game) => game
-          // Registered up front so the parked spawns flush at the frame
-          // boundary — not lazily inside the nested iteration under test.
+          // Register components before the nested query runs.
           ..registerComponent<_PA>()
           ..registerComponent<_PB>()
           ..registerComponent<_Enemy>()

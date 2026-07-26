@@ -1,10 +1,4 @@
-/// The inspector's snapshot boundary (I1): plain-data views of a world,
-/// collected on demand by [SnapshotCollector].
-///
-/// Every field is a string, int, bool or a list of those — serializable by
-/// construction, so a frontend (the in-app overlay today, a DevTools web
-/// page later) can consume the same data without holding live object
-/// references. Wave 1 is read-only: nothing here mutates the world.
+/// Debug data collected from a world.
 library;
 
 import '../entity/entity.dart';
@@ -13,8 +7,7 @@ import '../world/world.dart';
 import 'name.dart';
 import 'system_profiler.dart';
 
-/// One collected view of a world: counts, entity summaries, resources,
-/// system timings and event channels. Plain data — see the library docs.
+/// A summary of one world.
 final class InspectorSnapshot {
   const InspectorSnapshot({
     required this.entityCount,
@@ -31,16 +24,13 @@ final class InspectorSnapshot {
   /// Per-store dense counts, in store-registration order.
   final List<StoreSnapshot> stores;
 
-  /// One summary per live entity — type names only; the per-component
-  /// `toString` values are collected lazily by
-  /// [SnapshotCollector.describeEntity], on selection.
+  /// One summary per live entity.
   final List<EntitySnapshot> entities;
 
   /// Registered resources, in insertion order.
   final List<ResourceSnapshot> resources;
 
-  /// Profiled (system, schedule) timings — empty unless the app was built
-  /// with `AppDiagnostics(profileSystems: true)`.
+  /// Collected system timings.
   final List<SystemSnapshot> systems;
 
   /// Registered event channels, in registration order.
@@ -55,8 +45,7 @@ final class StoreSnapshot {
   final int count;
 }
 
-/// One live entity: handle parts, its `Name` when present, and component
-/// *type names* only (summaries stay cheap — values are detail-tier).
+/// A live entity summary.
 final class EntitySnapshot {
   const EntitySnapshot({
     required this.index,
@@ -81,9 +70,7 @@ final class ResourceSnapshot {
   final String? value;
 }
 
-/// One profiled (system, schedule) pair: the D11 identity-derived label
-/// (honoring a `label:` override), the schedule id, and the last and
-/// rolling-average run cost in milliseconds.
+/// Timing for one system and schedule.
 final class SystemSnapshot {
   const SystemSnapshot({
     required this.label,
@@ -112,9 +99,7 @@ final class EventChannelSnapshot {
   final bool readerLagged;
 }
 
-/// The detail view for one selected entity: the `debugDescribe` values
-/// (M6 — a component's own `toString` when overridden, its type name
-/// otherwise), one line per component. Collected only on selection.
+/// Component details for one entity.
 final class EntityDetailSnapshot {
   const EntityDetailSnapshot({
     required this.index,
@@ -131,15 +116,11 @@ final class EntityDetailSnapshot {
   /// One entry per component, in store-registration order.
   final List<String> lines;
 
-  /// True when the handle no longer resolves (despawned since the summary
-  /// was collected) — [lines] is empty then.
+  /// Whether the entity is no longer live.
   final bool stale;
 }
 
-/// Collects [InspectorSnapshot]s from a world, on demand (I3): a frontend
-/// polls it on its own timer — the collector itself runs nothing per
-/// frame and costs nothing while no frontend asks. Collection allocates
-/// (bounded by world size); this is debug tooling, not a hot path.
+/// Collects [InspectorSnapshot] data on demand.
 final class SnapshotCollector {
   SnapshotCollector(this.world);
 
@@ -215,9 +196,7 @@ final class SnapshotCollector {
     );
   }
 
-  /// Collects the detail view for the entity at ([index], [generation]) —
-  /// the `debugDescribe` component values. Called only when a frontend
-  /// selects the entity, never during [collect] (detail stays lazy).
+  /// Collects details for one entity.
   EntityDetailSnapshot describeEntity(int index, int generation) {
     final entity = Entity(index, generation);
     if (!world.isAlive(entity)) {
@@ -229,8 +208,7 @@ final class SnapshotCollector {
         stale: true,
       );
     }
-    // One line per component, by `debugDescribe`'s M6 rule: the value's
-    // own `toString` when overridden, the type name otherwise.
+    // Use the value text when available.
     final lines = <String>[];
     for (final (type, store) in world.stores.entries) {
       if (!store.containsIndex(index)) continue;
@@ -248,8 +226,7 @@ final class SnapshotCollector {
     );
   }
 
-  /// [value]'s `toString` when it overrides `Object.toString`, else null —
-  /// the same default-`Instance of '...'` detection `debugDescribe` uses.
+  /// Returns custom text for [value].
   static String? _overriddenToString(Object? value) {
     final text = value?.toString();
     if (text == null || text.startsWith("Instance of '")) return null;

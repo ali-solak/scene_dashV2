@@ -22,18 +22,7 @@ final class ScheduleCompileResult {
 /// Compiles a set of [SystemRegistration]s into a deterministic execution
 /// order via a stable topological sort over their `before`/`after` edges.
 ///
-/// Reports, as [ScheduleGraphError]s:
-///
-/// * duplicate system labels;
-/// * `before`/`after` references to unknown labels;
-/// * dependency cycles.
-///
-/// When [detectConflicts] is true, it also computes ordering reachability and
-/// returns [AccessConflict]s for pairs of systems that have no ordering between
-/// them yet declare conflicting component access (write/write or read/write).
-///
-/// Ties are broken by registration order, so an unconstrained schedule runs its
-/// systems in the order they were added.
+/// Sorts systems and reports invalid schedules.
 abstract final class ScheduleGraph {
   static ScheduleCompileResult compile(
     ScheduleLabel scheduleLabel,
@@ -79,10 +68,7 @@ abstract final class ScheduleGraph {
       }
     }
 
-    // Expand set chains into member-level edges: every member of an earlier
-    // set runs before every member of a later one. An empty set is skipped
-    // transparently — the non-empty sets around it still chain, so an empty
-    // phase never breaks the ordering.
+    // Expand set order into system order.
     if (setChains.isNotEmpty) {
       final members = <SystemSet, List<int>>{};
       for (var i = 0; i < count; i++) {

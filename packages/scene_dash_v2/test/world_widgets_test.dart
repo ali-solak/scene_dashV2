@@ -36,28 +36,32 @@ void main() {
     WorldGame? seen;
     late BuildContext outside;
     await tester.pumpWidget(
-      Builder(builder: (context) {
-        outside = context;
-        return GameScope(
-          game: game,
-          child: Builder(builder: (context) {
-            seen = context.game;
-            return const SizedBox();
-          }),
-        );
-      }),
+      Builder(
+        builder: (context) {
+          outside = context;
+          return GameScope(
+            game: game,
+            child: Builder(
+              builder: (context) {
+                seen = context.game;
+                return const SizedBox();
+              },
+            ),
+          );
+        },
+      ),
     );
     expect(seen, same(game));
     expect(GameScope.maybeOf(outside), isNull);
     expect(() => GameScope.of(outside), throwsFlutterError);
   });
 
-  testWidgets('GameHost installs the scope and survives reassemble',
-      (tester) async {
+  testWidgets('GameHost installs the scope and survives reassemble', (
+    tester,
+  ) async {
     final game = await boot();
     await tester.pumpWidget(GameHost(game: game, child: const SizedBox()));
-    // reassembleApplication completes at end-of-frame, which the test
-    // binding only reaches on pump — awaiting it bare would deadlock.
+    // Pump to complete the reassemble.
     final reassembled = tester.binding.reassembleApplication();
     await tester.pump();
     await reassembled;
@@ -127,12 +131,14 @@ void main() {
     game.world.spawn([Health(40)]);
     drive(game);
     await tester.pump();
-    expect(find.text('40.0'), findsOneWidget,
-        reason: 'a fresh match is picked up without a new handle');
+    expect(
+      find.text('40.0'),
+      findsOneWidget,
+      reason: 'a fresh match is picked up without a new handle',
+    );
   });
 
-  testWidgets('EntityBuilder.matching honours require filters',
-      (tester) async {
+  testWidgets('EntityBuilder.matching honours require filters', (tester) async {
     final game = await boot(features: [(game) => game.registerTag<Marked>()]);
     game.world.spawn([Health(1)]); // unmarked: never a match
     final marked = game.world.spawn([Health(2), const Marked()]);
@@ -154,12 +160,16 @@ void main() {
     game.world.despawn(marked);
     drive(game);
     await tester.pump();
-    expect(find.text('2.0'), findsNothing,
-        reason: 'default absent renders nothing');
+    expect(
+      find.text('2.0'),
+      findsNothing,
+      reason: 'default absent renders nothing',
+    );
   });
 
-  testWidgets('WorldBuilder watches world-derived values (query counts)',
-      (tester) async {
+  testWidgets('WorldBuilder watches world-derived values (query counts)', (
+    tester,
+  ) async {
     final game = await boot();
     game.world.spawn([Health(1)]);
     drive(game);
@@ -271,9 +281,7 @@ void main() {
   });
 
   testWidgets('GameStateBuilder routes on transitions', (tester) async {
-    final game = await boot(features: [
-      (game) => game.addState(RunMode.title),
-    ]);
+    final game = await boot(features: [(game) => game.addState(RunMode.title)]);
     drive(game);
     await tester.pumpWidget(
       GameScope(

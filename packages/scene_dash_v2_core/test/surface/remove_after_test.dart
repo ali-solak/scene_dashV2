@@ -9,10 +9,7 @@ final class Other {
   const Other();
 }
 
-/// The number of fixed steps until a `removeAfter:` deadline of [duration]
-/// expires, replaying the tracker's own accumulation — 1/60 is not
-/// binary-exact, so boundaries must come from the same float walk the
-/// tracker performs, never from `duration / dt` (the combat-suite lesson).
+/// Counts fixed steps until [duration] expires.
 int ticksFor(double duration, double dt) {
   var remaining = duration;
   var ticks = 0;

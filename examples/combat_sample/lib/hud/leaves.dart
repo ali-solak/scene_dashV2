@@ -1,7 +1,4 @@
-/// Ambient leaves drifting across the pause screen on their own ticker,
-/// so the frozen menu still feels like it sits in the clearing. Cheap:
-/// one full-screen [CustomPaint], a dozen-odd path fills. The host wraps
-/// it in an [IgnorePointer] so it never eats a tap.
+/// Ambient menu leaves.
 library;
 
 import 'dart:math' as math;
@@ -31,8 +28,7 @@ class _LeavesState extends State<Leaves> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    // Seeded, so the drift is the same every time the menu opens rather than
-    // re-scattering on each pause.
+    // Stable leaf layout.
     final rng = math.Random(7);
     _leaves = List.generate(widget.count, (_) => _Leaf.random(rng));
     _ticker = createTicker((elapsed) {
@@ -120,8 +116,7 @@ class _LeafPainter extends CustomPainter {
     final t = time.value;
     final w = size.width;
     final h = size.height;
-    // Enough overhang that a leaf resets while fully off-screen, so the
-    // top→bottom loop never visibly jumps.
+    // Reset leaves off screen.
     const margin = 48.0;
     for (final leaf in leaves) {
       final prog = ((t / leaf.fall) + leaf.phase) % 1.0;

@@ -75,7 +75,7 @@ void brawlerDriver(World world) {
     brawler.sinceDodge += world.dt;
     final phase = brawler.phase..tick(world.dt);
     if (!health.alive && phase.state != BrawlPhase.dying) {
-      // Killed outside applyDamage (tests, future hazards): still dies.
+      // Finish externally killed enemies.
       phase.go(BrawlPhase.dying);
       return;
     }
@@ -118,13 +118,11 @@ void brawlerDriver(World world) {
                 dodgeChance) {
           brawler
             ..sinceDodge = 0
-            // Rolls the way it was already orbiting, so the sidestep
-            // continues its momentum instead of reversing on the spot.
+            // Continue the circling direction.
             ..dodgeSign = brawler.circleDirection >= 0 ? 1 : -1;
           phase.go(BrawlPhase.dodging);
         } else if (brawler.hasToken && distance <= brawlerAttackRange) {
-          // Seeded off the circling clock, so the same barbarian does not
-          // always pick the same opener.
+          // Select a seeded opener.
           final roll = (brawler.wobbleSeed * 7.31 + brawler.wobble * 1.7) % 1.0;
           final combo = roll < (brawler.giant ? giantComboChance : comboChance);
           brawler.comboLeft = combo ? 1 : 0;
@@ -134,8 +132,7 @@ void brawlerDriver(World world) {
         } else if (!brawler.hasToken &&
             brawler.sinceTaunt >=
                 tauntIntervalSeconds + brawler.wobbleSeed.remainder(3.0)) {
-          // Not its turn: heckle. Only a token-less circler taunts, so the
-          // attacker's rhythm is never interrupted.
+          // Non attackers may taunt.
           brawler.sinceTaunt = 0;
           phase.go(BrawlPhase.taunting);
         }
@@ -172,9 +169,7 @@ void brawlerDriver(World world) {
   });
 }
 
-/// Starts a chop's windup at [windup]. Bumping the counter is what makes
-/// the mapper replay the clip: a combo's follow-up re-enters `telegraph`
-/// without the animation ever leaving the attack pose.
+/// Starts an attack windup.
 void _beginChop(Brawler brawler, double windup) {
   brawler
     ..windup = windup
@@ -202,8 +197,7 @@ void coordinateAggro(World world) {
         !health.alive ||
         brawler.phase.state == BrawlPhase.dying ||
         brawler.phase.state == BrawlPhase.staggered ||
-        // A combo keeps the token across its link recover, so a fresh
-        // grant cannot cut the follow-up chop off.
+        // Keep the token through combo links.
         (brawler.phase.state == BrawlPhase.recover && brawler.comboLeft == 0);
     if (done) {
       coordinator.holder = null;

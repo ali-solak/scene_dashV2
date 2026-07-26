@@ -1,12 +1,4 @@
-/// Session 0a — the simulation ceiling, headless.
-///
-/// Spawns exactly N barbarians into the full combat cascade (every
-/// fixed-step and update system; scene-gated visuals skip themselves) and
-/// measures whole-frame cost at one fixed step per frame. The second
-/// series adds four lava pits: `tickLavaPits` is the one O(pits × N)
-/// system, and its per-enemy `Mired`/`Burning` re-adds also exercise the
-/// `RemoveAfterTracker` row scan — the only quadratic candidates in the
-/// sim.
+/// Headless simulation benchmark.
 ///
 /// Not part of the default suite (no `_test` suffix); run explicitly:
 ///
@@ -92,10 +84,6 @@ double measureFrameMs(int n, {int pits = 0}) {
     ..engaged = true
     ..intermission = 0;
   game.pumpFixed(steps: 1); // flush the queued spawns
-
-  // (The first cook mass-adds `Burning` across the pack in one flush;
-  // the S6 observer guard counts per entity since Session 1, so volume
-  // alone no longer trips it and no seeding workaround is needed.)
 
   game.pumpFixed(steps: warmupSteps);
   final stopwatch = Stopwatch()..start();

@@ -13,22 +13,12 @@ typedef NodeTranslation<T> =
 /// mutable local transform matrix.
 typedef NodeTransformWriter<T> = void Function(T source, Matrix4 target);
 
-/// Hand-written system adapter that writes each entity's transform onto its
-/// bound [SceneNode] node.
+/// Writes entity transforms to scene nodes.
 ///
-/// Each entity's candidate matrix is composed into a reused scratch (no
-/// per-entity `Matrix4` allocation) and written onto the node — with
-/// [Node.markTransformDirty] so `flutter_scene` recomputes world transforms —
-/// **only when it differs** from the node's current matrix. Entities that did
-/// not move therefore never invalidate the scene's transform and bounds
-/// caches. Entities tagged [PhysicsDriven] are excluded — their node transform
-/// is authored elsewhere (the `PhysicsWorld`'s own fixed-step interpolation for
-/// dynamic bodies, or a kinematic character controller), so writing it here
-/// would fight that authority and stutter the interpolated pose.
+/// Skips [PhysicsDriven] entities.
 final class SyncSceneNodesAdapter<T extends Object>
     implements SystemAdapter, SystemAccessProvider {
-  /// Mutating the bound node's transform counts as writing [SceneNode],
-  /// matching how generated systems declare node mutation through the ref.
+  /// Writes [SceneNode] transforms.
   @override
   SystemAccess get access =>
       SystemAccess(reads: <Type>{T}, writes: const <Type>{SceneNode});
@@ -36,9 +26,7 @@ final class SyncSceneNodesAdapter<T extends Object>
   final NodeTransformWriter<T> _writeTransform;
   late final Query2<T, SceneNode> _query;
 
-  /// Reused candidate matrix, seeded from the node's current matrix each
-  /// entity so a partial writer (translation-only) keeps the cells it does
-  /// not own.
+  /// Reused transform matrix.
   final Matrix4 _scratch = Matrix4.zero();
 
   /// Number of nodes actually written (not skipped) by the last [run].

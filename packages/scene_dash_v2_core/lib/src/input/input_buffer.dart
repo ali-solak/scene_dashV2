@@ -1,26 +1,6 @@
-/// A short-lived queue of pressed actions, so an input that arrives during
-/// the wrong phase fires the instant a phase that accepts it begins.
+/// Keeps recent input actions in order.
 ///
-/// an action pressed three frames before recovery ends
-/// must start the roll on recovery's first accepting tick, not be dropped.
-/// Widgets/key handlers [record] `justPressed` edges; gameplay systems
-/// [consume] them when their state machine can act. Entries expire after
-/// [window] seconds, so stale intents never fire long after the press.
-///
-/// A plain generic resource — insert one per action type (or reach it as
-/// `world.buffer<T>()`, which creates it with the defaults) and [record]
-/// on press edges. The frame drivers age every buffer automatically, once
-/// per frame; no aging system to install, nothing to forget.
-///
-/// **The clock is wall time (`FrameTime.unscaledDelta`), by design**:
-/// hitstop and slow motion must not eat buffered inputs — a roll pressed
-/// during the freeze still fires when the freeze ends. A scaled clock
-/// would silently extend the window under slow motion and never expire
-/// entries during a pause. A buffer that genuinely needs a different
-/// clock opts out with `autoAdvance: false` and ticks [advance] itself.
-///
-/// Backed by fixed-length parallel lists used as a ring: no allocation per
-/// press after construction.
+/// Entries use wall time and expire after [window].
 final class InputBuffer<T> {
   /// Seconds a recorded action stays consumable. Inclusive: an entry exactly
   /// [window] old is still live; it expires strictly after.
@@ -83,10 +63,7 @@ final class InputBuffer<T> {
     _length -= 1;
   }
 
-  /// Drops expired entries from the front of the ring. Expiry is lazy —
-  /// entries age out on read, never in [advance] — but pruning the front
-  /// keeps the scan below short. Interior entries can never be older than
-  /// the head, so front-pruning is complete.
+  /// Drops expired entries from the front.
   void _pruneFront() {
     while (_length > 0 && _expired(_head)) {
       _actions[_head] = null;
@@ -110,9 +87,7 @@ final class InputBuffer<T> {
     return false;
   }
 
-  /// Removes and returns the oldest unexpired entry whose action is in
-  /// [actions], or `null` when none matches. The multi-action counterpart of
-  /// [consume] — one call resolves "act on whichever of these came first".
+  /// Removes the oldest entry found in [actions].
   T? consumeAny(Set<T> actions) {
     _pruneFront();
     for (var n = 0; n < _length; n++) {
@@ -146,10 +121,7 @@ final class InputBuffer<T> {
   }
 }
 
-/// Ages every [InputBuffer.autoAdvance] buffer among [resources] by
-/// [unscaledDt] wall seconds. Driver API — the frame loops call it once
-/// per frame right after stamping `FrameTime`, before the `frameStart`
-/// schedule; games never call it.
+/// Advances every automatic input buffer.
 void advanceInputBuffers(Iterable<Object> resources, double unscaledDt) {
   for (final resource in resources) {
     if (resource is InputBuffer && resource.autoAdvance) {

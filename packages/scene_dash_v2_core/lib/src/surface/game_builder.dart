@@ -1,11 +1,3 @@
-/// The registration surface features write against: plain functions over
-/// the carried v1 machinery.
-///
-/// A system is a stateless `void Function(World)`; [addSystem] wraps it in
-/// an internal adapter, builds its `SystemAccess` from `reads:`/`writes:`
-/// (§1.8 of the design), and reaches every carried scheduling capability —
-/// labels, `before:`/`after:` (by function reference), sets, run
-/// conditions, `OnEnter`/`OnExit` — unchanged.
 library;
 
 import '../app/app.dart';
@@ -21,25 +13,17 @@ import '../system/system_adapter.dart';
 import '../world/world.dart';
 import 'observers.dart';
 
-/// A system: stateless, world-in. All state lives in the world; event
-/// cursors are managed per registration by the framework.
+/// A system that updates the world.
 typedef WorldSystem = void Function(World world);
 
-/// A feature: a plain function over the builder — v1's plugin body without
-/// the class.
+/// Registers one game feature.
 typedef Feature = void Function(GameBuilder game);
 
-/// What features register against — the one builder (D12): v1's
-/// `AppBuilder` with the new surface folded in as members. Everything a
-/// feature could want is a member here; there is no inner builder to
-/// reach through. `SceneGame` and `TestGame` construct one and hand it to
-/// each feature.
+/// Registers game features.
 final class GameBuilder {
   final App _app;
 
-  /// When true, a system registered without `reads:`/`writes:` is a boot
-  /// error instead of being silently excluded from conflict detection
-  /// (§1.8).
+  /// Rejects systems without access declarations.
   final bool strictAccess;
 
   final Map<Function, SystemLabel> _labels = <Function, SystemLabel>{};
@@ -52,25 +36,9 @@ final class GameBuilder {
 
   /// Registers [system] into [schedule].
   ///
-  /// [reads]/[writes] declare the component types the system touches; they
-  /// feed the existing startup conflict detector. Omitting both marks the
-  /// system *undeclared* — excluded from detection (and rejected when
-  /// [strictAccess]). In debug mode, declared access is compared against
-  /// the component types the system's queries actually construct, and
-  /// drift is reported once through the app's diagnostics sink.
-  ///
-  /// [before]/[after] order against other systems *by function reference*
-  /// — register the referenced system first. [runIf], [inSet] and the
-  /// schedule labels are the carried machinery.
-  ///
-  /// [independentOf] exempts exactly this system's conflict pairing with
-  /// the listed systems (by function reference, register them first): the
-  /// author asserts the pair is independent — disjoint entities, disjoint
-  /// fields of a shared component — and the detector trusts it, in both
-  /// directions. Ordering is untouched (the pair stays unordered, ties
-  /// break by registration order) and every other pairing keeps the full
-  /// net. Prefer a real `after:` edge when order genuinely matters; this
-  /// is for the pairs the entity-blind detector cannot see are safe.
+  /// [reads] and [writes] enable conflict checks.
+  /// Systems in [before], [after], and [independentOf] must already exist.
+  /// [independentOf] skips conflict checks for those systems.
   void addSystem(
     ScheduleLabel schedule,
     WorldSystem system, {
@@ -92,10 +60,7 @@ final class GameBuilder {
       );
     }
     final systemLabel = _labelFor(system, label);
-    // Fixed schedules flip the world's fixed context for the body and its
-    // run condition, so `world.dt` and `every()` pick the right delta
-    // (D7, D9). State lifecycle schedules run at the frame boundary:
-    // frame context.
+    // Fixed schedules use fixed time.
     final fixed = schedule == Schedules.fixedUpdate;
     final adapter = declared
         ? _DeclaredFunctionSystem(
@@ -136,49 +101,24 @@ final class GameBuilder {
     );
   }
 
-  /// Tunes the event channel for [T] before boot — the carried
-  /// `addEvent(retainedUpdates:)`. Channels otherwise auto-register with
-  /// the default retention on first `emit`/`events<T>()`.
+  /// Configures the event channel for [T].
   void configureEvent<T extends Object>({int? retainedUpdates = 8}) =>
       world.registerEvent<T>(retainedUpdates: retainedUpdates);
 
-  /// Declares the order of [sets] within [schedule], once per schedule —
-  /// the cross-feature phase list. Features join a phase with `inSet:` on
-  /// [addSystem] and never reference each other's systems.
+  /// Orders [sets] within [schedule].
   void configureSets(ScheduleLabel schedule, List<SystemSet> sets) =>
       _app.configureSets(schedule, sets);
 
-  /// Registers a classic plugin — the migration escape hatch.
+  /// Registers a plugin.
   void addPlugin(Plugin plugin) => _app.addPlugin(plugin);
 
-  /// Registers a state machine for [S] starting at [initial] — the carried
-  /// v1 machinery; systems register into `OnEnter(value)`/`OnExit(value)`
-  /// through [addSystem].
+  /// Registers state [S] with [initial].
   void addState<S extends Object>(S initial) => _app.addState<S>(initial);
 
-  /// Registers component observers for [T]: [onAdd] fires when an entity
-  /// gains a [T], [onRemove] when it loses one — [onRemove] receives the
-  /// still-live removed instance. Explicit and per feature; multiple
-  /// observers per type fire in registration order.
+  /// Runs [onAdd] and [onRemove] after [T] changes.
   ///
-  /// Observers fire during the command-boundary flush, immediately after
-  /// the individual change applies, identically on device and under
-  /// `TestGame` (S1). Despawn strips components, so [onRemove] fires for
-  /// each observed component the entity carried — the "react to Health
-  /// removed" pattern is intended, not incidental (S3). Adding a component
-  /// the entity already has replaces the value, refreshes any
-  /// `removeAfter:` deadline, and fires **nothing**; there is no
-  /// `onChange`, deliberately — in-place object mutation makes honest
-  /// change marking impossible (S4).
-  ///
-  /// Observer bodies may use the deferred verbs (`add`, `remove`, `spawn`,
-  /// `despawn` — they land in the same flush) and `world.emit`, but not
-  /// `world.events<T>()`: observers have no registration cursor, so
-  /// observers emit and systems read (S5). Observers sit outside the
-  /// `reads:`/`writes:` conflict model, like resources — declare what your
-  /// *systems* touch; observer access is not detected. An observer
-  /// re-adding or re-removing what it observes loops the flush; a
-  /// debug-mode guard trips after 16 firings of one type per flush (S6).
+  /// Replacing [T] calls neither observer.
+  /// Observers can queue commands and emit events.
   void observe<T extends Object>({
     ComponentObserver<T>? onAdd,
     ComponentObserver<T>? onRemove,
@@ -188,15 +128,13 @@ final class GameBuilder {
   /// ever appear in spawn lists (never queried). Idempotent.
   void registerComponent<T extends Object>() => world.ensureObjectStore<T>();
 
-  /// Registers the tag store for [T]. Tags always need this — a tag store
-  /// cannot be created from a spawned instance. Idempotent.
+  /// Registers the tag store for [T].
   void registerTag<T>() => world.ensureTagStore<T>();
 
   SystemLabel _labelFor(WorldSystem system, String? override) {
     final existing = _labels[system];
     if (existing != null) {
-      // The same function in a second schedule keeps one identity (the
-      // profiler records per (label, schedule)).
+      // Keep one identity across schedules.
       return existing;
     }
     final label = SystemLabel(
@@ -218,9 +156,7 @@ final class GameBuilder {
     return label;
   }
 
-  /// Best-effort function name for labels and messages, parsed from the
-  /// closure's `toString` (`... from Function 'updateProjectiles': ...`);
-  /// anonymous closures fall back to their type.
+  /// Finds a useful function name for logs.
   static String _nameOf(Function system) {
     final text = system.toString();
     final match = RegExp("from Function '([^']+)'").firstMatch(text);
@@ -228,21 +164,16 @@ final class GameBuilder {
   }
 }
 
-/// The per-registration state behind `world.events<T>()`: memoized readers
-/// keyed by event type, owned by the registration so a system re-entering
-/// keeps its cursor.
+/// Stores event readers for one system.
 abstract interface class EventCursorHost {
-  /// The registration's reader for [T], created (at the channel end) on
-  /// first use.
+  /// Returns this system's reader for [T].
   EventReader<T> readerFor<T extends Object>(World world);
 
-  /// Debug bookkeeping: a record query constructed under this system noted
-  /// the component types it touches.
+  /// Records queried component types.
   void noteQueriedTypes(List<Type> types);
 }
 
-/// An undeclared function system: runs the function with the
-/// current-system hook set; contributes nothing to conflict detection.
+/// Runs a system without conflict checks.
 base class _FunctionSystem implements SystemAdapter, EventCursorHost {
   final WorldSystem _system;
   final SystemLabel _label;
@@ -277,8 +208,7 @@ base class _FunctionSystem implements SystemAdapter, EventCursorHost {
     final existing = _readers[T];
     if (existing != null) return existing as EventReader<T>;
     world.registerEvent<T>();
-    // From the channel start, so events emitted just before this
-    // registration's first run are not missed.
+    // Include events sent before the first run.
     final reader = world.eventChannel<T>().readerFromStart();
     _readers[T] = reader;
     return reader;
@@ -291,9 +221,7 @@ base class _FunctionSystem implements SystemAdapter, EventCursorHost {
   String toString() => _label.id;
 }
 
-/// A declared function system: additionally carries its hand-written
-/// [SystemAccess] for the conflict detector, and (in debug mode) warns once
-/// when the queries it actually constructs drift from the declaration.
+/// Runs a system with conflict checks.
 final class _DeclaredFunctionSystem extends _FunctionSystem
     implements SystemAccessProvider {
   @override
@@ -301,8 +229,7 @@ final class _DeclaredFunctionSystem extends _FunctionSystem
 
   final void Function(String message)? _diagnostics;
   Set<Type>? _driftReported;
-  // Built once: noteQueriedTypes runs per query construction per frame in
-  // debug mode, so the declared set must not be rebuilt per call.
+  // Built once for debug query checks.
   late final Set<Type> _declared = <Type>{...access.reads, ...access.writes};
 
   _DeclaredFunctionSystem(

@@ -1,11 +1,4 @@
-/// The slice's single import surface for flutter_scene's particle system.
-///
-/// flutter_scene 0.19 ships these under `lib/src/` only, so the
-/// implementation imports are confined here; when upstream barrels them,
-/// only this file changes.
-///
-/// Import with a prefix (`as fx`): the particle `SphereShape`/`BoxShape`
-/// collide with the physics collider shapes in the main barrel.
+/// Particle imports.
 library;
 
 // ignore_for_file: implementation_imports

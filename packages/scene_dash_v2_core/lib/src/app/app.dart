@@ -18,13 +18,7 @@ import '../world/world.dart';
 import 'app_builder.dart';
 import 'plugin.dart';
 
-/// The pure-Dart ECS engine: a [World] plus a set of named [Schedule]s and the
-/// plugin/registration lifecycle.
-///
-/// [App] is scene-agnostic by design — the core package must not depend on
-/// `flutter_scene`. The `scene_dash_flutter_scene` package wraps an [App] in a
-/// `Game` that owns the `Scene`, attaches the frame driver and exposes
-/// `start()`/`onTick`. Tests and headless simulations can drive [App] directly.
+/// Runs a [World] through named schedules.
 final class App implements AppBuilder {
   /// The ECS world this app operates on.
   final World world = World();
@@ -85,10 +79,7 @@ final class App implements AppBuilder {
       // mode (the world's tracking sits inside asserts) and reports once
       // per system.
       world.onNestedQuery = sink;
-      // Surface the one silent failure mode of bounded event retention: a
-      // reader that skips frames (paused, or gated by runIf) losing unread
-      // events. Reported once per event type so a stalled reader does not
-      // spam the sink every frame.
+      // Report dropped unread events once per type.
       world.onEventReaderSkip = (type, skipped) {
         if (!_reportedEventSkips.add(type)) return;
         sink(
@@ -135,10 +126,7 @@ final class App implements AppBuilder {
     final type = plugin.runtimeType;
     final existing = _addedPlugins[type];
     if (existing != null) {
-      // Re-adding the very same instance (e.g. the canonicalized const value)
-      // is an idempotent no-op. A *different* instance of the same type most
-      // likely carries different configuration, and silently dropping it would
-      // hide a real wiring bug — fail loudly instead.
+      // Allow only the same instance twice.
       if (identical(existing, plugin)) return this;
       throw StateError(
         'A $type has already been added. Adding a second, different instance '
@@ -216,8 +204,7 @@ final class App implements AppBuilder {
   Schedule _scheduleFor(ScheduleLabel schedule) {
     var target = _schedules[schedule];
     if (target == null && schedule is StateScheduleLabel) {
-      // Enter/exit schedules are created on demand: state values are not
-      // enumerable generically, so the label itself is the registration.
+      // Create state schedules on demand.
       target = _schedules[schedule] = Schedule(schedule);
     }
     if (target == null) {
@@ -285,10 +272,7 @@ final class App implements AppBuilder {
   /// runs the [Schedules.startup] schedule once, then runs each state
   /// machine's `OnEnter(initial)`.
   ///
-  /// [onStartupFlushed] runs between the two — the surface drivers flush
-  /// deferred spawns there, so the initial `OnEnter` systems see startup
-  /// spawns exactly as a later transition (applied at a frame boundary with
-  /// every earlier spawn flushed) would.
+  /// [onStartupFlushed] runs before initial state entry.
   ///
   /// Transitions queued during startup or the initial enters are not applied
   /// here; they apply at the first [applyStateTransitions].
@@ -311,8 +295,7 @@ final class App implements AppBuilder {
     }
   }
 
-  /// Rejects enter/exit registrations whose state type was never added — a
-  /// forgotten `addState` would otherwise leave those systems silently dead.
+  /// Rejects schedules for unregistered states.
   void _validateStateSchedules() {
     for (final label in _schedules.keys) {
       if (label is! StateScheduleLabel) continue;
@@ -360,12 +343,7 @@ final class App implements AppBuilder {
 
   /// Applies pending state transitions for every registered state machine.
   ///
-  /// For each machine with a queued [NextState]: runs `OnExit(old)`, despawns
-  /// entities carrying a matching [DespawnOnExit], swaps [CurrentState], runs
-  /// `OnEnter(new)` — flushing commands after each schedule pass. Repeats
-  /// until no machine is pending (an `OnEnter` may queue a further
-  /// transition), and throws after [maxStateTransitionPasses] passes so a
-  /// transition cycle fails loudly instead of hanging the frame.
+  /// Applies all queued state changes.
   ///
   /// The standard driver calls this at the frame-start boundary, after the
   /// [Schedules.frameStart] schedule; headless callers invoke it themselves at
@@ -429,9 +407,7 @@ final class App implements AppBuilder {
   /// frame at a safe boundary (typically frame start).
   void updateEvents() => world.updateEvents();
 
-  /// Runs the [Schedules.shutdown] schedule and all cleanup callbacks once,
-  /// then disposes every [Disposable] resource in reverse insertion order —
-  /// dependents die before their dependencies.
+  /// Runs shutdown and disposes resources.
   Future<void> shutdown() async {
     if (!_finalized || _shutdown) return;
     _shutdown = true;

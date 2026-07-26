@@ -1,9 +1,7 @@
 /// A generated leaf silhouette: a pointed blade with a midrib, as an
 /// alpha mask.
 ///
-/// Generated rather than shipped, like the grass blade mask and the lava
-/// crust; it keeps the CC0 asset fence (L5) intact and costs one small
-/// texture upload.
+/// Generates the leaf texture.
 library;
 
 import 'dart:math' as math;
@@ -29,13 +27,12 @@ Uint8List leafPixels(int size) {
         pixels[o + 3] = 0; // outside the blade
         continue;
       }
-      // Soft edge over the outer fifth, so the silhouette is not jagged.
+      // Soft outer edge.
       final edge = (1 - distance / halfWidth) / 0.2;
       final alpha = edge.clamp(0.0, 1.0);
       final soft = alpha * alpha * (3 - 2 * alpha);
 
-      // The midrib: a darker line up the centre, plus a little shading
-      // toward the edges so the leaf is not a flat cutout.
+      // Dark center rib and edge shading.
       final rib = 1 - math.exp(-(distance * distance) / 0.0015) * 0.45;
       final shade = (0.72 + 0.28 * (1 - distance / halfWidth)) * rib;
       final value = (shade * 255).round().clamp(0, 255);

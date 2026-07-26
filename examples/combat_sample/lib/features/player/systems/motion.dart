@@ -175,7 +175,7 @@ void _integrateMotion(
   } else {
     motion.tumble = 0;
   }
-  // The animator has no entity handle, so the floor beat rides here.
+  // Copy knockback state for animation.
   motion.downed = knockback?.incapacitated ?? false;
   motion.airborne = knockback?.airborne ?? false; // falls vs lies
   transform.rotation.setAxisAngle(_up, motion.facing);

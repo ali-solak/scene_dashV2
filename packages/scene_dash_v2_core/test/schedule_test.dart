@@ -220,8 +220,7 @@ void main() {
       final log = <String>[];
       final a = descriptor('a', log);
       final b = descriptor('b', log);
-      // Registration order alone would also run a -> b, so prove the edge is
-      // real: an explicit contradictory constraint must now form a cycle.
+      // A contradictory constraint forms a cycle.
       final app = App()
         ..addSystems(Schedules.update, [a, b], chained: true)
         ..addSystem(

@@ -3,19 +3,7 @@ import '../world/world.dart';
 import 'system_label.dart';
 import 'system_set.dart';
 
-/// Decides whether a system runs on a given schedule pass.
-///
-/// Attached at registration (`addSystem(..., runIf: ...)`) and evaluated every
-/// time the schedule runs, just before the system; returning `false` skips the
-/// system for that pass. Conditions should be cheap reads — typically a
-/// resource check:
-///
-/// ```dart
-/// bool playing(World world) =>
-///     world.resource<GameState>().status == GameStatus.playing;
-///
-/// app.addSystem(movePlayerSystem, schedule: Schedules.update, runIf: playing);
-/// ```
+/// Decides whether a system runs.
 typedef RunCondition = bool Function(World world);
 
 /// A single system registered into a schedule, with its ordering constraints.

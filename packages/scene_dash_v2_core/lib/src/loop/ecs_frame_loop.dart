@@ -6,32 +6,18 @@ import '../time/fixed_time.dart';
 import '../time/frame_time.dart';
 import '../time/game_clock.dart';
 
-/// Scene-free frame dispatcher: maps `flutter_scene` lifecycle callbacks onto
-/// Scene-Dash schedules and updates the time resources.
-///
-/// Kept independent of `flutter_scene` so the frame/fixed/update dispatch is
-/// unit-testable without a live `Scene` or GPU. [Game] and the internal scene
-/// driver both delegate here.
+/// Runs frame schedules and updates time.
 final class EcsFrameLoop {
   /// The engine this loop drives.
   final App app;
 
-  /// Optional hook called at the start of [update], before the `update`
-  /// schedule. [Game] does not use it — mounting happens at every command
-  /// boundary instead (see [onCommandBoundary]) — but custom drivers can hook
-  /// pre-update work here.
+  /// Runs before the update schedule.
   final void Function()? onBeforeUpdate;
 
-  /// Called after a schedule has run and flushed ECS commands — after
-  /// [frameStart], after each [fixedStep], after the `postPhysics` schedule,
-  /// and after the `update` schedule.
-  /// [Game] mounts newly bound scene nodes here, so nodes spawned by any
-  /// schedule are parented by the time the next schedule runs (in particular,
-  /// gameplay `update` systems always see already-mounted nodes).
+  /// Runs after each command flush.
   final void Function()? onCommandBoundary;
 
-  /// Called at the end of [update] (after `renderSync`, before the scene
-  /// renders) — a safe boundary to flush deferred scene-graph mutations.
+  /// Runs after render sync.
   final void Function()? onFrameEnd;
 
   EcsFrameLoop(
@@ -50,25 +36,13 @@ final class EcsFrameLoop {
     if (!resources.contains<GameClock>()) resources.insert(GameClock());
   }
 
-  /// Frame start: apply the [GameClock] to the raw wall delta, update
-  /// [FrameTime], run [Schedules.frameStart], apply pending state transitions
-  /// (OnExit/OnEnter), then advance event channels for the new frame.
-  ///
-  /// Returns the scaled delta. The driver must feed that value — not the raw
-  /// one — to the scene tick (`Scene.update`), which is what slows or halts
-  /// the physics accumulator, component updates, and animations together
-  /// with the ECS; [Game.onTick] does this.
-  ///
-  /// Transitions apply before [onCommandBoundary], so nodes spawned by
-  /// `OnEnter` systems are mounted before the frame's fixed/update steps.
+  /// Starts a frame and returns its scaled delta.
   double frameStart(Duration elapsed, double deltaSeconds) {
     // Advance the profiler frame counter (if profiling is enabled) at the one
     // per-frame boundary, so timings can be attributed to a frame number.
     app.profiler?.beginFrame();
     final clock = app.world.resources.get<GameClock>();
-    // Read the scale before serving the freeze: a freeze shorter than one
-    // frame must still freeze the frame it lands on, so any nonzero
-    // remainder zeroes this frame and the wall delta is deducted after.
+    // Apply a partial freeze to its full frame.
     final scaledDelta = deltaSeconds * clock.effectiveScale;
     clock.advanceFreeze(deltaSeconds);
     app.world.resources.get<FrameTime>()
@@ -76,9 +50,7 @@ final class EcsFrameLoop {
       ..unscaledDelta = deltaSeconds
       ..elapsed = elapsed
       ..frame += 1;
-    // Input buffers age on the wall clock, before frameStart systems read
-    // them — automatic, so the press window can never silently become
-    // infinite because a game forgot its aging system.
+    // Age inputs before frame start.
     advanceInputBuffers(app.world.resources.values, deltaSeconds);
     app.runSchedule(Schedules.frameStart);
     app.applyStateTransitions();
@@ -87,12 +59,7 @@ final class EcsFrameLoop {
     return scaledDelta;
   }
 
-  /// Fixed step (before the scene physics step): update [FixedTime] and run
-  /// [Schedules.fixedPrePhysics]. May run several times per frame.
-  ///
-  /// After the schedule, `removeAfter:` deadlines advance one step — after,
-  /// so a system refreshing a deadline this step always beats its expiry —
-  /// and any expiries flush with the step's command boundary.
+  /// Runs one fixed step.
   void fixedStep(double fixedDt) {
     app.world.resources.get<FixedTime>()
       ..delta = fixedDt

@@ -1,7 +1,4 @@
-/// Shared menu chrome. [MenuShell] frames the title, skill and death
-/// screens alike: the scrim, the SafeArea, and the panel with a scrolling
-/// body over a pinned footer. [BracketAction] is the `[ LABEL ]` text
-/// button those screens act with, deliberately not a filled pill.
+/// Shared menu layout and actions.
 library;
 
 import 'package:flutter/material.dart';
@@ -21,15 +18,12 @@ class MenuShell extends StatelessWidget {
   /// The scrolling part.
   final Widget child;
 
-  /// Pinned below [child], never scrolled away: in landscape the panel is
-  /// taller than the screen, and the screen's primary action must not sit
-  /// below the fold.
+  /// Fixed footer below [child].
   final Widget? footer;
 
   final Color scrim;
 
-  /// A CEILING, not a width: the panel shrinks below this on a narrow
-  /// screen instead of overflowing it.
+  /// Maximum panel width.
   final double maxWidth;
 
   /// Draws the bordered panel. The death screen is bare text on a scrim.
@@ -85,8 +79,7 @@ class BracketAction extends StatelessWidget {
 
   final String label;
 
-  /// Null renders the action disabled; it keeps its full size (so a row
-  /// never resizes as it becomes affordable) but does not respond.
+  /// Null disables the action.
   final VoidCallback? onPressed;
   final Color color;
 

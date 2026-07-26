@@ -116,8 +116,7 @@ void main() {
       final single = Single<Position>(world.query1<Position>());
       expect(single.entity, first);
 
-      // The match set changes, but the cached resolution stays stable —
-      // that is the per-run contract.
+      // The cached result stays stable during the run.
       world.removeNow<Position>(first);
       final second = _spawn(world, position: Position(2, 2));
       expect(single.entity, first, reason: 'cached within the run');

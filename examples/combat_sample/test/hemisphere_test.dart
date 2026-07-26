@@ -1,6 +1,4 @@
-/// The pancake fix (NOTES.md B1): `harmoniseRotationHemispheres` makes
-/// cross-clip blending take the short slerp path. Above all it must NOT
-/// change any pose; a bad sign flip silently breaks every animation.
+/// Rotation hemisphere tests.
 library;
 
 // ignore_for_file: implementation_imports
@@ -113,9 +111,7 @@ void main() {
   });
 
   test('the anchor does NOT drift as clips are aligned in turn', () {
-    // The bug this pins: the anchor used to be overwritten by each clip's
-    // first keyframe, so C aligned to B instead of A and could come out
-    // antipodal to A. Every clip must align to the FIRST clip.
+    // Every clip aligns to the first clip.
     final a = Quaternion.axisAngle(Vector3(0, 1, 0), 0.0)..normalize();
     final b = Quaternion.axisAngle(Vector3(0, 1, 0), 2.6)..normalize();
     final c = Quaternion.axisAngle(Vector3(0, 1, 0), 5.2)..normalize();

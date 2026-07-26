@@ -2,11 +2,7 @@ import 'component_store.dart';
 import 'object_store.dart';
 import 'tag_store.dart';
 
-/// Maps a component [Type] to its single [ComponentStore].
-///
-/// Until code generation exists (Phase 2), stores are registered manually. The
-/// registry is the source of truth queries and commands consult to find the
-/// store for a component type.
+/// Maps component types to stores.
 final class StoreRegistry {
   final Map<Type, ComponentStore> _stores = <Type, ComponentStore>{};
   final List<ComponentStore> _all = <ComponentStore>[];
@@ -15,11 +11,7 @@ final class StoreRegistry {
   /// store it might belong to.
   Iterable<ComponentStore> get all => _all;
 
-  /// Every registered `(type, store)` pair, in registration order.
-  ///
-  /// The reverse view of the type-keyed map, for diagnostics that need to
-  /// name what a store holds (`World.debugComponentsOf`). Allocates a record
-  /// per pair — debug-only; runtime code uses [all] or the typed lookups.
+  /// Stores with their component types.
   Iterable<(Type, ComponentStore)> get entries =>
       _stores.entries.map((entry) => (entry.key, entry.value));
 

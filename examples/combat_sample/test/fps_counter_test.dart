@@ -1,6 +1,4 @@
-/// The frame-rate readout. Here because the counter once shipped stuck
-/// at 0: its `Ticker` lived in a `late final` field nothing read except
-/// `dispose`, so it was never started. Only running it shows that.
+/// Frame rate counter tests.
 library;
 
 import 'package:combat_sample/hud/fps.dart';

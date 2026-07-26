@@ -1,7 +1,4 @@
-/// The non-generic maintenance surface of an [EventChannel].
-///
-/// The world stores channels behind this interface so it can advance them each
-/// frame with a direct (non-dynamic) call regardless of their event type.
+/// Untyped event channel controls.
 abstract interface class EventChannelMaintenance {
   /// Reclaims consumed events; see [EventChannel.update].
   ///
@@ -9,52 +6,23 @@ abstract interface class EventChannelMaintenance {
   /// the retention window this pass (`0` when no reader fell behind).
   int update();
 
-  /// Number of events currently buffered (sent but not yet reclaimed).
-  /// Diagnostics surface — the inspector snapshot reads it.
+  /// Number of buffered events.
   int get pendingCount;
 
-  /// Whether the most recent [update] found a reader that lost events to
-  /// the retention window. Diagnostics surface — the inspector snapshot
-  /// reads it; cleared by the next pass where nobody falls behind.
+  /// Whether a reader lost events during the last [update].
   bool get readerLagged;
 
-  /// Appends [event] without a static type argument. Used by [World.sendEvent]
-  /// to route an event to the channel for its *runtime* type, so a
-  /// statically-widened value still lands in the right channel. Throws if
-  /// [event] is not an instance of this channel's event type.
+  /// Adds [event] using its runtime type.
   void sendDynamic(Object event);
 
   /// Discards every buffered event; see [EventChannel.clear].
   void clear();
 }
 
-/// A buffered, multi-reader event channel for events of type [T].
+/// A buffered event channel with independent readers.
 ///
-/// Events are appended by writers and read by any number of [EventReader]s,
-/// each of which keeps its own independent cursor. One reader consuming events
-/// never advances another reader's cursor.
-///
-/// [update] reclaims the prefix of events that every registered reader has
-/// already observed, so the buffer does not grow without bound.
-///
-/// ## Retention
-///
-/// A reader that stops draining (a system that early-returns while the game is
-/// paused, for example) would otherwise pin the buffer forever. Each event is
-/// therefore kept for at most [retainedUpdates] maintenance passes: readers
-/// that lag further behind skip the dropped events instead of leaking memory.
-///
-/// The default of `8` is deliberately wider than Bevy's two-frame window,
-/// because maintenance runs once per RENDER frame while fixed-step systems
-/// only run when the fixed accumulator fills: at high refresh rates a render
-/// frame can carry ZERO fixed steps, and under a two-pass window an input
-/// edge could expire before its fixed-step reader ever got a turn — a cast
-/// key that "sometimes needs two presses" on a 144 Hz desktop and never
-/// fails on a slow phone. Eight passes keeps events alive across the
-/// zero-step frames of any realistic display while still expiring what
-/// nobody reads. Systems that read their channels every frame never miss
-/// anything at any setting. Pass `null` to retain events until every reader
-/// has consumed them, however long that takes.
+/// Unread events remain for [retainedUpdates] updates.
+/// Use `null` to keep them until every reader consumes them.
 final class EventChannel<T> implements EventChannelMaintenance {
   /// Creates a channel that keeps unread events for at most [retainedUpdates]
   /// calls to [update], or indefinitely when [retainedUpdates] is `null`.
@@ -91,21 +59,13 @@ final class EventChannel<T> implements EventChannelMaintenance {
   @override
   bool get readerLagged => _readerLagged;
 
-  /// Whether the channel currently buffers any events. An event stays
-  /// buffered until every reader has consumed it, capped by the retention
-  /// window (see [EventChannel] docs) — at most [retainedUpdates]
-  /// maintenance passes after it was sent. The `hasEvents` run condition
-  /// keys off this.
+  /// Whether the channel contains events.
   bool get isNotEmpty => _events.isNotEmpty;
 
   /// Whether the channel buffers no events. See [isNotEmpty].
   bool get isEmpty => _events.isEmpty;
 
-  /// Whether any reader is registered on this channel. Producers that do
-  /// non-trivial work per event (the physics entity-resolution bridge, for
-  /// example) key off this to skip production entirely while nothing
-  /// consumes — a reader-less channel would expire the events unread
-  /// anyway.
+  /// Whether the channel has readers.
   bool get hasReaders => _readers.isNotEmpty;
 
   /// Appends an event to the channel.
@@ -122,11 +82,7 @@ final class EventChannel<T> implements EventChannelMaintenance {
     return reader;
   }
 
-  /// Creates a reader positioned at the oldest still-buffered event, so it
-  /// also observes events sent before this call (bounded by the retention
-  /// window). The v2 surface uses this for lazily-created per-registration
-  /// cursors, which must not miss events emitted just before a system's
-  /// first run.
+  /// Creates a reader at the oldest buffered event.
   EventReader<T> readerFromStart() {
     final reader = EventReader<T>._(this).._cursor = _base;
     _readers.add(reader);
@@ -136,14 +92,7 @@ final class EventChannel<T> implements EventChannelMaintenance {
   /// Creates a writer bound to this channel.
   EventWriter<T> writer() => EventWriter<T>._(this);
 
-  /// Discards every buffered event, read or not — the event side of
-  /// `World.reset`.
-  ///
-  /// Every reader's cursor is snapped to the new end, so readers created
-  /// before the clear stay registered and simply observe nothing until new
-  /// events arrive; the retention window restarts empty. Unlike [update],
-  /// nothing is delivered or counted as skipped — cleared events were
-  /// deliberately discarded, not lost to lag.
+  /// Discards every buffered event.
   @override
   void clear() {
     final end = _end;
@@ -155,25 +104,14 @@ final class EventChannel<T> implements EventChannelMaintenance {
     _retainedEnds.clear();
   }
 
-  /// Drops the prefix of events that all readers have already consumed, and
-  /// force-expires events older than the retention window (see [EventChannel]
-  /// docs) so a stalled reader cannot pin the buffer.
+  /// Removes consumed and expired events.
   ///
-  /// If there are no readers, every event is dropped.
-  ///
-  /// Returns the largest number of unread events any single reader lost to
-  /// the retention window this pass (`0` when nobody fell behind), so the app
-  /// can surface a diagnostic for readers that skip frames.
+  /// Returns the largest number of events missed by one reader.
   @override
   int update() {
     _readerLagged = false;
     if (_readers.isEmpty) {
-      // v2: a channel can exist before its first reader (per-registration
-      // cursors are created lazily on a system's first run), so a
-      // reader-less channel expires by the retention window like any lagging
-      // reader would — events emitted just before that first run survive to
-      // it. Unbounded retention with no readers would leak, so that case
-      // keeps the original drop-everything behavior.
+      // Apply retention before the first reader exists.
       final maxPasses = retainedUpdates;
       if (maxPasses == null) {
         _base = _end;
@@ -217,8 +155,7 @@ final class EventChannel<T> implements EventChannelMaintenance {
     var minCursor = _end;
     var maxSkipped = 0;
     for (final reader in _readers) {
-      // A reader that lagged past the retention window misses the expired
-      // events; its cursor jumps forward so the prefix can be reclaimed.
+      // Advance readers past expired events.
       final lag = floor - reader._cursor;
       if (lag > 0) {
         reader._cursor = floor;
@@ -264,14 +201,7 @@ final class EventReader<T> {
     _cursor = _channel._end;
   }
 
-  /// Consumes every unread event, returning whether there were any.
-  ///
-  /// Allocates nothing and ignores payloads — use for *signal* events, where a
-  /// system only needs to know that something happened (a fire button released,
-  /// a restart requested), not the event data. Advancing the cursor here is what
-  /// gives once-per-occurrence semantics across a multi-step fixed loop: the
-  /// first step that runs consumes the signal, later steps in the same frame see
-  /// nothing.
+  /// Consumes unread events and reports whether any existed.
   bool consume() {
     final had = hasUnread;
     _cursor = _channel._end;

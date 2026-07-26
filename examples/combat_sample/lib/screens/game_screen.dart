@@ -1,8 +1,4 @@
-/// The game itself: the app's scene view under controls under HUD, scoped
-/// by [GameHost] so the widgets below can reach the world.
-///
-/// Takes a booted game and the view the app already mounted — the view is
-/// reparented here rather than rebuilt, so its reveal gate does not restart.
+/// Displays a running game.
 library;
 
 import 'package:flutter/material.dart';

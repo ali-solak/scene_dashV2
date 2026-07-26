@@ -105,7 +105,7 @@ void main() {
 
 enum Mood { calm, furious }
 
-/// A component that describes itself — the [Machine] carrier shape.
+/// A self describing component.
 final class Described {
   final Machine<Mood> mood;
   Described(this.mood);

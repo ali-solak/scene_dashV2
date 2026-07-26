@@ -3,10 +3,7 @@ import 'package:test/test.dart';
 
 enum Phase { idle, startup, active, recovery }
 
-/// Edge-exactness coverage for [Machine] — every consequence of the M2
-/// latch rule by name. The latch is the whole design: `go()` raises edges
-/// immediately, the next `tick()` lowers them, so an edge is true for
-/// exactly one tick-window (`GameTimer.justFinished` semantics for modes).
+/// Machine edge tests.
 void main() {
   group('Machine edge latch', () {
     test('go-then-tick visibility window: edges are true from go until '
@@ -87,9 +84,7 @@ void main() {
   group('Machine time', () {
     test('elapsed accumulates the owner-passed dt and go zeroes it', () {
       final m = Machine<Phase>(Phase.idle);
-      // A scripted dt sequence: normal steps, a freeze (dt 0, exactly what
-      // the fixed loop delivers under pause/hitstop: no ticks at all — the
-      // zero here doubles as "a tick that adds nothing"), slow motion.
+      // Normal steps, a freeze, then slow motion.
       m.tick(0.5);
       m.tick(0);
       m.tick(0.25);

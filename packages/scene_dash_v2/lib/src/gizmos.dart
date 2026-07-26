@@ -15,30 +15,10 @@ import 'package:flutter_scene/scene.dart'
 import 'package:scene_dash_v2_core/advanced.dart';
 import 'package:vector_math/vector_math.dart';
 
-/// The fixed gizmo palette. `flutter_scene` instancing is transform-only
-/// (no per-instance color, still true in 0.19), so each color is its own
-/// instanced pool and arbitrary per-call colors are not offered.
+/// Available gizmo colors.
 enum GizmoColor { green, red, blue, yellow }
 
-/// Immediate-mode debug drawing: any system submits shapes for the current
-/// frame; nothing persists.
-///
-/// A resource inserted by [GizmosPlugin]; inject with `@Resource()`:
-///
-/// ```dart
-/// @System()
-/// void probeGround(@Resource() Gizmos gizmos, ...) {
-///   gizmos.ray(origin, down, groundProbeDistance, color: GizmoColor.yellow);
-///   gizmos.sphere(playerPos, hitRadius, color: GizmoColor.red);
-/// }
-/// ```
-///
-/// Submissions are cleared at frame start and flushed into instanced meshes
-/// at `renderSync`, so a shape submitted from any schedule draws for exactly
-/// that frame. Calls write plain floats into fixed-capacity buffers — no
-/// allocation — and become no-ops while [enabled] is `false`, so call sites
-/// can stay in shipping code. Overflow past a shape's capacity drops the
-/// shape and counts it in [droppedThisFrame].
+/// Debug shapes for the current frame.
 final class Gizmos {
   /// Capacities are per color, per shape kind.
   Gizmos({
@@ -55,20 +35,13 @@ final class Gizmos {
          growable: false,
        );
 
-  /// Master switch: while `false`, every submission returns immediately.
-  ///
-  /// It also controls rendering, but as a *startup* decision: [GizmosPlugin]
-  /// only builds and attaches the instanced pools when this is `true` at the
-  /// time the setup system runs, so a disabled game pays no per-frame draw
-  /// cost. Set it before `start()`; toggling it at runtime affects
-  /// submissions but not whether the pools exist.
+  /// Whether gizmos are enabled.
   bool enabled = true;
 
   /// Shapes dropped this frame because a buffer was full.
   int droppedThisFrame = 0;
 
-  /// Per-color staging buffers, indexed by [GizmoColor.index]. Read by the
-  /// flush system; not part of the public API surface.
+  /// Per color staging buffers.
   final List<GizmoBucket> buckets;
 
   // Scratch for ray's endpoint computation.
@@ -260,21 +233,7 @@ void composeLineTransform(
   s[15] = 1;
 }
 
-/// The debug-gizmo render layer as a feature — opt-in, actively added:
-///
-/// ```dart
-/// final game = await SceneGame.boot(
-///   features: [installGizmos(enabled: showDebugGizmos), installPlayer, ...],
-/// );
-/// ```
-///
-/// Installs the [Gizmos] resource and the clear/flush systems. Pools build
-/// lazily on the first *enabled* flush, so [enabled] — and
-/// `world.gizmos.enabled` at any later moment — is a true runtime toggle:
-/// off means zero draw calls and zero vertex work, on builds (or re-shows)
-/// the pools that frame. Without this feature, `world.gizmos` is a disabled
-/// recorder — submission calls in shipping code stay safe no-ops and
-/// nothing is ever drawn.
+/// Installs debug shape rendering.
 Feature installGizmos({
   int sphereCapacity = 64,
   int lineCapacity = 128,
@@ -293,16 +252,7 @@ Feature installGizmos({
   };
 }
 
-/// Immediate-mode debug drawing for scene_dash games — the classic-plugin
-/// form of [installGizmos].
-///
-/// Inserts the [Gizmos] resource, clears submissions each frame start and
-/// flushes them into per-[GizmoColor], per-shape instanced pools at
-/// `renderSync`. Pools draw depth-tested, unlit and semi-transparent, so
-/// gizmos read against the scene without a dedicated overlay pass. The
-/// pools are built lazily on the first flush that finds [Gizmos.enabled]
-/// `true` (and hidden again whenever it goes `false`), so the flag is a
-/// runtime toggle and a disabled layer costs nothing per frame.
+/// Adds debug drawing to a game.
 final class GizmosPlugin extends Plugin {
   /// Per-color, per-shape instance capacities for the [Gizmos] resource.
   final int sphereCapacity;
@@ -349,19 +299,7 @@ final Matrix4 _hidden = Matrix4.diagonal3Values(0, 0, 0);
 
 /// One color's three instanced meshes.
 final class _GizmoPools {
-  // Debug-grade tessellation: instanced draws pay vertex cost for the whole
-  // pool capacity (hidden zero-scale instances included), so a dense sphere
-  // turns thousands of gizmos into millions of debug triangles. The 0.19
-  // geodesic icosphere at one subdivision (80 triangles, evenly
-  // distributed) reads rounder than a low-segment UV sphere at the same
-  // vertex cost.
-  //
-  // Lines deliberately stay stretched unit cuboids rather than 0.19's
-  // LineSegmentsGeometry: that geometry bakes its endpoints into a GPU
-  // buffer at construction with no update path, so an immediate-mode layer
-  // would have to rebuild geometry (and allocate a device buffer) every
-  // frame — breaking this layer's no-per-frame-allocation contract.
-  // Revisit when upstream ships an updatable segment batch (backlog row).
+  // Keep debug geometry inexpensive.
   _GizmoPools(GizmoColor color, GizmoBucket bucket)
     : spheres = _pool(
         IcosphereGeometry(radius: 1, subdivisions: 1),
@@ -402,8 +340,7 @@ final class _GizmoPools {
     return mesh;
   }
 
-  /// The pools' scene node; the flush toggles its visibility with
-  /// [Gizmos.enabled] so a disabled layer submits no draws at all.
+  /// Scene node containing the gizmo pools.
   late final Node node;
 
   void addTo(Scene scene) {
@@ -420,8 +357,7 @@ final class _GizmoPools {
 final class _GizmoClearAdapter implements SystemAdapter, SystemAccessProvider {
   _GizmoClearAdapter(this._gizmos);
 
-  /// Touches only the [Gizmos] resource, which the access model does not
-  /// cover — declared empty deliberately, not left to the fallback.
+  /// Reads no components.
   @override
   SystemAccess get access => SystemAccess.empty;
 
@@ -439,9 +375,7 @@ final class _GizmoClearAdapter implements SystemAdapter, SystemAccessProvider {
 final class _GizmoFlushAdapter implements SystemAdapter, SystemAccessProvider {
   _GizmoFlushAdapter(this.gizmos);
 
-  /// Touches only the [Gizmos] resource and its instanced pools, which the
-  /// access model does not cover — declared empty deliberately, not left to
-  /// the fallback.
+  /// Reads no components.
   @override
   SystemAccess get access => SystemAccess.empty;
 
@@ -464,9 +398,7 @@ final class _GizmoFlushAdapter implements SystemAdapter, SystemAccessProvider {
     }
     var pools = this.pools;
     if (pools == null) {
-      // Lazy: built on the first *enabled* flush, so `enabled` is a runtime
-      // toggle rather than a startup decision. Headless worlds (no Scene)
-      // stay record-only.
+      // Build pools on first use.
       final scene = _world.resources.tryGet<Scene>();
       if (scene == null) return;
       pools = List<_GizmoPools>.generate(

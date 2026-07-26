@@ -38,11 +38,17 @@ const _fixed = InspectorSnapshot(
   ],
   systems: [
     SystemSnapshot(
-        label: 'cheapSystem', schedule: 'update', lastMs: 0.1,
-        averageMs: 0.1),
+      label: 'cheapSystem',
+      schedule: 'update',
+      lastMs: 0.1,
+      averageMs: 0.1,
+    ),
     SystemSnapshot(
-        label: 'slowSystem', schedule: 'update', lastMs: 4.5,
-        averageMs: 3.2),
+      label: 'slowSystem',
+      schedule: 'update',
+      lastMs: 4.5,
+      averageMs: 3.2,
+    ),
   ],
   events: [
     EventChannelSnapshot(type: 'HitLanded', pending: 3, readerLagged: true),
@@ -57,14 +63,15 @@ Widget _panel({
     home: Scaffold(
       body: InspectorPanel(
         snapshot: snapshot,
-        describe: describe ??
+        describe:
+            describe ??
             (index, generation) => EntityDetailSnapshot(
-                  index: index,
-                  generation: generation,
-                  name: 'Boss',
-                  lines: const ['hp 75/100', 'Pos'],
-                  stale: false,
-                ),
+              index: index,
+              generation: generation,
+              name: 'Boss',
+              lines: const ['hp 75/100', 'Pos'],
+              stale: false,
+            ),
       ),
     ),
   );
@@ -99,27 +106,31 @@ void main() {
   testWidgets('filters entities by Name substring', (tester) async {
     await tester.pumpWidget(_panel());
 
-    await tester.enterText(
-        find.byKey(const Key('inspector-filter')), 'bo');
+    await tester.enterText(find.byKey(const Key('inspector-filter')), 'bo');
     await tester.pump();
 
     expect(find.text('Entity(0 v0) "Boss"'), findsOneWidget);
     expect(find.text('Entity(1 v0) "Grunt"'), findsNothing);
   });
 
-  testWidgets('requests detail only on tap, and back returns to the list',
-      (tester) async {
+  testWidgets('requests detail only on tap, and back returns to the list', (
+    tester,
+  ) async {
     var describeCalls = 0;
-    await tester.pumpWidget(_panel(describe: (index, generation) {
-      describeCalls++;
-      return EntityDetailSnapshot(
-        index: index,
-        generation: generation,
-        name: 'Boss',
-        lines: const ['hp 75/100'],
-        stale: false,
-      );
-    }));
+    await tester.pumpWidget(
+      _panel(
+        describe: (index, generation) {
+          describeCalls++;
+          return EntityDetailSnapshot(
+            index: index,
+            generation: generation,
+            name: 'Boss',
+            lines: const ['hp 75/100'],
+            stale: false,
+          );
+        },
+      ),
+    );
 
     expect(describeCalls, 0, reason: 'summary rendering must stay lazy');
 
@@ -134,15 +145,17 @@ void main() {
     expect(describeCalls, 1, reason: 'closing detail asks for nothing');
   });
 
-  testWidgets('sort-by-ms toggle reorders the systems list',
-      (tester) async {
+  testWidgets('sort-by-ms toggle reorders the systems list', (tester) async {
     await tester.pumpWidget(_panel());
     await tester.tap(find.text('systems'));
     await tester.pump();
 
     double y(String label) => tester.getTopLeft(find.text(label)).dy;
-    expect(y('cheapSystem'), lessThan(y('slowSystem')),
-        reason: 'registration order by default');
+    expect(
+      y('cheapSystem'),
+      lessThan(y('slowSystem')),
+      reason: 'registration order by default',
+    );
 
     await tester.tap(find.byKey(const Key('inspector-sort-ms')));
     await tester.pump();
@@ -158,22 +171,22 @@ void main() {
     game.onTick(const Duration(milliseconds: 16), 1 / 60);
 
     Widget host({required bool visible}) => MaterialApp(
-          home: GameScope(
-            game: game,
-            child: Stack(
-              children: [
-                InspectorOverlay(
-                  visible: visible,
-                  pollInterval: const Duration(milliseconds: 100),
-                ),
-              ],
+      home: GameScope(
+        game: game,
+        child: Stack(
+          children: [
+            InspectorOverlay(
+              visible: visible,
+              pollInterval: const Duration(milliseconds: 100),
             ),
-          ),
-        );
+          ],
+        ),
+      ),
+    );
 
     await tester.pumpWidget(host(visible: false));
     expect(find.text('Inspector'), findsNothing);
-    // No timer pending while hidden — pumping far ahead changes nothing.
+    // Hidden panels do not poll.
     await tester.pump(const Duration(seconds: 1));
     expect(find.text('Inspector'), findsNothing);
 
@@ -185,8 +198,11 @@ void main() {
     game.world.spawn([_Marker()]);
     game.onTick(const Duration(milliseconds: 32), 1 / 60);
     await tester.pump(const Duration(milliseconds: 40));
-    expect(find.text('1 entities'), findsOneWidget,
-        reason: 'no fresh collect before the poll interval elapses');
+    expect(
+      find.text('1 entities'),
+      findsOneWidget,
+      reason: 'no fresh collect before the poll interval elapses',
+    );
     await tester.pump(const Duration(milliseconds: 70));
     expect(find.text('2 entities'), findsOneWidget);
 

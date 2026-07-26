@@ -3,14 +3,7 @@ import 'dart:async';
 import 'package:flutter_scene/scene.dart' show CollisionEvent, PhysicsWorld;
 import 'package:scene_dash_v2_core/advanced.dart';
 
-/// Buffers a [PhysicsWorld]'s collision stream so it can be republished as ECS
-/// events on the schedule clock.
-///
-/// `flutter_scene` delivers collisions through an async [Stream]; ECS systems
-/// read synchronously via `EventReader`. This bridge subscribes once and
-/// accumulates events, and [drainTo] moves them into an ECS event channel when
-/// a system runs. The initial implementation does **not** promise same-substep
-/// delivery — events surface on the next drain.
+/// Buffers physics collisions for ECS systems.
 final class PhysicsEventBridge {
   /// The physics world whose collisions are bridged.
   final PhysicsWorld world;

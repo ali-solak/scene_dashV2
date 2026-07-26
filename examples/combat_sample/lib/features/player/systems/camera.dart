@@ -72,9 +72,7 @@ void updateCameraRig(World world) {
     );
   }
 
-  // Orbit around the focus, not the player: orbiting the player while
-  // merely looking toward the target framed neither fighter. Locked, the
-  // distance also grows with separation so the pair stays in frame.
+  // Frame the player and target.
   var distance = cameraDistance;
   if (targetTransform != null) {
     final dx = targetTransform.translation.x - position.x;

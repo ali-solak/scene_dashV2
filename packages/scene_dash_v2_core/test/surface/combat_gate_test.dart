@@ -1,9 +1,4 @@
-/// The Phase 1 gate: a combat-grade timing feature — i-frame windows,
-/// hitstop, input-buffer expiry — written entirely against the Part 1
-/// surface and proven frame-exact headlessly.
-///
-/// A 1/64 s fixed step makes distances exact binary floats, so assertions
-/// are `==`, not `closeTo`.
+/// Combat timing tests.
 library;
 
 import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';

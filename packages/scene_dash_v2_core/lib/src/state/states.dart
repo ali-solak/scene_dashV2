@@ -1,36 +1,4 @@
-/// First-class game states: whole-app modes (title, overworld, paused, ...)
-/// that gate system sets and run one-shot enter/exit lifecycles.
-///
-/// A state machine is registered with `AppBuilder.addState<S>(initial)`, where
-/// [S] is normally an enum. Registration inserts two resources:
-///
-/// * [CurrentState] of `S` — the active value, read-only from systems;
-/// * [NextState] of `S` — where systems queue a transition.
-///
-/// Transitions are applied at [App.applyStateTransitions] (called at the
-/// frame-start boundary by the standard driver): the machine runs the
-/// [OnExit] schedule for the old value, swaps [CurrentState], then runs the
-/// [OnEnter] schedule for the new value. Steady-state gating uses the
-/// [inState] run condition:
-///
-/// ```dart
-/// enum GamePhase { title, overworld, dungeon }
-///
-/// app
-///   ..addState<GamePhase>(GamePhase.title)
-///   ..addSystem(spawnDungeonSystem, schedule: OnEnter(GamePhase.dungeon))
-///   ..addSystem(saveDungeonProgressSystem, schedule: OnExit(GamePhase.dungeon))
-///   ..addSystem(movePlayerSystem,
-///       schedule: Schedules.update, runIf: inState(GamePhase.overworld));
-/// ```
-///
-/// Enter/exit schedules are for world-side work (spawning a region, saving
-/// progress); screens and menus stay Flutter widgets that observe the current
-/// state and switch layers.
-///
-/// Multiple machines of different types coexist (e.g. a `GamePhase` and an
-/// orthogonal `PauseState`); each gets its own resource pair and transitions
-/// independently.
+/// Game state support.
 library;
 
 import '../schedule/schedule_label.dart';
@@ -39,9 +7,7 @@ import '../world/world.dart';
 
 /// The active value of the state machine for [S].
 ///
-/// Read-only from systems; request a change through [NextState]. (Named
-/// `CurrentState` rather than Bevy's `State` to avoid colliding with
-/// Flutter's `State<T>`.)
+/// Request changes through [NextState].
 final class CurrentState<S extends Object> {
   CurrentState._(this._value);
 
@@ -78,20 +44,7 @@ final class NextState<S extends Object> {
 RunCondition inState<S extends Object>(S value) =>
     (World world) => world.resources.get<CurrentState<S>>().value == value;
 
-/// Scopes an entity to a state value: when that value's machine transitions
-/// away from it, the entity is despawned automatically — after `OnExit(value)`
-/// systems run (so they still see it), before the next value's `OnEnter`.
-///
-/// ```dart
-/// commands.spawn(BossBundle())
-///   ..insert(const DespawnOnExit(GamePhase.dungeon));
-/// ```
-///
-/// This is how region/mode teardown should work by default: everything a
-/// dungeon spawns is scoped to the dungeon, and leaving it needs no manual
-/// cleanup system. Bundles can carry it as a field, so a spawn recipe scopes
-/// itself (annotated `@ObjectComponent` so the generator accepts that, like
-/// `SceneNode`).
+/// Despawns an entity when its state ends.
 final class DespawnOnExit {
   /// The state value this entity lives under.
   final Object value;
@@ -174,9 +127,7 @@ final class StateMachineRuntime<S extends Object> implements StateMachine {
   ) {
     final target = next._pending;
     if (target == null) return false;
-    // Cleared before running the lifecycle schedules, so an OnEnter system
-    // queueing a further transition is picked up by the caller's next pass
-    // instead of being lost (or looping inside this one).
+    // Preserve transitions queued by lifecycle systems.
     next._pending = null;
     if (target == current._value) return false;
     final old = current._value;

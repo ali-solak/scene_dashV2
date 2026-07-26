@@ -1,11 +1,4 @@
-/// The lava pit's body: a crust on a ground disc, with globs of molten
-/// rock bubbling up out of it and falling back in.
-///
-/// Split from the skills feature because emitters and material
-/// parameters are GPU-side; the pit's damage logic stays testable
-/// headless. The crust falls back to a generated lava texture when the
-/// `.fmat` is unavailable: the pit is a damage zone, and a zone you
-/// cannot see is worse than an ugly one.
+/// Lava pit scene effect.
 library;
 
 import 'package:flutter_scene/scene.dart';
@@ -87,9 +80,7 @@ void setLavaPitHeat(Node node, {required double time, required double heat}) {
 fx.ParticleEmitterComponent _globs() {
   final system = fx.ParticleSystem(
     maxParticles: _globCount,
-    // A cone emits about +Y from a disc in the XZ plane, so with no
-    // rotation this is exactly "bubbles rising from anywhere in the
-    // pool". The narrow angle keeps them going up rather than spraying.
+    // Narrow upward spray.
     shape: fx.ConeShape(angle: 0.3, radius: lavaPitRadius * 0.82),
     spawner: fx.Spawner(rate: _globCount / 1.7),
     duration: lavaPitSeconds,
@@ -112,9 +103,7 @@ fx.ParticleEmitterComponent _globs() {
       fx.SizeOverLifeModule(
         fx.CurveFloat(fx.ParticleCurve.linear(from: 0.7, to: 1.25)),
       ),
-      // ColorOverLifeModule replaces the colour, so the molten gradient
-      // lives here. Every value at or under 1: over-bright colours turn
-      // into bloom, and bloom dissolves a glob's edge into its neighbour.
+      // Molten gradient.
       fx.ColorOverLifeModule(
         fx.GradientColor(
           fx.ColorGradient([
@@ -169,8 +158,7 @@ void spawnLavaEruption(World world, Vector3 position) {
       fx.SizeOverLifeModule(
         fx.CurveFloat(fx.ParticleCurve.linear(from: 1.0, to: 0.4)),
       ),
-      // Same rule as the globs: at or under 1, or the burst blooms into a
-      // flash instead of reading as thrown rock.
+      // Molten rock colors.
       fx.ColorOverLifeModule(
         fx.GradientColor(
           fx.ColorGradient([
@@ -199,6 +187,6 @@ void spawnLavaEruption(World world, Vector3 position) {
 /// unmistakably lava; the globs supply the movement.
 Material _fallbackCrust() {
   return UnlitMaterial(colorTexture: lavaCrustTexture())
-    // Above 1 so the channels bloom a little against the dark grass.
+    // Bright lava channels.
     ..baseColorFactor = Vector4(1.35, 1.35, 1.35, 1);
 }

@@ -1,18 +1,4 @@
-/// The record-query surface: `world.query<A>()`, `query2`, `query3`,
-/// `query4` (pinned decision D1) over the internal arity classes.
-///
-/// `each` is the primary spelling (D9) — callback parameters, zero
-/// allocation, `return` as continue, `eachUntil` as break. Every query is
-/// also an iterable of records through [records] (`(Entity, A)`,
-/// `(Entity, A, B)`, …) at the cost of a small per-row allocation. Verbs
-/// follow Dart conventions: `isEmpty`/`isNotEmpty`, predicate `any`/
-/// `firstWhere`/`eachUntil` with multi-arg callbacks, and the row verbs
-/// `first`, `firstOrNull`, `single`, `singleOrNull`, `count`.
-///
-/// Construction is a typed site: it registers the queried component stores
-/// (which also materializes parked spawn-list parts of those types) and, in
-/// debug mode, notes the types against the running system's declared access
-/// for the drift check.
+/// Record based world queries.
 library;
 
 import '../entity/entity.dart';
@@ -54,13 +40,13 @@ void _noteTypes(World world, List<Type> types) {
 Never _noMatch(String surface) =>
     throw StateError('$surface: no matching entity.');
 
-/// A 1-type record query; see the library docs for the surface contract.
+/// A query over one component type.
 final class QueryView1<A extends Object> {
   final Query1<A> _core;
 
   QueryView1._(this._core);
 
-  /// Builds the query; a typed site — queried stores register lazily.
+  /// Builds the query.
   factory QueryView1(
     World world, {
     List<Type> require = const <Type>[],
@@ -78,12 +64,10 @@ final class QueryView1<A extends Object> {
     );
   }
 
-  /// Invokes [callback] once per match — the primary, zero-allocation
-  /// spelling. `return` inside the callback continues with the next match.
+  /// Calls [callback] for each match.
   void each(void Function(Entity entity, A a) callback) => _core.each(callback);
 
-  /// Like [each], but stops as soon as [callback] returns `false` — the
-  /// break-capable form.
+  /// Stops when [callback] returns false.
   void eachUntil(bool Function(Entity entity, A a) callback) =>
       _core.eachUntil(callback);
 
@@ -94,8 +78,7 @@ final class QueryView1<A extends Object> {
   (Entity, A)? firstWhere(bool Function(Entity entity, A a) test) =>
       _core.firstWhere(test);
 
-  /// The matches as records, in iteration order — the for-loop spelling;
-  /// allocates one record per row.
+  /// Matching records in iteration order.
   Iterable<(Entity, A)> get records {
     final rows = <(Entity, A)>[];
     _core.each((entity, a) => rows.add((entity, a)));
@@ -125,13 +108,13 @@ final class QueryView1<A extends Object> {
   int count() => _core.count();
 }
 
-/// A 2-type record query; see the library docs for the surface contract.
+/// A query over two component types.
 final class QueryView2<A extends Object, B extends Object> {
   final Query2<A, B> _core;
 
   QueryView2._(this._core);
 
-  /// Builds the query; a typed site — queried stores register lazily.
+  /// Builds the query.
   factory QueryView2(
     World world, {
     List<Type> require = const <Type>[],
@@ -150,13 +133,11 @@ final class QueryView2<A extends Object, B extends Object> {
     );
   }
 
-  /// Invokes [callback] once per match — the primary, zero-allocation
-  /// spelling. `return` inside the callback continues with the next match.
+  /// Calls [callback] for each match.
   void each(void Function(Entity entity, A a, B b) callback) =>
       _core.each(callback);
 
-  /// Like [each], but stops as soon as [callback] returns `false` — the
-  /// break-capable form.
+  /// Stops when [callback] returns false.
   void eachUntil(bool Function(Entity entity, A a, B b) callback) =>
       _core.eachUntil(callback);
 
@@ -167,8 +148,7 @@ final class QueryView2<A extends Object, B extends Object> {
   (Entity, A, B)? firstWhere(bool Function(Entity entity, A a, B b) test) =>
       _core.firstWhere(test);
 
-  /// The matches as records, in iteration order — the for-loop spelling;
-  /// allocates one record per row.
+  /// Matching records in iteration order.
   Iterable<(Entity, A, B)> get records {
     final rows = <(Entity, A, B)>[];
     _core.each((entity, a, b) => rows.add((entity, a, b)));
@@ -198,13 +178,13 @@ final class QueryView2<A extends Object, B extends Object> {
   int count() => _core.count();
 }
 
-/// A 3-type record query; see the library docs for the surface contract.
+/// A query over three component types.
 final class QueryView3<A extends Object, B extends Object, C extends Object> {
   final Query3<A, B, C> _core;
 
   QueryView3._(this._core);
 
-  /// Builds the query; a typed site — queried stores register lazily.
+  /// Builds the query.
   factory QueryView3(
     World world, {
     List<Type> require = const <Type>[],
@@ -224,13 +204,11 @@ final class QueryView3<A extends Object, B extends Object, C extends Object> {
     );
   }
 
-  /// Invokes [callback] once per match — the primary, zero-allocation
-  /// spelling. `return` inside the callback continues with the next match.
+  /// Calls [callback] for each match.
   void each(void Function(Entity entity, A a, B b, C c) callback) =>
       _core.each(callback);
 
-  /// Like [each], but stops as soon as [callback] returns `false` — the
-  /// break-capable form.
+  /// Stops when [callback] returns false.
   void eachUntil(bool Function(Entity entity, A a, B b, C c) callback) =>
       _core.eachUntil(callback);
 
@@ -242,8 +220,7 @@ final class QueryView3<A extends Object, B extends Object, C extends Object> {
     bool Function(Entity entity, A a, B b, C c) test,
   ) => _core.firstWhere(test);
 
-  /// The matches as records, in iteration order — the for-loop spelling;
-  /// allocates one record per row.
+  /// Matching records in iteration order.
   Iterable<(Entity, A, B, C)> get records {
     final rows = <(Entity, A, B, C)>[];
     _core.each((entity, a, b, c) => rows.add((entity, a, b, c)));
@@ -273,7 +250,7 @@ final class QueryView3<A extends Object, B extends Object, C extends Object> {
   int count() => _core.count();
 }
 
-/// A 4-type record query; see the library docs for the surface contract.
+/// A query over four component types.
 final class QueryView4<
   A extends Object,
   B extends Object,
@@ -284,7 +261,7 @@ final class QueryView4<
 
   QueryView4._(this._core);
 
-  /// Builds the query; a typed site — queried stores register lazily.
+  /// Builds the query.
   factory QueryView4(
     World world, {
     List<Type> require = const <Type>[],
@@ -305,13 +282,11 @@ final class QueryView4<
     );
   }
 
-  /// Invokes [callback] once per match — the primary, zero-allocation
-  /// spelling. `return` inside the callback continues with the next match.
+  /// Calls [callback] for each match.
   void each(void Function(Entity entity, A a, B b, C c, D d) callback) =>
       _core.each(callback);
 
-  /// Like [each], but stops as soon as [callback] returns `false` — the
-  /// break-capable form.
+  /// Stops when [callback] returns false.
   void eachUntil(bool Function(Entity entity, A a, B b, C c, D d) callback) =>
       _core.eachUntil(callback);
 
@@ -324,8 +299,7 @@ final class QueryView4<
     bool Function(Entity entity, A a, B b, C c, D d) test,
   ) => _core.firstWhere(test);
 
-  /// The matches as records, in iteration order — the for-loop spelling;
-  /// allocates one record per row.
+  /// Matching records in iteration order.
   Iterable<(Entity, A, B, C, D)> get records {
     final rows = <(Entity, A, B, C, D)>[];
     _core.each((entity, a, b, c, d) => rows.add((entity, a, b, c, d)));
@@ -357,7 +331,7 @@ final class QueryView4<
   int count() => _core.count();
 }
 
-/// The record-query verbs on [World] (pinned decision D1).
+/// Record query methods for [World].
 extension WorldRecordQueries on World {
   /// A record query over one component type; see [QueryView1].
   QueryView1<A> query<A extends Object>({

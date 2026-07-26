@@ -234,9 +234,7 @@ void main() {
     expect(node.parent, same(root), reason: 'mounted before the reset');
 
     world.reset();
-    // The reset bumped the SceneNode store's revision, so the adapter's
-    // next (revision-gated) run reconciles and queues the detach — no manual
-    // scene cleanup.
+    // The next run detaches nodes removed by reset.
     adapter.run();
     commands.flush();
 

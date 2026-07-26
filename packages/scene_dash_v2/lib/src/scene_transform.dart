@@ -6,10 +6,7 @@ import 'package:vector_math/vector_math.dart'
 /// The standard transform component the integration synchronizes onto bound
 /// nodes.
 ///
-/// Holds a node-**local** translation, rotation and scale. Named
-/// `SceneTransform` (not `Transform`) to avoid colliding with Flutter's
-/// `Transform` widget. Games that already have their own transform type can use
-/// `CustomSceneSyncPlugin<T>` instead.
+/// Local translation, rotation, and scale for a scene node.
 ///
 /// ## Conventions
 ///
@@ -20,8 +17,7 @@ import 'package:vector_math/vector_math.dart'
 /// * [rotation] is a unit quaternion. Methods that compose rotations
 ///   re-normalize to prevent drift; the absolute setters assume their inputs
 ///   are already normalized.
-/// * Forward is **−Z** and up is **+Y** (the glTF / `flutter_scene` camera
-///   convention) — see [lookAt].
+/// * Forward is **−Z** and up is **+Y**.
 ///
 /// ## Mutability
 ///
@@ -59,7 +55,7 @@ final class SceneTransform {
        rotation = rotation?.clone() ?? Quaternion.identity(),
        scale = scale?.clone() ?? Vector3.all(1);
 
-  // --- Translation ---
+  // Translation
 
   double get x => translation.x;
 
@@ -106,7 +102,7 @@ final class SceneTransform {
     return this;
   }
 
-  // --- Scale ---
+  // Scale
 
   /// Sets a non-uniform local scale.
   SceneTransform setScale(double x, double y, double z) {
@@ -126,7 +122,7 @@ final class SceneTransform {
     return this;
   }
 
-  // --- Rotation ---
+  // Rotation
 
   /// Sets the absolute orientation from [quaternion] (copied, not aliased).
   ///
@@ -202,7 +198,7 @@ final class SceneTransform {
   SceneTransform rotateZ(double radians) =>
       rotate(Quaternion.axisAngle(Vector3(0, 0, 1), radians));
 
-  // --- Copy & reset ---
+  // Copy and reset
 
   /// Copies translation, rotation and scale from [other].
   SceneTransform setFrom(SceneTransform other) {
@@ -221,7 +217,7 @@ final class SceneTransform {
     return this;
   }
 
-  // --- Matrix interop ---
+  // Matrices
 
   /// Replaces translation, rotation and scale by decomposing [matrix].
   ///
@@ -244,7 +240,7 @@ final class SceneTransform {
     return result;
   }
 
-  // --- Look-at ---
+  // Look at
 
   /// Orients this transform so its local **−Z** axis points at [target] (in the
   /// same local space as [translation]) and its local **+Y** stays as close to

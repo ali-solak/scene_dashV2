@@ -38,16 +38,11 @@ Uint8List _softDotPixels(int size) {
 
 Texture2D? _softDot;
 
-/// The shared soft-dot sprite, built lazily on first use (needs the GPU
-/// context, so every call site is already scene-gated).
+/// Shared soft dot texture.
 Texture2D softDotTexture() =>
     _softDot ??= Texture2D.fromPixels(_softDotPixels(64), 64, 64);
 
-/// A droplet: the soft dot without its hot core, and dimmer. Sea spray
-/// is many faint specks that read as haze together, so the core spike
-/// that makes a spark pop is exactly what makes a droplet look like a
-/// hard bright dot. The falloff is gentle the whole way in, so nothing
-/// in the sprite resolves to a point.
+/// Builds a soft droplet texture.
 Uint8List _dropletPixels(int size) {
   final pixels = Uint8List(size * size * 4);
   final center = (size - 1) / 2.0;
@@ -77,16 +72,12 @@ Texture2D dropletTexture() =>
 
 SpriteMaterial? _dropletSprite;
 
-/// Droplets under additive blending: faint alone, catching the light
-/// where a burst of them overlaps.
+/// Shared additive droplet material.
 SpriteMaterial dropletAdditiveSprite() =>
     _dropletSprite ??= SpriteMaterial(colorTexture: dropletTexture())
       ..blendMode = SpriteBlendMode.additive;
 
-/// Approximate blackbody colour for a normalized temperature, from
-/// extinguished black up through deep red and orange to yellow. Stops
-/// short of white on purpose: the flame sprites composite additively, so
-/// a white-hot core would leave the stack nowhere left to climb.
+/// Returns a flame color for a normalized temperature.
 (double, double, double) _blackbody(double temp) {
   const stops = <(double, double, double, double)>[
     (0.00, 0.00, 0.00, 0.00),
@@ -111,16 +102,7 @@ SpriteMaterial dropletAdditiveSprite() =>
   return (1.0, 0.82, 0.35);
 }
 
-/// A flame tongue: a teardrop tapering to a point, so a spray reads as
-/// licking spikes rather than round blobs. Wide and hot at the base
-/// (v = 0), pinched and cooling at the tip. Soft round dots turn a gush
-/// of fire into white mist.
-///
-/// Two noise fields do the work a smooth gradient cannot. A domain warp
-/// bends the silhouette so tongues lick and split instead of staying
-/// airbrushed teardrops, and a second field breaks the interior into hot
-/// and cool filaments, mapped through [_blackbody] so a single puff
-/// carries its own temperature structure.
+/// Builds a flame tongue texture.
 Uint8List _flamePixels(int size) {
   final pixels = Uint8List(size * size * 4);
   final warp = FastNoiseLite()
@@ -149,7 +131,7 @@ Uint8List _flamePixels(int size) {
       final n = detail.getNoise2(warped * 5.6, t * 3.4) * 0.5 + 0.5;
       // Hottest at the base and burning out along the length.
       final along = (1.0 - t) * (1.0 - t);
-      // Frays toward the tip instead of ending in a clean point.
+      // Frayed tip.
       final density = soft * along * (0.55 + 0.55 * n);
       final a = ((density - 0.06 * t) / 0.9).clamp(0.0, 1.0);
       // The filaments read as temperature, not just as brightness.
@@ -191,7 +173,7 @@ Uint8List _crispDotPixels(int size) {
       final dx = (x - center) / maxR;
       final dy = (y - center) / maxR;
       final r = math.sqrt(dx * dx + dy * dy);
-      // Solid to 0.82, then a short ramp to nothing: an edge, not a haze.
+      // Sharp outer edge.
       final t = ((1.0 - r) / 0.18).clamp(0.0, 1.0);
       final a = t * t * (3 - 2 * t);
       // Cheap sphere shading: brighter where a light above-left would sit.
@@ -237,7 +219,7 @@ Uint8List _puffPixels(int size) {
       final dx = (x - center) / maxR;
       final dy = (y - center) / maxR;
       final r = math.sqrt(dx * dx + dy * dy);
-      // Solid core out to ~0.55, then a wide soft shoulder.
+      // Soft outer shoulder.
       final t = ((1.0 - r) / 0.45).clamp(0.0, 1.0);
       final round = t * t * (3 - 2 * t);
       final billow = 1.0 - noise.getNoise2(dx * 1.9, dy * 1.9).abs();
@@ -263,17 +245,14 @@ Texture2D puffTexture() =>
 
 SpriteMaterial? _puffSprite;
 
-/// Puffs under alpha blending. Additive fire sums toward white where
-/// puffs overlap; alpha puffs occlude each other, so the mass keeps its
-/// edges and depth.
+/// Shared alpha puff material.
 SpriteMaterial puffAlphaSprite() =>
     _puffSprite ??= SpriteMaterial(colorTexture: puffTexture())
       ..blendMode = SpriteBlendMode.alpha;
 
 SpriteMaterial? _alphaSprite;
 
-/// The soft dot under alpha blending, for dust and thrown earth:
-/// additive dirt would glow, which is the one thing dirt does not do.
+/// Shared alpha dust material.
 SpriteMaterial softAlphaSprite() =>
     _alphaSprite ??= SpriteMaterial(colorTexture: softDotTexture())
       ..blendMode = SpriteBlendMode.alpha;

@@ -116,9 +116,7 @@ void moveBrawlers(World world) {
       }
       brawler.facing = math.atan2(dx, dz);
     case BrawlPhase.dodging:
-      // Back and to the side: the backward half is what actually leaves
-      // the swing's reach (see [dodgeBackWeight]), the sideways half is
-      // what makes it read as a roll. Eyes stay on the player throughout.
+      // Backward side roll.
       velocityX =
           (-towardX * dodgeBackWeight -
               towardZ * brawler.dodgeSign * dodgeSideWeight) *

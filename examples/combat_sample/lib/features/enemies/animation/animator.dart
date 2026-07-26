@@ -76,11 +76,7 @@ final class EnemyAnimator {
         (phase == BrawlPhase.dying ? corpseHitSeconds : brawlStaggerSeconds);
   }
 
-  /// Switches pose. The listed one-shots snap to full weight: a real
-  /// crossfade on this rig's mirrored bones lerps negative scale through
-  /// zero and flattens the model (flutter_scene #249), so the sample never
-  /// blends between poses. The rise snaps so its prone first frame is not
-  /// preceded by a stand.
+  /// Switches to [desired].
   void _enterShot(BrawlerShot? desired) {
     active = desired;
     final clip = desired == null ? null : shots[desired];
@@ -100,10 +96,7 @@ final class EnemyAnimator {
     }
   }
 
-  /// A combo's follow-up chop re-enters `telegraph` without the pose ever
-  /// leaving `attack`, so the phase alone cannot trigger a replay: the
-  /// chop counter does. Rescaled per chop, since a combo's opener and its
-  /// follow-up wind up at different speeds.
+  /// Replays the attack clip for each chop.
   void _replayOnNewChop(Brawler brawler) {
     if (active != BrawlerShot.attack || _lastChop == brawler.chopIndex) return;
     _lastChop = brawler.chopIndex;
@@ -267,11 +260,7 @@ EnemyAnimator buildEnemyAnimator(CharacterAssets assets, Node model) {
     BrawlerShot.death: shot('Death_B', deathBClipSeconds, deathBClipSeconds),
 
     BrawlerShot.fall: loop('Jump_Idle'),
-    // The roll goes mostly backward (see [dodgeBackWeight]), so the
-    // backward clip is the one that matches the travel; the left/right
-    // pair read as strafing on the spot. One clip, not one per side: the
-    // player registers clips by animation name, so a second instance of
-    // the same name would evict the first.
+    // Backward dodge clip.
     BrawlerShot.dodge: shot('Dodge_Backward', dodgeClipSeconds, dodgeSeconds),
 
     // The giant's growth spurt, spanning exactly the transform window.

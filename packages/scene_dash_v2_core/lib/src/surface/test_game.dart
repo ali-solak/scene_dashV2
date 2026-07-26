@@ -1,17 +1,4 @@
-/// The headless game harness: drives the exact frame pipeline the device
-/// driver runs — same schedule order, same command boundaries, same clock
-/// semantics — with no scene, no GPU and no Flutter.
-///
-/// ```dart
-/// final game = TestGame.headless(features: [installCombat]);
-/// game.world.spawn([Health(100), Facing(), FighterState()]);
-/// game.press(CombatAction.roll);
-/// game.pumpFixed(steps: 18);                 // 0.3 s at 60 Hz
-/// expect(game.world.query<FighterState>().single.$2.iFramed, isTrue);
-/// ```
-///
-/// Determinism guarantee: identical spawns + identical inputs ⇒ identical
-/// runs (registration ordering; game-side RNG is the game's business).
+/// Headless game support.
 library;
 
 import '../app/app.dart';
@@ -28,18 +15,12 @@ import 'game_builder.dart';
 import 'remove_after.dart';
 import 'spawning.dart';
 
-/// A headless Scene-Dash v2 game for tests and simulations.
-///
-/// [pump] advances one rendered frame (frame start → state transitions →
-/// fixed steps by accumulator → update → render sync); [pumpFixed]
-/// advances exactly one fixed step per frame for frame-exact timing
-/// suites. Frames follow the `GameClock`, so pause, slow motion and
-/// hitstop behave exactly as on device.
+/// Runs game logic without Flutter.
 final class TestGame {
-  /// The engine underneath — interop tier.
+  /// The app under test.
   final App app;
 
-  /// The registration surface, alive until the first [pump]/[start].
+  /// Feature registration.
   late final GameBuilder builder;
 
   /// The fixed timestep, in seconds.
@@ -49,10 +30,7 @@ final class TestGame {
   double _accumulator = 0;
   Duration _elapsed = Duration.zero;
 
-  /// Creates a headless game and runs [features] against its builder. The
-  /// internal pipeline must be conflict-clean, so the access-conflict
-  /// policy defaults to `throw`; [strictAccess] additionally rejects
-  /// systems registered without `reads:`/`writes:` (§1.8).
+  /// Creates a headless game with [features].
   TestGame.headless({
     List<Feature> features = const <Feature>[],
     this.fixedDt = 1 / 60,
@@ -82,7 +60,7 @@ final class TestGame {
   /// The gameplay clock (pause, `timeScale`, `freezeFor` hitstop).
   GameClock get clock => world.resources.get<GameClock>();
 
-  // ── input & events ────────────────────────────────────────────────────
+  // Input
 
   /// Marks [action] held on the `ButtonInput<T>` resource, creating the
   /// resource on first use.
@@ -99,21 +77,17 @@ final class TestGame {
   ButtonInput<T> _input<T extends Object>() =>
       world.resources.getOrInsert<ButtonInput<T>>(ButtonInput<T>.new);
 
-  /// Sends [event] into the world — the widget-to-gameplay path. The
-  /// channel registers on first use.
+  /// Sends [event] into the world.
   void emit<E extends Object>(E event) {
     if (E == event.runtimeType) world.registerEvent<E>();
     world.sendEvent(event);
   }
 
-  // ── driving ───────────────────────────────────────────────────────────
+  // Frames
 
   void _boundary() => SpawnQueue.of(world).flush();
 
-  /// Compiles schedules and runs startup once. Spawns queued by features
-  /// apply first, so startup systems see them; startup spawns flush before
-  /// the initial `OnEnter` schedules, so enter systems see them too.
-  /// Called automatically by the first [pump].
+  /// Runs startup once.
   void start() {
     if (_started) return;
     _started = true;
@@ -122,11 +96,7 @@ final class TestGame {
     _boundary();
   }
 
-  /// Advances one rendered frame of [dt] wall seconds, replaying the
-  /// device pipeline exactly: clock scale + freeze service, `frameStart`,
-  /// state transitions, event maintenance, the accumulator's fixed steps,
-  /// `postPhysics`, `update`, `renderSync` — with a command boundary after
-  /// every flush, where spawn lists apply and owned subtrees die.
+  /// Advances one frame by [dt].
   void pump({double dt = 1 / 60}) {
     start();
     app.profiler?.beginFrame();
@@ -141,8 +111,7 @@ final class TestGame {
       ..unscaledDelta = dt
       ..elapsed = _elapsed
       ..frame += 1;
-    // Mirrors the device driver: buffers age on wall time before the
-    // frameStart schedule runs.
+    // Age inputs before frame start.
     advanceInputBuffers(world.resources.values, dt);
     app.runSchedule(Schedules.frameStart);
     app.applyStateTransitions();
@@ -156,9 +125,7 @@ final class TestGame {
         ..delta = fixedDt
         ..tick += 1;
       app.runSchedule(Schedules.fixedUpdate);
-      // removeAfter: deadlines advance after the schedule (a same-step
-      // refresh beats expiry) and expiries flush with this boundary —
-      // exactly the device driver's fixedStep.
+      // Refreshes win before deadlines advance.
       world.resources.tryGet<RemoveAfterTracker>()?.tick(fixedDt);
       _boundary();
     }
@@ -171,10 +138,7 @@ final class TestGame {
     _boundary();
   }
 
-  /// Advances [steps] frames of exactly one fixed step each (`dt ==`
-  /// [fixedDt]) — the frame-exact idiom for timing suites. Under a freeze
-  /// or pause the frames still render but no fixed steps run, exactly as
-  /// on device.
+  /// Advances [steps] frames using [fixedDt].
   void pumpFixed({required int steps}) {
     for (var i = 0; i < steps; i++) {
       pump(dt: fixedDt);

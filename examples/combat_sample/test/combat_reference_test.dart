@@ -1,7 +1,4 @@
-/// The framework's `combat_machine_reference_test`, lifted to run against
-/// the game's real `player/combat/combat.dart`. Scenario systems and the
-/// scoreboard stay test-side; tick counts come from [ticksFor], never
-/// assumed.
+/// Combat state tests.
 library;
 
 import 'package:combat_sample/features/player/combat/combat.dart';
@@ -269,15 +266,12 @@ void main() {
     game.emit(HitLanded(fighter, 10));
     game.pumpFixed(steps: 1); // lands: staggered (the sample no longer freezes)
 
-    // Hits stopped freezing the clock (the hitstop read as lag), but the
-    // freeze is a framework mechanic in its own right: drive it directly
-    // and prove frozen frames still run no fixed step.
+    // Frozen frames run no fixed steps.
     const freezeSeconds = 0.05;
     game.world.clock.freezeFor(freezeSeconds);
     final stepsAtFreeze = log.steps;
 
-    // Every frozen frame renders but runs no fixed step: the machine
-    // stalls for exactly the pump count the clock's arithmetic dictates.
+    // Pump through the freeze.
     final frozen = frozenPumpsFor(freezeSeconds);
     game.pumpFixed(steps: frozen);
     expect(

@@ -1,6 +1,4 @@
-/// The camera rig: a plain resource written by the player feature's
-/// `updateCameraRig` each frame and read by `main`'s `cameraBuilder`
-/// (scene_game's pattern: the framework never owns cameras).
+/// Combat camera state.
 library;
 
 import 'package:vector_math/vector_math.dart' show Vector3;
@@ -15,12 +13,9 @@ class CameraRig {
   /// The rig's smoothed heading; camera forward is `(sin yaw, 0, cos yaw)`.
   double yaw = 0;
 
-  /// Orbit elevation in radians: 0 looks level with the fighter, higher
-  /// looks down on them. Player-controlled free, eased while locked.
+  /// Orbit elevation in radians.
   double pitch = 0.3;
 
-  /// Seconds left of the opening push-in from the title framing onto the
-  /// fighter. The camera system counts it down and blends slower while it
-  /// runs, so the arrival reads as a move rather than a cut.
+  /// Seconds left in the opening camera move.
   double intro = 0;
 }

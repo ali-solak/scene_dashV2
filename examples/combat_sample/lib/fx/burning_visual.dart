@@ -1,10 +1,4 @@
-/// Fire on a burning body: a small looping flame that rides the victim
-/// for as long as the burn ticks.
-///
-/// Unlike the one-shot bursts, this one is attached to an existing node
-/// rather than spawned as its own entity; the flame has to follow the
-/// barbarian around, and the burn's own `removeAfter:` clock decides
-/// when it stops.
+/// Fire attached to a burning body.
 library;
 
 import 'package:flutter_scene/scene.dart';
@@ -13,16 +7,13 @@ import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 import 'particle_texture.dart';
 import 'particles.dart' as fx;
 
-/// Enough to read as a body on fire at combat distance; the fix for
-/// additive stacking is short-lived sparks, not fewer clouds.
+/// Flame particle count.
 const int _flameCount = 70;
 
-/// Roughly the middle of the 2.6u body, so the fire wraps the torso
-/// instead of pooling at the feet.
+/// Flame height on the body.
 const double _bodyHeight = 1.3;
 
-/// Builds the flame node to hang on a burning body. Returned rather than
-/// attached so the caller owns the handle it will need to detach.
+/// Builds a flame node.
 Node buildBurnFlame() {
   final system = fx.ParticleSystem(
     maxParticles: _flameCount,
@@ -45,13 +36,11 @@ Node buildBurnFlame() {
       fx.SizeOverLifeModule(
         fx.CurveFloat(fx.ParticleCurve.linear(from: 1.2, to: 0.15)),
       ),
-      // Fire colours, blue near zero; see fire_gush.dart on why a
-      // white-ish curve here renders as white mist.
+      // Flame colors.
       fx.ColorOverLifeModule(
         fx.GradientColor(
           fx.ColorGradient([
-            // Red-dominant, same rule as the gush: green low so the
-            // stack cannot climb toward yellow and white.
+            // Orange flame stack.
             fx.ColorStop(0, Vector4(1.00, 0.42, 0.07, 1.0)),
             fx.ColorStop(0.35, Vector4(0.92, 0.15, 0.02, 1.0)),
             fx.ColorStop(1, Vector4(0.22, 0.03, 0.00, 0)),

@@ -280,9 +280,7 @@ void main() {
     );
     expect(world.get<Fighter>(player).stance, Stance.free);
 
-    // The corpse lies through the delay, dissolves, and the death clock
-    // expires with the entity: waves own the field now, so a corpse is
-    // gone for good and its model slot returns to the pool.
+    // The corpse dissolves, despawns, and releases its model.
     game.pumpFixed(steps: ticksFor(dissolveDelaySeconds + dissolveSeconds) + 8);
     expect(world.tryGet<Health>(enemy), isNull, reason: 'the corpse despawns');
   });

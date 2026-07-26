@@ -11,8 +11,7 @@ final class _Health {
   String toString() => 'hp $current/$max';
 }
 
-/// Counts `toString` calls so tests can prove summaries never render
-/// component values — detail stays lazy (I2).
+/// Counts `toString` calls.
 final class _Tattling {
   static int toStringCalls = 0;
 
@@ -140,7 +139,7 @@ void main() {
 
       final snapshot = SnapshotCollector(game.world).collect();
 
-      // The D11 label carries the registration disambiguator (`@0`).
+      // The label includes the registration index.
       final mover = snapshot.systems.where(
         (s) => s.label.startsWith('moverSystem'),
       );

@@ -1,9 +1,4 @@
-// The clearing floor: two earth tones blended by world-space fbm noise, so
-// the ground reads as mottled forest floor without a tiling texture. World
-// position (not UV) drives the noise, so the pattern never stretches or
-// seams regardless of the ground mesh's parameterization — the flat-world
-// equivalent of triplanar sampling; a slope axis can be added when the stage
-// ever gets one.
+// Procedural ground color.
 material {
   name: "ground_noise",
   shading_model: lit,

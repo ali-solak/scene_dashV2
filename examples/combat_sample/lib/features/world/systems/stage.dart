@@ -36,9 +36,7 @@ void setupWorld(World world) {
     ..toneMapping = ToneMappingMode.aces
     ..exposure = sceneExposure
     ..antiAliasingMode = AntiAliasingMode.auto;
-  // renderScale / SSAO / god rays are the quality preset's to own (they
-  // are what the pause menu actually trades), so boot goes through the
-  // same path a menu change does rather than setting them twice.
+  // Apply the default quality preset.
   final boot = qualityPresets[defaultQualityLevel];
   scene.renderScale = boot.renderScale;
   scene.fog
@@ -71,10 +69,7 @@ void setupWorld(World world) {
     ..radius = 0.4;
 }
 
-/// Serves the pause menu's quality choice. Polled on `update` because
-/// `world.events` needs a running system; the drain is free when nobody
-/// asked. Not state-gated: the change comes from the pause menu, so it
-/// must land while the world is stopped.
+/// Applies requested quality settings.
 void applyGraphicsQuality(World world) {
   var level = -1;
   for (final request in world.events<QualityRequested>()) {

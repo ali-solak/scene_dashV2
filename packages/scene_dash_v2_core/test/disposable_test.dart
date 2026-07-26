@@ -1,9 +1,7 @@
 import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
 import 'package:test/test.dart';
 
-/// Coverage for [Disposable] at the framework's three call sites — game
-/// shutdown, `World.reset(keepResources: false)`, and resource
-/// removal/replacement — plus the ordering and double-dispose guarantees.
+/// Disposable lifecycle tests.
 class _Tracked implements Disposable {
   _Tracked(this.name, this.log);
   final String name;

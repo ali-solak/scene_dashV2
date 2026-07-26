@@ -278,8 +278,7 @@ void main() {
       final game = TestGame.headless(onDiagnostic: diagnostics.add);
       final entity = game.world.spawn([Position(1), Unclaimed(7)]);
       game.pump();
-      // Position was registered by nothing yet either — both parked until
-      // a typed site names them.
+      // Both component types are registered lazily.
       expect(game.world.query<Position>().single.$2.x, 1);
       expect(game.world.stores.isRegistered(Unclaimed), isFalse);
       game.pump();

@@ -12,9 +12,7 @@ import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 import 'particle_texture.dart';
 import 'particles.dart' as fx;
 
-// Kept modest on purpose: a burst is built per connect, and the particle
-// system allocates its buffers at construction, so every particle here
-// is paid for in the middle of a swing.
+// Particle counts per hit strength.
 const int _lightCount = 28;
 const int _heavyCount = 38;
 const double _burstEntityLifetime = 1.2;

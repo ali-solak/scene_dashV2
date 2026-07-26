@@ -66,8 +66,7 @@ final class _FakeWorld extends PhysicsWorld {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-/// Collider stub carrying only a layer; the rest is unimplemented on purpose
-/// (the wrapper reads nothing else).
+/// Collider stub with a layer.
 final class _LayerCollider extends Collider {
   _LayerCollider(this._layer);
 
@@ -80,7 +79,7 @@ final class _LayerCollider extends Collider {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-/// A collider component that is not a [Collider] — its layer is unknowable.
+/// Collider component without a readable layer.
 final class _OpaqueCollider extends Component {}
 
 const int rockLayer = 1 << 2;
@@ -141,15 +140,13 @@ void main() {
     physics.cannedHits = [_hit(childMesh)];
 
     Entity? resolved;
-    physics.overlapSphereEntities(
-      SceneNodeIndex(bindings),
-      Vector3.zero(),
-      1,
-      (hitEntity, hit) {
-        resolved = hitEntity;
-        return true;
-      },
-    );
+    physics.overlapSphereEntities(SceneNodeIndex(bindings), Vector3.zero(), 1, (
+      hitEntity,
+      hit,
+    ) {
+      resolved = hitEntity;
+      return true;
+    });
 
     expect(resolved, entity);
   });
@@ -174,34 +171,37 @@ void main() {
     expect(seen, [entity]);
   });
 
-  test('re-checks the layer result-side for backends that do not forward it',
-      () {
-    final bindings = <Node, Entity>{};
-    final (entity, node) = spawnBound(bindings);
-    final (_, wrongLayerNode) = spawnBound(bindings);
-    final (_, opaqueNode) = spawnBound(bindings);
-    // A backend that ignores layerMask returns all three.
-    physics.cannedHits = [
-      _hit(node, collider: _LayerCollider(rockLayer)),
-      _hit(wrongLayerNode, collider: _LayerCollider(otherLayer)),
-      _hit(opaqueNode, collider: _OpaqueCollider()),
-    ];
+  test(
+    're-checks the layer result-side for backends that do not forward it',
+    () {
+      final bindings = <Node, Entity>{};
+      final (entity, node) = spawnBound(bindings);
+      final (_, wrongLayerNode) = spawnBound(bindings);
+      final (_, opaqueNode) = spawnBound(bindings);
+      // A backend that ignores layerMask returns all three.
+      physics.cannedHits = [
+        _hit(node, collider: _LayerCollider(rockLayer)),
+        _hit(wrongLayerNode, collider: _LayerCollider(otherLayer)),
+        _hit(opaqueNode, collider: _OpaqueCollider()),
+      ];
 
-    final seen = <Entity>[];
-    physics.overlapSphereEntities(
-      SceneNodeIndex(bindings),
-      Vector3.zero(),
-      1,
-      layerMask: rockLayer,
-      (hitEntity, hit) {
-        seen.add(hitEntity);
-        return true;
-      },
-    );
+      final seen = <Entity>[];
+      physics.overlapSphereEntities(
+        SceneNodeIndex(bindings),
+        Vector3.zero(),
+        1,
+        layerMask: rockLayer,
+        (hitEntity, hit) {
+          seen.add(hitEntity);
+          return true;
+        },
+      );
 
-    expect(seen, [entity],
-        reason: 'wrong-layer and unknowable colliders are excluded');
-  });
+      expect(seen, [
+        entity,
+      ], reason: 'wrong-layer and unknowable colliders are excluded');
+    },
+  );
 
   test('the default all-layers mask delivers every resolved hit', () {
     final bindings = <Node, Entity>{};
@@ -213,15 +213,13 @@ void main() {
     ];
 
     final seen = <Entity>[];
-    physics.overlapSphereEntities(
-      SceneNodeIndex(bindings),
-      Vector3.zero(),
-      1,
-      (hitEntity, hit) {
-        seen.add(hitEntity);
-        return true;
-      },
-    );
+    physics.overlapSphereEntities(SceneNodeIndex(bindings), Vector3.zero(), 1, (
+      hitEntity,
+      hit,
+    ) {
+      seen.add(hitEntity);
+      return true;
+    });
 
     expect(seen, [a, b]);
   });
@@ -253,18 +251,18 @@ void main() {
     physics.cannedHits = [_hit(node), _hit(node)];
 
     final seen = <Entity>[];
-    physics.overlapSphereEntities(
-      SceneNodeIndex(bindings),
-      Vector3.zero(),
-      1,
-      (hitEntity, hit) {
-        seen.add(hitEntity);
-        return true;
-      },
-    );
+    physics.overlapSphereEntities(SceneNodeIndex(bindings), Vector3.zero(), 1, (
+      hitEntity,
+      hit,
+    ) {
+      seen.add(hitEntity);
+      return true;
+    });
 
-    expect(seen, [entity, entity],
-        reason: 'per-entity dedup is the consumer\'s job (per-swing sets)');
+    expect(seen, [
+      entity,
+      entity,
+    ], reason: 'per-entity dedup is the consumer\'s job (per-swing sets)');
   });
 
   test('overlapBoxEntities resolves and filters the same way', () {

@@ -34,12 +34,7 @@ part 'systems/lock_on.dart';
 part 'systems/camera.dart';
 part 'systems/visuals.dart';
 
-/// Installs the player as six sub-features, each owning its systems and
-/// their registration.
-///
-/// Order is load-bearing: ordering and `independentOf` edges are by
-/// function reference, so lock-on must install after the actions group
-/// it exempts.
+/// Installs the player.
 void installPlayer(GameBuilder game) {
   game
     ..registerTag<Player>()

@@ -21,10 +21,7 @@ void installWeather(GameBuilder game) {
     );
 }
 
-/// Advances the wind clock and writes it into the grass and ocean
-/// materials, resolved through their nodes so the seam shows in the
-/// queries. Game-time on purpose: slow-mo slows wind and waves with
-/// everything else, and a hitstop's 0.05 s pause is imperceptible.
+/// Updates wind and water time.
 void updateWindMaterials(World world) {
   final wind = world.resource<GrassWind>()..time += world.dt;
 
@@ -55,9 +52,7 @@ void crashWaves(World world) {
   final theta =
       cliffAzimuth + (clock.rng.nextDouble() - 0.5) * 2 * cliffHalfAngle * 0.85;
   final radius = groundIslandRadius + (clock.rng.nextDouble() - 0.5) * 2.5;
-  // Every break rolls its own size and spread, so the surf never sparks
-  // the same twice; a wide range so a small lap and a big wall are
-  // obviously different.
+  // Vary each wave break.
   final intensity = 0.45 + clock.rng.nextDouble() * 1.25;
   spawnWaveCrash(
     world,

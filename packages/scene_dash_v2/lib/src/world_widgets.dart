@@ -1,12 +1,4 @@
-/// The world as a Flutter data source: pull-based widgets over one
-/// `frameTick` heartbeat with select-and-compare — a widget rebuilds only
-/// when the value it selected actually changed, no cubit bridge, no
-/// per-frame snapshots pushed out of the world.
-///
-/// All primitives resolve their game from the enclosing `GameScope`
-/// (nearest-ancestor wins); none takes a game parameter. The write path is
-/// unchanged and non-negotiable: UI → `ButtonInput` / `world.emit`; never
-/// direct component mutation.
+/// Widgets that read world state.
 library;
 
 import 'package:flutter/widgets.dart';
@@ -16,8 +8,7 @@ import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
 import 'game_scope.dart';
 import 'scene_game.dart';
 
-/// Shared plumbing: subscribe to the enclosing game's `frameTick`, resub
-/// when the scope's game changes, and unsubscribe on dispose.
+/// Listens to game frames.
 abstract class _FrameTickState<W extends StatefulWidget> extends State<W> {
   WorldGame? _game;
 
@@ -47,7 +38,7 @@ abstract class _FrameTickState<W extends StatefulWidget> extends State<W> {
     frameTick();
   }
 
-  /// The game changed (first attach included; [previous] was the old one).
+  /// Called when the game changes.
   void attached(WorldGame? previous) {}
 
   /// The widget is going away; release game-side resources.
@@ -57,33 +48,7 @@ abstract class _FrameTickState<W extends StatefulWidget> extends State<W> {
   void frameTick();
 }
 
-/// Watches one component's selected value on one entity, rebuilding only
-/// when that value changes:
-///
-/// ```dart
-/// EntityBuilder<Health, double>(
-///   entity: player,                 // handle form: from a spawn return or
-///   select: (h) => h.current,       //   event data
-///   builder: (context, hp) => HealthBar(hp),
-/// )
-///
-/// EntityBuilder<Health, double>.matching(
-///   require: const [Player],        // matching form: the first entity with
-///   select: (h) => h.current,       //   Health + Player, re-resolved through
-///   builder: (context, hp) =>       //   the world each frame — no handle
-///       HealthBar(hp),              //   crosses into the widget tree
-/// )
-/// ```
-///
-/// Both type arguments usually infer from the closures. While the entity
-/// is dead or lacks [T] — or, for `.matching`, nothing matches — [absent]
-/// shows instead (default: nothing); selection resumes when a match comes
-/// back, a *respawned* entity included. [select] must return a value with
-/// meaningful `==` (numbers, strings, records) — returning the component
-/// itself would compare identical and never rebuild. `.matching` is for
-/// match sets meant to be unique (THE player, THE boss); resolving by one
-/// component while watching another stays the `WorldBuilder<Entity?>` +
-/// `EntityBuilder` composition.
+/// Rebuilds when a selected component value changes.
 class EntityBuilder<T extends Object, S> extends StatefulWidget {
   const EntityBuilder({
     super.key,
@@ -94,8 +59,7 @@ class EntityBuilder<T extends Object, S> extends StatefulWidget {
   }) : require = null,
        exclude = null;
 
-  /// Watches the first entity carrying [T], every type in [require] and
-  /// none in [exclude] — resolved through the world each frame.
+  /// Watches the first entity matching the filters.
   const EntityBuilder.matching({
     super.key,
     this.require = const <Type>[],
@@ -133,9 +97,7 @@ class _EntityBuilderState<T extends Object, S>
 
   @override
   void attached(WorldGame? previous) {
-    // A typed site (§ lazy stores): ensure [T]'s store exists and claim any
-    // parked parts, so a component spawned before any system queried its
-    // type is still visible to this widget.
+    // Ensure the component store exists.
     SpawnQueue.of(game.world).ensureStore<T>();
     _read(rebuild: false);
   }
@@ -169,37 +131,7 @@ class _EntityBuilderState<T extends Object, S>
       : (widget.absent ?? const SizedBox.shrink());
 }
 
-/// Watches any world-derived value — query counts, resources, aggregates —
-/// rebuilding only when it changes:
-///
-/// ```dart
-/// WorldBuilder<int>(
-///   select: (world) => world.query<Rock>().count(),
-///   builder: (context, rocks) => Text('$rocks rocks'),
-/// )
-///
-/// WorldBuilder<double>.pulse(
-///   select: (world) => playerHpFraction(world),   // pulse form: a transition
-///   trigger: (previous, next) => next < previous, //   becomes decaying energy
-///   duration: 0.4,
-///   pulseBuilder: (context, pulse, child) =>
-///       HurtVignette(intensity: pulse * pulse),
-/// )
-/// ```
-///
-/// [select] runs once per rendered frame; keep it cheap and give it
-/// meaningful `==` (see `EntityBuilder`).
-///
-/// The pulse form serves transient feedback (hurt flashes, cast pops): the
-/// frame [trigger] passes on a changed selection, [pulseBuilder] starts
-/// receiving a pulse that decays 1 → 0 over [duration] seconds and holds 0
-/// at rest (no rebuilds). The decay runs on wall time
-/// (`FrameTime.unscaledDelta`), so hitstop, slow motion and a paused clock
-/// never freeze feedback mid-flash; a re-trigger mid-decay restarts at 1;
-/// the first frame only establishes the baseline and never fires. Key the
-/// trigger off an *outcome* the world already shows (health fell, a
-/// cooldown started): gameplay events are often attempts — a blocked or
-/// i-framed hit still emits its event — but a transition cannot lie.
+/// Rebuilds when a selected world value changes.
 class WorldBuilder<S> extends StatefulWidget {
   const WorldBuilder({
     super.key,
@@ -229,9 +161,7 @@ class WorldBuilder<S> extends StatefulWidget {
   /// Selects the watched value from the world; compared with `==`.
   final S Function(World world) select;
 
-  /// Overrides `==` for the change compare — `listEquals` lets a select
-  /// return a plain `List` instead of wrapping it in a value class.
-  /// Returns whether the two selections are the SAME (no rebuild).
+  /// Custom equality check.
   final bool Function(S previous, S next)? equals;
 
   /// Builds from the selected value; runs only when it changed. (Plain
@@ -299,20 +229,7 @@ class _WorldBuilderState<S> extends _FrameTickState<WorldBuilder<S>> {
   }
 }
 
-/// Typed overlay routing off `CurrentState<S>` — HUD while playing,
-/// results on game-over — replacing string-keyed overlay maps:
-///
-/// ```dart
-/// GameStateBuilder<GameStatus>(
-///   builder: (context, s) => switch (s) {
-///     GameStatus.playing  => const BattleHud(),
-///     GameStatus.gameOver => const ResultsScreen(),
-///   },
-/// )
-/// ```
-///
-/// Rebuilds only on transitions. The state machine must be registered
-/// (`addState<S>` in a feature).
+/// Rebuilds when game state changes.
 class GameStateBuilder<S extends Object> extends StatefulWidget {
   const GameStateBuilder({super.key, required this.builder});
 
@@ -341,20 +258,7 @@ class _GameStateBuilderState<S extends Object>
   Widget build(BuildContext context) => widget.builder(context, _state);
 }
 
-/// One-shot reactions to world events — flashes, navigation, SFX — with
-/// widget-lifetime cleanup:
-///
-/// ```dart
-/// WorldEventListener<HitLanded>(
-///   onEvent: (context, hit) => showDamageFlash(context),
-///   child: const BattleView(),
-/// )
-/// ```
-///
-/// Events are delivered once per rendered frame, in emission order, after
-/// the world resolved. The subscription leases a channel reader from the
-/// world's spawn queue pool and returns it on dispose, so an unmounted
-/// listener never lags a channel or leaks one.
+/// Listens for world events.
 class WorldEventListener<E extends Object> extends StatefulWidget {
   const WorldEventListener({
     super.key,

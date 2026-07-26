@@ -1,14 +1,4 @@
-// The lava pit's surface: a crust of cooled rock cracked open by molten
-// channels that flow and pulse. UNLIT for the same reason the ocean is —
-// the whole point is a surface that emits its own light, so the scene's
-// sun has nothing to say about it and a lit shader would only wash the
-// glow toward the sky color. `heat` is the pit's own clock, driven by
-// Dart: it swells the pit open when it lands and crusts it over as the
-// pit's lifetime runs out.
-//
-// The disc's own geometry is the pit's outline; `center`/`radius` are
-// only used for the radial falloff (world position, so the pattern never
-// stretches with the mesh — the ground material's trick).
+// Animated lava surface.
 material {
   name: "lava",
   shading_model: unlit,
@@ -41,8 +31,7 @@ fragment {
     float churn = NoiseFbm2(p * 2.1 - vec2(t * 0.16, t * 0.11), 67, 2, 2.0, 0.5);
     float molten = clamp((flow + churn * 0.6) * 0.5 + 0.5, 0.0, 1.0);
 
-    // The channels: the hottest band sits where the two fields cross, and
-    // it breathes so the pit never looks like a still texture.
+    // Moving hot channels.
     float pulse = 0.82 + 0.18 * sin(t * 2.3 + flow * 6.0);
     float veins = smoothstep(0.42, 0.78, molten) * pulse;
 
@@ -51,8 +40,7 @@ fragment {
     color += material_params.hot_color *
         smoothstep(0.72, 0.95, molten) * pulse * 0.6;
 
-    // The rim cools into crust, and the whole pit fades on `heat` — the
-    // opening swell and the closing crust-over both ride this one term.
+    // Cool the rim as heat falls.
     float rim = 1.0 - smoothstep(0.68, 1.0, r);
     color = mix(material_params.crust_color, color, rim * material_params.heat);
 

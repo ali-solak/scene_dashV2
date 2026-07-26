@@ -4,29 +4,7 @@ import 'package:scene_dash_v2_core/advanced.dart';
 import 'scene_commands.dart';
 import 'scene_node.dart';
 
-/// Keeps the scene graph in sync with entity-bound [SceneNode]s: mounts new
-/// nodes and detaches them again when their entity goes away.
-///
-/// Each run it reconciles the set of bound nodes against the scene:
-///
-/// * a newly bound node with no parent is queued under the scene root (through
-///   [SceneCommands]) and remembered;
-/// * a node the integration previously mounted whose binding has gone — the
-///   entity was despawned, the [SceneNode] was removed, or it was replaced
-///   with a different node — is queued for detachment.
-///
-/// A node the game parents itself (custom hierarchy) is never adopted and never
-/// auto-detached: only nodes this adapter mounted are tracked. This makes the
-/// common case — `commands.spawn(bundle)` then later `commands.despawn(entity)`
-/// — clean up its scene node automatically, with no manual `SceneCommands.remove`
-/// in game code.
-///
-/// It also maintains the integration-managed [Mounted] tag: each mounted entity
-/// gains [Mounted] and loses it on unmount, so advanced systems can filter on
-/// scene-mounted entities.
-///
-/// [Game] runs this *before* the `update` phase each frame (and once at startup),
-/// so a bound node is already parented and tagged by the time gameplay reads it.
+/// Mounts entity nodes and removes unused mounts.
 final class SceneNodeMountAdapter
     implements SystemAdapter, SystemAccessProvider {
   @override
@@ -35,9 +13,7 @@ final class SceneNodeMountAdapter
 
   final SceneCommands _sceneCommands;
 
-  /// Live node → entity index shared with the `SceneNodeIndex` resource. Updated
-  /// from this adapter's existing per-frame scan over bound nodes, so the reverse
-  /// lookup costs no extra allocation.
+  /// Live node to entity index.
   final Map<Node, Entity> _index;
 
   late final World _world;
@@ -50,7 +26,7 @@ final class SceneNodeMountAdapter
   /// Every bound node seen during the last reconciliation pass.
   final Map<Node, Entity> _knownBound = <Node, Entity>{};
 
-  /// Scratch set of nodes seen this run (reused to avoid per-frame allocation).
+  /// Nodes seen this run.
   final Set<Node> _seen = <Node>{};
 
   /// Scratch lists of entities to (un)tag, applied after the bound query stops
@@ -121,9 +97,7 @@ final class SceneNodeMountAdapter
     // removal, or replacement). Reuses the scan's _seen set, no allocation.
     _index.removeWhere((node, _) => !_seen.contains(node));
 
-    // Apply Mounted-tag changes now the bound query is no longer iterating.
-    // Untag first so a same-entity node replacement (untag old, tag new) ends
-    // up tagged. Despawn already strips the tag, so only touch live entities.
+    // Apply mount tags after the query.
     final mounted = _world.ensureTagStore<Mounted>();
     for (final entity in _toUntag) {
       if (_world.isAlive(entity)) mounted.removeEntityIndex(entity.index);

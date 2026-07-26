@@ -5,28 +5,7 @@ import '../system/system_adapter.dart';
 import '../time/frame_time.dart';
 import '../world/world.dart';
 
-/// Gives an entity a lifetime: after [remaining] seconds of game time it is
-/// despawned automatically — the timed sibling of [DespawnOnExit]'s
-/// state-scoped teardown.
-///
-/// The staple for muzzle flashes, pickups, corpses, projectiles with a max
-/// range — anything spawned in volume that must go away on its own without a
-/// bespoke countdown system:
-///
-/// ```dart
-/// commands.spawn(ExplosionVfxBundle(at: hit.point))
-///   ..insert(DespawnAfter(0.4));
-/// ```
-///
-/// A built-in system (registered by `App` in `Schedules.update`) ticks
-/// [remaining] down by `FrameTime.delta` and queues a *deferred* despawn when
-/// it reaches zero, so the entity is fully alive for the frame it expires on
-/// and vanishes at the schedule's command flush. Because game time drives it,
-/// pause/hitstop/slow motion extend the lifetime with everything else.
-/// Removing the component before it expires cancels the despawn.
-///
-/// The countdown is frame-time by design; for fixed-step determinism, tick a
-/// game-defined copy in a fixed schedule instead.
+/// Despawns an entity after [remaining] seconds.
 final class DespawnAfter {
   /// Seconds of game time left before the entity is despawned. Mutable:
   /// systems may extend or shorten an in-flight lifetime.
@@ -35,15 +14,7 @@ final class DespawnAfter {
   DespawnAfter(this.remaining);
 }
 
-/// The built-in ticker behind [DespawnAfter]. `App` registers one in
-/// `Schedules.update` under [label]; game code never constructs it.
-///
-/// Iterates the [DespawnAfter] store directly (allocation-free, like the
-/// state-scoped despawn walk) and defers every despawn through `Commands` —
-/// never a mid-iteration structural change. Requires a [FrameTime] resource
-/// once any entity carries [DespawnAfter]: the standard driver inserts one,
-/// headless apps insert their own; it throws rather than silently freezing
-/// lifetimes.
+/// Advances all [DespawnAfter] timers.
 final class DespawnAfterSystem implements SystemAdapter, SystemAccessProvider {
   /// The registration label, so games can order systems `before`/`after` the
   /// built-in tick.

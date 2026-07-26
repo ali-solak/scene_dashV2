@@ -2,7 +2,7 @@ import 'package:flutter_scene/scene.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 
-/// A trivial [Component] used to exercise [SceneNode.component].
+/// Test component.
 final class _ProbeComponent extends Component {
   _ProbeComponent(this.id);
   final int id;

@@ -1,11 +1,6 @@
 part of '../enemies.dart';
 
-/// Kicks up earth on the frame a barbarian commits to a roll, the same
-/// tell the player's dodge gives (a no-op headless).
-///
-/// The heading is the roll's travel, recomputed here rather than read
-/// off `velocity`: movement steers in an earlier set, so on the entry
-/// tick that column still holds the circling step.
+/// Spawns enemy dodge effects.
 void spawnBrawlerFx(World world) {
   final playerRow = world
       .query<SceneTransform>(require: const [Player])
@@ -49,12 +44,9 @@ void installEnemyVisuals(GameBuilder game) {
     ..registerComponent<EnemyAnimator>()
     ..registerComponent<EnemyHealthBar>()
     ..registerComponent<ModelSlot>()
-    // A despawned barbarian hands its pooled model back, so the next
-    // wave can borrow it (imported skinned models cannot be cloned).
+    // Return despawned models to the pool.
     ..observe<ModelSlot>(onRemove: releaseEnemyModel)
-    // Per frame, not once: waves keep fielding barbarians and each new
-    // one needs a body; already-bodied ones are skipped. Deferred adds
-    // only, so no live write is declared.
+    // Attach bodies to new enemies.
     ..addSystem(
       Schedules.update,
       attachEnemyVisuals,
@@ -94,7 +86,7 @@ void installEnemyVisuals(GameBuilder game) {
       spawnBrawlerFx,
       inSet: GameSets.actions,
       reads: const {Player, Enemy, Brawler, SceneTransform},
-      // After the whole brain, so the phase edge it reads is settled.
+      // Run after enemy decisions.
       after: const [brawlerDriver, coordinateAggro],
       runIf: hasResource<Scene>(),
     )
@@ -225,10 +217,7 @@ void updateHealthBars(World world) {
       scale = 1 + healthBarShakePop * decay;
       roll = healthBarShakeTilt * math.sin(p * math.pi * 3) * decay;
     }
-    // Rebuilt in place on the node's own matrix: this runs per enemy per
-    // frame, so it must not allocate (no compose, no fresh quaternions).
-    // The lift is reapplied every frame — the giant's bar sinks back onto
-    // normal height otherwise — and T·Ry·Rz·S mirrors the old compose.
+    // Rebuild the health bar transform.
     final barTransform = bar.node.localTransform
       ..setIdentity()
       ..setTranslationRaw(

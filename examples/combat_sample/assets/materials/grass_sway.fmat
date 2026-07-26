@@ -1,17 +1,9 @@
-// Wind-swaying grass blades. Each tapered blade is real geometry, while the
-// entire field remains one batched draw. The sway phase derives from world
-// position, so blades de-sync without per-instance data. Dart advances `time`
-// each frame; strength and direction are fixed ambient-weather settings.
-//
-// Two scales of variation give the field life. Per blade, a baked vertex tint
-// and a root-to-tip gradient. Across the clearing, a slow simplex field
-// drifts regions between short deep-green and taller dry-yellow, so the
-// carpet reads as terrain rather than one uniform texture.
+// Wind swept grass.
 material {
   name: "grass_sway",
   shading_model: lit,
   blending: opaque,
-  // Geometry carries both windings so color and shadow passes see both sides.
+  // Double sided geometry.
   culling: back,
   parameters: [
     { type: float, name: time, default: 0.0 },
@@ -20,13 +12,13 @@ material {
     { type: float, name: sway_scale, hint: range(0.01, 2, 0.01), default: 0.3 },
     // Fast flutter riding the slow gust.
     { type: float, name: wind_turbulence, hint: range(0, 1.5, 0.01), default: 0.25 },
-    // Signed static lean downwind, so wind reads as blowing from somewhere
-    // rather than only shimmering in place.
+    // Static downwind lean.
     { type: float, name: wind_lean, hint: range(-1, 1, 0.01), default: 0.12 },
-    // The macro field: a lower scale means broader patches.
+    // Lower values create broader patches.
     { type: float, name: macro_scale, hint: range(0.01, 1, 0.01), default: 0.12 },
-    { type: float, name: height_low, hint: range(0.3, 1.2, 0.01), default: 0.75 },
-    { type: float, name: height_high, hint: range(1, 2.5, 0.01), default: 1.15 },
+    // Macro height range.
+    { type: float, name: height_low, hint: range(0.3, 1.2, 0.01), default: 0.70 },
+    { type: float, name: height_high, hint: range(1, 2.5, 0.01), default: 1.65 },
     // Multiplier tints over the baked per-blade tint. Root is shaded, tip
     // catches light.
     { type: vec4, name: root_color, default: [0.55, 0.62, 0.45, 1.0] },
@@ -44,17 +36,13 @@ vertex {
   #include <noise.glsl>
 
   void Vertex(inout VertexInputs vertex) {
-    // Uniform parameters are members of the generated material_params block;
-    // only samplers are bare identifiers.
+    // Material values.
     float time = material_params.time;
     vec2 wind = material_params.wind_dir;
-    // Roots are authored at object y = 0 and tips above it. Derive bend from
-    // position rather than UV: the opaque material's position-only shadow
-    // variant has no UV stream, so UV-based bend detached its shadows.
+    // Bend blade tips.
     float bend = step(0.001, vertex.position.y);
 
-    // Sampled before the sway displaces the blade, so it keeps its
-    // region's look instead of shifting palette as it waves.
+    // Sample the color region.
     macro = smoothstep(
         0.2, 0.8,
         NoiseSimplex2(vertex.world_position.xz * material_params.macro_scale, 23)
@@ -64,8 +52,7 @@ vertex {
 
     vec2 phase =
         vertex.world_position.xz * material_params.sway_scale + wind * time * 0.9;
-    // Slow traveling gust plus a small fast flutter, both from the shared
-    // FastNoiseLite port so a Dart consumer can match the field exactly.
+    // Gust and flutter.
     float gust = NoiseSimplex2(phase, 7);
     float flutter = NoiseSimplex2(phase * 3.1 + vec2(0.0, time * 2.3), 13)
         * material_params.wind_turbulence;
@@ -74,8 +61,7 @@ vertex {
         * bend * bend * heightScale;
     float lean = material_params.wind_lean * bend * bend * heightScale;
     vertex.world_position.xz += wind * (amount + lean);
-    // Roots sit at world y = 0, so scaling y stretches a blade from its own
-    // root without lifting it off the ground.
+    // Stretch from the root.
     vertex.world_position.y *= heightScale;
 
     blade_h = bend;
@@ -83,8 +69,7 @@ vertex {
 }
 fragment {
   void Surface(inout MaterialInputs material) {
-    // Reproduce the old blade texture's olive tint and dark root directly.
-    // The tapered silhouette now comes from geometry instead of an alpha card.
+    // Olive blades with dark roots.
     vec3 blade =
         vec3(0.784, 0.902, 0.549) * mix(0.55, 1.0, blade_h);
     vec3 col = blade * GetVertexColor().rgb;

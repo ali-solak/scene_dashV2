@@ -16,9 +16,7 @@ class FpsCounter extends StatefulWidget {
     this.window = const Duration(milliseconds: 500),
   });
 
-  /// The rolling sample window. Long enough that the number is readable
-  /// rather than flickering, short enough that a stall shows up while it
-  /// is still happening.
+  /// Rolling sample window.
   final Duration window;
 
   @override
@@ -27,9 +25,7 @@ class FpsCounter extends StatefulWidget {
 
 class _FpsCounterState extends State<FpsCounter>
     with SingleTickerProviderStateMixin {
-  // Started in initState, NOT as a `late final` initialiser: a `late`
-  // field is built on first read, and nothing reads the ticker before
-  // `dispose`, so the lazy form never started it and the counter sat at 0.
+  // Started in initState.
   late final Ticker _ticker;
   Duration _windowStart = Duration.zero;
   int _frames = 0;

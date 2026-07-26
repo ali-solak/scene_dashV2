@@ -3,14 +3,9 @@ import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
 
 import 'gizmos.dart';
 
-/// The integration members of the world surface (D8): promoted getters for
-/// the scene-side plumbing, so `resource<T>()` stays reserved for the
-/// game's own singletons.
+/// Scene helpers for [World].
 extension WorldSceneSurface on World {
-  /// Immediate-mode debug shapes for the current frame. The render layer
-  /// is opt-in — add `installGizmos(...)` to the feature list to draw.
-  /// Without it this is a disabled recorder, so submission calls in
-  /// shipping code stay safe no-ops everywhere (headless included).
+  /// Debug shapes for the current frame.
   Gizmos get gizmos =>
       resources.getOrInsert<Gizmos>(() => Gizmos()..enabled = false);
 

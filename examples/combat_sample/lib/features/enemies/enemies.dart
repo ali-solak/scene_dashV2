@@ -31,14 +31,7 @@ part 'systems/movement.dart';
 part 'systems/death.dart';
 part 'systems/visuals.dart';
 
-/// Installs the barbarians as four sub-features, each owning its own
-/// systems and their registration. Stagger and death themselves arrive
-/// through the rules feature's `applyDamage`.
-///
-/// Order matters: ordering edges are by function reference and need the
-/// referenced system registered first. Every `after:` edge currently
-/// sits inside one sub-feature, so this order is free to change, but a
-/// cross-feature edge would pin it.
+/// Installs enemies.
 void installEnemies(GameBuilder game) {
   game
     ..registerTag<Enemy>()

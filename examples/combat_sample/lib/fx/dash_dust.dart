@@ -1,8 +1,4 @@
-/// The dash's mud: a low scuff of earth kicked up where the roll pushes
-/// off, thrown BACKWARD along the dodge so the ground reads as being
-/// shoved against.
-///
-/// A no-op headless, like the other fx.
+/// Dash dust effect.
 library;
 
 import 'dart:math' as math;
@@ -18,14 +14,12 @@ import 'particles.dart' as fx;
 const int _clodCount = 90;
 const double _entityLifetime = 1.6;
 
-/// Spawns the scuff at [position] (the player's feet), kicked away along
-/// [heading] (the direction the dash travels), so the dirt flies out
-/// behind it.
+/// Spawns dash dust at [position].
 void spawnDashDust(World world, Vector3 position, Vector3 heading) {
   if (!world.hasResource<Scene>()) return;
   final system = fx.ParticleSystem(
     maxParticles: _clodCount,
-    // A shallow cone: the spray fans out low rather than fountaining.
+    // Shallow spray.
     shape: const fx.ConeShape(angle: 0.85, radius: 0.45),
     spawner: fx.Spawner(bursts: [fx.ParticleBurst(time: 0, count: _clodCount)]),
     looping: false,
@@ -33,8 +27,7 @@ void spawnDashDust(World world, Vector3 position, Vector3 heading) {
     lifetime: const fx.UniformFloat(0.45, 1.0),
     startSpeed: const fx.UniformFloat(3.5, 9.0),
     startSize: const fx.UniformFloat(0.2, 0.55),
-    // Wet forest earth, not dust: dark and brown, so it reads against
-    // the grass instead of glowing over it.
+    // Wet earth colors.
     startColor: fx.GradientColor(
       fx.ColorGradient([
         fx.ColorStop(0, Vector4(0.26, 0.19, 0.11, 1)),

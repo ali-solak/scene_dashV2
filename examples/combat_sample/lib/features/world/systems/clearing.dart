@@ -1,10 +1,6 @@
 part of '../world.dart';
 
-/// The clearing itself: ground slab and collider, the forest ring, the
-/// cliff rocks, the ocean, and the grass field.
-///
-/// Installs after [installStageLook]: `spawnClearing` orders after
-/// `setupWorld`, and ordering edges are by function reference.
+/// Installs the clearing.
 void installClearing(GameBuilder game) {
   game
     ..registerTag<Grass>()
@@ -18,10 +14,7 @@ void installClearing(GameBuilder game) {
     );
 }
 
-/// Builds the clearing: the ground slab (visual + fixed Rapier collider),
-/// the forest ring, and the grass field at budget. Static dressing is
-/// plain scene nodes; the grass spawns as an entity so the wind system
-/// reaches its material through the ECS.
+/// Builds the clearing.
 void spawnClearing(World world) {
   final scene = world.resource<Scene>();
   final assets = world.resource<WorldAssets>();
@@ -174,8 +167,7 @@ Node _buildOcean(WorldAssets assets) {
   final material =
       assets.oceanMaterial ??
       (UnlitMaterial()..baseColorFactor = Vector4(0.06, 0.2, 0.3, 1));
-  // Driven from Dart rather than left on the `.fmat` defaults, so the
-  // swell can be tuned without rebuilding the shader bundle.
+  // Apply ocean tuning.
   if (material is PreprocessedMaterial) {
     material.parameters
       ..setFloat('wave_height', oceanWaveHeight)
@@ -217,9 +209,7 @@ Node _buildGrass(WorldAssets assets) {
   return node;
 }
 
-/// Bakes [blades] worth of field onto [node]. Zero is a real setting:
-/// rather than feed `MeshGeometry.fromArrays` empty buffers, the node is
-/// simply hidden.
+/// Bakes [blades] onto [node].
 void _bakeGrass(Node node, Material material, int blades) {
   if (blades <= 0) {
     node.visible = false;

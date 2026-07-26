@@ -1,5 +1,4 @@
-/// Shared actor vocabulary: the components every combat feature reads
-/// (player, enemies, rules) without importing each other.
+/// Shared actor components.
 library;
 
 import 'dart:math' as math;
@@ -15,7 +14,7 @@ final class Player implements Tag {
 final class Health {
   Health(this.max) : current = max;
 
-  /// Not final: the vitality upgrade raises the player's ceiling mid-run.
+  /// Maximum health.
   double max;
   double current;
 
@@ -31,8 +30,7 @@ final class Health {
 final class PlayerWindup {
   const PlayerWindup(this.facing);
 
-  /// The yaw the swing is committed to, so the pack can tell whether it
-  /// is actually in the arc rather than merely nearby.
+  /// Committed attack yaw.
   final double facing;
 }
 
@@ -50,8 +48,7 @@ final class Knockback {
   /// Off the ground (mid-launch): movement input has no purchase.
   bool airborne = false;
 
-  /// Seconds still to spend on the floor after landing. Without this,
-  /// launched bodies popped upright the instant they touched down.
+  /// Remaining time on the ground.
   double downed = 0;
 
   /// Airborne, or still on the floor from a landing. Nothing that reads
@@ -84,9 +81,7 @@ final class Knockback {
       into
         ..x += velocity.x * dt
         ..z += velocity.z * dt;
-      // The decay models ground friction, sliding to a stop, so it only
-      // applies while grounded. Decaying mid-flight killed the horizontal
-      // half of every launch, turning a throw into a hop.
+      // Apply friction while grounded.
       if (!airborne) {
         final decay = math.exp(-decayRate * dt);
         velocity.x *= decay;
