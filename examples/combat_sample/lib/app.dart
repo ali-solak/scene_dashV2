@@ -2,7 +2,6 @@
 library;
 
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -44,7 +43,7 @@ class _CombatAppState extends State<CombatApp> {
   late final Future<SceneGame> _booting;
   final ValueNotifier<String> _bootStage = ValueNotifier('renderer');
 
-  final CameraRig _cameraRig = CameraRig()..yaw = math.pi;
+  final CameraRig _cameraRig = CameraRig()..yaw = config.titleCameraStartYaw;
   final GlobalKey _viewKey = GlobalKey();
 
   SceneGame? _game;

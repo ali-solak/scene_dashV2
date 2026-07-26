@@ -48,6 +48,10 @@ const double underbrushJitter = 0.9;
 final double cliffAzimuth = math.atan2(sunDirection.x, sunDirection.z);
 const double cliffHalfAngle = 0.6;
 
+/// Opens short of the sun, so the orbit drifts onto it and the run starts
+/// backlit.
+final double titleCameraStartYaw = cliffAzimuth - 0.4;
+
 const double groundIslandRadius = treeRingOuter + 2;
 const double cliffHeight = 12;
 
