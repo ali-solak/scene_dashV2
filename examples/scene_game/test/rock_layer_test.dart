@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scene_game/game/physics_layers.dart';
-import 'package:scene_game/rocks/rocks.dart';
+import 'package:scene_game/common/physics_layers.dart';
+import 'package:scene_game/features/rocks/rocks.dart';
 
 /// Guards the rock physics-layer classification used by the lose-condition
 /// system: it keeps `overlapSphere` hits whose collider carries

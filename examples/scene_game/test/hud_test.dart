@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
-import 'package:scene_game/collectables/collectables.dart';
-import 'package:scene_game/collectables/data/config.dart';
-import 'package:scene_game/game/game_state.dart';
+import 'package:scene_game/features/collectables/collectables.dart';
+import 'package:scene_game/features/collectables/data/config.dart';
+import 'package:scene_game/common/game_state.dart';
 import 'package:scene_game/hud/debug_panel.dart';
 import 'package:scene_game/hud/game_hud.dart';
-import 'package:scene_game/projectiles/data/config.dart';
-import 'package:scene_game/projectiles/projectiles.dart';
+import 'package:scene_game/features/projectiles/data/config.dart';
+import 'package:scene_game/features/projectiles/projectiles.dart';
 
 /// Widget coverage for the HUD: control placement, hold/release/cancel
 /// fire transitions, charge/cooldown/ready presentation, and the
@@ -27,6 +26,7 @@ void main() {
         g.world
           ..insert(GameState())
           ..insert(FpsCounter())
+          ..insert(DebugSettings())
           ..spawn([Blaster()]);
       },
     ],
@@ -49,15 +49,12 @@ void main() {
         home: Scaffold(
           body: GameScope(
             game: game,
-            child: BlocProvider(
-              create: (_) => DebugCubit(),
-              child: GameHud(
-                onLeftChanged: (_) {},
-                onRightChanged: (_) {},
-                onFireChanged: onFireChanged ?? (_) {},
-                onFireCanceled: onFireCanceled ?? () {},
-                onRestart: () {},
-              ),
+            child: GameHud(
+              onLeftChanged: (_) {},
+              onRightChanged: (_) {},
+              onFireChanged: onFireChanged ?? (_) {},
+              onFireCanceled: onFireCanceled ?? () {},
+              onRestart: () {},
             ),
           ),
         ),

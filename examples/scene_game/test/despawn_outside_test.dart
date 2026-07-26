@@ -1,8 +1,8 @@
 import 'package:flutter_scene/scene.dart' show Node;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
-import 'package:scene_game/game/bounds.dart';
-import 'package:scene_game/world/world.dart';
+import 'package:scene_game/common/bounds.dart';
+import 'package:scene_game/features/world/world.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4, Vector3;
 
 /// The shared [DespawnOutside] sweep, headless, through the world feature:

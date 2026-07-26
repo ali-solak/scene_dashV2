@@ -1,6 +1,6 @@
 import 'package:flutter_scene/scene.dart';
 
-import 'camera_rig.dart';
+import '../common/camera_rig.dart';
 
 PerspectiveCamera? _camera;
 

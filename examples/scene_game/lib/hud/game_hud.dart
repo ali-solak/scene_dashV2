@@ -1,14 +1,13 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:scene_dash_inspector/scene_dash_inspector.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 
-import '../collectables/collectables.dart';
-import '../collectables/data/config.dart';
-import '../game/game_state.dart';
-import '../projectiles/projectiles.dart';
+import '../features/collectables/collectables.dart';
+import '../features/collectables/data/config.dart';
+import '../common/game_state.dart';
+import '../features/projectiles/projectiles.dart';
 import 'debug_panel.dart';
 
 /// Plain Flutter HUD over the scene, built from the widget layer:
@@ -136,11 +135,10 @@ class _PlayingHud extends StatelessWidget {
         const Positioned(top: 64, left: 24, child: DebugPanel()),
         // The inspector consumes core snapshots only (never the live
         // world); the debug chip beside gizmos/stats toggles it.
-        BlocBuilder<DebugCubit, DebugSettings>(
-          buildWhen: (previous, current) =>
-              previous.inspector != current.inspector,
-          builder: (context, settings) =>
-              InspectorOverlay(visible: settings.inspector),
+        WorldBuilder<bool>(
+          select: (world) =>
+              world.tryResource<DebugSettings>()?.inspector ?? false,
+          builder: (context, visible) => InspectorOverlay(visible: visible),
         ),
         _Controls(
           onLeftChanged: onLeftChanged,

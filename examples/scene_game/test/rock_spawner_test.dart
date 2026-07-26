@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
-import 'package:scene_game/game/game_state.dart';
-import 'package:scene_game/rocks/data/config.dart';
-import 'package:scene_game/rocks/rocks.dart';
+import 'package:scene_game/common/game_state.dart';
+import 'package:scene_game/features/rocks/data/config.dart';
+import 'package:scene_game/features/rocks/rocks.dart';
 
 /// Pure-logic coverage for the deterministic, seeded rock spawner — no scene or
 /// GPU (it builds no rock meshes, only advances the timer and RNG) — plus the
@@ -28,8 +28,11 @@ void main() {
 
       game.world.setState(GameStatus.lost);
       game.pump();
-      expect(game.world.query<RockSpawner>().isEmpty, isTrue,
-          reason: 'DespawnOnExit swept the process entity');
+      expect(
+        game.world.query<RockSpawner>().isEmpty,
+        isTrue,
+        reason: 'DespawnOnExit swept the process entity',
+      );
 
       game.world.setState(GameStatus.playing);
       game.pump();
@@ -47,8 +50,11 @@ void main() {
       game.pump();
 
       final second = game.world.single<RockSpawner>();
-      expect(identical(first, second), isFalse,
-          reason: 'respawn-per-run IS the cadence reset');
+      expect(
+        identical(first, second),
+        isFalse,
+        reason: 'respawn-per-run IS the cadence reset',
+      );
     });
   });
 

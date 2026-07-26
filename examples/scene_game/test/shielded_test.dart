@@ -1,11 +1,11 @@
 import 'package:flutter_scene/scene.dart' show Node;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
-import 'package:scene_game/collectables/collectables.dart';
-import 'package:scene_game/collectables/data/config.dart';
-import 'package:scene_game/game/game_state.dart';
-import 'package:scene_game/game/sets.dart';
-import 'package:scene_game/player/player.dart' show Player;
+import 'package:scene_game/features/collectables/collectables.dart';
+import 'package:scene_game/features/collectables/data/config.dart';
+import 'package:scene_game/common/game_state.dart';
+import 'package:scene_game/common/sets.dart';
+import 'package:scene_game/features/player/player.dart' show Player;
 
 /// The full [Shielded] lifecycle, headless, through the real collectables
 /// feature: pickup → observers fire (the bubble signal) → the damage gate
@@ -81,26 +81,30 @@ void main() {
     expect(g.game.world.has<Shielded>(g.player), isTrue);
   });
 
-  test('the deadline expires frame-exactly: bubble hidden, damage lands',
-      () {
+  test('the deadline expires frame-exactly: bubble hidden, damage lands', () {
     final g = boot();
     spawnPickupAtPlayer(g.game);
     g.game.pump();
 
     final ticks = ticksFor(shieldDuration);
     g.game.pumpFixed(steps: ticks - 1);
-    expect(g.game.world.has<Shielded>(g.player), isTrue,
-        reason: 'shielded through tick ${ticks - 1}');
+    expect(
+      g.game.world.has<Shielded>(g.player),
+      isTrue,
+      reason: 'shielded through tick ${ticks - 1}',
+    );
 
     g.game.pumpFixed(steps: 1);
-    expect(g.game.world.has<Shielded>(g.player), isFalse,
-        reason: 'expired at tick $ticks — damage lands again');
+    expect(
+      g.game.world.has<Shielded>(g.player),
+      isFalse,
+      reason: 'expired at tick $ticks — damage lands again',
+    );
     expect(g.game.world.expiryOf<Shielded>(g.player), isNull);
     expect(g.bubble, ['shown', 'hidden']);
   });
 
-  test('re-pickup while shielded refreshes the deadline and fires nothing',
-      () {
+  test('re-pickup while shielded refreshes the deadline and fires nothing', () {
     final g = boot();
     spawnPickupAtPlayer(g.game);
     g.game.pump();
@@ -108,13 +112,15 @@ void main() {
 
     spawnPickupAtPlayer(g.game);
     g.game.pump();
-    expect(g.game.world.expiryOf<Shielded>(g.player), shieldDuration,
-        reason: 'back to full duration');
+    expect(
+      g.game.world.expiryOf<Shielded>(g.player),
+      shieldDuration,
+      reason: 'back to full duration',
+    );
     expect(g.bubble, ['shown'], reason: 'S4: add-over-existing is silent');
   });
 
-  test('a run restart removes a carried shield through the same observers',
-      () {
+  test('a run restart removes a carried shield through the same observers', () {
     final g = boot();
     spawnPickupAtPlayer(g.game);
     g.game.pump();

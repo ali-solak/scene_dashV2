@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scene_game/player/data/config.dart';
-import 'package:scene_game/player/animation/gait.dart';
+import 'package:scene_game/features/player/data/config.dart';
+import 'package:scene_game/features/player/animation/gait.dart';
 
 void main() {
   test('player leg definitions include three legs per side', () {
@@ -104,13 +104,11 @@ void main() {
       for (var slot = 0; slot < crabLegsPerSide; slot++) {
         for (final extended in [false, true]) {
           final pose = crabLegPoseFor(side, slot, extended: extended);
-          final worldElbowSum =
-              side.sign * (pose.upperAngle + pose.lowerAngle);
+          final worldElbowSum = side.sign * (pose.upperAngle + pose.lowerAngle);
           expect(
             worldElbowSum,
             lessThan(0),
-            reason:
-                '$side slot $slot (extended: $extended) must fold downward',
+            reason: '$side slot $slot (extended: $extended) must fold downward',
           );
         }
       }

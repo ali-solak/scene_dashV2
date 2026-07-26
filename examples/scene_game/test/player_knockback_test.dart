@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scene_game/player/data/config.dart';
-import 'package:scene_game/player/player.dart';
+import 'package:scene_game/features/player/data/config.dart';
+import 'package:scene_game/features/player/player.dart';
 import 'package:vector_math/vector_math.dart' show Vector3;
 
 /// Pure-logic coverage for rock-contact shove state (no scene or GPU).

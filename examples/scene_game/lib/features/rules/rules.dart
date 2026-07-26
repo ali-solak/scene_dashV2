@@ -7,10 +7,10 @@ import 'package:vector_math/vector_math.dart' show Ray, Vector3;
 
 import '../collectables/collectables.dart';
 import '../collectables/data/config.dart';
-import '../game/camera_rig.dart';
-import '../game/game_state.dart';
-import '../game/physics_layers.dart';
-import '../game/sets.dart';
+import '../../common/camera_rig.dart';
+import '../../common/game_state.dart';
+import '../../common/physics_layers.dart';
+import '../../common/sets.dart';
 import '../player/data/config.dart';
 import '../player/player.dart';
 import 'data/config.dart';

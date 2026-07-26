@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
-import 'package:scene_game/game/game_state.dart';
-import 'package:scene_game/projectiles/projectiles.dart';
+import 'package:scene_game/common/game_state.dart';
+import 'package:scene_game/features/projectiles/projectiles.dart';
 
 /// Drives the real event → Blaster path through the real frame pipeline —
 /// no scene, GPU, physics or player entity — to reproduce "charging works,
@@ -35,15 +35,17 @@ void main() {
       if (!shots.isEmpty) fired.add(shots);
     }
 
-    final game = TestGame.headless(features: [
-      (g) => g
-        // The device wiring: fire edges must survive until a fixed step
-        // consumes them, however many frames that takes.
-        ..configureEvent<FirePressed>(retainedUpdates: null)
-        ..configureEvent<FireReleased>(retainedUpdates: null)
-        ..configureEvent<FireCanceled>(retainedUpdates: null)
-        ..addSystem(Schedules.fixedUpdate, probe, reads: const {}),
-    ]);
+    final game = TestGame.headless(
+      features: [
+        (g) => g
+          // The device wiring: fire edges must survive until a fixed step
+          // consumes them, however many frames that takes.
+          ..configureEvent<FirePressed>(retainedUpdates: null)
+          ..configureEvent<FireReleased>(retainedUpdates: null)
+          ..configureEvent<FireCanceled>(retainedUpdates: null)
+          ..addSystem(Schedules.fixedUpdate, probe, reads: const {}),
+      ],
+    );
     return (game: game, blaster: blaster, fired: fired);
   }
 

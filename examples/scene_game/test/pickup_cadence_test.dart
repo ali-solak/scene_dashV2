@@ -1,11 +1,11 @@
 import 'package:flutter_scene/scene.dart' show Node;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
-import 'package:scene_game/collectables/collectables.dart';
-import 'package:scene_game/collectables/data/config.dart';
-import 'package:scene_game/game/game_state.dart';
-import 'package:scene_game/game/sets.dart';
-import 'package:scene_game/player/player.dart' show Player;
+import 'package:scene_game/features/collectables/collectables.dart';
+import 'package:scene_game/features/collectables/data/config.dart';
+import 'package:scene_game/common/game_state.dart';
+import 'package:scene_game/common/sets.dart';
+import 'package:scene_game/features/player/player.dart' show Player;
 
 /// Headless behavior of the pickup spawner. The cadence itself is the
 /// registration's `every(shieldPickupInterval)` (timing covered by the

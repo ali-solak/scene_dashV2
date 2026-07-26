@@ -1,75 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 
-import '../player/player.dart';
-import '../rocks/rocks.dart';
+import '../features/player/player.dart';
+import '../features/rocks/rocks.dart';
 
-/// App-shell debug switches: the gizmo overlay, the live-stats panel and
-/// the inspector.
 final class DebugSettings {
-  const DebugSettings({
+  DebugSettings({
     this.gizmos = false,
     this.stats = false,
     this.inspector = false,
   });
 
-  /// Draw the gizmo overlay (ground probe, hit radii). A true runtime
-  /// toggle — the pools build on the first enabled frame and hide again
-  /// when it goes off.
-  final bool gizmos;
+  bool gizmos;
+  bool stats;
+  bool inspector;
 
-  /// Show the live-stats panel (rock count, player position).
-  final bool stats;
-
-  /// Show the inspector overlay (entities, resources, timings, events).
-  final bool inspector;
-
-  DebugSettings copyWith({bool? gizmos, bool? stats, bool? inspector}) =>
-      DebugSettings(
-        gizmos: gizmos ?? this.gizmos,
-        stats: stats ?? this.stats,
-        inspector: inspector ?? this.inspector,
-      );
+  (bool, bool, bool) get snapshot => (gizmos, stats, inspector);
 }
 
-/// Cubit-as-resource (§1.10), the app-shell pattern: `main` constructs one
-/// instance, hands it to the widget tree through `BlocProvider` *and*
-/// inserts it into the world — widgets drive it with ordinary cubit
-/// methods, and systems read `cubit.state` like any other resource. The
-/// write path stays one-directional: UI → cubit → world. [Disposable] is
-/// the whole teardown wiring: the framework disposes the resource at game
-/// shutdown, so nothing closes the cubit by hand.
-final class DebugCubit extends Cubit<DebugSettings> implements Disposable {
-  DebugCubit([super.initial = const DebugSettings()]);
-
-  void toggleGizmos() => emit(state.copyWith(gizmos: !state.gizmos));
-
-  void toggleStats() => emit(state.copyWith(stats: !state.stats));
-
-  void toggleInspector() => emit(state.copyWith(inspector: !state.inspector));
-
-  @override
-  void dispose() => close();
-}
-
-/// The read half of the cubit-as-resource pattern: once per frame, apply
-/// the app-shell choices to the world.
-void applyDebugSettings(World world) {
-  world.gizmos.enabled = world.resource<DebugCubit>().state.gizmos;
-}
-
-/// Two toggle chips and, when stats are on, a live panel selected straight
-/// from the world — `WorldBuilder` for the aggregate, `EntityBuilder` for
-/// the one watched entity. Each rebuilds only when its value changes.
 class DebugPanel extends StatelessWidget {
   const DebugPanel({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<DebugCubit, DebugSettings>(
-      builder: (context, settings) {
-        final cubit = context.read<DebugCubit>();
+    final world = GameScope.of(context).world;
+    final settings = world.resource<DebugSettings>();
+    return WorldBuilder<(bool, bool, bool)>(
+      select: (world) => world.resource<DebugSettings>().snapshot,
+      builder: (context, _) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -81,21 +39,24 @@ class DebugPanel extends StatelessWidget {
                   icon: Icons.monitor_heart_outlined,
                   semanticLabel: 'Toggle live stats',
                   active: settings.stats,
-                  onPressed: cubit.toggleStats,
+                  onPressed: () => settings.stats = !settings.stats,
                 ),
                 const SizedBox(width: 8),
                 _ToggleChip(
                   icon: Icons.grid_3x3,
                   semanticLabel: 'Toggle debug gizmos',
                   active: settings.gizmos,
-                  onPressed: cubit.toggleGizmos,
+                  onPressed: () {
+                    settings.gizmos = !settings.gizmos;
+                    world.gizmos.enabled = settings.gizmos;
+                  },
                 ),
                 const SizedBox(width: 8),
                 _ToggleChip(
                   icon: Icons.manage_search,
                   semanticLabel: 'Toggle inspector',
                   active: settings.inspector,
-                  onPressed: cubit.toggleInspector,
+                  onPressed: () => settings.inspector = !settings.inspector,
                 ),
               ],
             ),

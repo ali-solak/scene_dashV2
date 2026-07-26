@@ -3,10 +3,10 @@ import 'package:flutter_scene_rapier/flutter_scene_rapier.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 
-import '../fx/anim.dart';
-import '../game/game_state.dart';
-import '../game/physics_layers.dart';
-import '../game/sets.dart';
+import '../../fx/anim.dart';
+import '../../common/game_state.dart';
+import '../../common/physics_layers.dart';
+import '../../common/sets.dart';
 import '../world/data/config.dart';
 import '../world/data/ramp.dart';
 import 'animation/gait.dart';

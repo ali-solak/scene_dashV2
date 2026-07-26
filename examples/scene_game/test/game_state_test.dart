@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
-import 'package:scene_game/game/game_state.dart';
+import 'package:scene_game/common/game_state.dart';
 
 /// Pure-logic coverage for the run's data and its `GameStatus` state machine —
 /// no scene or GPU.
@@ -41,9 +41,9 @@ void main() {
   });
 
   test('the GameStatus machine starts playing and transitions to lost', () {
-    final game = TestGame.headless(features: [
-      (g) => g.addState<GameStatus>(GameStatus.playing),
-    ]);
+    final game = TestGame.headless(
+      features: [(g) => g.addState<GameStatus>(GameStatus.playing)],
+    );
     game.pump();
     expect(game.world.state<GameStatus>(), GameStatus.playing);
 

@@ -1,15 +1,3 @@
-/// The game screen: boots a game, holds a cover over its first frames,
-/// then shows it. Until the game is ready it shows [LoadingScreen],
-/// the only other screen this app has.
-///
-/// Four phases, in order:
-///
-///  1. boot    — [bootCombatGame] runs while the cover shows its stages
-///  2. cover   — the game renders its first frames still covered, so
-///               pipeline compiles and warmups never jank on screen
-///  3. reveal  — after two scene ticks the cover lifts
-///  4. reserve — one frame later the pooled barbarian reserve realizes,
-///               off the critical path of the first visible frame
 library;
 
 import 'dart:async';
@@ -97,7 +85,6 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void dispose() {
     unawaited(_game?.shutdown());
-    // The boot future captures both; they must outlive a mid-boot dispose.
     unawaited(
       _bootFuture.whenComplete(() {
         _loading.dispose();
@@ -116,7 +103,6 @@ class _GameScreenState extends State<GameScreen> {
       fit: StackFit.expand,
       children: [
         _GameView(game: game, scene: _scene, onTick: _onSceneTick),
-        // Phase 2: the game is live underneath, still hidden.
         if (_coverScene) _BootCover(stage: _bootStage),
       ],
     );

@@ -1,16 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
-import 'package:scene_game/collectables/collectables.dart';
-import 'package:scene_game/decor/decor.dart';
-import 'package:scene_game/game/camera_rig.dart';
-import 'package:scene_game/game/game_state.dart';
-import 'package:scene_game/game/sets.dart';
+import 'package:scene_game/features/collectables/collectables.dart';
+import 'package:scene_game/features/decor/decor.dart';
+import 'package:scene_game/common/camera_rig.dart';
+import 'package:scene_game/common/game_state.dart';
+import 'package:scene_game/common/sets.dart';
 import 'package:scene_game/hud/debug_panel.dart';
-import 'package:scene_game/player/player.dart';
-import 'package:scene_game/projectiles/projectiles.dart';
-import 'package:scene_game/rocks/rocks.dart';
-import 'package:scene_game/rules/rules.dart';
-import 'package:scene_game/world/world.dart';
+import 'package:scene_game/features/player/player.dart';
+import 'package:scene_game/features/projectiles/projectiles.dart';
+import 'package:scene_game/features/rocks/rocks.dart';
+import 'package:scene_game/features/rules/rules.dart';
+import 'package:scene_game/features/world/world.dart';
 
 /// The whole-build acceptance row "conflict detector clean at `throw` with
 /// `strictAccess` for the validation game": every system registration in
@@ -30,14 +30,11 @@ void main() {
               GameSets.movement,
               GameSets.actions,
             ])
-            ..configureSets(
-                Schedules.update, [GameSets.logic, GameSets.rules])
+            ..configureSets(Schedules.update, [GameSets.logic, GameSets.rules])
             ..world.insert(ButtonInput<GameAction>())
             ..world.insert(CameraRig())
             ..world.insert(FpsCounter())
-            ..world.insert(DebugCubit())
-            ..addSystem(Schedules.frameStart, applyDebugSettings,
-                reads: const {});
+            ..world.insert(DebugSettings());
         },
         installGizmos(enabled: false),
         installWorldGeometry,

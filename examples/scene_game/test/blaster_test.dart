@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scene_game/projectiles/data/config.dart';
-import 'package:scene_game/projectiles/projectiles.dart';
+import 'package:scene_game/features/projectiles/data/config.dart';
+import 'package:scene_game/features/projectiles/projectiles.dart';
 
 /// Pure-logic coverage for the blaster's tap-to-burst / hold-to-charge state
 /// machine. Drives [Blaster.update] directly — no scene or GPU.
@@ -47,7 +47,13 @@ void main() {
 
   test('holding below the threshold then releasing is still a burst', () {
     final b = Blaster()
-      ..update(pressed: true, released: false, canceled: false, held: true, dt: 0);
+      ..update(
+        pressed: true,
+        released: false,
+        canceled: false,
+        held: true,
+        dt: 0,
+      );
     // Hold for less than the threshold.
     b.update(
       pressed: false,
@@ -72,7 +78,13 @@ void main() {
 
   test('holding past the threshold enters the charging state', () {
     final b = Blaster()
-      ..update(pressed: true, released: false, canceled: false, held: true, dt: 0)
+      ..update(
+        pressed: true,
+        released: false,
+        canceled: false,
+        held: true,
+        dt: 0,
+      )
       ..update(
         pressed: false,
         released: false,
@@ -86,7 +98,13 @@ void main() {
 
   test('a charged release produces exactly one charged shot', () {
     final b = Blaster()
-      ..update(pressed: true, released: false, canceled: false, held: true, dt: 0)
+      ..update(
+        pressed: true,
+        released: false,
+        canceled: false,
+        held: true,
+        dt: 0,
+      )
       ..update(
         pressed: false,
         released: false,
@@ -111,7 +129,13 @@ void main() {
 
   test('charge clamps at maximum', () {
     final b = Blaster()
-      ..update(pressed: true, released: false, canceled: false, held: true, dt: 0)
+      ..update(
+        pressed: true,
+        released: false,
+        canceled: false,
+        held: true,
+        dt: 0,
+      )
       ..update(
         pressed: false,
         released: false,
@@ -124,7 +148,13 @@ void main() {
 
   test('cooldown blocks a new fire sequence', () {
     final b = Blaster()
-      ..update(pressed: true, released: false, canceled: false, held: true, dt: 0)
+      ..update(
+        pressed: true,
+        released: false,
+        canceled: false,
+        held: true,
+        dt: 0,
+      )
       ..update(
         pressed: false,
         released: false,
@@ -165,7 +195,13 @@ void main() {
 
   test('cancel does not fire', () {
     final b = Blaster()
-      ..update(pressed: true, released: false, canceled: false, held: true, dt: 0)
+      ..update(
+        pressed: true,
+        released: false,
+        canceled: false,
+        held: true,
+        dt: 0,
+      )
       ..update(
         pressed: false,
         released: false,
@@ -185,35 +221,44 @@ void main() {
     expect(drainIdle(b).charged, 0);
   });
 
-  test('charging with held dropped and no release flag aborts, does not fire', () {
-    // This is exactly what a *dropped* FireReleased event looks like to the
-    // blaster: `held` (the ButtonInput level) has already gone false, but no
-    // `released`/`canceled` edge arrived. The blaster aborts the charge rather
-    // than firing — which is why a dropped release read as "no projectiles".
-    // The fix keeps the release edge alive until this system consumes it, so
-    // `released` is true on the same step `held` is false.
-    final b = Blaster()
-      ..update(pressed: true, released: false, canceled: false, held: true, dt: 0)
-      ..update(
-        pressed: false,
-        released: false,
-        canceled: false,
-        held: true,
-        dt: blasterChargeThreshold + 0.2,
-      );
-    expect(b.isCharging, isTrue);
+  test(
+    'charging with held dropped and no release flag aborts, does not fire',
+    () {
+      // This is exactly what a *dropped* FireReleased event looks like to the
+      // blaster: `held` (the ButtonInput level) has already gone false, but no
+      // `released`/`canceled` edge arrived. The blaster aborts the charge rather
+      // than firing — which is why a dropped release read as "no projectiles".
+      // The fix keeps the release edge alive until this system consumes it, so
+      // `released` is true on the same step `held` is false.
+      final b = Blaster()
+        ..update(
+          pressed: true,
+          released: false,
+          canceled: false,
+          held: true,
+          dt: 0,
+        )
+        ..update(
+          pressed: false,
+          released: false,
+          canceled: false,
+          held: true,
+          dt: blasterChargeThreshold + 0.2,
+        );
+      expect(b.isCharging, isTrue);
 
-    final s = b.update(
-      pressed: false,
-      released: false, // the release edge never arrived
-      canceled: false,
-      held: false, // but the held level already dropped
-      dt: 0,
-    );
-    expect(s.isEmpty, isTrue, reason: 'no shot');
-    expect(b.isReady, isTrue, reason: 'charge aborted');
-    expect(drainIdle(b).charged, 0);
-  });
+      final s = b.update(
+        pressed: false,
+        released: false, // the release edge never arrived
+        canceled: false,
+        held: false, // but the held level already dropped
+        dt: 0,
+      );
+      expect(s.isEmpty, isTrue, reason: 'no shot');
+      expect(b.isReady, isTrue, reason: 'charge aborted');
+      expect(drainIdle(b).charged, 0);
+    },
+  );
 
   test('phase edges follow the machine latch: charging-started is readable '
       'until the next update', () {
@@ -234,14 +279,23 @@ void main() {
       held: true,
       dt: frame,
     );
-    expect(b.phase.justEntered(BlasterPhase.charging), isFalse,
-        reason: 'the next update ticks the machine: window closed');
+    expect(
+      b.phase.justEntered(BlasterPhase.charging),
+      isFalse,
+      reason: 'the next update ticks the machine: window closed',
+    );
     expect(b.phase.state, BlasterPhase.charging);
   });
 
   test('reset clears all state', () {
     final b = Blaster()
-      ..update(pressed: true, released: false, canceled: false, held: true, dt: 0)
+      ..update(
+        pressed: true,
+        released: false,
+        canceled: false,
+        held: true,
+        dt: 0,
+      )
       ..update(
         pressed: false,
         released: false,
