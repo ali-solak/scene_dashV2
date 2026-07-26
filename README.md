@@ -1012,16 +1012,20 @@ void strafePlayer(World world) {
 | [`benchmarks`](benchmarks) | Query, structural, and record-overhead benchmarks. |
 
 ```text
-examples/scene_game/lib/
-├── player/          # each folder: one feature
-├── projectiles/     #   (components, bundles, systems, resources)
+examples/scene_game/lib/features/   # feature based structure
+├── player/                         #   else you keep beside it (hud/, fx/,
+├── projectiles/                    #   common/, main.dart) is your call
 ├── rocks/
 ├── collectables/
 ├── rules/
 ├── world/
-├── decor/
-├── hud/
-└── main.dart
+└── decor/
+
+examples/scene_game/lib/features/player/     # every feature, same shape
+├── player.dart      # the Feature function: installs this feature's systems
+├── data/            # components, bundles, config, resources
+├── systems/         # one file per concern, not one file per feature
+└── animation/       # optional; clip selection lives with its feature
 ```
 
 Deeper docs: [architecture](docs/concept.md) ·
