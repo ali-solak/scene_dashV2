@@ -121,14 +121,43 @@ class _SkillSlot extends StatelessWidget {
           child: Listener(
             onPointerDown: (_) => onCast(),
             behavior: HitTestBehavior.opaque,
-            child: _build(context, flash),
+            child: _SlotFace(
+              index: index,
+              level: level,
+              readiness: readiness,
+              charges: charges,
+              flash: flash,
+            ),
           ),
         );
       },
     );
   }
+}
 
-  Widget _build(BuildContext context, double flash) {
+/// The slot's face: the frame, the cooldown sweep or charge pips, the
+/// number and the level. A widget rather than a helper method, so the
+/// pulse rebuilds only this and Flutter can element-match it frame to
+/// frame.
+class _SlotFace extends StatelessWidget {
+  const _SlotFace({
+    required this.index,
+    required this.level,
+    required this.readiness,
+    required this.charges,
+    required this.flash,
+  });
+
+  final int index;
+  final int level;
+  final double readiness;
+  final int charges;
+
+  /// 0 at rest, 1 at the top of the cast pop.
+  final double flash;
+
+  @override
+  Widget build(BuildContext context) {
     final unlocked = level > 0;
     final ready = unlocked && readiness >= 1;
     final holding = charges > 0;

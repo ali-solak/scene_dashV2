@@ -252,11 +252,12 @@ Future<SceneGame> _boot(Scene scene, ResourceGroup loading) async {
   scene.add(await loading.add(Node.fromGlbAsset('assets/model.glb')));
   return SceneGame.boot(scene: scene, features: [...]);
 }
-
+final viewKey = GlobalKey();     
 final sceneView = SceneView(
   scene,
+  key: viewKey,
   loading: loading,
-  warmUp: true,
+  warmUp: !isMobile,
   loadingBuilder: (context, progress) => SplashScreen(progress),
 );
 

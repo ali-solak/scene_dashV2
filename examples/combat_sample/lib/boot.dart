@@ -4,8 +4,6 @@
 /// this file owns everything between "binding ready" and "game running".
 library;
 
-import 'dart:math' as math;
-
 import 'package:flutter/foundation.dart' show ValueNotifier, debugPrint;
 import 'package:flutter_scene/scene.dart';
 import 'package:flutter_scene_rapier/flutter_scene_rapier.dart';
@@ -31,16 +29,17 @@ Future<SceneGame> bootCombatGame(
   Scene scene,
   ResourceGroup loading,
   ValueNotifier<String> stage,
+  CameraRig cameraRig,
 ) async {
+  final physics = RapierWorld.ensureInitialized();
   stage.value = 'renderer';
   await Scene.initializeStaticResources();
-  stage.value = 'physics';
-  await RapierWorld.ensureInitialized();
-
-  stage.value = 'world materials';
-  final assets = await loadWorldAssets(loading: loading);
-  stage.value = 'character rigs';
-  final characters = await _loadCharacters(loading);
+  stage.value = 'assets';
+  final worldAssets = loadWorldAssets(loading: loading);
+  final characterAssets = _loadCharacters(loading);
+  final assets = await worldAssets;
+  final characters = await characterAssets;
+  await physics;
 
   stage.value = 'the clearing';
   final game = await SceneGame.boot(
@@ -49,7 +48,7 @@ Future<SceneGame> bootCombatGame(
     strictAccess: true,
     accessConflictPolicy: AccessConflictPolicy.error,
     features: [
-      _configureCombat(characters),
+      _configureCombat(characters, cameraRig),
       installWorld(assets),
       installDecor,
       installPlayer,
@@ -75,21 +74,24 @@ Future<CharacterAssets?> _loadCharacters(ResourceGroup loading) async {
   }
 }
 
-Feature _configureCombat(CharacterAssets? characters) => (game) {
-  game
-    ..addState<GameStatus>(GameStatus.title)
-    ..configureSets(Schedules.fixedUpdate, [
-      GameSets.movement,
-      GameSets.enemyMovement,
-      GameSets.actions,
-      GameSets.resolution,
-      GameSets.waves,
-    ])
-    ..configureSets(Schedules.update, [GameSets.logic])
-    ..world.insert(ButtonInput<CombatAction>())
-    ..world.insert(AxisInput<MoveAxis>())
-    ..world.insert(InputBuffer<CombatAction>(window: bufferWindow))
-    ..world.insert(LookInput())
-    ..world.insert(CameraRig()..yaw = math.pi);
-  if (characters != null) game.world.insert(characters);
-};
+Feature _configureCombat(CharacterAssets? characters, CameraRig cameraRig) =>
+    (game) {
+      game
+        ..addState<GameStatus>(GameStatus.title)
+        ..configureSets(Schedules.fixedUpdate, [
+          GameSets.movement,
+          GameSets.enemyMovement,
+          GameSets.actions,
+          GameSets.resolution,
+          GameSets.waves,
+        ])
+        ..configureSets(Schedules.update, [GameSets.logic])
+        ..world.insert(ButtonInput<CombatAction>())
+        ..world.insert(AxisInput<MoveAxis>())
+        ..world.insert(InputBuffer<CombatAction>(window: bufferWindow))
+        ..world.insert(LookInput())
+        // Created by the app, not here: the SceneView mounts before the game
+        // exists and its cameraBuilder needs a rig to read from day one.
+        ..world.insert(cameraRig);
+      if (characters != null) game.world.insert(characters);
+    };

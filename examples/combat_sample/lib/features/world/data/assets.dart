@@ -41,19 +41,23 @@ class WorldAssets {
 /// imports upload geometry and need the GPU context.
 Future<WorldAssets> loadWorldAssets({ResourceGroup? loading}) async {
   final registry = await FmatMaterialRegistry.load();
-  final ground = await _track(loading, _load(registry, 'ground_noise'));
-  final grass = await _track(loading, _load(registry, 'grass_sway'));
-  final dissolve = await _track(loading, _load(registry, 'dissolve'));
-  final ocean = await _track(loading, _load(registry, 'ocean'));
-  final lava = await _track(loading, _load(registry, 'lava'));
-  final barrier = await _track(loading, _load(registry, 'barrier'));
+  // Started together, awaited together. Six independent materials, so
+  // serial awaits made the load the sum of its parts instead of its
+  // slowest part — and a ResourceGroup's progress only means anything
+  // while the loads it tracks actually overlap.
+  final ground = _track(loading, _load(registry, 'ground_noise'));
+  final grass = _track(loading, _load(registry, 'grass_sway'));
+  final dissolve = _track(loading, _load(registry, 'dissolve'));
+  final ocean = _track(loading, _load(registry, 'ocean'));
+  final lava = _track(loading, _load(registry, 'lava'));
+  final barrier = _track(loading, _load(registry, 'barrier'));
   return WorldAssets(
-    groundMaterial: ground,
-    grassMaterial: grass,
-    dissolveMaterial: dissolve,
-    oceanMaterial: ocean,
-    lavaMaterial: lava,
-    barrierMaterial: barrier,
+    groundMaterial: await ground,
+    grassMaterial: await grass,
+    dissolveMaterial: await dissolve,
+    oceanMaterial: await ocean,
+    lavaMaterial: await lava,
+    barrierMaterial: await barrier,
   );
 }
 

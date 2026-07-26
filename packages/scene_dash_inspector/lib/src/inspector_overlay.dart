@@ -3,7 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:scene_dash_v2_core/advanced.dart'
-    show EntityDetailSnapshot, InspectorSnapshot, SnapshotCollector;
+    show
+        EntityDetailSnapshot,
+        EntitySnapshot,
+        EventChannelSnapshot,
+        InspectorSnapshot,
+        ResourceSnapshot,
+        SnapshotCollector,
+        SystemSnapshot;
 
 /// A toggleable, phone-usable inspector panel for a `Stack` (I4).
 ///
@@ -177,11 +184,15 @@ class _InspectorPanelState extends State<InspectorPanel> {
               Row(
                 children: [
                   for (final tab in _InspectorTab.values)
-                    _tabButton(tab, tab.name),
+                    _TabButton(
+                      label: tab.name,
+                      selected: _tab == tab,
+                      onPressed: () => setState(() => _tab = tab),
+                    ),
                 ],
               ),
               const Divider(height: 1, color: Colors.white24),
-              Flexible(child: _body()),
+              Flexible(child: _tabBody()),
             ],
           ),
         ),
@@ -189,8 +200,59 @@ class _InspectorPanelState extends State<InspectorPanel> {
     );
   }
 
-  Widget _tabButton(_InspectorTab tab, String label) {
-    final selected = _tab == tab;
+  /// Picks the widget for the selected tab: it returns one of the list
+  /// widgets below and builds no tree of its own.
+  Widget _tabBody() {
+    final snapshot = widget.snapshot;
+    switch (_tab) {
+      case _InspectorTab.entities:
+        final detail = _detail;
+        if (detail != null) {
+          return _EntityDetail(
+            detail: detail,
+            onBack: () => setState(() => _detail = null),
+          );
+        }
+        return _EntityList(
+          entities: snapshot.entities,
+          filter: _filter,
+          onFilterChanged: (value) => setState(() => _filter = value),
+          onSelect: (index, generation) => setState(() {
+            _detail = widget.describe(index, generation);
+          }),
+        );
+      case _InspectorTab.resources:
+        return _ResourceList(resources: snapshot.resources);
+      case _InspectorTab.systems:
+        return _SystemList(
+          systems: snapshot.systems,
+          sortByMs: _sortByMs,
+          onToggleSort: () => setState(() => _sortByMs = !_sortByMs),
+        );
+      case _InspectorTab.events:
+        return _EventList(events: snapshot.events);
+    }
+  }
+}
+
+String _entityTitle(int index, int generation, String? name) {
+  final label = name == null ? '' : ' "$name"';
+  return 'Entity($index v$generation)$label';
+}
+
+class _TabButton extends StatelessWidget {
+  const _TabButton({
+    required this.label,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
     return Expanded(
       child: TextButton(
         style: TextButton.styleFrom(
@@ -198,30 +260,31 @@ class _InspectorPanelState extends State<InspectorPanel> {
           minimumSize: Size.zero,
           foregroundColor: selected ? Colors.amber : Colors.white70,
         ),
-        onPressed: () => setState(() => _tab = tab),
+        onPressed: onPressed,
         child: Text(label, style: const TextStyle(fontSize: 11)),
       ),
     );
   }
+}
 
-  Widget _body() {
-    switch (_tab) {
-      case _InspectorTab.entities:
-        final detail = _detail;
-        return detail == null ? _entityList() : _entityDetail(detail);
-      case _InspectorTab.resources:
-        return _resourceList();
-      case _InspectorTab.systems:
-        return _systemList();
-      case _InspectorTab.events:
-        return _eventList();
-    }
-  }
+class _EntityList extends StatelessWidget {
+  const _EntityList({
+    required this.entities,
+    required this.filter,
+    required this.onFilterChanged,
+    required this.onSelect,
+  });
 
-  Widget _entityList() {
-    final filter = _filter.toLowerCase();
-    final entities = widget.snapshot.entities
-        .where((e) => (e.name ?? '').toLowerCase().contains(filter))
+  final List<EntitySnapshot> entities;
+  final String filter;
+  final ValueChanged<String> onFilterChanged;
+  final void Function(int index, int generation) onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final needle = filter.toLowerCase();
+    final matches = entities
+        .where((e) => (e.name ?? '').toLowerCase().contains(needle))
         .toList();
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -236,23 +299,23 @@ class _InspectorPanelState extends State<InspectorPanel> {
               hintText: 'filter by Name',
               hintStyle: TextStyle(color: Colors.white38),
             ),
-            onChanged: (value) => setState(() => _filter = value),
+            onChanged: onFilterChanged,
           ),
         ),
         Flexible(
           child: ListView(
             shrinkWrap: true,
             children: [
-              for (final entity in entities)
-                _tile(
+              for (final entity in matches)
+                _Tile(
                   key: Key('inspector-entity-${entity.index}'),
-                  title: _entityTitle(entity.index, entity.generation,
-                      entity.name),
+                  title: _entityTitle(
+                    entity.index,
+                    entity.generation,
+                    entity.name,
+                  ),
                   subtitle: entity.componentTypes.join(', '),
-                  onTap: () => setState(() {
-                    _detail =
-                        widget.describe(entity.index, entity.generation);
-                  }),
+                  onTap: () => onSelect(entity.index, entity.generation),
                 ),
             ],
           ),
@@ -260,8 +323,16 @@ class _InspectorPanelState extends State<InspectorPanel> {
       ],
     );
   }
+}
 
-  Widget _entityDetail(EntityDetailSnapshot detail) {
+class _EntityDetail extends StatelessWidget {
+  const _EntityDetail({required this.detail, required this.onBack});
+
+  final EntityDetailSnapshot detail;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,9 +341,12 @@ class _InspectorPanelState extends State<InspectorPanel> {
           children: [
             IconButton(
               key: const Key('inspector-detail-back'),
-              icon: const Icon(Icons.arrow_back,
-                  size: 16, color: Colors.white70),
-              onPressed: () => setState(() => _detail = null),
+              icon: const Icon(
+                Icons.arrow_back,
+                size: 16,
+                color: Colors.white70,
+              ),
+              onPressed: onBack,
             ),
             Expanded(
               child: Text(
@@ -285,8 +359,10 @@ class _InspectorPanelState extends State<InspectorPanel> {
         if (detail.stale)
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 12),
-            child: Text('<stale — despawned>',
-                style: TextStyle(color: Colors.white54)),
+            child: Text(
+              '<stale - despawned>',
+              style: TextStyle(color: Colors.white54),
+            ),
           ),
         Flexible(
           child: ListView(
@@ -304,21 +380,41 @@ class _InspectorPanelState extends State<InspectorPanel> {
       ],
     );
   }
+}
 
-  Widget _resourceList() {
+class _ResourceList extends StatelessWidget {
+  const _ResourceList({required this.resources});
+
+  final List<ResourceSnapshot> resources;
+
+  @override
+  Widget build(BuildContext context) {
     return ListView(
       shrinkWrap: true,
       children: [
-        for (final resource in widget.snapshot.resources)
-          _tile(title: resource.type, subtitle: resource.value),
+        for (final resource in resources)
+          _Tile(title: resource.type, subtitle: resource.value),
       ],
     );
   }
+}
 
-  Widget _systemList() {
-    final systems = widget.snapshot.systems.toList();
-    if (_sortByMs) {
-      systems.sort((a, b) => b.lastMs.compareTo(a.lastMs));
+class _SystemList extends StatelessWidget {
+  const _SystemList({
+    required this.systems,
+    required this.sortByMs,
+    required this.onToggleSort,
+  });
+
+  final List<SystemSnapshot> systems;
+  final bool sortByMs;
+  final VoidCallback onToggleSort;
+
+  @override
+  Widget build(BuildContext context) {
+    final ordered = systems.toList();
+    if (sortByMs) {
+      ordered.sort((a, b) => b.lastMs.compareTo(a.lastMs));
     }
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -330,18 +426,18 @@ class _InspectorPanelState extends State<InspectorPanel> {
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               minimumSize: Size.zero,
-              foregroundColor: _sortByMs ? Colors.amber : Colors.white70,
+              foregroundColor: sortByMs ? Colors.amber : Colors.white70,
             ),
-            onPressed: () => setState(() => _sortByMs = !_sortByMs),
+            onPressed: onToggleSort,
             icon: const Icon(Icons.sort, size: 14),
             label: const Text('by ms', style: TextStyle(fontSize: 11)),
           ),
         ),
-        if (systems.isEmpty)
+        if (ordered.isEmpty)
           const Padding(
             padding: EdgeInsets.all(12),
             child: Text(
-              'No timings — enable AppDiagnostics(profileSystems: true).',
+              'No timings - enable AppDiagnostics(profileSystems: true).',
               style: TextStyle(color: Colors.white54),
             ),
           ),
@@ -349,11 +445,12 @@ class _InspectorPanelState extends State<InspectorPanel> {
           child: ListView(
             shrinkWrap: true,
             children: [
-              for (final system in systems)
-                _tile(
+              for (final system in ordered)
+                _Tile(
                   title: system.label,
                   subtitle: system.schedule,
-                  trailing: '${system.lastMs.toStringAsFixed(2)} ms '
+                  trailing:
+                      '${system.lastMs.toStringAsFixed(2)} ms '
                       '(avg ${system.averageMs.toStringAsFixed(2)})',
                 ),
             ],
@@ -362,13 +459,20 @@ class _InspectorPanelState extends State<InspectorPanel> {
       ],
     );
   }
+}
 
-  Widget _eventList() {
+class _EventList extends StatelessWidget {
+  const _EventList({required this.events});
+
+  final List<EventChannelSnapshot> events;
+
+  @override
+  Widget build(BuildContext context) {
     return ListView(
       shrinkWrap: true,
       children: [
-        for (final event in widget.snapshot.events)
-          _tile(
+        for (final event in events)
+          _Tile(
             title: event.type,
             subtitle: 'pending ${event.pending}',
             trailing: event.readerLagged ? 'reader lagging' : null,
@@ -376,21 +480,27 @@ class _InspectorPanelState extends State<InspectorPanel> {
       ],
     );
   }
+}
 
-  static String _entityTitle(int index, int generation, String? name) {
-    final label = name == null ? '' : ' "$name"';
-    return 'Entity($index v$generation)$label';
-  }
+class _Tile extends StatelessWidget {
+  const _Tile({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+  });
 
-  Widget _tile({
-    Key? key,
-    required String title,
-    String? subtitle,
-    String? trailing,
-    VoidCallback? onTap,
-  }) {
+  final String title;
+  final String? subtitle;
+  final String? trailing;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = subtitle;
+    final tail = trailing;
     return InkWell(
-      key: key,
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -401,21 +511,22 @@ class _InspectorPanelState extends State<InspectorPanel> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title, overflow: TextOverflow.ellipsis),
-                  if (subtitle != null && subtitle.isNotEmpty)
+                  if (sub != null && sub.isNotEmpty)
                     Text(
-                      subtitle,
+                      sub,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontSize: 10, color: Colors.white54),
+                        fontSize: 10,
+                        color: Colors.white54,
+                      ),
                     ),
                 ],
               ),
             ),
-            if (trailing != null)
+            if (tail != null)
               Text(
-                trailing,
-                style:
-                    const TextStyle(fontSize: 10, color: Colors.amberAccent),
+                tail,
+                style: const TextStyle(fontSize: 10, color: Colors.amberAccent),
               ),
           ],
         ),

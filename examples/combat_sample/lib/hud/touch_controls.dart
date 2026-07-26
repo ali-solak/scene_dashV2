@@ -41,7 +41,7 @@ class TouchControls extends StatelessWidget {
               children: [
                 _ActionButton(label: 'ROLL', size: 64, onPressed: onRoll),
                 const SizedBox(height: 16),
-                _HoldButton(label: 'ATK', size: 84, onChanged: onAttackChanged),
+                _HoldButton(label: 'ATK', size: 90, onChanged: onAttackChanged),
               ],
             ),
           ],
@@ -144,7 +144,7 @@ class _HoldButton extends StatelessWidget {
       onPointerDown: (_) => onChanged(true),
       onPointerUp: (_) => onChanged(false),
       onPointerCancel: (_) => onChanged(false),
-      child: _buttonFace(label, size),
+      child: _ButtonFace(label: label, size: size),
     );
   }
 }
@@ -165,29 +165,41 @@ class _ActionButton extends StatelessWidget {
     return Listener(
       behavior: HitTestBehavior.opaque,
       onPointerDown: (_) => onPressed(),
-      child: _buttonFace(label, size),
+      child: _ButtonFace(label: label, size: size),
     );
   }
 }
 
-Widget _buttonFace(String label, double size) {
-  return Container(
-    width: size,
-    height: size,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      color: Colors.white.withValues(alpha: 0.12),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
-    ),
-    child: Text(
-      label,
-      style: TextStyle(
-        color: Colors.white.withValues(alpha: 0.8),
-        fontWeight: FontWeight.bold,
-        letterSpacing: 1.2,
-        fontSize: math.max(12, size * 0.18),
+/// The shared round face both buttons wear.
+class _ButtonFace extends StatelessWidget {
+  const _ButtonFace({required this.label, required this.size});
+
+  final String label;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withValues(alpha: 0.12),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.3),
+          width: 2,
+        ),
       ),
-    ),
-  );
+      child: Text(
+        label,
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.8),
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
+          fontSize: math.max(12, size * 0.18),
+        ),
+      ),
+    );
+  }
 }

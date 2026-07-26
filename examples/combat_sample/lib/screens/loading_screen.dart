@@ -1,5 +1,6 @@
-/// The boot cover: title, a thin progress rule, and the current boot
-/// stage. Doubles as the failure screen when boot throws.
+/// The boot cover: title, a progress rule fed by the boot's
+/// [ResourceGroup], and the current boot stage. Doubles as the failure
+/// screen when boot throws.
 library;
 
 import 'package:flutter/material.dart';
@@ -7,10 +8,14 @@ import 'package:flutter/material.dart';
 import '../hud/ink.dart';
 
 class LoadingScreen extends StatelessWidget {
-  const LoadingScreen({super.key, this.error, this.stage});
+  const LoadingScreen({super.key, this.error, this.stage, this.progress});
 
   final Object? error;
   final ValueNotifier<String>? stage;
+
+  /// Fraction of the tracked loads that have settled, as handed over by
+  /// `SceneView.loadingBuilder`. Null falls back to an indeterminate bar.
+  final double? progress;
 
   @override
   Widget build(BuildContext context) {
@@ -40,14 +45,7 @@ class LoadingScreen extends StatelessWidget {
               ),
             )
           else
-            SizedBox(
-              width: 150,
-              child: LinearProgressIndicator(
-                minHeight: 2,
-                backgroundColor: HudInk.ruleFaint,
-                color: HudInk.steel,
-              ),
-            ),
+            SizedBox(width: 150, child: _ProgressRule(progress: progress)),
           const SizedBox(height: 14),
           Text(
             failed ? 'FAILED TO START' : 'LOADING',
@@ -73,6 +71,43 @@ class LoadingScreen extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _ProgressRule extends StatefulWidget {
+  const _ProgressRule({required this.progress});
+
+  final double? progress;
+
+  @override
+  State<_ProgressRule> createState() => _ProgressRuleState();
+}
+
+class _ProgressRuleState extends State<_ProgressRule> {
+  double _highest = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = widget.progress;
+    if (progress == null) {
+      // Nothing to report: an indeterminate sweep still reads as "busy".
+      return const LinearProgressIndicator(
+        minHeight: 2,
+        backgroundColor: HudInk.ruleFaint,
+        color: HudInk.steel,
+      );
+    }
+    // Only ever advances. Progress is completed-over-tracked and boot
+    // registers loads in waves, so each new wave raises the denominator and
+    // the raw fraction dips — documented behaviour, but a bar that slides
+    // backwards reads as a bug.
+    _highest = progress > _highest ? progress : _highest;
+    return LinearProgressIndicator(
+      value: _highest,
+      minHeight: 2,
+      backgroundColor: HudInk.ruleFaint,
+      color: HudInk.steel,
     );
   }
 }

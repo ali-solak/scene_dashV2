@@ -111,25 +111,38 @@ Future<CharacterAssets> loadCharacterAssets({
   ResourceGroup? loading,
 }) async {
   final scenes = await SceneRegistry.load();
+
+  // The knight, the barbarian document, the five rigs and the three
+  // weapons are all independent of each other: start them together and
+  // collect below, so the load costs its slowest member rather than the
+  // sum of all of them.
   final knightFuture = _track(
     loading,
     scenes.loadScene('assets/characters/Knight.glb'),
   );
+  final documentBytes = _assetBytes(scenes.resolveKey(_barbarianScene));
+  final rigFutures = [
+    for (final path in _rigFiles) _track(loading, scenes.loadScene(path)),
+  ];
+  final swordFuture = _track(loading, _loadWeapon('sword_2handed'));
+  final axeFuture = _track(loading, _loadWeapon('axe_2handed'));
+  final shieldFuture = _track(loading, _loadWeapon('shield_square_color'));
+
   final knight = await knightFuture;
   // Parsed once; realized once per barbarian (see [_barbarianScene]).
-  final barbarianDocument = readFsceneb(
-    await _assetBytes(scenes.resolveKey(_barbarianScene)),
-  );
+  final barbarianDocument = readFsceneb(await documentBytes);
   final openingCount = math.min(_openingBarbarians, barbarianCount);
   final barbarians = <Node>[];
   for (var i = 0; i < openingCount; i++) {
     barbarians.add(await _track(loading, realizeSceneAsync(barbarianDocument)));
   }
 
+  // Awaited in list order even though they loaded concurrently: the rigs
+  // share clip names (every one carries a T-Pose), so a later file is
+  // meant to win, and that only holds if insertion follows [_rigFiles].
   final clips = <String, Animation>{};
-  for (final path in _rigFiles) {
-    final rig = await _track(loading, scenes.loadScene(path));
-    for (final animation in rig.parsedAnimations) {
+  for (final rigFuture in rigFutures) {
+    for (final animation in (await rigFuture).parsedAnimations) {
       clips[animation.name] = animation;
     }
   }
@@ -142,11 +155,11 @@ Future<CharacterAssets> loadCharacterAssets({
     clips: clips,
     // Two-handed: the player's sword, the barbarians' axe. The reach sells
     // the wide swings.
-    sword: await _track(loading, _loadWeapon('sword_2handed')),
-    axe: await _track(loading, _loadWeapon('axe_2handed')),
+    sword: await swordFuture,
+    axe: await axeFuture,
     // The coloured variant: the plain one is untextured white, which
     // reads as a missing material rather than as a shield.
-    shield: await _track(loading, _loadWeapon('shield_square_color')),
+    shield: await shieldFuture,
   );
   // Two bodies cover the opening wave. The app realizes the reserve only after
   // its first rendered frames, so it cannot hold the loading cover.

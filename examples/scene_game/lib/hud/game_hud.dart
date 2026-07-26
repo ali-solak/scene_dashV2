@@ -52,19 +52,29 @@ class GameHud extends StatelessWidget {
 /// Quantised to whole percent so a section only rebuilds on a visible step.
 double _centi(double v) => (v.clamp(0.0, 1.0) * 100).round() / 100;
 
-Widget _shadowed(String text, {required double fontSize}) {
-  return Text(
-    text,
-    textAlign: TextAlign.center,
-    style: TextStyle(
-      color: Colors.white,
-      fontSize: fontSize,
-      fontWeight: FontWeight.w600,
-      shadows: const [
-        Shadow(blurRadius: 4, color: Colors.black, offset: Offset(0, 1)),
-      ],
-    ),
-  );
+/// White HUD text with a drop shadow, so it stays legible over any part
+/// of the scene.
+class _Shadowed extends StatelessWidget {
+  const _Shadowed(this.text, {required this.fontSize});
+
+  final String text;
+  final double fontSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: fontSize,
+        fontWeight: FontWeight.w600,
+        shadows: const [
+          Shadow(blurRadius: 4, color: Colors.black, offset: Offset(0, 1)),
+        ],
+      ),
+    );
+  }
 }
 
 class _PlayingHud extends StatelessWidget {
@@ -91,7 +101,7 @@ class _PlayingHud extends StatelessWidget {
           child: IgnorePointer(
             child: WorldBuilder<int>(
               select: (world) => world.resource<GameState>().survivedTenths,
-              builder: (context, tenths) => _shadowed(
+              builder: (context, tenths) => _Shadowed(
                 'Survived: ${(tenths / 10).toStringAsFixed(1)}s',
                 fontSize: 22,
               ),
@@ -104,7 +114,7 @@ class _PlayingHud extends StatelessWidget {
           child: IgnorePointer(
             child: WorldBuilder<int>(
               select: (world) => world.resource<FpsCounter>().fps,
-              builder: (context, fps) => _shadowed('FPS: $fps', fontSize: 18),
+              builder: (context, fps) => _Shadowed('FPS: $fps', fontSize: 18),
             ),
           ),
         ),
@@ -575,11 +585,11 @@ class _GameOverPanel extends StatelessWidget {
           builder: (context, run) => Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _shadowed('Game Over', fontSize: 32),
+              _Shadowed('Game Over', fontSize: 32),
               const SizedBox(height: 8),
-              _shadowed(run.$2 ?? '', fontSize: 18),
+              _Shadowed(run.$2 ?? '', fontSize: 18),
               const SizedBox(height: 4),
-              _shadowed(
+              _Shadowed(
                 'Survived ${(run.$1 / 10).toStringAsFixed(1)}s',
                 fontSize: 16,
               ),
