@@ -13,8 +13,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  # Cubit-as-resource (§1.10): app-shell state widgets drive with bloc
-  # tooling and systems read as a plain resource.
   flutter_scene: ^0.19.0
   flutter_scene_rapier: ^0.2.2
   # The in-app inspector overlay — optional tooling, wired behind the

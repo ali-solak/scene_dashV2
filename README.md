@@ -600,42 +600,42 @@ widgets use `WorldEventListener`.
 
 ## Input
 
-Held state → a `ButtonInput` resource. Discrete intents → events.
-Buffered presses → `InputBuffer`. The fighter's machine (Machine, below)
-consumes all three.
+Held state → `ButtonInput`. Analog → `AxisInput`. Buffered presses →
+`InputBuffer`. Discrete intents → events. Widgets write, systems read.
 
 ```dart
 enum PlayerAction { left, right, attack, roll }
 
-final class AttackPressed { const AttackPressed(); }
-
-// in a widget: OR-combine sources so releasing one never releases the
-// other; setPressed returns the edge it crossed
-switch (input.setPressed(PlayerAction.attack, keyDown || touchDown)) {
-  case ButtonEdge.pressed: game.emit(const AttackPressed());
-  case ButtonEdge.released || ButtonEdge.none: break;
-}
-
-// held state, read directly in a system:
-final strafe = world.buttons<PlayerAction>()
-    .axis(PlayerAction.left, PlayerAction.right);        // -1, 0, or +1
-```
-
-```dart
-// buffered: a roll pressed during a strike must fire the instant the
-// strike ends; the fighter consumes it when its machine allows (Machine)
-if (edge == ButtonEdge.pressed) {
-  world.buffer<PlayerAction>().record(PlayerAction.roll);   // widget side
-}
-// consume removes the oldest unexpired match; the press window (~150ms)
-// expires on wall time, so hitstop never eats a buffered input
-```
-
-```dart
 enum GameAxis { moveX, moveY }
-// analog sticks: widget writes, system reads a plain double
-axes.setValue(GameAxis.moveX, stick.dx);                 // clamped [-1, 1]
-final x = world.axes<GameAxis>().value(GameAxis.moveX);  // 0.0 if never written
+
+void installControls(GameBuilder game) {
+  game
+    ..world.insert(InputBuffer<PlayerAction>(window: 0.15))
+    ..world.insert(AxisInput<GameAxis>());
+}     // only to override a default: the accessors below create the resource
+      //   on first use, so most games insert nothing
+```
+
+```dart
+// Widget writes. Resolve once in a State, releaseAll() in dispose.
+final buttons = GameScope.of(context).world.buttons<PlayerAction>();
+
+buttons.setPressed(PlayerAction.attack, keyDown || touchDown);
+                             // returns the edge crossed; OR-combine sources
+                             //   so releasing one never releases the other
+world.axes<GameAxis>().setValue(GameAxis.moveX, stick.dx);   // clamped [-1, 1]
+world.buffer<PlayerAction>().record(PlayerAction.roll);
+```
+
+```dart
+// System reads.
+world.buttons<PlayerAction>().pressed(PlayerAction.attack);        // bool
+world.buttons<PlayerAction>().axis(PlayerAction.left,
+    PlayerAction.right);                                    // -1, 0, or +1
+world.axes<GameAxis>().value(GameAxis.moveX);       // 0.0 if never written
+world.buffer<PlayerAction>().consume(PlayerAction.roll);
+                             // oldest unexpired match; the window expires on
+                             //   wall time, so hitstop never eats an input
 ```
 
 ## Resources
@@ -657,10 +657,10 @@ WorldBuilder<int>(                       // reactive read in the UI:
 ```dart
 // owns teardown? implement Disposable; the framework calls dispose():
 // game shutdown (reverse insertion order), a dropping reset, replacement.
-final class ScoreCubit extends Cubit<int> implements Disposable {
-  ScoreCubit() : super(0);
+final class Ambience implements Disposable {
+  final ValueNotifier<double> volume = ValueNotifier(0.6);
   @override
-  void dispose() => close();             // blocs need nothing more
+  void dispose() => volume.dispose();
 }
 ```
 
@@ -936,9 +936,9 @@ world.gizmos.enabled = false;   // off = zero draw calls; calls stay in
 
 ```dart
 Stack(children: [
-  GameView(game: game),
+  SceneView(game.scene, onTick: game.onTick),
   InspectorOverlay(visible: showInspector),   // package: scene_dash_inspector
-])
+])                                            //   reads the world it is under
 ```
 
 Live entities (filter by `Name`, tap for component values), resources,
