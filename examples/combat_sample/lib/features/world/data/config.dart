@@ -109,7 +109,7 @@ const double sceneVignetteRadius = 0.85;
 const double sceneVignetteSmoothness = 0.6;
 
 /// Grass blades used by the ultra quality preset.
-const int grassBladeCount = 96000;
+const int grassBladeCount = 90000;
 
 typedef QualityPreset = ({
   String label,

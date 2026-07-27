@@ -257,7 +257,6 @@ final sceneView = SceneView(
   scene,
   key: viewKey,
   loading: loading,
-  warmUp: !isMobile,
   loadingBuilder: (context, progress) => SplashScreen(progress),
 );
 

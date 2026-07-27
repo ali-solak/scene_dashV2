@@ -83,8 +83,6 @@ class _CombatAppState extends State<CombatApp> {
       _scene,
       key: _viewKey,
       loading: _loading,
-      //warmup crashes mobile
-      warmUp: !config.isMobile,
       loadingBuilder: (context, progress) =>
           LoadingScreen(stage: _bootStage, progress: progress),
       cameraBuilder: (elapsed) => buildCombatCamera(elapsed, _cameraRig),
