@@ -26,14 +26,30 @@ material {
     // The macro field's two ends: deep green and dry yellow.
     { type: vec4, name: short_color, default: [0.78, 1.00, 0.72, 1.0] },
     { type: vec4, name: tall_color, default: [1.30, 1.12, 0.62, 1.0] },
+    // Scorch marks: (world x, world z, radius, strength). Four, because
+    // fmat parameters cannot be arrays.
+    { type: vec4, name: burn_a, default: [0, 0, 0, 0] },
+    { type: vec4, name: burn_b, default: [0, 0, 0, 0] },
+    { type: vec4, name: burn_c, default: [0, 0, 0, 0] },
+    { type: vec4, name: burn_d, default: [0, 0, 0, 0] },
+    { type: vec4, name: char_color, default: [0.16, 0.13, 0.11, 1.0] },
   ],
   varyings: [
     { type: float, name: blade_h },
     { type: float, name: macro },
+    { type: float, name: burn },
   ],
 }
 vertex {
   #include <noise.glsl>
+
+  float BurnAt(vec4 spot, vec2 world) {
+    if (spot.w <= 0.0 || spot.z <= 0.0) {
+      return 0.0;
+    }
+    float d = distance(world, spot.xy) / spot.z;
+    return spot.w * (1.0 - smoothstep(0.55, 1.0, d));
+  }
 
   void Vertex(inout VertexInputs vertex) {
     // Material values.
@@ -49,6 +65,16 @@ vertex {
             * 0.5 + 0.5);
     float heightScale =
         mix(material_params.height_low, material_params.height_high, macro);
+
+    // On the root, so a blade scorches whole.
+    vec2 root = vertex.world_position.xz;
+    burn = clamp(
+        max(max(BurnAt(material_params.burn_a, root),
+                BurnAt(material_params.burn_b, root)),
+            max(BurnAt(material_params.burn_c, root),
+                BurnAt(material_params.burn_d, root))),
+        0.0, 1.0);
+    heightScale *= 1.0 - 0.82 * burn;
 
     vec2 phase =
         vertex.world_position.xz * material_params.sway_scale + wind * time * 0.9;
@@ -79,6 +105,9 @@ fragment {
     // Then the region's palette: deep green through dry yellow.
     col *= mix(material_params.short_color.rgb, material_params.tall_color.rgb,
                macro);
+    // Tips char first.
+    col = mix(col, material_params.char_color.rgb,
+              clamp(burn * (0.45 + 0.55 * blade_h), 0.0, 1.0));
     material.base_color = vec4(col, 1.0);
     material.roughness = 1.0;
     material.metallic = 0.0;

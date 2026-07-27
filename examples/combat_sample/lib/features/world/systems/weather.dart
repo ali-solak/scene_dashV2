@@ -5,6 +5,7 @@ part of '../world.dart';
 void installWeather(GameBuilder game) {
   game
     ..world.insert(GrassWind())
+    ..world.insert(GrassBurns())
     ..world.insert(WaveClock())
     ..addSystem(
       Schedules.update,
@@ -21,9 +22,13 @@ void installWeather(GameBuilder game) {
     );
 }
 
+const List<String> _burnSlots = ['burn_a', 'burn_b', 'burn_c', 'burn_d'];
+
 /// Updates wind and water time.
 void updateWindMaterials(World world) {
   final wind = world.resource<GrassWind>()..time += world.dt;
+  final burns = world.resource<GrassBurns>()
+    ..regrow(world.dt, grassRegrowSeconds);
 
   void drive(NodeRef ref) {
     final material = ref.node.mesh?.primitives.first.material;
@@ -34,6 +39,11 @@ void updateWindMaterials(World world) {
 
   world.query<NodeRef>(require: const [Grass]).each((entity, ref) {
     drive(ref);
+    final material = ref.node.mesh?.primitives.first.material;
+    if (material is! PreprocessedMaterial) return;
+    for (var i = 0; i < GrassBurns.slots; i++) {
+      material.parameters.setVec4(_burnSlots[i], burns.marks[i]);
+    }
   });
   world.query<NodeRef>(require: const [Ocean]).each((entity, ref) {
     drive(ref);

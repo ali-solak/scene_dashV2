@@ -40,8 +40,9 @@ fragment {
     color += material_params.hot_color *
         smoothstep(0.72, 0.95, molten) * pulse * 0.6;
 
-    // Cool the rim as heat falls.
-    float rim = 1.0 - smoothstep(0.68, 1.0, r);
+    // Warped, or the fade re-rounds the jagged edge.
+    float edge = r + NoiseFbm2(world * 0.9, 73, 2, 2.0, 0.5) * 0.16;
+    float rim = 1.0 - smoothstep(0.72, 1.06, edge);
     color = mix(material_params.crust_color, color, rim * material_params.heat);
 
     material.base_color = vec4(color, 1.0);

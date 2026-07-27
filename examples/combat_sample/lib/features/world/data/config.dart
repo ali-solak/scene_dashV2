@@ -158,6 +158,8 @@ final int defaultQualityLevel = heavyAtmospherics ? 3 : 2;
 const double grassFieldRadius = treeRingInner + 2;
 const double grassFalloffStart = arenaRadius;
 
+const double grassRegrowSeconds = 14;
+
 const int grassFieldSeed = 11;
 const double grassWindStrength = 0.28;
 const double grassSwayScale = 0.3;

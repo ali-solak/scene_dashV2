@@ -37,6 +37,8 @@ const double lavaBurnTickDamage = 3;
 
 const double lavaMireLinger = 0.35;
 
+const double lavaPitOpenFrom = 0.18;
+
 const double lavaPitOpenSeconds = 0.5;
 const double lavaPitCoolSeconds = 1.5;
 

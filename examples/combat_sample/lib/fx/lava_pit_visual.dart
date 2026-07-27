@@ -1,6 +1,10 @@
 /// Lava pit scene effect.
 library;
 
+import 'dart:math' as math;
+import 'dart:typed_data';
+
+import 'package:flutter_scene/noise.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart'
@@ -14,11 +18,11 @@ import 'particles.dart' as fx;
 
 /// Few and fat: a pool bubbles in distinct globs, and a dense stack of
 /// additive blobs is how a lava pit turns into a white smear.
-const int _globCount = 26;
+const int _globCount = 20;
 
 /// The one-shot when the pit opens. Denser than the idle bubbling: this
 /// is the ground breaking, and it only happens once.
-const int _eruptionCount = 70;
+const int _eruptionCount = 44;
 const double _eruptionLifetime = 2.2;
 
 /// Builds one pit node: the crust disc, plus the globs bubbling in it.
@@ -28,15 +32,10 @@ Node buildLavaPitNode({
   required PreprocessedMaterial? material,
   required Vector2 center,
 }) {
-  final crust =
-      Node(
-          name: 'lava-crust',
-          localTransform: Matrix4.translation(Vector3(0, lavaPitLift, 0)),
-        )
-        ..mesh = Mesh(
-          DiscGeometry(radius: lavaPitRadius, segments: 48),
-          material ?? _fallbackCrust(),
-        );
+  final crust = Node(
+    name: 'lava-crust',
+    localTransform: Matrix4.translation(Vector3(0, lavaPitLift, 0)),
+  )..mesh = Mesh(_crustGeometry(), material ?? _fallbackCrust());
 
   // The crust shades from world position, so it has to be told where the
   // pit is. Safe to set on the shared material instance: the lava
@@ -56,6 +55,44 @@ Node buildLavaPitNode({
         ..add(crust)
         ..addComponent(_globs());
   return node;
+}
+
+MeshGeometry? _crust;
+
+/// A disc with a noise-broken rim. Built once: pits are placed by node
+/// transform, so every pit shares it.
+MeshGeometry _crustGeometry() => _crust ??= _jaggedDisc(lavaPitRadius);
+
+MeshGeometry _jaggedDisc(double radius, {int segments = 64}) {
+  final noise = FastNoiseLite()
+    ..seed = 83
+    ..frequency = 1.0
+    ..fractalType = FractalType.fbm
+    ..octaves = 3;
+  final positions = Float32List((segments + 2) * 3);
+  final normals = Float32List((segments + 2) * 3);
+  final indices = <int>[];
+
+  for (var i = 1; i < normals.length; i += 3) {
+    normals[i] = 1;
+  }
+  for (var i = 0; i <= segments; i++) {
+    final theta = (i % segments) / segments * math.pi * 2;
+    // Sampled on the circle so the outline closes.
+    final wobble =
+        noise.getNoise2(math.cos(theta) * 1.1, math.sin(theta) * 1.1) * 0.7 +
+        noise.getNoise2(math.cos(theta) * 2.4, math.sin(theta) * 2.4) * 0.3;
+    final r = radius * (1 + wobble * 0.15);
+    final v = (i + 1) * 3;
+    positions[v] = math.cos(theta) * r;
+    positions[v + 2] = math.sin(theta) * r;
+    if (i > 0) indices.addAll([0, i, i + 1]);
+  }
+  return MeshGeometry.fromArrays(
+    positions: positions,
+    normals: normals,
+    indices: indices,
+  );
 }
 
 /// Sets the pit's clock on its crust. A no-op on the generated fallback

@@ -144,9 +144,16 @@ void updateLavaMaterials(World world) {
   world.query2<LavaPit, NodeRef>().each((entity, pit, ref) {
     final remaining = world.expiryOf<DespawnAfter>(entity) ?? lavaPitSeconds;
     // Swells open fast, then dims over its last second as it crusts over.
-    final heat =
-        (pit.elapsed / lavaPitOpenSeconds).clamp(0.0, 1.0) *
-        (remaining / lavaPitCoolSeconds).clamp(0.0, 1.0);
+    final open = (pit.elapsed / lavaPitOpenSeconds).clamp(0.0, 1.0);
+    final heat = open * (remaining / lavaPitCoolSeconds).clamp(0.0, 1.0);
     setLavaPitHeat(ref.node, time: pit.elapsed, heat: heat);
+    // Eases out, so the crust spreads rather than snapping to full size.
+    final spread =
+        lavaPitOpenFrom + (1 - lavaPitOpenFrom) * (1 - (1 - open) * (1 - open));
+    ref.node.localTransform = Matrix4.compose(
+      ref.node.localTransform.getTranslation(),
+      Quaternion.identity(),
+      Vector3(spread, 1, spread),
+    );
   });
 }

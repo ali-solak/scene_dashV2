@@ -159,6 +159,13 @@ void _castFireGush(
     // Refresh the burn.
     world.add(enemy, Burning(burnTickDamage * power), removeAfter: burnSeconds);
   });
+  final scorchX =
+      origin.translation.x + math.sin(motion.facing) * fireGushRange * 0.55;
+  final scorchZ =
+      origin.translation.z + math.cos(motion.facing) * fireGushRange * 0.55;
+  final scorchRadius = fireGushRange * 0.5;
+  world.resource<GrassBurns>().scorch(scorchX, scorchZ, scorchRadius);
+  spawnScorchEmbers(world, Vector3(scorchX, 0.2, scorchZ), scorchRadius);
   spawnFireGush(
     world,
     Vector3(
@@ -183,6 +190,7 @@ void _openLavaPit(
   final z = origin.translation.z + math.cos(motion.facing) * lavaPitDistance;
   // Spawn the opening effect.
   spawnLavaEruption(world, Vector3(x, 0, z));
+  world.resource<GrassBurns>().scorch(x, z, lavaPitRadius * 1.15);
   world.spawn([
     LavaPit(lavaTickDamage * power),
     SceneTransform(x, 0, z),

@@ -10,6 +10,7 @@ import '../../fx/barrier_visual.dart';
 import '../../fx/burning_visual.dart';
 import '../../fx/fire_gush.dart';
 import '../../fx/lava_pit_visual.dart';
+import '../../fx/scorch_embers.dart';
 import '../../fx/wind_blast.dart';
 import '../../common/actors.dart';
 import '../../assets/character_assets.dart';
