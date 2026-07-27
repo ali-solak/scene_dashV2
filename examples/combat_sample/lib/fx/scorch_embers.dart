@@ -53,12 +53,6 @@ void spawnScorchEmbers(World world, Vector3 center, double radius) {
       fx.SizeOverLifeModule(
         fx.CurveFloat(fx.ParticleCurve.linear(from: 1, to: 0.35)),
       ),
-      fx.TurbulenceModule(
-        strength: 0.7,
-        frequency: 1.4,
-        scroll: Vector3(windDirection.x * 0.8, 0.15, windDirection.y * 0.8),
-        seed: 91,
-      ),
       fx.LinearDragModule(1.5),
     ],
     // Drifts on the wind and settles; the burnt patch is where they live.

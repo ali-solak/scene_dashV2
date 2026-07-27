@@ -5,7 +5,6 @@ import 'package:flutter_scene/scene.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 
-import '../features/world/data/config.dart' show windDirection;
 import 'particle_texture.dart';
 import 'particles.dart' as fx;
 
@@ -60,14 +59,6 @@ void spawnWaveCrash(
             const fx.ParticleKeyframe(1, 0.15),
           ]),
         ),
-      ),
-      // Wind off the water breaks the fan up so the droplets stop moving as
-      // one sheet. Small and busy, not a displacement.
-      fx.TurbulenceModule(
-        strength: 2.2,
-        frequency: 1.6,
-        scroll: Vector3(windDirection.x * 1.2, 0.4, windDirection.y * 1.2),
-        seed: seed + 7,
       ),
       // Sea spray gradient.
       fx.ColorOverLifeModule(

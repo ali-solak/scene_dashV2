@@ -11,11 +11,10 @@ const double _leafCeiling = 5.5;
 const double _fallSlowest = 0.35;
 const double _fallFastest = 1.25;
 
-const double _windPush = 1.7;
+const double _windPush = 0.5;
 
 /// Leaf tumble and sway.
 const double _tumbleFastest = 2.2;
-const double _swayAmplitude = 0.9;
 
 const double _leafLifetime = 6.5;
 

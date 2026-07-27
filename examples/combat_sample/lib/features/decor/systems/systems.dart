@@ -12,6 +12,13 @@ void spawnLeaves(World world) {
     // than from one point.
     shape: fx.BoxEmitterShape(
       halfExtents: Vector3(_leafFieldRadius, 0.2, _leafFieldRadius),
+      // Tipped off vertical, so they drift as they fall rather than
+      // dropping in parallel lines.
+      direction: Vector3(
+        windDirection.x * _windPush,
+        -1,
+        windDirection.y * _windPush,
+      ),
     ),
     spawner: fx.Spawner(rate: _leafCount / _leafLifetime),
     lifetime: const fx.UniformFloat(_leafLifetime * 0.8, _leafLifetime),
@@ -25,18 +32,6 @@ void spawnLeaves(World world) {
     ),
     gravity: Vector3(0, -_leafGravity, 0),
     modules: [
-      // The slalom: a leaf does not fall straight, it skids side to side.
-      // Low frequency and gentle strength, or they scatter like sparks.
-      fx.TurbulenceModule(
-        strength: _swayAmplitude,
-        frequency: 0.35,
-        scroll: Vector3(
-          windDirection.x * _windPush,
-          0,
-          windDirection.y * _windPush,
-        ),
-        seed: 31,
-      ),
       // Air resistance: without it gravity wins and they drop like stones.
       fx.LinearDragModule(1.6),
       fx.RotationModule(),
