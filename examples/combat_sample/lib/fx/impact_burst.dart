@@ -26,7 +26,7 @@ void spawnImpactBurst(World world, Vector3 position, {bool heavy = false}) {
     maxParticles: count,
     // A zero-radius sphere degenerates to a point emitting uniformly in
     // every direction: a clean point burst.
-    shape: const fx.SphereShape(radius: 0),
+    shape: const fx.SphereEmitterShape(radius: 0),
     spawner: fx.Spawner(bursts: [fx.ParticleBurst(time: 0, count: count)]),
     looping: false,
     duration: 0.1,
@@ -84,5 +84,5 @@ void spawnImpactBurst(World world, Vector3 position, {bool heavy = false}) {
   final node = Node(localTransform: Matrix4.translation(position))
     ..frustumCulled = false
     ..addComponent(emitter);
-  world.spawn([SceneNode(node), DespawnAfter(_burstEntityLifetime)]);
+  world.spawn([NodeRef(node), DespawnAfter(_burstEntityLifetime)]);
 }

@@ -49,25 +49,24 @@ void main() {
   test('writes transform onto the bound node, skipping PhysicsDriven', () {
     final world = World()
       ..stores.register<TestTransform>(ObjectComponentStore<TestTransform>())
-      ..stores.register<SceneNode>(ObjectComponentStore<SceneNode>())
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>())
       ..stores.register<PhysicsDriven>(TagStore());
 
     final syncedNode = Node();
     final synced = world.entities.spawn();
     world
       ..insertNow<TestTransform>(synced, TestTransform(1, 2, 3))
-      ..insertNow<SceneNode>(synced, SceneNode(syncedNode));
+      ..insertNow<NodeRef>(synced, NodeRef(syncedNode));
 
     final physicsNode = Node();
     final physics = world.entities.spawn();
     world
       ..insertNow<TestTransform>(physics, TestTransform(9, 9, 9))
-      ..insertNow<SceneNode>(physics, SceneNode(physicsNode))
+      ..insertNow<NodeRef>(physics, NodeRef(physicsNode))
       ..insertNow<PhysicsDriven>(physics, const PhysicsDriven());
 
-    final adapter = SyncSceneNodesAdapter<TestTransform>(
-      (t) => (t.x, t.y, t.z),
-    )..initialize(world);
+    final adapter = SyncSceneNodesAdapter<TestTransform>((t) => (t.x, t.y, t.z))
+      ..initialize(world);
     adapter.run();
 
     final t = syncedNode.localTransform.getTranslation();
@@ -86,13 +85,13 @@ void main() {
     final app = App();
     app.world.stores
       ..register<TestTransform>(ObjectComponentStore<TestTransform>())
-      ..register<SceneNode>(ObjectComponentStore<SceneNode>());
+      ..register<NodeRef>(ObjectComponentStore<NodeRef>());
 
     final node = Node();
     final e = app.world.entities.spawn();
     app.world
       ..insertNow<TestTransform>(e, TestTransform(4, 5, 6))
-      ..insertNow<SceneNode>(e, SceneNode(node));
+      ..insertNow<NodeRef>(e, NodeRef(node));
 
     app.addPlugin(
       CustomSceneSyncPlugin<TestTransform>(
@@ -111,7 +110,7 @@ void main() {
     final app = App();
     app.world.stores
       ..register<TestFullTransform>(ObjectComponentStore<TestFullTransform>())
-      ..register<SceneNode>(ObjectComponentStore<SceneNode>());
+      ..register<NodeRef>(ObjectComponentStore<NodeRef>());
 
     final source = TestFullTransform(
       translation: Vector3(1, 2, 3),
@@ -122,7 +121,7 @@ void main() {
     final e = app.world.entities.spawn();
     app.world
       ..insertNow<TestFullTransform>(e, source)
-      ..insertNow<SceneNode>(e, SceneNode(node));
+      ..insertNow<NodeRef>(e, NodeRef(node));
 
     app.addPlugin(
       CustomSceneSyncPlugin<TestFullTransform>(
@@ -148,10 +147,7 @@ void main() {
   });
 
   test('CustomSceneSyncPlugin requires exactly one sync callback', () {
-    expect(
-      () => CustomSceneSyncPlugin<TestTransform>(),
-      throwsArgumentError,
-    );
+    expect(() => CustomSceneSyncPlugin<TestTransform>(), throwsArgumentError);
     expect(
       () => CustomSceneSyncPlugin<TestTransform>(
         translationOf: (t) => (t.x, t.y, t.z),
@@ -164,7 +160,7 @@ void main() {
   test('sync skips nodes whose transform did not change', () {
     final world = World()
       ..stores.register<TestTransform>(ObjectComponentStore<TestTransform>())
-      ..stores.register<SceneNode>(ObjectComponentStore<SceneNode>());
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
 
     final movingNode = Node();
     final staticNode = Node();
@@ -173,13 +169,12 @@ void main() {
     final movingTransform = TestTransform(1, 2, 3);
     world
       ..insertNow<TestTransform>(moving, movingTransform)
-      ..insertNow<SceneNode>(moving, SceneNode(movingNode))
+      ..insertNow<NodeRef>(moving, NodeRef(movingNode))
       ..insertNow<TestTransform>(static_, TestTransform(4, 5, 6))
-      ..insertNow<SceneNode>(static_, SceneNode(staticNode));
+      ..insertNow<NodeRef>(static_, NodeRef(staticNode));
 
-    final adapter = SyncSceneNodesAdapter<TestTransform>(
-      (t) => (t.x, t.y, t.z),
-    )..initialize(world);
+    final adapter = SyncSceneNodesAdapter<TestTransform>((t) => (t.x, t.y, t.z))
+      ..initialize(world);
 
     adapter.run();
     expect(adapter.lastRunWrites, 2, reason: 'first run writes both nodes');
@@ -190,16 +185,13 @@ void main() {
     movingTransform.x = 10;
     adapter.run();
     expect(adapter.lastRunWrites, 1, reason: 'only the moved node is written');
-    expect(
-      movingNode.localTransform.getTranslation().x,
-      closeTo(10, 1e-9),
-    );
+    expect(movingNode.localTransform.getTranslation().x, closeTo(10, 1e-9));
   });
 
   test('translation-only sync preserves the node\'s rotation and scale', () {
     final world = World()
       ..stores.register<TestTransform>(ObjectComponentStore<TestTransform>())
-      ..stores.register<SceneNode>(ObjectComponentStore<SceneNode>());
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
 
     final original = Matrix4.zero()
       ..setFromTranslationRotationScale(
@@ -211,7 +203,7 @@ void main() {
     final e = world.entities.spawn();
     world
       ..insertNow<TestTransform>(e, TestTransform(1, 2, 3))
-      ..insertNow<SceneNode>(e, SceneNode(node));
+      ..insertNow<NodeRef>(e, NodeRef(node));
 
     SyncSceneNodesAdapter<TestTransform>((t) => (t.x, t.y, t.z))
       ..initialize(world)
@@ -225,7 +217,7 @@ void main() {
     // This is the adapter Game installs automatically for SceneTransform.
     final world = World()
       ..stores.register<SceneTransform>(ObjectComponentStore<SceneTransform>())
-      ..stores.register<SceneNode>(ObjectComponentStore<SceneNode>());
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
 
     final node = Node();
     final e = world.entities.spawn();
@@ -236,15 +228,15 @@ void main() {
     );
     world
       ..insertNow<SceneTransform>(e, transform)
-      ..insertNow<SceneNode>(e, SceneNode(node));
+      ..insertNow<NodeRef>(e, NodeRef(node));
 
     SyncSceneNodesAdapter<SceneTransform>.full(
-      (transform, target) => target.setFromTranslationRotationScale(
-        transform.translation,
-        transform.rotation,
-        transform.scale,
-      ),
-    )
+        (transform, target) => target.setFromTranslationRotationScale(
+          transform.translation,
+          transform.rotation,
+          transform.scale,
+        ),
+      )
       ..initialize(world)
       ..run();
 

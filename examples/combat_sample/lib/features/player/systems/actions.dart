@@ -80,10 +80,8 @@ void updateBladeTrail(World world) {
     CombatPhase.active || CombatPhase.recovery => true,
     _ => false,
   };
-  if (swinging) {
-    blade.trail.sample(blade.weapon.globalTransform);
-  } else {
-    blade.trail.retract();
-  }
-  blade.trail.rebuild(fighter.heavy ? heavyTrailTint : lightTrailTint);
+  // Off outside the swing: the ribbon ages out instead of snapping away.
+  blade.trail
+    ..emitting = swinging
+    ..colorOverTrail = fighter.heavy ? heavyTrailFade : lightTrailFade;
 }

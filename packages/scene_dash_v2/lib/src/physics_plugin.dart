@@ -1,4 +1,4 @@
-import 'package:flutter_scene/scene.dart' show CollisionEvent, PhysicsWorld;
+import 'package:flutter_scene/physics.dart' show CollisionEvent, PhysicsWorld;
 import 'package:scene_dash_v2_core/advanced.dart';
 
 import 'physics_event_bridge.dart';

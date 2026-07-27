@@ -14,7 +14,7 @@ void installStageLook(GameBuilder game) {
     ..addSystem(
       Schedules.update,
       applyGraphicsQuality,
-      reads: const {Grass, SceneNode},
+      reads: const {Grass, NodeRef},
       runIf: hasResource<Scene>(),
     );
 }
@@ -80,7 +80,7 @@ void applyGraphicsQuality(World world) {
   final quality = world.resource<GraphicsQuality>();
   if (level == quality.level) return;
 
-  final grass = world.query<SceneNode>(require: const [Grass]).firstOrNull;
+  final grass = world.query<NodeRef>(require: const [Grass]).firstOrNull;
   _applyQuality(world.resource<Scene>(), grass?.$2.node, quality.level, level);
   quality.level = level; // what the menu reads back
 }

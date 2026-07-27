@@ -1,12 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter_scene/scene.dart';
+import 'package:flutter_scene/physics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2_core/advanced.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 
 /// Minimal fake world: only the collision stream and lifecycle hooks are real.
 final class _FakeWorld extends PhysicsWorld {
+  _FakeWorld() : super(BasicSimulation());
+
   final controller = StreamController<CollisionEvent>.broadcast();
 
   @override
@@ -28,12 +31,12 @@ final class _FakeWorld extends PhysicsWorld {
 final class _Collider extends Component {}
 
 CollisionBegan _began(Node a, Node b) => CollisionBegan(
-      nodeA: a,
-      nodeB: b,
-      colliderA: _Collider(),
-      colliderB: _Collider(),
-      contacts: const [],
-    );
+  nodeA: a,
+  nodeB: b,
+  colliderA: _Collider(),
+  colliderB: _Collider(),
+  contacts: const [],
+);
 
 /// Starts an app with the physics bridge and the entity-collision layer, seeded
 /// with a [SceneNodeIndex] over [bindings] (a `Game` normally maintains it).
@@ -44,7 +47,9 @@ CollisionBegan _began(Node a, Node b) => CollisionBegan(
   final app = App()
     ..addPlugin(PhysicsPlugin(physics))
     ..addPlugin(const EntityCollisionPlugin());
-  app.world.resources.insert<SceneNodeIndex>(SceneNodeIndex(bindings(app.world)));
+  app.world.resources.insert<SceneNodeIndex>(
+    SceneNodeIndex(bindings(app.world)),
+  );
   app.start();
   return (
     app: app,
@@ -54,56 +59,61 @@ CollisionBegan _began(Node a, Node b) => CollisionBegan(
 }
 
 void main() {
-  test('republishes a collision with both nodes resolved to entities', () async {
-    final nodeA = Node();
-    final nodeB = Node();
-    late Entity entityA;
-    late Entity entityB;
-    final started = _start((world) {
-      entityA = world.entities.spawn();
-      entityB = world.entities.spawn();
-      return {nodeA: entityA, nodeB: entityB};
-    });
-    addTearDown(() async {
-      await started.app.shutdown();
-      await started.physics.controller.close();
-    });
+  test(
+    'republishes a collision with both nodes resolved to entities',
+    () async {
+      final nodeA = Node();
+      final nodeB = Node();
+      late Entity entityA;
+      late Entity entityB;
+      final started = _start((world) {
+        entityA = world.entities.spawn();
+        entityB = world.entities.spawn();
+        return {nodeA: entityA, nodeB: entityB};
+      });
+      addTearDown(() async {
+        await started.app.shutdown();
+        await started.physics.controller.close();
+      });
 
-    started.physics.controller.add(_began(nodeA, nodeB));
-    await Future<void>.delayed(Duration.zero); // let the stream deliver
+      started.physics.controller.add(_began(nodeA, nodeB));
+      await Future<void>.delayed(Duration.zero); // let the stream deliver
 
-    started.app.runSchedule(Schedules.frameStart); // drain, then resolve
+      started.app.runSchedule(Schedules.frameStart); // drain, then resolve
 
-    final events = started.reader.drain();
-    expect(events, hasLength(1));
-    expect(events.single.a, entityA);
-    expect(events.single.b, entityB);
-    expect(events.single.source, isA<CollisionBegan>());
-  });
+      final events = started.reader.drain();
+      expect(events, hasLength(1));
+      expect(events.single.a, entityA);
+      expect(events.single.b, entityB);
+      expect(events.single.source, isA<CollisionBegan>());
+    },
+  );
 
-  test('resolves the bound side and leaves an unmanaged collider null',
-      () async {
-    final bound = Node();
-    final unmanaged = Node(); // never indexed
-    late Entity entity;
-    final started = _start((world) {
-      entity = world.entities.spawn();
-      return {bound: entity};
-    });
-    addTearDown(() async {
-      await started.app.shutdown();
-      await started.physics.controller.close();
-    });
+  test(
+    'resolves the bound side and leaves an unmanaged collider null',
+    () async {
+      final bound = Node();
+      final unmanaged = Node(); // never indexed
+      late Entity entity;
+      final started = _start((world) {
+        entity = world.entities.spawn();
+        return {bound: entity};
+      });
+      addTearDown(() async {
+        await started.app.shutdown();
+        await started.physics.controller.close();
+      });
 
-    started.physics.controller.add(_began(bound, unmanaged));
-    await Future<void>.delayed(Duration.zero);
-    started.app.runSchedule(Schedules.frameStart);
+      started.physics.controller.add(_began(bound, unmanaged));
+      await Future<void>.delayed(Duration.zero);
+      started.app.runSchedule(Schedules.frameStart);
 
-    final event = started.reader.drain().single;
-    expect(event.a, entity);
-    expect(event.b, isNull);
-    expect(event.other(entity), isNull); // the other side is unmanaged
-  });
+      final event = started.reader.drain().single;
+      expect(event.a, entity);
+      expect(event.b, isNull);
+      expect(event.other(entity), isNull); // the other side is unmanaged
+    },
+  );
 
   test('drops a collision where neither node maps to an entity', () async {
     final started = _start((_) => const {});

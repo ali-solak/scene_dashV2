@@ -35,7 +35,7 @@ void spawnWaveCrash(
   // down. Additive, so they catch the sun like real spray.
   final spray = fx.ParticleSystem(
     maxParticles: sprayN,
-    shape: fx.ConeShape(angle: 0.6, radius: 0.6),
+    shape: fx.ConeEmitterShape(angle: 0.6, radius: 0.6),
     spawner: fx.Spawner(bursts: [fx.ParticleBurst(time: 0, count: sprayN)]),
     looping: false,
     duration: 0.1,
@@ -71,7 +71,7 @@ void spawnWaveCrash(
   // Foam.
   final foam = fx.ParticleSystem(
     maxParticles: foamN,
-    shape: fx.ConeShape(angle: 0.85, radius: 1.0),
+    shape: fx.ConeEmitterShape(angle: 0.85, radius: 1.0),
     spawner: fx.Spawner(bursts: [fx.ParticleBurst(time: 0, count: foamN)]),
     looping: false,
     duration: 0.1,
@@ -106,7 +106,7 @@ void spawnWaveCrash(
   // Mist.
   final mist = fx.ParticleSystem(
     maxParticles: mistN,
-    shape: fx.ConeShape(angle: 1.05, radius: 1.6),
+    shape: fx.ConeEmitterShape(angle: 1.05, radius: 1.6),
     spawner: fx.Spawner(bursts: [fx.ParticleBurst(time: 0, count: mistN)]),
     looping: false,
     duration: 0.1,
@@ -178,5 +178,5 @@ void spawnWaveCrash(
         ),
     );
 
-  world.spawn([SceneNode(node), DespawnAfter(_entityLifetime)]);
+  world.spawn([NodeRef(node), DespawnAfter(_entityLifetime)]);
 }

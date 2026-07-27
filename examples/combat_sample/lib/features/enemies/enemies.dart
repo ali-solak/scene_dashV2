@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:flutter/widgets.dart' show Size;
 import 'package:flutter_scene/scene.dart';
-import 'package:flutter_scene_rapier/flutter_scene_rapier.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart'
     show Matrix4, Quaternion, Vector3, Vector4;
@@ -19,6 +18,7 @@ import '../../fx/dash_dust.dart';
 import '../../hud/health_bar_widget.dart';
 import '../world/data/arena.dart';
 import '../world/data/config.dart' show characterModelYaw, characterScale;
+import 'package:flutter_scene/physics.dart';
 
 export '../../common/actors.dart' show Health;
 

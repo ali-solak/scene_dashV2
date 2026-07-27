@@ -28,7 +28,7 @@ void spawnFireGush(World world, Vector3 position, double facing) {
   final system = fx.ParticleSystem(
     maxParticles: _flameCount,
     // Match the damage cone.
-    shape: fx.ConeShape(angle: fireGushHalfArc, radius: 0.25),
+    shape: fx.ConeEmitterShape(angle: fireGushHalfArc, radius: 0.25),
     spawner: fx.Spawner(rate: _flameCount / _gushSeconds),
     looping: false,
     duration: _gushSeconds,
@@ -100,5 +100,5 @@ void spawnFireGush(World world, Vector3 position, double facing) {
             ..velocityStretch = 0.3,
         );
 
-  world.spawn([SceneNode(node), DespawnAfter(_entityLifetime)]);
+  world.spawn([NodeRef(node), DespawnAfter(_entityLifetime)]);
 }

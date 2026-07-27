@@ -13,7 +13,7 @@ void spawnDeflectBurst(World world, Vector3 position) {
   final system = fx.ParticleSystem(
     maxParticles: deflectBurstCount,
     // Shards leave the bubble's upper half, headed outward.
-    shape: const fx.SphereShape(radius: 0.2, hemisphere: true),
+    shape: const fx.SphereEmitterShape(radius: 0.2, hemisphere: true),
     spawner: fx.Spawner(
       bursts: [fx.ParticleBurst(time: 0, count: deflectBurstCount)],
     ),
@@ -57,7 +57,7 @@ void spawnDeflectBurst(World world, Vector3 position) {
     ..addComponent(emitter);
   world.spawn([
     const Name('deflect-burst'),
-    SceneNode(node),
+    NodeRef(node),
     DespawnAfter(deflectBurstEntityLifetime),
     const DespawnOnExit(GameStatus.playing),
   ]);

@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart' show Size;
 import 'package:flutter_scene/scene.dart';
-import 'package:flutter_scene_rapier/flutter_scene_rapier.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 
@@ -20,6 +19,7 @@ import '../rocks/data/config.dart';
 import '../rocks/rocks.dart';
 import 'data/config.dart';
 import 'vfx/reticle_widget.dart';
+import 'package:flutter_scene/physics.dart';
 
 part 'data/components.dart';
 part 'data/resources.dart';
@@ -49,7 +49,7 @@ void installProjectiles(GameBuilder game) {
     ..observe<LockOnReticle>(onRemove: disposeReticleModel)
     // The attach is deferred (world.add), so the declared write is the
     // feature-owned component; the player is found by tag, keeping this
-    // clear of the player feature's SceneNode writes in the same enter.
+    // clear of the player feature's NodeRef writes in the same enter.
     ..addSystem(
       OnEnter(GameStatus.playing),
       attachBlaster,
@@ -71,7 +71,7 @@ void installProjectiles(GameBuilder game) {
     ..addSystem(
       Schedules.fixedUpdate,
       shootProjectiles,
-      reads: {SceneNode},
+      reads: {NodeRef},
       writes: {Projectile, Blaster, LockOnReticle},
       inSet: GameSets.actions,
       runIf: inState(GameStatus.playing),
@@ -95,13 +95,13 @@ void installProjectiles(GameBuilder game) {
     ..addSystem(
       Schedules.update,
       updateProjectiles,
-      reads: {SceneNode},
+      reads: {NodeRef},
       writes: {Projectile, LockOnReticle},
     )
     ..addSystem(
       Schedules.update,
       updateChargeVisuals,
-      reads: {Blaster, SceneNode},
+      reads: {Blaster, NodeRef},
       writes: {PlayerChargeVisuals, ChargePlasmaEmitter},
     )
     // Ordered after updateProjectiles: both write the reticle (flash set
@@ -110,7 +110,7 @@ void installProjectiles(GameBuilder game) {
     ..addSystem(
       Schedules.update,
       updateLockOnReticle,
-      reads: {SceneNode, Blaster},
+      reads: {NodeRef, Blaster},
       writes: {LockOnReticle},
       after: [updateProjectiles],
     )

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_scene/scene.dart';
+import 'package:flutter_scene/physics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2_core/advanced.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
@@ -8,6 +9,8 @@ import 'package:scene_dash_v2/scene_dash_v2.dart';
 /// Minimal fake world: only the collision stream and lifecycle hooks are real;
 /// query methods are unused and forwarded to [noSuchMethod].
 final class _FakeWorld extends PhysicsWorld {
+  _FakeWorld() : super(BasicSimulation());
+
   final controller = StreamController<CollisionEvent>.broadcast();
 
   @override

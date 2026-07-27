@@ -32,10 +32,8 @@ final class Target {
 
 /// Blade trail scene handles.
 final class BladeTrail {
-  BladeTrail({required this.weapon, required this.trail});
+  BladeTrail(this.trail);
 
-  /// The weapon node, sampled in world space each frame.
-  final Node weapon;
-
-  final SwordTrail trail;
+  /// Rides a node at the blade tip; the engine records its world path.
+  final TrailComponent trail;
 }

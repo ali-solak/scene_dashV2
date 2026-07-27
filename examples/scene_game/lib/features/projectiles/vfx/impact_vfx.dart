@@ -19,7 +19,7 @@ void spawnImpactBurst(World world, Vector3 position, {double strength = 0}) {
     maxParticles: charged ? chargedImpactBurstCount : impactBurstCount,
     // A zero-radius sphere degenerates to a point emitting uniformly in
     // all directions — the plan-pinned point-burst shape.
-    shape: const fx.SphereShape(radius: 0),
+    shape: const fx.SphereEmitterShape(radius: 0),
     spawner: fx.Spawner(
       bursts: [
         fx.ParticleBurst(
@@ -83,7 +83,7 @@ void spawnImpactBurst(World world, Vector3 position, {double strength = 0}) {
     ..addComponent(emitter);
   world.spawn([
     const Name('impact-burst'),
-    SceneNode(node),
+    NodeRef(node),
     DespawnAfter(impactBurstEntityLifetime),
     const DespawnOnExit(GameStatus.playing),
   ]);

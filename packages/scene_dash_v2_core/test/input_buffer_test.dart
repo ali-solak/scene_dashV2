@@ -18,8 +18,7 @@ void main() {
       expect(buffer.has(_Action.roll), isFalse);
     });
 
-    test('a paused clock still expires presses (wall time, not game time)',
-        () {
+    test('a paused clock still expires presses (wall time, not game time)', () {
       final game = TestGame.headless();
       game.start();
       final buffer = game.world.buffer<_Action>();

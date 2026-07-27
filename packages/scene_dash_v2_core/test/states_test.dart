@@ -46,8 +46,11 @@ void main() {
         features: [
           (g) => g
             ..addState<GamePhase>(GamePhase.title)
-            ..addSystem(Schedules.fixedUpdate, _requestDungeon,
-                reads: const {}),
+            ..addSystem(
+              Schedules.fixedUpdate,
+              _requestDungeon,
+              reads: const {},
+            ),
         ],
       );
       game.start();

@@ -86,13 +86,13 @@ class _LiveStats extends StatelessWidget {
             // An aggregate straight off the world.
             WorldBuilder<int>(
               select: (world) =>
-                  world.query<SceneNode>(require: const [Rock]).count(),
+                  world.query<NodeRef>(require: const [Rock]).count(),
               builder: (context, rocks) => Text('rocks: $rocks'),
             ),
             // The one watched entity, resolved through the world each
             // frame — no handle crosses into the tree; `absent` covers
             // death and respawn gaps in one place.
-            EntityBuilder<SceneNode, String>.matching(
+            EntityBuilder<NodeRef, String>.matching(
               require: const [Player],
               select: (binding) =>
                   binding.node.localTransform.storage[12].toStringAsFixed(1),

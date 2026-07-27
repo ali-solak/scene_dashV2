@@ -29,7 +29,7 @@ void installLockOn(GameBuilder game) {
       Schedules.update,
       updateEnemyHighlights,
       inSet: GameSets.logic,
-      reads: const {Player, Enemy, Target, Brawler, SceneNode},
+      reads: const {Player, Enemy, Target, Brawler, NodeRef},
       runIf: hasResource<Scene>(),
     );
 }
@@ -168,7 +168,7 @@ void updateEnemyHighlights(World world) {
   final player = world.entitiesWith(require: const [Player]).firstOrNull;
   final locked = player == null ? null : world.tryGet<Target>(player)?.entity;
   final applied = world.resource<EnemyHighlights>().applied;
-  world.query2<Brawler, SceneNode>(require: const [Enemy]).each((
+  world.query2<Brawler, NodeRef>(require: const [Enemy]).each((
     enemy,
     brawler,
     ref,

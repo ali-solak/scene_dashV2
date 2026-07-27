@@ -5,9 +5,9 @@ import 'package:scene_dash_v2/scene_dash_v2.dart';
 
 World _worldWithBinding(Node node) {
   final world = World()
-    ..stores.register<SceneNode>(ObjectComponentStore<SceneNode>());
+    ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
   final entity = world.entities.spawn();
-  world.insertNow<SceneNode>(entity, SceneNode(node));
+  world.insertNow<NodeRef>(entity, NodeRef(node));
   return world;
 }
 
@@ -40,9 +40,9 @@ void main() {
     final node = Node();
     elsewhere.add(node); // custom parenting
     final world = World()
-      ..stores.register<SceneNode>(ObjectComponentStore<SceneNode>());
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
     final entity = world.entities.spawn();
-    world.insertNow<SceneNode>(entity, SceneNode(node));
+    world.insertNow<NodeRef>(entity, NodeRef(node));
 
     SceneNodeMountAdapter(commands, <Node, Entity>{})
       ..initialize(world)
@@ -58,9 +58,9 @@ void main() {
     final commands = SceneCommands(root);
     final node = Node();
     final world = World()
-      ..stores.register<SceneNode>(ObjectComponentStore<SceneNode>());
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
     final entity = world.entities.spawn();
-    world.insertNow<SceneNode>(entity, SceneNode(node));
+    world.insertNow<NodeRef>(entity, NodeRef(node));
 
     final adapter = SceneNodeMountAdapter(commands, <Node, Entity>{})
       ..initialize(world);
@@ -75,14 +75,14 @@ void main() {
     expect(node.parent, isNull, reason: 'detached on despawn');
   });
 
-  test('detaches when the SceneNode component is removed', () {
+  test('detaches when the NodeRef component is removed', () {
     final root = Node();
     final commands = SceneCommands(root);
     final node = Node();
     final world = World()
-      ..stores.register<SceneNode>(ObjectComponentStore<SceneNode>());
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
     final entity = world.entities.spawn();
-    world.insertNow<SceneNode>(entity, SceneNode(node));
+    world.insertNow<NodeRef>(entity, NodeRef(node));
 
     final adapter = SceneNodeMountAdapter(commands, <Node, Entity>{})
       ..initialize(world);
@@ -91,7 +91,7 @@ void main() {
     expect(node.parent, same(root));
 
     // Remove just the component (entity stays alive).
-    world.removeNow<SceneNode>(entity);
+    world.removeNow<NodeRef>(entity);
     adapter.run();
     commands.flush();
     expect(node.parent, isNull, reason: 'detached on component removal');
@@ -102,9 +102,9 @@ void main() {
     final commands = SceneCommands(root);
     final oldNode = Node();
     final world = World()
-      ..stores.register<SceneNode>(ObjectComponentStore<SceneNode>());
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
     final entity = world.entities.spawn();
-    world.insertNow<SceneNode>(entity, SceneNode(oldNode));
+    world.insertNow<NodeRef>(entity, NodeRef(oldNode));
 
     final adapter = SceneNodeMountAdapter(commands, <Node, Entity>{})
       ..initialize(world);
@@ -113,7 +113,7 @@ void main() {
     expect(oldNode.parent, same(root));
 
     final newNode = Node();
-    world.insertNow<SceneNode>(entity, SceneNode(newNode)); // replace
+    world.insertNow<NodeRef>(entity, NodeRef(newNode)); // replace
     adapter.run();
     commands.flush();
     expect(oldNode.parent, isNull, reason: 'old node detached');
@@ -125,9 +125,9 @@ void main() {
     final commands = SceneCommands(root);
     final node = Node();
     final world = World()
-      ..stores.register<SceneNode>(ObjectComponentStore<SceneNode>());
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
     final entity = world.entities.spawn();
-    world.insertNow<SceneNode>(entity, SceneNode(node));
+    world.insertNow<NodeRef>(entity, NodeRef(node));
 
     final adapter = SceneNodeMountAdapter(commands, <Node, Entity>{})
       ..initialize(world);
@@ -141,21 +141,21 @@ void main() {
     expect(world.isAlive(entity), isFalse);
   });
 
-  test('clears Mounted when only the SceneNode component is removed', () {
+  test('clears Mounted when only the NodeRef component is removed', () {
     final root = Node();
     final commands = SceneCommands(root);
     final node = Node();
     final world = World()
-      ..stores.register<SceneNode>(ObjectComponentStore<SceneNode>());
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
     final entity = world.entities.spawn();
-    world.insertNow<SceneNode>(entity, SceneNode(node));
+    world.insertNow<NodeRef>(entity, NodeRef(node));
 
     final adapter = SceneNodeMountAdapter(commands, <Node, Entity>{})
       ..initialize(world);
     adapter.run();
     expect(world.has<Mounted>(entity), isTrue);
 
-    world.removeNow<SceneNode>(entity); // entity stays alive
+    world.removeNow<NodeRef>(entity); // entity stays alive
     adapter.run();
     expect(world.has<Mounted>(entity), isFalse, reason: 'untagged on unmount');
   });
@@ -164,9 +164,9 @@ void main() {
     final root = Node();
     final commands = SceneCommands(root);
     final world = World()
-      ..stores.register<SceneNode>(ObjectComponentStore<SceneNode>());
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
     final entity = world.entities.spawn();
-    world.insertNow<SceneNode>(entity, SceneNode(Node()));
+    world.insertNow<NodeRef>(entity, NodeRef(Node()));
 
     final adapter = SceneNodeMountAdapter(commands, <Node, Entity>{})
       ..initialize(world);
@@ -174,7 +174,7 @@ void main() {
     commands.flush();
     expect(world.has<Mounted>(entity), isTrue);
 
-    world.insertNow<SceneNode>(entity, SceneNode(Node())); // replace node
+    world.insertNow<NodeRef>(entity, NodeRef(Node())); // replace node
     adapter.run();
     expect(world.has<Mounted>(entity), isTrue, reason: 'still mounted');
   });
@@ -185,9 +185,9 @@ void main() {
     final child = Node();
     final node = Node()..add(child); // child mesh under the bound node
     final world = World()
-      ..stores.register<SceneNode>(ObjectComponentStore<SceneNode>());
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
     final entity = world.entities.spawn();
-    world.insertNow<SceneNode>(entity, SceneNode(node));
+    world.insertNow<NodeRef>(entity, NodeRef(node));
 
     final map = <Node, Entity>{};
     final index = SceneNodeIndex(map);
@@ -205,9 +205,9 @@ void main() {
     final commands = SceneCommands(root);
     final node = Node();
     final world = World()
-      ..stores.register<SceneNode>(ObjectComponentStore<SceneNode>());
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
     final entity = world.entities.spawn();
-    world.insertNow<SceneNode>(entity, SceneNode(node));
+    world.insertNow<NodeRef>(entity, NodeRef(node));
 
     final map = <Node, Entity>{};
     final index = SceneNodeIndex(map);
@@ -251,9 +251,9 @@ void main() {
     final node = Node();
     elsewhere.add(node); // custom parenting → never adopted
     final world = World()
-      ..stores.register<SceneNode>(ObjectComponentStore<SceneNode>());
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
     final entity = world.entities.spawn();
-    world.insertNow<SceneNode>(entity, SceneNode(node));
+    world.insertNow<NodeRef>(entity, NodeRef(node));
 
     final adapter = SceneNodeMountAdapter(commands, <Node, Entity>{})
       ..initialize(world);

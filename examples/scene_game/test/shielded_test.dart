@@ -52,7 +52,7 @@ void main() {
     game.start();
     // A player stand-in at the origin — no GPU-bound visuals needed for
     // the lifecycle itself.
-    final player = game.world.spawn([const Player(), SceneNode(Node())]);
+    final player = game.world.spawn([const Player(), NodeRef(Node())]);
     game.pump();
     return (game: game, player: player, bubble: bubble);
   }
@@ -63,7 +63,7 @@ void main() {
     game.world.spawn([
       const Collectable(),
       const ShieldPickup(),
-      SceneNode(Node()),
+      NodeRef(Node()),
     ]);
   }
 

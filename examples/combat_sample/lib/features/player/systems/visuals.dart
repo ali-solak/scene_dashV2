@@ -23,7 +23,7 @@ void installPlayerVisuals(GameBuilder game) {
       Schedules.update,
       updatePlayerGhost,
       inSet: GameSets.logic,
-      reads: const {Player, Fighter, SceneNode, Knockback},
+      reads: const {Player, Fighter, NodeRef, Knockback},
       runIf: hasResource<Scene>(),
     );
 }
@@ -32,7 +32,7 @@ void installPlayerVisuals(GameBuilder game) {
 void attachPlayerVisuals(World world) {
   final player = world.entitiesWith(require: const [Player]).firstOrNull;
   if (player == null) return;
-  if (world.tryGet<SceneNode>(player) != null) return;
+  if (world.tryGet<NodeRef>(player) != null) return;
 
   if (world.hasResource<CharacterAssets>()) {
     final assets = world.resource<CharacterAssets>();
@@ -49,13 +49,23 @@ void attachPlayerVisuals(World world) {
         Vector3.all(characterScale),
       ),
     )..add(model);
-    world.add(player, SceneNode(Node(name: 'player')..add(wrapper)));
+    world.add(player, NodeRef(Node(name: 'player')..add(wrapper)));
     world.add(player, buildPlayerAnimator(assets, model));
     if (weapon != null) {
-      // The trail remains in world space.
-      final trail = SwordTrail.create();
-      world.resource<Scene>().add(trail.node);
-      world.add(player, BladeTrail(weapon: weapon, trail: trail));
+      // Rides a node at the blade tip; points are recorded in world space,
+      // so the ribbon hangs where the blade has been.
+      final trail = TrailComponent(
+        width: bladeTrailWidth,
+        lifetime: bladeTrailSeconds,
+        colorOverTrail: lightTrailFade,
+      );
+      weapon.add(
+        Node(
+          name: 'blade-tip',
+          localTransform: Matrix4.translation(Vector3(0, swordBladeLength, 0)),
+        )..addComponent(trail),
+      );
+      world.add(player, BladeTrail(trail));
     }
     return;
   }
@@ -85,7 +95,7 @@ void attachPlayerVisuals(World world) {
         ),
       )..mesh = Mesh(CuboidGeometry(Vector3(0.14, 0.14, 0.3)), material),
     );
-  world.add(player, SceneNode(root));
+  world.add(player, NodeRef(root));
 }
 
 /// Updates player animation.
@@ -101,7 +111,7 @@ void updatePlayerAnimation(World world) {
 /// Shows a cyan outline while the player is invulnerable.
 void updatePlayerGhost(World world) {
   final row = world
-      .query2<Fighter, SceneNode>(require: const [Player])
+      .query2<Fighter, NodeRef>(require: const [Player])
       .firstOrNull;
   if (row == null) return;
   final (entity, fighter, ref) = row;

@@ -24,6 +24,7 @@ import 'assets/character_assets.dart';
 import 'common/game_state.dart';
 import 'common/inputs.dart';
 import 'common/sets.dart';
+import 'package:flutter_scene/physics.dart';
 
 Future<SceneGame> bootCombatGame(
   Scene scene,
@@ -44,7 +45,9 @@ Future<SceneGame> bootCombatGame(
   stage.value = 'the clearing';
   final game = await SceneGame.boot(
     scene: scene,
-    physics: RapierWorld(gravity: Vector3(0, -config.gravityStrength, 0)),
+    physics: PhysicsWorld(
+      RapierWorld(gravity: Vector3(0, -config.gravityStrength, 0)),
+    ),
     strictAccess: true,
     accessConflictPolicy: AccessConflictPolicy.error,
     features: [

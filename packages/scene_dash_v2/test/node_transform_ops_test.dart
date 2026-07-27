@@ -9,8 +9,11 @@ void main() {
     final before = node.localTransform;
     node.setLocalTRS(1, 2, 3, 2, 4, 8);
 
-    expect(identical(node.localTransform, before), isTrue,
-        reason: 'mutates the existing matrix in place');
+    expect(
+      identical(node.localTransform, before),
+      isTrue,
+      reason: 'mutates the existing matrix in place',
+    );
     final s = node.localTransform.storage;
     expect(s[12], 1);
     expect(s[13], 2);

@@ -8,7 +8,7 @@ part of '../projectiles.dart';
 void updateChargeVisuals(World world) {
   final plasma = world.singleOrNull<ChargePlasmaEmitter>();
   final player = world
-      .query2<SceneNode, PlayerChargeVisuals>(require: const [Player])
+      .query2<NodeRef, PlayerChargeVisuals>(require: const [Player])
       .firstOrNull;
   final blaster = world.singleOrNull<Blaster>();
   if (player == null || blaster == null) {

@@ -9,7 +9,7 @@ List<Object> playerBundle() {
   final (legs, charge, shield) = buildPlayerVisuals();
   return [
     const Player(),
-    SceneNode(_makePlayerNode(legs, charge, shield)),
+    NodeRef(_makePlayerNode(legs, charge, shield)),
     const PhysicsDriven(),
     legs,
     charge,
@@ -54,15 +54,15 @@ Node _makePlayerNode(
             ),
           ),
         )
-        ..addComponent(RapierRigidBody(type: BodyType.kinematic))
+        ..addComponent(RigidBody(type: BodyType.kinematic))
         ..addComponent(
-          RapierCollider(
+          Collider(
             shape: SphereShape(radius: playerCollisionRadius),
             collisionLayer: PhysicsLayers.player,
           ),
         )
         ..addComponent(
-          RapierKinematicCharacterController(
+          KinematicCharacterController(
             up: Vector3(0, 1, 0),
             slide: true,
             snapToGround: 0.5,

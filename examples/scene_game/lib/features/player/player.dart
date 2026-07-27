@@ -1,5 +1,4 @@
 import 'package:flutter_scene/scene.dart';
-import 'package:flutter_scene_rapier/flutter_scene_rapier.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 
@@ -11,6 +10,7 @@ import '../world/data/config.dart';
 import '../world/data/ramp.dart';
 import 'animation/gait.dart';
 import 'data/config.dart';
+import 'package:flutter_scene/physics.dart';
 
 part 'data/components.dart';
 part 'data/resources.dart';
@@ -25,12 +25,12 @@ void installPlayer(GameBuilder game) {
     ..addSystem(
       Schedules.startup,
       spawnPlayer,
-      writes: {Player, SceneNode, PlayerVisuals},
+      writes: {Player, NodeRef, PlayerVisuals},
       runIf: hasResource<Scene>(),
     )
     // The attach is deferred (world.add), so the declared write is the
     // feature-owned component; the player is found by tag, keeping this
-    // clear of resetPlayerOnRunStart's SceneNode write in the same enter.
+    // clear of resetPlayerOnRunStart's NodeRef write in the same enter.
     ..addSystem(
       OnEnter(GameStatus.playing),
       attachPlayerKnockback,
@@ -40,12 +40,12 @@ void installPlayer(GameBuilder game) {
     ..addSystem(
       OnEnter(GameStatus.playing),
       resetPlayerOnRunStart,
-      writes: {SceneNode, PlayerVisuals},
+      writes: {NodeRef, PlayerVisuals},
     )
     ..addSystem(
       Schedules.fixedUpdate,
       movePlayer,
-      writes: {SceneNode, PlayerKnockback},
+      writes: {NodeRef, PlayerKnockback},
       inSet: GameSets.movement,
       runIf: inState(GameStatus.playing),
     )

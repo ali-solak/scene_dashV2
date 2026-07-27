@@ -2,14 +2,14 @@ import 'package:flutter_scene/scene.dart' show Node;
 import 'package:scene_dash_v2_core/advanced.dart';
 
 import 'scene_commands.dart';
-import 'scene_node.dart';
+import 'node_ref.dart';
 
 /// Mounts entity nodes and removes unused mounts.
 final class SceneNodeMountAdapter
     implements SystemAdapter, SystemAccessProvider {
   @override
   SystemAccess get access =>
-      const SystemAccess(reads: <Type>{SceneNode}, writes: <Type>{Mounted});
+      const SystemAccess(reads: <Type>{NodeRef}, writes: <Type>{Mounted});
 
   final SceneCommands _sceneCommands;
 
@@ -17,8 +17,8 @@ final class SceneNodeMountAdapter
   final Map<Node, Entity> _index;
 
   late final World _world;
-  late final ObjectComponentStore<SceneNode> _sceneNodeStore;
-  late final Query1<SceneNode> _bound;
+  late final ObjectComponentStore<NodeRef> _sceneNodeStore;
+  late final Query1<NodeRef> _bound;
 
   /// Nodes this adapter mounted, mapped to the entity they were mounted for.
   final Map<Node, Entity> _ownedMounted = <Node, Entity>{};
@@ -42,10 +42,10 @@ final class SceneNodeMountAdapter
   void initialize(World world) {
     _world = world;
     world
-      ..ensureObjectStore<SceneNode>()
+      ..ensureObjectStore<NodeRef>()
       ..ensureTagStore<Mounted>();
-    _sceneNodeStore = world.stores.object<SceneNode>();
-    _bound = world.query1<SceneNode>();
+    _sceneNodeStore = world.stores.object<NodeRef>();
+    _bound = world.query1<NodeRef>();
   }
 
   @override

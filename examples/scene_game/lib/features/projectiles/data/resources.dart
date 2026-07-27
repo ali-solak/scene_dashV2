@@ -10,7 +10,7 @@ final class ChargePlasmaEmitter {
 
   /// The emitter node, positioned at the muzzle orb offset; parented to
   /// the live player's root while a run is on (manual — reparenting under
-  /// the player is this feature's job, so no `SceneNode` mount).
+  /// the player is this feature's job, so no `NodeRef` mount).
   final Node node;
 
   /// The emitter's spawner; rate 0 while idle.
@@ -26,7 +26,7 @@ final class ChargePlasmaEmitter {
 final class LockOnReticle {
   LockOnReticle({required this.node, required this.model});
 
-  /// The reticle node; the entity's `SceneNode` mounts it at the scene
+  /// The reticle node; the entity's `NodeRef` mounts it at the scene
   /// root, and `billboardAt`/`hideNode` steer it in place.
   final Node node;
 

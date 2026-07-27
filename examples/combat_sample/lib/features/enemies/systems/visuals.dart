@@ -104,7 +104,7 @@ void installEnemyVisuals(GameBuilder game) {
 void attachEnemyVisuals(World world) {
   final hasCharacters = world.hasResource<CharacterAssets>();
   world.entitiesWith(require: const [Enemy]).each((enemy) {
-    if (world.tryGet<SceneNode>(enemy) != null) return;
+    if (world.tryGet<NodeRef>(enemy) != null) return;
     final assets = hasCharacters ? world.resource<CharacterAssets>() : null;
     final brawler = world.tryGet<Brawler>(enemy);
     final lent = assets?.takeBarbarian();
@@ -128,7 +128,7 @@ void attachEnemyVisuals(World world) {
       )..add(model);
       final root = Node(name: 'enemy')..add(wrapper);
       _attachHealthBar(world, enemy, root, giant: brawler?.giant ?? false);
-      world.add(enemy, SceneNode(root));
+      world.add(enemy, NodeRef(root));
       world.add(enemy, buildEnemyAnimator(assets, model));
       world.add(enemy, BrawlerVisuals(bodyRoot: wrapper));
       world.add(enemy, ModelSlot(lent, axe: mountedAxe));
@@ -152,7 +152,7 @@ void attachEnemyVisuals(World world) {
           );
     final root = Node(name: 'enemy')..add(body);
     _attachHealthBar(world, enemy, root, giant: brawler?.giant ?? false);
-    world.add(enemy, SceneNode(root));
+    world.add(enemy, NodeRef(root));
     world.add(enemy, BrawlerVisuals(bodyRoot: body, capsuleMaterial: material));
   });
 }

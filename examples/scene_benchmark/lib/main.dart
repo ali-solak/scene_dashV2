@@ -8,12 +8,7 @@ import 'package:scene_dash_v2/scene_dash_v2.dart';
 // mountOnly hand-assembles the mount half of the driver from the machinery
 // tier, so the mode isolates mounting cost from transform sync.
 import 'package:scene_dash_v2_core/advanced.dart'
-    show
-        App,
-        EcsFrameLoop,
-        SystemAdapter,
-        SystemLabel,
-        SystemProfiler;
+    show App, EcsFrameLoop, SystemAdapter, SystemLabel, SystemProfiler;
 // Benchmark-only: mountOnly needs the same scene lifecycle driver as the
 // booted game while intentionally skipping the built-in transform-sync
 // registration.
@@ -138,11 +133,11 @@ final class SceneBenchmark {
           diagnostics: const AppDiagnostics(profileSystems: _profileSystems),
           features: [
             (game) => game.addSystem(
-                  Schedules.startup,
-                  _spawnCubeGrid(mesh, gridSide),
-                  writes: {SceneTransform, SceneNode},
-                  label: 'benchmark.spawnGrid',
-                ),
+              Schedules.startup,
+              _spawnCubeGrid(mesh, gridSide),
+              writes: {SceneTransform, NodeRef},
+              label: 'benchmark.spawnGrid',
+            ),
           ],
         );
         return SceneBenchmark._(
@@ -195,9 +190,9 @@ final class SceneBenchmark {
 /// mode exists precisely to subtract it.
 final class MountOnlyRuntime {
   MountOnlyRuntime({required this.scene})
-      : app = App(
-          diagnostics: const AppDiagnostics(profileSystems: _profileSystems),
-        );
+    : app = App(
+        diagnostics: const AppDiagnostics(profileSystems: _profileSystems),
+      );
 
   final Scene scene;
   final App app;
@@ -370,7 +365,7 @@ WorldSystem _spawnCubeGrid(Mesh mesh, int gridSide) {
           translation: matrix.getTranslation(),
           scale: vm.Vector3.all(1),
         ),
-        SceneNode(Node(mesh: mesh, localTransform: matrix)),
+        NodeRef(Node(mesh: mesh, localTransform: matrix)),
       ]);
     }
   };
@@ -389,7 +384,7 @@ final class _SpawnGridAdapter implements SystemAdapter {
   @override
   void initialize(World world) {
     _world = world;
-    world.ensureObjectStore<SceneNode>();
+    world.ensureObjectStore<NodeRef>();
     if (includeTransform) world.ensureObjectStore<SceneTransform>();
   }
 
@@ -407,9 +402,9 @@ final class _SpawnGridAdapter implements SystemAdapter {
           ),
         );
       }
-      _world.insertNow<SceneNode>(
+      _world.insertNow<NodeRef>(
         entity,
-        SceneNode(Node(mesh: mesh, localTransform: matrix)),
+        NodeRef(Node(mesh: mesh, localTransform: matrix)),
       );
     }
   }

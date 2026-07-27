@@ -26,7 +26,7 @@ void shootProjectiles(World world) {
   final canceled = world.consumeAny<FireCanceled>();
 
   final player = world
-      .query2<Blaster, SceneNode>(require: const [Player])
+      .query2<Blaster, NodeRef>(require: const [Player])
       .firstOrNull;
   if (player == null) return;
   final (_, blaster, binding) = player;
@@ -76,7 +76,7 @@ void stopBlasterOnRunEnd(World world) {
 /// Flies each shot: rock knocks and hit bookkeeping. Lifetime expiry is
 /// the bundle's `DespawnAfter`; spatial exits are its `DespawnOutside`.
 void updateProjectiles(World world) {
-  world.query2<Projectile, SceneNode>().each((entity, projectile, binding) {
+  world.query2<Projectile, NodeRef>().each((entity, projectile, binding) {
     binding.node.globalTranslationInto(_projectilePosition);
     final position = _projectilePosition;
     world.gizmos.sphere(
@@ -121,7 +121,7 @@ int _knockRocks(World world, Vector3 position, Projectile projectile) {
       final knock = projectileKnockbackForCharge(projectile.charge);
       final lift = projectileLiftForCharge(projectile.charge);
       final spin = projectileSpinForCharge(projectile.charge);
-      hit.node.getComponent<RapierRigidBody>()
+      hit.node.getComponent<RigidBody>()
         ?..linearVelocity = Vector3(
           xAway.clamp(-1, 1).toDouble() * knock * 0.35,
           lift,

@@ -1,6 +1,6 @@
-import 'package:flutter_scene/scene.dart' show BasicPhysicsWorld, PhysicsWorld;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
+import 'package:flutter_scene/physics.dart';
 
 enum RunMode { title, playing }
 
@@ -45,7 +45,7 @@ void main() {
 
   test('physics boot wires the world resource, the collision channels and '
       'the promoted world.physics getter', () async {
-    final physics = BasicPhysicsWorld();
+    final physics = PhysicsWorld(BasicSimulation());
     final game = await WorldGame.boot(physics: physics);
     expect(game.world.resource<PhysicsWorld>(), same(physics));
     expect(game.world.physics, same(physics));

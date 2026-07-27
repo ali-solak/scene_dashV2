@@ -20,6 +20,7 @@ import 'features/world/data/config.dart';
 import 'features/world/world.dart';
 import 'hud/debug_panel.dart';
 import 'screens/controls.dart';
+import 'package:flutter_scene/physics.dart';
 
 const bool showDebugGizmos = false;
 
@@ -29,7 +30,9 @@ Future<void> main() async {
   final fps = FpsCounter();
 
   final game = await SceneGame.boot(
-    physics: RapierWorld(gravity: Vector3(0, -gravityStrength, 0)),
+    physics: PhysicsWorld(
+      RapierWorld(gravity: Vector3(0, -gravityStrength, 0)),
+    ),
     strictAccess: true,
     accessConflictPolicy: AccessConflictPolicy.error,
     features: [

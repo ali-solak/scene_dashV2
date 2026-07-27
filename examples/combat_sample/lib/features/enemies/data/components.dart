@@ -151,7 +151,7 @@ final class PendingCorpse {
 final class PhysicsCorpse {
   PhysicsCorpse(this.body);
 
-  final RapierRigidBody body;
+  final RigidBody body;
 
   /// Last vertical velocity.
   double fallSpeed = 0;

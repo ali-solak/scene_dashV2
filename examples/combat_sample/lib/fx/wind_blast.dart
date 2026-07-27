@@ -19,7 +19,7 @@ void spawnWindBlast(World world, Vector3 position) {
     maxParticles: _dustCount,
     // A zero-radius sphere emits uniformly in every direction; the drag
     // and the near-zero gravity flatten it into a ground-hugging ring.
-    shape: const fx.SphereShape(radius: 0),
+    shape: const fx.SphereEmitterShape(radius: 0),
     spawner: fx.Spawner(bursts: [fx.ParticleBurst(time: 0, count: _dustCount)]),
     looping: false,
     duration: 0.1,
@@ -75,5 +75,5 @@ void spawnWindBlast(World world, Vector3 position) {
         );
 
   // Keep the effect through pauses.
-  world.spawn([SceneNode(node), DespawnAfter(_entityLifetime)]);
+  world.spawn([NodeRef(node), DespawnAfter(_entityLifetime)]);
 }

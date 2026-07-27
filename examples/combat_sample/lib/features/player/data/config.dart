@@ -85,7 +85,19 @@ const double maxOneShotPlaybackScale = 1.55;
 const double airborneProneRate = 5.0;
 const double proneSettleRate = 2.6;
 
-final Vector4 lightTrailTint = Vector4(0.80, 0.90, 1.0, 0.75);
-final Vector4 heavyTrailTint = Vector4(1.0, 0.62, 0.22, 0.9);
+final ColorGradient lightTrailFade = ColorGradient([
+  ColorStop(0, Vector4(0.80, 0.90, 1.0, 0.75)),
+  ColorStop(1, Vector4(0.80, 0.90, 1.0, 0)),
+]);
+final ColorGradient heavyTrailFade = ColorGradient([
+  ColorStop(0, Vector4(1.0, 0.62, 0.22, 0.9)),
+  ColorStop(1, Vector4(1.0, 0.62, 0.22, 0)),
+]);
+
+/// Where the blade tip sits in the weapon's local space; the weapons are
+/// authored with the blade running up +Y from the grip.
+const double swordBladeLength = 1.35;
+const double bladeTrailWidth = 0.5;
+const double bladeTrailSeconds = 0.18;
 
 const double attackMoveFactor = 0.35;

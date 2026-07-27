@@ -9,7 +9,7 @@ final class SceneNodeIndex {
   final Map<Node, Entity> _byNode;
 
   /// The entity bound to [node] or its nearest indexed ancestor, or `null` when
-  /// no ancestor is a bound `SceneNode` node.
+  /// no ancestor is a bound `NodeRef` node.
   Entity? entityOf(Node node) {
     Node? current = node;
     while (current != null) {

@@ -8,7 +8,6 @@ import 'package:vector_math/vector_math.dart'
 import '../enemies/enemies.dart'
     show Enemy, Brawler, BrawlPhase, telegraphSeconds;
 import '../../fx/dash_dust.dart';
-import '../../fx/sword_trail.dart';
 import '../../common/actors.dart';
 import '../../common/camera_rig.dart';
 import '../../common/combat_math.dart';

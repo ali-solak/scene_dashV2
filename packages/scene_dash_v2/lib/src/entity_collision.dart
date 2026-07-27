@@ -1,4 +1,4 @@
-import 'package:flutter_scene/scene.dart' show CollisionEvent;
+import 'package:flutter_scene/physics.dart' show CollisionEvent;
 import 'package:scene_dash_v2_core/advanced.dart';
 
 import 'scene_node_index.dart';

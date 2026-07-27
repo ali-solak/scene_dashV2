@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_scene/scene.dart';
+import 'package:flutter_scene/physics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart' show Quaternion, Vector3;
@@ -8,6 +9,8 @@ import 'package:vector_math/vector_math.dart' show Quaternion, Vector3;
 /// Fake world that returns canned overlap hits and records the arguments the
 /// wrapper forwarded. Only the overlap queries are real.
 final class _FakeWorld extends PhysicsWorld {
+  _FakeWorld() : super(BasicSimulation());
+
   List<OverlapHit> cannedHits = const [];
   int? lastLayerMask;
   bool? lastIncludeTriggers;
@@ -68,7 +71,7 @@ final class _FakeWorld extends PhysicsWorld {
 
 /// Collider stub with a layer.
 final class _LayerCollider extends Collider {
-  _LayerCollider(this._layer);
+  _LayerCollider(this._layer) : super(shape: const SphereShape(radius: 1));
 
   final int _layer;
 

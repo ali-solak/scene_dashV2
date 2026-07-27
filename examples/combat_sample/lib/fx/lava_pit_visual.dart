@@ -81,7 +81,7 @@ fx.ParticleEmitterComponent _globs() {
   final system = fx.ParticleSystem(
     maxParticles: _globCount,
     // Narrow upward spray.
-    shape: fx.ConeShape(angle: 0.3, radius: lavaPitRadius * 0.82),
+    shape: fx.ConeEmitterShape(angle: 0.3, radius: lavaPitRadius * 0.82),
     spawner: fx.Spawner(rate: _globCount / 1.7),
     duration: lavaPitSeconds,
     // Long enough to complete the arc: at this speed against the gravity
@@ -139,7 +139,7 @@ void spawnLavaEruption(World world, Vector3 position) {
     maxParticles: _eruptionCount,
     // Wider and flatter than the pit's idle bubbling: the ground is
     // breaking open, so debris goes out as well as up.
-    shape: fx.ConeShape(angle: 0.85, radius: lavaPitRadius * 0.55),
+    shape: fx.ConeEmitterShape(angle: 0.85, radius: lavaPitRadius * 0.55),
     spawner: fx.Spawner(
       bursts: [fx.ParticleBurst(time: 0, count: _eruptionCount)],
     ),
@@ -179,7 +179,7 @@ void spawnLavaEruption(World world, Vector3 position) {
     ..addComponent(
       fx.ParticleEmitterComponent(system: system, material: crispAlphaSprite()),
     );
-  world.spawn([SceneNode(node), DespawnAfter(_eruptionLifetime)]);
+  world.spawn([NodeRef(node), DespawnAfter(_eruptionLifetime)]);
 }
 
 /// When the `.fmat` is unavailable: a generated crust texture rather

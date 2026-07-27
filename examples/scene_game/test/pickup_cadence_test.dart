@@ -29,7 +29,7 @@ void main() {
       ],
     );
     game.start();
-    game.world.spawn([const Player(), SceneNode(Node())]);
+    game.world.spawn([const Player(), NodeRef(Node())]);
     game.pump();
     return game;
   }

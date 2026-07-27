@@ -45,10 +45,10 @@ void animateShieldPickups(World world) {
 /// at the first collection: one shield per frame, no further distance
 /// checks.
 void collectShieldPickups(World world) {
-  final player = world.query<SceneNode>(require: const [Player]).firstOrNull;
+  final player = world.query<NodeRef>(require: const [Player]).firstOrNull;
   if (player == null) return;
   player.$2.node.globalTranslationInto(_playerScratch);
-  world.query<SceneNode>(require: const [ShieldPickup]).eachUntil((
+  world.query<NodeRef>(require: const [ShieldPickup]).eachUntil((
     entity,
     binding,
   ) {

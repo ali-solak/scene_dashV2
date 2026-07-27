@@ -1,4 +1,5 @@
-import 'package:flutter_scene/scene.dart' show Component, PhysicsWorld;
+import 'package:flutter_scene/scene.dart' show Component;
+import 'package:flutter_scene/physics.dart' show PhysicsWorld;
 
 import 'package:scene_dash_v2_core/advanced.dart';
 

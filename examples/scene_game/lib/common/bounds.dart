@@ -32,7 +32,7 @@ final Vector3 _positionScratch = Vector3.zero();
 /// Despawns any [DespawnOutside] carrier whose node left its region — one
 /// system serving every feature through a shared data component.
 void despawnOutOfBounds(World world) {
-  world.query2<DespawnOutside, SceneNode>().each((entity, bounds, binding) {
+  world.query2<DespawnOutside, NodeRef>().each((entity, bounds, binding) {
     binding.node.globalTranslationInto(_positionScratch);
     if (!bounds.contains(_positionScratch)) {
       world.despawn(entity);

@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:scene_dash_v2_core/advanced.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4;
 
-import 'scene_node.dart';
+import 'node_ref.dart';
 
 /// Extracts a node-local translation `(x, y, z)` from a game transform
 /// component of type [T].
@@ -18,13 +18,13 @@ typedef NodeTransformWriter<T> = void Function(T source, Matrix4 target);
 /// Skips [PhysicsDriven] entities.
 final class SyncSceneNodesAdapter<T extends Object>
     implements SystemAdapter, SystemAccessProvider {
-  /// Writes [SceneNode] transforms.
+  /// Writes [NodeRef] transforms.
   @override
   SystemAccess get access =>
-      SystemAccess(reads: <Type>{T}, writes: const <Type>{SceneNode});
+      SystemAccess(reads: <Type>{T}, writes: const <Type>{NodeRef});
 
   final NodeTransformWriter<T> _writeTransform;
-  late final Query2<T, SceneNode> _query;
+  late final Query2<T, NodeRef> _query;
 
   /// Reused transform matrix.
   final Matrix4 _scratch = Matrix4.zero();
@@ -42,9 +42,9 @@ final class SyncSceneNodesAdapter<T extends Object>
   void initialize(World world) {
     world
       ..ensureObjectStore<T>()
-      ..ensureObjectStore<SceneNode>()
+      ..ensureObjectStore<NodeRef>()
       ..ensureTagStore<PhysicsDriven>();
-    _query = world.query2<T, SceneNode>(withoutTypes: const [PhysicsDriven]);
+    _query = world.query2<T, NodeRef>(withoutTypes: const [PhysicsDriven]);
   }
 
   @override

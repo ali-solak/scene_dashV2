@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter_scene/scene.dart';
-import 'package:flutter_scene_rapier/flutter_scene_rapier.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart' show Ray, Vector3;
 
@@ -14,6 +13,7 @@ import '../../common/sets.dart';
 import '../player/data/config.dart';
 import '../player/player.dart';
 import 'data/config.dart';
+import 'package:flutter_scene/physics.dart';
 
 part 'systems/systems.dart';
 
@@ -32,7 +32,7 @@ void installRules(GameBuilder game) {
     ..addSystem(
       Schedules.update,
       evaluateGameRules,
-      reads: {SceneNode, Shielded},
+      reads: {NodeRef, Shielded},
       writes: {PlayerKnockback},
       inSet: GameSets.rules,
       runIf: inState(GameStatus.playing),
@@ -41,7 +41,7 @@ void installRules(GameBuilder game) {
     ..addSystem(
       Schedules.update,
       playerView,
-      reads: {SceneNode},
+      reads: {NodeRef},
       after: [evaluateGameRules],
     );
 }

@@ -24,7 +24,7 @@ void installHitResolution(GameBuilder game) {
       Schedules.fixedUpdate,
       applyDamage,
       inSet: GameSets.resolution,
-      reads: const {Enemy, SceneNode},
+      reads: const {Enemy, NodeRef},
       writes: const {
         Fighter,
         Brawler,

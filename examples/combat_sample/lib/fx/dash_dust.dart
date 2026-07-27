@@ -20,7 +20,7 @@ void spawnDashDust(World world, Vector3 position, Vector3 heading) {
   final system = fx.ParticleSystem(
     maxParticles: _clodCount,
     // Shallow spray.
-    shape: const fx.ConeShape(angle: 0.85, radius: 0.45),
+    shape: const fx.ConeEmitterShape(angle: 0.85, radius: 0.45),
     spawner: fx.Spawner(bursts: [fx.ParticleBurst(time: 0, count: _clodCount)]),
     looping: false,
     duration: 0.1,
@@ -76,5 +76,5 @@ void spawnDashDust(World world, Vector3 position, Vector3 heading) {
           ),
         );
 
-  world.spawn([SceneNode(node), DespawnAfter(_entityLifetime)]);
+  world.spawn([NodeRef(node), DespawnAfter(_entityLifetime)]);
 }

@@ -53,9 +53,9 @@ void setupWorld(World world) {
           ),
           localTransform: Matrix4.rotationX(rampInclineRadians),
         )
-        ..addComponent(RapierRigidBody(type: BodyType.fixed))
+        ..addComponent(RigidBody(type: BodyType.fixed))
         ..addComponent(
-          RapierCollider(
+          Collider(
             shape: BoxShape(
               halfExtents: Vector3(
                 rampWidth / 2,

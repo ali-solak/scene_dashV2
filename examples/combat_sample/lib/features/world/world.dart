@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_scene/scene.dart';
-import 'package:flutter_scene_rapier/flutter_scene_rapier.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 
@@ -15,6 +14,7 @@ import 'data/layout.dart';
 import 'data/resources.dart';
 import 'vfx/forest.dart';
 import 'vfx/grass_field.dart';
+import 'package:flutter_scene/physics.dart';
 
 part 'systems/stage.dart';
 part 'systems/clearing.dart';

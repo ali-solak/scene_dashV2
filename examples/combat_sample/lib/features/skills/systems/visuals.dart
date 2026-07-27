@@ -17,21 +17,21 @@ void installSkillVisuals(GameBuilder game) {
       Schedules.update,
       updateBurnFlames,
       inSet: GameSets.logic,
-      reads: const {Enemy, Burning, SceneNode},
+      reads: const {Enemy, Burning, NodeRef},
       runIf: hasResource<Scene>(),
     )
     ..addSystem(
       Schedules.update,
       updateBarrierVisual,
       inSet: GameSets.logic,
-      reads: const {Player, Barrier, SceneNode},
+      reads: const {Player, Barrier, NodeRef},
       runIf: hasResource<Scene>(),
     )
     ..addSystem(
       Schedules.update,
       updateLavaMaterials,
       inSet: GameSets.logic,
-      reads: const {LavaPit, SceneNode},
+      reads: const {LavaPit, NodeRef},
       after: const [attachLavaVisuals],
       runIf: hasResource<Scene>(),
     );
@@ -39,7 +39,7 @@ void installSkillVisuals(GameBuilder game) {
 
 /// Updates attached burn flames.
 void updateBurnFlames(World world) {
-  world.query<SceneNode>(require: const [Enemy]).each((entity, ref) {
+  world.query<NodeRef>(require: const [Enemy]).each((entity, ref) {
     final burning = world.tryGet<Burning>(entity) != null;
     final flame = world.tryGet<BurnFlame>(entity);
     if (burning && flame == null) {
@@ -56,7 +56,7 @@ void updateBurnFlames(World world) {
 /// Updates barrier visuals.
 void updateBarrierVisual(World world) {
   final dt = world.dt;
-  world.query<SceneNode>(require: const [Player]).each((entity, ref) {
+  world.query<NodeRef>(require: const [Player]).each((entity, ref) {
     final barrier = world.tryGet<Barrier>(entity);
     final visual = world.tryGet<BarrierVisual>(entity);
 
@@ -126,10 +126,10 @@ void attachLavaVisuals(World world) {
       ? world.resource<WorldAssets>()
       : null;
   world.query2<LavaPit, SceneTransform>().each((entity, pit, at) {
-    if (world.tryGet<SceneNode>(entity) != null) return;
+    if (world.tryGet<NodeRef>(entity) != null) return;
     world.add(
       entity,
-      SceneNode(
+      NodeRef(
         buildLavaPitNode(
           material: assets?.lavaMaterial,
           center: Vector2(at.translation.x, at.translation.z),
@@ -141,7 +141,7 @@ void attachLavaVisuals(World world) {
 
 /// Updates lava materials.
 void updateLavaMaterials(World world) {
-  world.query2<LavaPit, SceneNode>().each((entity, pit, ref) {
+  world.query2<LavaPit, NodeRef>().each((entity, pit, ref) {
     final remaining = world.expiryOf<DespawnAfter>(entity) ?? lavaPitSeconds;
     // Swells open fast, then dims over its last second as it crusts over.
     final heat =

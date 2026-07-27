@@ -1,16 +1,10 @@
 library;
 
-import 'dart:async' show unawaited;
-import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:flutter_scene/fscene.dart'
-    show SceneDocument, readFsceneb, realizeSceneAsync;
 import 'package:flutter_scene/scene.dart';
-
-import '../anim/hemisphere.dart';
 
 /// Rig files this slice actually uses (general/hits/deaths, locomotion,
 /// dodges/strafes, melee).
@@ -22,9 +16,6 @@ const List<String> _rigFiles = [
   'assets/animation/Rig_Medium_Special.glb',
 ];
 
-const int _openingBarbarians = 2;
-
-/// Each barbarian needs independent skin data.
 const String _barbarianScene = 'assets/characters/Barbarian.glb';
 
 class CharacterAssets {
@@ -40,7 +31,6 @@ class CharacterAssets {
   final Node knight;
 
   final List<Node> barbarians;
-  Future<void> Function()? _loadReserve;
 
   late final List<bool> _lent = List<bool>.filled(
     barbarians.length,
@@ -51,15 +41,6 @@ class CharacterAssets {
   void addBarbarian(Node node) {
     barbarians.add(node);
     _lent.add(false);
-  }
-
-  /// Starts the deferred reserve realizations once the first scene frame is
-  /// visible. Safe to call more than once.
-  void loadReserve() {
-    final load = _loadReserve;
-    if (load == null) return;
-    _loadReserve = null;
-    unawaited(load());
   }
 
   /// Lends a free model index, or null when the pool is exhausted (the
@@ -108,7 +89,7 @@ Future<CharacterAssets> loadCharacterAssets({
     loading,
     scenes.loadScene('assets/characters/Knight.glb'),
   );
-  final documentBytes = _assetBytes(scenes.resolveKey(_barbarianScene));
+  final barbarianFuture = _track(loading, scenes.loadScene(_barbarianScene));
   final rigFutures = [
     for (final path in _rigFiles) _track(loading, scenes.loadScene(path)),
   ];
@@ -117,13 +98,12 @@ Future<CharacterAssets> loadCharacterAssets({
   final shieldFuture = _track(loading, _loadWeapon('shield_square_color'));
 
   final knight = await knightFuture;
-  // Realize each barbarian from one document.
-  final barbarianDocument = readFsceneb(await documentBytes);
-  final openingCount = math.min(_openingBarbarians, barbarianCount);
-  final barbarians = <Node>[];
-  for (var i = 0; i < openingCount; i++) {
-    barbarians.add(await _track(loading, realizeSceneAsync(barbarianDocument)));
-  }
+  // One load, one clone per body: clones carry their own skin data, and
+  // share GPU geometry and textures.
+  final template = await barbarianFuture;
+  final barbarians = [
+    for (var i = 0; i < barbarianCount; i++) template.clone(),
+  ];
 
   // Merge clips in rig order.
   final clips = <String, Animation>{};
@@ -132,9 +112,7 @@ Future<CharacterAssets> loadCharacterAssets({
       clips[animation.name] = animation;
     }
   }
-  // Align clip rotations before blending.
-  harmoniseRotationHemispheres(clips.values);
-  final assets = CharacterAssets(
+  return CharacterAssets(
     knight: knight,
     barbarians: barbarians,
     clips: clips,
@@ -144,33 +122,10 @@ Future<CharacterAssets> loadCharacterAssets({
     // Colored shield.
     shield: await shieldFuture,
   );
-  // Load reserve bodies after startup.
-  assets._loadReserve = () => _fillBarbarianPool(
-    assets,
-    barbarianDocument,
-    barbarianCount - openingCount,
-  );
-  return assets;
 }
 
 Future<T> _track<T>(ResourceGroup? loading, Future<T> load) =>
     loading?.add(load) ?? load;
-
-Future<void> _fillBarbarianPool(
-  CharacterAssets assets,
-  SceneDocument document,
-  int remaining,
-) async {
-  for (var i = 0; i < remaining; i++) {
-    await Future<void>.delayed(Duration.zero);
-    try {
-      assets.addBarbarian(await realizeSceneAsync(document));
-    } on Object catch (error) {
-      debugPrint('combat_sample: background barbarian load failed: $error');
-      return;
-    }
-  }
-}
 
 Future<Uint8List> _assetBytes(String path) async {
   final data = await rootBundle.load(path);

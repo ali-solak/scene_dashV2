@@ -1,4 +1,4 @@
-import 'package:flutter_scene/scene.dart'
+import 'package:flutter_scene/physics.dart'
     show Collider, OverlapHit, PhysicsWorld;
 import 'package:scene_dash_v2_core/advanced.dart';
 import 'package:vector_math/vector_math.dart' show Quaternion, Vector3;

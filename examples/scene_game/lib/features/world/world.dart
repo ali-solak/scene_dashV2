@@ -1,11 +1,11 @@
 import 'package:flutter_scene/scene.dart';
-import 'package:flutter_scene_rapier/flutter_scene_rapier.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 
 import '../../common/bounds.dart';
 import '../../common/physics_layers.dart';
 import 'data/config.dart';
+import 'package:flutter_scene/physics.dart';
 
 part 'systems/systems.dart';
 
@@ -23,6 +23,6 @@ void installWorldGeometry(GameBuilder game) {
     ..addSystem(
       Schedules.update,
       despawnOutOfBounds,
-      reads: {DespawnOutside, SceneNode},
+      reads: {DespawnOutside, NodeRef},
     );
 }

@@ -16,7 +16,7 @@ const int _rockPickSalt = 29;
 /// on a rock, old embers stay where that rock left them, and the gap the
 /// rock opens up is the trail.
 final class FlameTrailShape extends fx.EmitterShape {
-  final fx.ConeShape _cone = fx.ConeShape(
+  final fx.ConeEmitterShape _cone = fx.ConeEmitterShape(
     angle: 0.5,
     radius: rockRadius * 0.35,
   );
@@ -106,7 +106,7 @@ void spawnFlameTrailEmitter(World world) {
     ..addComponent(emitter);
   world.spawn([
     const Name('flame-trails'),
-    SceneNode(node),
+    NodeRef(node),
     FlameTrailEmitter(shape: shape, spawner: spawner),
   ]);
 }

@@ -26,7 +26,7 @@ List<Object> shieldPickupBundle({required double x}) {
     const Collectable(),
     const ShieldPickup(),
     ShieldPickupVisuals(glow),
-    SceneNode(_makePickupNode(x, glow)),
+    NodeRef(_makePickupNode(x, glow)),
     const PhysicsDriven(),
     const DespawnOnExit(GameStatus.playing),
     const DespawnOutside(minY: collectableKillY, maxZ: collectablePassZ),
@@ -47,7 +47,7 @@ Node _makePickupNode(double x, Node glow) {
     )
     ..add(glow)
     ..addComponent(
-      RapierRigidBody(
+      RigidBody(
         type: BodyType.dynamic_,
         ccdEnabled: true,
         linearVelocity: Vector3(0, 0, 4),
@@ -55,7 +55,7 @@ Node _makePickupNode(double x, Node glow) {
       ),
     )
     ..addComponent(
-      RapierCollider(
+      Collider(
         shape: SphereShape(radius: collectableRadius),
         collisionLayer: PhysicsLayers.collectable,
         collisionMask: PhysicsLayers.platform,

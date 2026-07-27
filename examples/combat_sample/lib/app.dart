@@ -9,7 +9,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 
-import 'assets/character_assets.dart';
 import 'boot.dart';
 import 'common/camera.dart';
 import 'common/camera_rig.dart';
@@ -59,10 +58,6 @@ class _CombatAppState extends State<CombatApp> {
   Future<SceneGame> _boot() async {
     final game = await bootCombatGame(_scene, _loading, _bootStage, _cameraRig);
     _game = game;
-    final world = game.world;
-    if (mounted && world.hasResource<CharacterAssets>()) {
-      world.resource<CharacterAssets>().loadReserve();
-    }
     return game;
   }
 

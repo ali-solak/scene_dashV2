@@ -9,7 +9,7 @@ final Ray _groundRay = Ray.originDirection(Vector3.zero(), Vector3(0, -1, 0));
 /// Evaluates the lose condition (no ground below) and rock contacts each
 /// frame.
 void evaluateGameRules(World world) {
-  final player = world.query<SceneNode>(require: const [Player]).firstOrNull;
+  final player = world.query<NodeRef>(require: const [Player]).firstOrNull;
   if (player == null) return;
   final node = player.$2.node;
   node.globalTranslationInto(_playerPos);
@@ -103,7 +103,7 @@ void _deflectRock(
   }
   final nx = dx / len;
   final nz = dz / len;
-  final body = rockNode.getComponent<RapierRigidBody>();
+  final body = rockNode.getComponent<RigidBody>();
   if (body != null) {
     body
       ..linearVelocity = Vector3(
@@ -123,7 +123,7 @@ void _deflectRock(
 
 /// Camera follow: observes the latest player state after the rules pass.
 void playerView(World world) {
-  final player = world.query<SceneNode>(require: const [Player]).firstOrNull;
+  final player = world.query<NodeRef>(require: const [Player]).firstOrNull;
   if (player == null) return;
   player.$2.node.globalTranslationInto(_playerPos);
   world.resource<CameraRig>().follow(_playerPos, world.dt);

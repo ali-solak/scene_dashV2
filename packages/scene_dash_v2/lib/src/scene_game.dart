@@ -2,14 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart' show Listenable;
 import 'package:flutter/widgets.dart' show WidgetsFlutterBinding;
-import 'package:flutter_scene/scene.dart' show PhysicsWorld, Scene;
+import 'package:flutter_scene/scene.dart' show Scene;
+import 'package:flutter_scene/physics.dart' show PhysicsWorld;
 import 'package:scene_dash_v2_core/advanced.dart';
 
 import 'entity_collision.dart';
 import 'game.dart';
 import 'physics_plugin.dart';
 import 'scene_commands.dart';
-import 'scene_node.dart';
+import 'node_ref.dart';
 import 'scene_transform.dart';
 
 /// A game without a scene.
@@ -57,7 +58,7 @@ class WorldGame {
     SpawnQueue.of(world).onDiagnostic = onDiagnostic;
     // Register scene component stores.
     world
-      ..ensureObjectStore<SceneNode>()
+      ..ensureObjectStore<NodeRef>()
       ..ensureObjectStore<SceneTransform>()
       ..ensureTagStore<PhysicsDriven>()
       ..ensureTagStore<Mounted>();

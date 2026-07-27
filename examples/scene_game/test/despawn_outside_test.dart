@@ -23,40 +23,40 @@ void main() {
   test('a carrier inside its region survives the sweep', () {
     final game = boot();
     final entity = game.world.spawn([
-      SceneNode(nodeAt(0, 0, 0)),
+      NodeRef(nodeAt(0, 0, 0)),
       const DespawnOutside(minY: -1, maxZ: 3),
     ]);
     game.pump();
-    expect(game.world.tryGet<SceneNode>(entity), isNotNull);
+    expect(game.world.tryGet<NodeRef>(entity), isNotNull);
   });
 
   test('falling below minY despawns the carrier', () {
     final game = boot();
     final entity = game.world.spawn([
-      SceneNode(nodeAt(0, -5, 0)),
+      NodeRef(nodeAt(0, -5, 0)),
       const DespawnOutside(minY: -1),
     ]);
     game.pump();
-    expect(game.world.tryGet<SceneNode>(entity), isNull);
+    expect(game.world.tryGet<NodeRef>(entity), isNull);
   });
 
   test('each plane is enforced independently', () {
     final game = boot();
     final pastZ = game.world.spawn([
-      SceneNode(nodeAt(0, 0, 5)),
+      NodeRef(nodeAt(0, 0, 5)),
       const DespawnOutside(maxZ: 3),
     ]);
     final behindZ = game.world.spawn([
-      SceneNode(nodeAt(0, 0, -8)),
+      NodeRef(nodeAt(0, 0, -8)),
       const DespawnOutside(minZ: -6),
     ]);
     final unbounded = game.world.spawn([
-      SceneNode(nodeAt(0, -100, 100)),
+      NodeRef(nodeAt(0, -100, 100)),
       const DespawnOutside(),
     ]);
     game.pump();
-    expect(game.world.tryGet<SceneNode>(pastZ), isNull);
-    expect(game.world.tryGet<SceneNode>(behindZ), isNull);
-    expect(game.world.tryGet<SceneNode>(unbounded), isNotNull);
+    expect(game.world.tryGet<NodeRef>(pastZ), isNull);
+    expect(game.world.tryGet<NodeRef>(behindZ), isNull);
+    expect(game.world.tryGet<NodeRef>(unbounded), isNotNull);
   });
 }

@@ -56,8 +56,8 @@ void spawnClearing(World world) {
   scene.root.add(clearing);
 
   // The mount adapter parents these at the scene root.
-  world.spawn([const Grass(), SceneNode(_buildGrass(assets))]);
-  world.spawn([const Ocean(), SceneNode(_buildOcean(assets))]);
+  world.spawn([const Grass(), NodeRef(_buildGrass(assets))]);
+  world.spawn([const Ocean(), NodeRef(_buildOcean(assets))]);
 }
 
 /// The forest: an evenly-spaced jittered pine ring with rocks and bushes
@@ -114,9 +114,9 @@ Node _buildGround(WorldAssets assets) {
       name: 'ground',
       localTransform: Matrix4.translation(Vector3(0, -groundThickness / 2, 0)),
     )
-    ..addComponent(RapierRigidBody(type: BodyType.fixed))
+    ..addComponent(RigidBody(type: BodyType.fixed))
     ..addComponent(
-      RapierCollider(
+      Collider(
         shape: BoxShape(
           halfExtents: Vector3(
             groundIslandRadius,

@@ -102,26 +102,30 @@ void main() {
     expect(log, <String>['fixed', 'update', 'renderSync']);
   });
 
-  test('Game.shutdown runs app shutdown and removes the scene driver',
-      skip: 'Constructs a real flutter_scene Scene, which needs Flutter GPU / '
-          'Impeller — unavailable under headless `flutter test`. Belongs in an '
-          'on-device integration_test.', () async {
-    final scene = Scene();
-    final game = Game(scene: scene);
-    final log = <String>[];
-    game.app.addSystemAdapter(
-      CountAdapter('shutdown', log),
-      schedule: Schedules.shutdown,
-      label: const SystemLabel('p.shutdown'),
-    );
+  test(
+    'Game.shutdown runs app shutdown and removes the scene driver',
+    skip:
+        'Constructs a real flutter_scene Scene, which needs Flutter GPU / '
+        'Impeller — unavailable under headless `flutter test`. Belongs in an '
+        'on-device integration_test.',
+    () async {
+      final scene = Scene();
+      final game = Game(scene: scene);
+      final log = <String>[];
+      game.app.addSystemAdapter(
+        CountAdapter('shutdown', log),
+        schedule: Schedules.shutdown,
+        label: const SystemLabel('p.shutdown'),
+      );
 
-    await game.start();
-    expect(scene.root.getComponent<EcsSceneDriver>(), isNotNull);
+      await game.start();
+      expect(scene.root.getComponent<EcsSceneDriver>(), isNotNull);
 
-    await game.shutdown();
-    await game.shutdown();
+      await game.shutdown();
+      await game.shutdown();
 
-    expect(log, <String>['shutdown']);
-    expect(scene.root.getComponent<EcsSceneDriver>(), isNull);
-  });
+      expect(log, <String>['shutdown']);
+      expect(scene.root.getComponent<EcsSceneDriver>(), isNull);
+    },
+  );
 }

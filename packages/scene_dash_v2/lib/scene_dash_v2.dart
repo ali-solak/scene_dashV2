@@ -16,7 +16,7 @@ export 'src/scene_commands.dart';
 export 'src/scene_game.dart';
 export 'src/scene_mount.dart';
 export 'src/scene_node_index.dart';
-export 'src/scene_node.dart';
+export 'src/node_ref.dart';
 export 'src/scene_sync.dart';
 export 'src/world_inspector.dart';
 export 'src/world_scene_extensions.dart';

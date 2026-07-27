@@ -21,12 +21,12 @@ void attachPlayerKnockback(World world) {
 void movePlayer(World world) {
   final input = world.buttons<GameAction>();
   final dt = world.dt;
-  world.query2<PlayerKnockback, SceneNode>(require: const [Player]).each((
+  world.query2<PlayerKnockback, NodeRef>(require: const [Player]).each((
     entity,
     knockback,
     ref,
   ) {
-    final controller = ref.component<RapierKinematicCharacterController>();
+    final controller = ref.component<KinematicCharacterController>();
     if (controller == null) return;
 
     final node = ref.node;
@@ -103,12 +103,12 @@ void animateCrabLegs(World world) {
 /// own state in `OnEnter(GameStatus.playing)`; the rules feature only
 /// resets what it owns (run clock, camera).
 void resetPlayerOnRunStart(World world) {
-  world.query2<SceneNode, PlayerVisuals>(require: const [Player]).each((
+  world.query2<NodeRef, PlayerVisuals>(require: const [Player]).each((
     entity,
     ref,
     visuals,
   ) {
-    final body = ref.component<RapierRigidBody>();
+    final body = ref.component<RigidBody>();
     if (body != null) {
       body
         ..type = BodyType.kinematic

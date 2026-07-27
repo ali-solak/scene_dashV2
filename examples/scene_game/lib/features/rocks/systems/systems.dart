@@ -41,10 +41,7 @@ void updateFlameTrails(World world) {
   if (trails == null) return; // Headless: no emitter entity.
   final shape = trails.shape;
   shape.origins.clear();
-  world.query<SceneNode>(require: const [Rock, Flaming]).each((
-    entity,
-    binding,
-  ) {
+  world.query<NodeRef>(require: const [Rock, Flaming]).each((entity, binding) {
     binding.node.globalTranslationInto(_rockScratch);
     shape.origins
       ..add(_rockScratch.x)

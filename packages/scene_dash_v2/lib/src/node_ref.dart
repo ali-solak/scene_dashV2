@@ -1,11 +1,11 @@
 import 'package:flutter_scene/scene.dart' show Node;
 
 /// An object component that binds an ECS entity to a `flutter_scene` [Node].
-final class SceneNode {
+final class NodeRef {
   /// The bound scene-graph node.
   final Node node;
 
-  const SceneNode(this.node);
+  const NodeRef(this.node);
 
   /// The first [T] attached to [node].
   T? component<T>() => node.getComponent<T>();

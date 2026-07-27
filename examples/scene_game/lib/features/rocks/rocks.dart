@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter_scene/scene.dart';
-import 'package:flutter_scene_rapier/flutter_scene_rapier.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 
@@ -11,6 +10,7 @@ import '../../common/bounds.dart';
 import '../../common/game_state.dart';
 import '../../common/physics_layers.dart';
 import 'data/config.dart';
+import 'package:flutter_scene/physics.dart';
 
 part 'data/components.dart';
 part 'data/resources.dart';
@@ -63,7 +63,7 @@ void installRocks(GameBuilder game) {
     ..addSystem(
       Schedules.update,
       updateFlameTrails,
-      reads: {SceneNode},
+      reads: {NodeRef},
       writes: {FlameTrailEmitter},
     )
     // The reaction itself is read-only here: its removeAfter deadline is

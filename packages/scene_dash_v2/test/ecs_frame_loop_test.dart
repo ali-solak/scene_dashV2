@@ -154,7 +154,14 @@ void main() {
       ..fixedStep(1 / 60)
       ..fixedStep(1 / 60)
       ..update(0.016);
-    expect(log, <String>['fixed', 'fixed', 'fixed', 'postPhysics', 'update', 'renderSync']);
+    expect(log, <String>[
+      'fixed',
+      'fixed',
+      'fixed',
+      'postPhysics',
+      'update',
+      'renderSync',
+    ]);
 
     // Frame with no fixed steps at all (e.g. clock frozen): still one.
     log.clear();
@@ -191,17 +198,20 @@ void main() {
     loop.update(0.016);
   });
 
-  test('Schedules.all lists postPhysics between fixedPrePhysics and update', () {
-    expect(Schedules.all, <ScheduleLabel>[
-      Schedules.startup,
-      Schedules.frameStart,
-      Schedules.fixedPrePhysics,
-      Schedules.postPhysics,
-      Schedules.update,
-      Schedules.renderSync,
-      Schedules.shutdown,
-    ]);
-  });
+  test(
+    'Schedules.all lists postPhysics between fixedPrePhysics and update',
+    () {
+      expect(Schedules.all, <ScheduleLabel>[
+        Schedules.startup,
+        Schedules.frameStart,
+        Schedules.fixedPrePhysics,
+        Schedules.postPhysics,
+        Schedules.update,
+        Schedules.renderSync,
+        Schedules.shutdown,
+      ]);
+    },
+  );
 
   test('onFrameEnd fires after renderSync (scene-command flush point)', () {
     final log = <String>[];
@@ -225,7 +235,13 @@ void main() {
     app.start();
 
     loop.update(0.016);
-    expect(log, <String>['postPhysics', 'mount', 'update', 'renderSync', 'flush']);
+    expect(log, <String>[
+      'postPhysics',
+      'mount',
+      'update',
+      'renderSync',
+      'flush',
+    ]);
   });
 
   test('onCommandBoundary fires after frameStart commands', () {
@@ -381,7 +397,7 @@ final class _NodeBundle implements SceneDashBundle {
 
   @override
   void insertInto(World world, Entity entity) {
-    world.ensureObjectStore<SceneNode>();
-    world.insertNow<SceneNode>(entity, SceneNode(node));
+    world.ensureObjectStore<NodeRef>();
+    world.insertNow<NodeRef>(entity, NodeRef(node));
   }
 }

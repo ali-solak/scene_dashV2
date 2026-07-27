@@ -20,7 +20,7 @@ void installEnemyDeath(GameBuilder game) {
 
 /// `PendingCorpse` expiry hands one dying enemy to Rapier.
 void launchPhysicsCorpse(World world, Entity entity, PendingCorpse pending) {
-  final row = world.tryGet3<Brawler, SceneNode, Knockback>(entity);
+  final row = world.tryGet3<Brawler, NodeRef, Knockback>(entity);
   if (row == null || world.has<PhysicsDriven>(entity)) return;
   final (brawler, ref, knockback) = row;
   final seed = brawler.wobbleSeed + brawler.wobble;
@@ -32,7 +32,7 @@ void launchPhysicsCorpse(World world, Entity entity, PendingCorpse pending) {
 
   final halfExtents = corpseHalfExtents.clone();
   if (brawler.giant) halfExtents.scale(giantScale);
-  final body = RapierRigidBody(
+  final body = RigidBody(
     type: BodyType.dynamic_,
     linearVelocity: velocity,
     angularVelocity: spin,
@@ -40,7 +40,7 @@ void launchPhysicsCorpse(World world, Entity entity, PendingCorpse pending) {
     angularDamping: corpseAngularDamping,
     ccdEnabled: true,
   );
-  final collider = RapierCollider(
+  final collider = Collider(
     shape: BoxShape(halfExtents: halfExtents),
     material: corpseMaterial,
     collisionLayer: PhysicsLayers.fighter,
@@ -73,7 +73,7 @@ void _dropAxe(
   // Preserve the axe world pose.
   axe.localTransform = axe.globalTransform.clone();
 
-  final body = RapierRigidBody(
+  final body = RigidBody(
     type: BodyType.dynamic_,
     linearVelocity: Vector3(
       corpseVelocity.x * axeDropCarry + math.sin(seed * 5.3) * axeDropToss,
@@ -89,7 +89,7 @@ void _dropAxe(
     angularDamping: corpseAngularDamping,
     ccdEnabled: true,
   );
-  final collider = RapierCollider(
+  final collider = Collider(
     shape: BoxShape(halfExtents: axeHalfExtents),
     material: corpseMaterial,
     collisionLayer: PhysicsLayers.fighter,
@@ -109,8 +109,8 @@ void dustCorpseLandings(World world) {
   world.query<PhysicsCorpse>(require: const [Enemy]).each((entity, corpse) {
     if (corpse.bursts >= corpseDustMaxBursts) return;
     final body = corpse.body;
-    if (body.nativeHandle == null) return;
-    final velocity = body.readNativeLinearVelocity();
+    if (body.handle == null) return;
+    final velocity = body.linearVelocity;
     final landed =
         corpse.fallSpeed < -corpseDustMinFallSpeed && velocity.y > -0.5;
     corpse.fallSpeed = velocity.y;
@@ -120,7 +120,7 @@ void dustCorpseLandings(World world) {
     final heading = Vector3(velocity.x, 0, velocity.z);
     if (heading.length2 < 1e-4) heading.setValues(0, 0, 1);
     // On the floor under the body, not at the tumbling body's origin.
-    final at = body.readNativeTranslation()..y = 0;
+    final at = body.node.globalTransform.getTranslation()..y = 0;
     spawnDashDust(world, at, heading);
   });
 }

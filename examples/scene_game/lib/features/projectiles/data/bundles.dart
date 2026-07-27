@@ -43,7 +43,7 @@ final _projectileTrailGeometry = CuboidGeometry(Vector3(0.07, 0.07, 0.78));
 List<Object> projectileBundle({required Vector3 position, double charge = 0}) {
   return [
     Projectile(charge: charge),
-    SceneNode(_makeProjectileNode(position, charge)),
+    NodeRef(_makeProjectileNode(position, charge)),
     const PhysicsDriven(),
     const DespawnOnExit(GameStatus.playing),
     const DespawnOutside(minY: projectileKillY, minZ: projectileExitZ),
@@ -88,7 +88,7 @@ Node _makeProjectileNode(Vector3 position, double charge) {
     ..frustumCulled = false
     ..add(visual)
     ..addComponent(
-      RapierRigidBody(
+      RigidBody(
         type: BodyType.dynamic_,
         mass: 0.04,
         ccdEnabled: true,
@@ -97,9 +97,6 @@ Node _makeProjectileNode(Vector3 position, double charge) {
       ),
     )
     ..addComponent(
-      RapierCollider(
-        shape: SphereShape(radius: colliderRadius),
-        isTrigger: true,
-      ),
+      Collider(shape: SphereShape(radius: colliderRadius), isTrigger: true),
     );
 }

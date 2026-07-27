@@ -15,7 +15,7 @@ timestep and per-frame phases; structural changes (spawn, despawn,
 add/remove component) are command-buffered and applied at frame
 boundaries, so they never invalidate a running query.
 
-A `SceneNode` component binds an entity to a `flutter_scene` `Node`: the
+A `NodeRef` component binds an entity to a `flutter_scene` `Node`: the
 framework mounts bound nodes into the scene and syncs `SceneTransform`
 components onto them each frame. Keep using `flutter_scene` for rendering,
 cameras, physics, scene nodes, and widgets; Scene-Dash organizes the game
@@ -169,7 +169,7 @@ final class Orbit {                            // a component: a plain class
 List<Object> cubeBundle() => [       // a bundle: a function → the spawn list
   Orbit(radius: 2, speed: 1),
   SceneTransform.zero(),
-  SceneNode(Node(mesh: Mesh(CuboidGeometry(Vector3.all(0.8)), UnlitMaterial()))),
+  NodeRef(Node(mesh: Mesh(CuboidGeometry(Vector3.all(0.8)), UnlitMaterial()))),
 ];
 ```
 
@@ -418,7 +418,7 @@ final class Enemy implements Tag { const Enemy(); }     //   filter-only
 final class Stunned implements Tag { const Stunned(); }
 
 List<Object> combatantBundle({required Node node, required double maxHealth}) =>
-    [SceneNode(node), Health(maxHealth)];
+    [NodeRef(node), Health(maxHealth)];
 
 List<Object> playerBundle(Node body) => [
   const Player(),                        // present for the whole lifetime
@@ -457,7 +457,7 @@ world.expiryOf<Stunned>(enemy);          // seconds left, or null
 
 ```dart
 final sword = world.spawn(
-    [SceneNode(swordNode)],              // swordNode: yours
+    [NodeRef(swordNode)],              // swordNode: yours
     ownedBy: player);                    // despawning the player despawns
                                          //   everything it owns
 ```
@@ -906,7 +906,7 @@ final grunt = world.spawn(
     [...enemyBundle(gruntNode, target: player), const Name('grunt-3')]);
 
 print(world.debugDescribe(grunt));
-// Entity(14 v2) "grunt-3" [Enemy, SceneNode, Health, Target, EnemyAttack,
+// Entity(14 v2) "grunt-3" [Enemy, NodeRef, Health, Target, EnemyAttack,
 //   DespawnOnExit, Name]     (one line; entries in store-registration order)
 
 // a component that overrides toString renders its live value instead of
@@ -973,7 +973,7 @@ expect(fighter.phase.state, FighterPhase.idle);
 
 ```dart
 // the only bridge between world and scene; everything you see is a real Node
-SceneNode(node)          // mounted into the scene automatically
+NodeRef(node)          // mounted into the scene automatically
 SceneTransform.zero()    // when present, synced onto the bound node per frame
 const PhysicsDriven()    // a physics body owns the transform instead
 // SceneNodeIndex maps a hit node back to its entity (playerStrikes, above)
@@ -986,7 +986,7 @@ An entity's transform can also live on the node directly;
 const playerStrafeSpeed = 6.0;
 
 void strafePlayer(World world) {
-  final row = world.query<SceneNode>(require: const [Player]).firstOrNull;
+  final row = world.query<NodeRef>(require: const [Player]).firstOrNull;
   if (row == null) return;
   final (_, binding) = row;
 

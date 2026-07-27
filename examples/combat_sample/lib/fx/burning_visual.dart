@@ -18,7 +18,7 @@ Node buildBurnFlame() {
   final system = fx.ParticleSystem(
     maxParticles: _flameCount,
     // Body-sized, so flames lick up the whole silhouette.
-    shape: fx.SphereShape(radius: 0.45),
+    shape: fx.SphereEmitterShape(radius: 0.45),
     spawner: fx.Spawner(rate: _flameCount / 0.5),
     duration: 1,
     // Short and quick: embers flicking off a burning body.
