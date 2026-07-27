@@ -36,6 +36,12 @@ void setupWorld(World world) {
     ..toneMapping = ToneMappingMode.aces
     ..exposure = sceneExposure
     ..antiAliasingMode = AntiAliasingMode.auto;
+  // Metered on the GPU over the base exposure. Partial strength: the
+  // clearing is meant to stay brighter than the treeline.
+  scene.autoExposure
+    ..enabled = heavyAtmospherics
+    ..strength = autoExposureStrength
+    ..compensation = autoExposureCompensation;
   // Apply the default quality preset.
   final boot = qualityPresets[defaultQualityLevel];
   scene.renderScale = boot.renderScale;

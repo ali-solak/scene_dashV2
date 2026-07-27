@@ -46,6 +46,16 @@ Uint8List leafPixels(int size) {
   return pixels;
 }
 
+/// One tint per leaf card. Mesh particles carry no per-particle colour, but
+/// each geometry carries its own vertex colours, and a particle picks one
+/// geometry for life.
+const List<(double, double, double)> leafTints = [
+  (0.42, 0.55, 0.20),
+  (0.30, 0.44, 0.16),
+  (0.55, 0.48, 0.18),
+  (0.62, 0.38, 0.14),
+];
+
 Texture2D? _leaf;
 
 /// The shared leaf mask, built lazily on first use (needs the GPU

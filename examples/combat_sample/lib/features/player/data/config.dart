@@ -17,7 +17,7 @@ const double lockAcquireRange = 12;
 
 const double lockBreakRange = 15;
 
-const double cameraDistance = 9.5;
+const double cameraDistance = 10;
 const double cameraFocusHeight = 2.0;
 
 const double cameraPitchMin = -0.1;

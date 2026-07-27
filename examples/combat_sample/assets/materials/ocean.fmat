@@ -1,4 +1,7 @@
-// Animated ocean surface.
+// Animated ocean surface. Unlit and banded on purpose: the clearing is
+// flat-shaded KayKit, and a lit specular water reads as plastic against it.
+// The swell is posterised into a few steps so the water matches the blocky
+// props rather than fighting them.
 material {
   name: "ocean",
   shading_model: unlit,
@@ -11,6 +14,14 @@ material {
     { type: vec3, name: deep_color, default: [0.05, 0.17, 0.26] },
     { type: vec3, name: swell_color, default: [0.12, 0.34, 0.40] },
     { type: vec3, name: sparkle_color, default: [1.0, 0.95, 0.8] },
+    // How many steps the swell is quantised into. Low is cartoon, high
+    // slides back toward a smooth gradient.
+    { type: float, name: bands, hint: range(2, 16, 1), default: 5 },
+    // How far the troughs lift toward the horizon. Reads as depth and
+    // airiness without alpha, which a plane this size cannot afford: it
+    // would sort against the spray and the leaves by its own origin.
+    { type: vec3, name: haze_color, default: [0.42, 0.58, 0.66] },
+    { type: float, name: haze, hint: range(0, 1, 0.01), default: 0.22 },
   ],
 }
 vertex {
@@ -36,11 +47,22 @@ fragment {
         NoiseFbm2(p + vec2(t * 0.18, t * 0.13), 47, 3, 2.0, 0.5) * 0.5 + 0.5;
     float flicker =
         NoiseSimplex2(p * 3.4 - vec2(t * 0.5, t * 0.2), 53) * 0.5 + 0.5;
+
+    // Posterise: flat bands of colour instead of a continuous ramp.
+    float steps = max(material_params.bands, 2.0);
+    float banded = floor(swell * steps) / (steps - 1.0);
     vec3 color = mix(
-        material_params.deep_color, material_params.swell_color, swell);
-    // Crest sparkle.
-    float crest = smoothstep(0.72, 0.92, swell) * (0.4 + 0.6 * flicker);
-    color += material_params.sparkle_color * crest * 0.4;
+        material_params.deep_color, material_params.swell_color, banded);
+
+    // Crest sparkle, itself banded so the highlights read as shapes rather
+    // than as a sheen.
+    float crest = step(0.78, swell) * step(0.45, flicker);
+    color += material_params.sparkle_color * crest * 0.35;
+
+    // Lifted toward the horizon in the troughs: the airy, see-through read
+    // without paying for translucency.
+    color = mix(color, material_params.haze_color,
+                material_params.haze * (1.0 - banded));
     material.base_color = vec4(color, 1.0);
   }
 }

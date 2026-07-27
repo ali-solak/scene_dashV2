@@ -48,6 +48,14 @@ void spawnFireGush(World world, Vector3 position, double facing) {
       ]),
     ),
     modules: [
+      // Fixed rate, not once-over-life: these live 0.5-0.85s, and 64 cells
+      // over that is ~128fps, which skips cells and strobes. The atlas is
+      // built to loop, so it wraps cleanly. Random start desyncs spawns.
+      const fx.FlipbookModule(
+        frameCount: flameAtlasFrames,
+        framesPerSecond: 28,
+        randomStartFrame: true,
+      ),
       // Blooms as it rolls outward, then collapses: a puff of burning
       // gas expanding and being consumed.
       fx.SizeOverLifeModule(
@@ -92,12 +100,17 @@ void spawnFireGush(World world, Vector3 position, double facing) {
           fx.ParticleEmitterComponent(
               system: system,
               // Tongues, not dots.
-              material: flameAdditiveSprite(),
+              material: flameAtlasSprite(),
             )
             // Stretch along travel.
             ..facing = BillboardFacing.velocityStretched
             // Flame tongue stretch.
-            ..velocityStretch = 0.3,
+            ..velocityStretch = 0.3
+            ..flipbookColumns = flameAtlasColumns
+            ..flipbookRows = flameAtlasRows
+            // Crossfade: 64 cells over a 0.5s life is far under one cell
+            // per frame, so unblended steps would read as a stutter.
+            ..flipbookBlend = true,
         );
 
   world.spawn([NodeRef(node), DespawnAfter(_entityLifetime)]);

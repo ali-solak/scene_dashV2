@@ -84,6 +84,9 @@ const double sunIntensityScale = 1.1;
 const double shadowMaxDistance = 70;
 const double sceneExposure = 1.05;
 
+const double autoExposureStrength = 0.45;
+const double autoExposureCompensation = 0.1;
+
 final Vector3 skyGroundColor = Vector3(0.05, 0.13, 0.17);
 
 const double fogVisibilityDistance = 800;
@@ -162,6 +165,6 @@ const double grassSwayScale = 0.3;
 final Vector2 windDirection = Vector2(0.8, 0.6);
 
 const double stageCameraOrbitRadius = 16.5;
-const double stageCameraHeight = 3.2;
+const double stageCameraHeight = 3.8;
 
 const double stageCameraOrbitSpeed = 0.07;

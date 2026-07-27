@@ -75,7 +75,9 @@ SpriteMaterial? _dropletSprite;
 /// Shared additive droplet material.
 SpriteMaterial dropletAdditiveSprite() =>
     _dropletSprite ??= SpriteMaterial(colorTexture: dropletTexture())
-      ..blendMode = SpriteBlendMode.additive;
+      ..blendMode = SpriteBlendMode.additive
+      // Spray meets the ocean plane and the cliff face constantly.
+      ..softDepthFade = 0.6;
 
 /// Returns a flame color for a normalized temperature.
 (double, double, double) _blackbody(double temp) {
@@ -103,6 +105,71 @@ SpriteMaterial dropletAdditiveSprite() =>
 }
 
 /// Builds a flame tongue texture.
+/// Flame atlas: [flameAtlasColumns] x [flameAtlasRows] cells of [cell] px.
+const int flameAtlasColumns = 8;
+const int flameAtlasRows = 8;
+const int flameAtlasFrames = flameAtlasColumns * flameAtlasRows;
+
+/// One flame tongue per cell, the noise field scrolled upward frame to frame
+/// so the sequence reads as fire rising rather than as a sprite wobbling.
+Uint8List _flameAtlasPixels(int cell) {
+  final width = cell * flameAtlasColumns;
+  final height = cell * flameAtlasRows;
+  final pixels = Uint8List(width * height * 4);
+  final warp = FastNoiseLite()
+    ..seed = 7
+    ..frequency = 1.0
+    ..fractalType = FractalType.fbm
+    ..octaves = 3;
+  final detail = FastNoiseLite()
+    ..seed = 8
+    ..frequency = 1.0
+    ..fractalType = FractalType.fbm
+    ..octaves = 3;
+
+  for (var frame = 0; frame < flameAtlasFrames; frame++) {
+    // Scrolls a full period over the sequence, so the last cell meets the
+    // first and a looping playback never jumps.
+    final phase = frame / flameAtlasFrames;
+    final scroll = phase * 2.4;
+    final ox = (frame % flameAtlasColumns) * cell;
+    final oy = (frame ~/ flameAtlasColumns) * cell;
+    for (var y = 0; y < cell; y++) {
+      // 0 at the base, 1 at the tip.
+      final t = y / (cell - 1);
+      // The silhouette: fattest just above the base, pinching to nothing.
+      // Breathes over the sequence so the tongue licks rather than slides.
+      final lick = 0.72 + 0.06 * math.sin(phase * math.pi * 2);
+      final halfWidth = math.sin((1 - t) * math.pi * lick) * 0.5;
+      for (var x = 0; x < cell; x++) {
+        final u = x / (cell - 1) - 0.5;
+        // The warp grows toward the tip, where flame is free to wander.
+        final warped = u + warp.getNoise2(u * 4.4, t * 2.4 - scroll) * 0.16 * t;
+        final across = halfWidth <= 0
+            ? 0.0
+            : (1.0 - (warped.abs() / halfWidth)).clamp(0.0, 1.0);
+        final soft = across * across * (3 - 2 * across);
+        final n = detail.getNoise2(warped * 5.6, t * 3.4 - scroll) * 0.5 + 0.5;
+        // Hottest at the base and burning out along the length.
+        final along = (1.0 - t) * (1.0 - t);
+        // Frayed tip.
+        final density = soft * along * (0.55 + 0.55 * n);
+        final a = ((density - 0.06 * t) / 0.9).clamp(0.0, 1.0);
+        // The filaments read as temperature, not just as brightness.
+        final temp = (a * (1.15 - 0.35 * t) * (0.72 + 0.5 * n)).clamp(0.0, 1.0);
+        final (r, g, b) = _blackbody(temp);
+        final o = ((oy + y) * width + (ox + x)) * 4;
+        // Premultiplied; the particle colour tints it further.
+        pixels[o] = (r * a * 255).round();
+        pixels[o + 1] = (g * a * 255).round();
+        pixels[o + 2] = (b * a * 255).round();
+        pixels[o + 3] = (a * 255).round();
+      }
+    }
+  }
+  return pixels;
+}
+
 Uint8List _flamePixels(int size) {
   final pixels = Uint8List(size * size * 4);
   final warp = FastNoiseLite()
@@ -148,6 +215,23 @@ Uint8List _flamePixels(int size) {
   return pixels;
 }
 
+Texture2D? _flameAtlas;
+
+/// The animated flame atlas, for emitters running a [FlipbookModule].
+Texture2D flameAtlasTexture() => _flameAtlas ??= Texture2D.fromPixels(
+  _flameAtlasPixels(64),
+  64 * flameAtlasColumns,
+  64 * flameAtlasRows,
+);
+
+SpriteMaterial? _flameAtlasSprite;
+
+/// The flame atlas under additive blending.
+SpriteMaterial flameAtlasSprite() =>
+    _flameAtlasSprite ??= SpriteMaterial(colorTexture: flameAtlasTexture())
+      ..blendMode = SpriteBlendMode.additive
+      ..softDepthFade = 1.1;
+
 Texture2D? _flame;
 
 /// The shared flame-tongue sprite.
@@ -159,7 +243,9 @@ SpriteMaterial? _flameSprite;
 /// A soft additive sprite material carrying the flame tongue.
 SpriteMaterial flameAdditiveSprite() =>
     _flameSprite ??= SpriteMaterial(colorTexture: flameTexture())
-      ..blendMode = SpriteBlendMode.additive;
+      ..blendMode = SpriteBlendMode.additive
+      // Widest of the set: flame licks a burning body from every angle.
+      ..softDepthFade = 1.1;
 
 /// A crisp blob: opaque through most of its radius with a thin
 /// antialiasing rim, shaded brighter top-left so it reads as a ball.
@@ -203,7 +289,9 @@ SpriteMaterial? _crispSprite;
 /// overlap add up into the bloom that swallows their shape.
 SpriteMaterial crispAlphaSprite() =>
     _crispSprite ??= SpriteMaterial(colorTexture: crispDotTexture())
-      ..blendMode = SpriteBlendMode.alpha;
+      ..blendMode = SpriteBlendMode.alpha
+      // Narrow: these are meant to keep their edge.
+      ..softDepthFade = 0.25;
 
 Uint8List _puffPixels(int size) {
   final pixels = Uint8List(size * size * 4);
@@ -248,14 +336,20 @@ SpriteMaterial? _puffSprite;
 /// Shared alpha puff material.
 SpriteMaterial puffAlphaSprite() =>
     _puffSprite ??= SpriteMaterial(colorTexture: puffTexture())
-      ..blendMode = SpriteBlendMode.alpha;
+      ..blendMode = SpriteBlendMode.alpha
+      // Ground dust sits on the floor it is kicked off.
+      ..softDepthFade = 0.7
+      // The camera pushes through these during a roll.
+      ..cameraNearFade = 1.2;
 
 SpriteMaterial? _alphaSprite;
 
 /// Shared alpha dust material.
 SpriteMaterial softAlphaSprite() =>
     _alphaSprite ??= SpriteMaterial(colorTexture: softDotTexture())
-      ..blendMode = SpriteBlendMode.alpha;
+      ..blendMode = SpriteBlendMode.alpha
+      ..softDepthFade = 0.7
+      ..cameraNearFade = 1.2;
 
 SpriteMaterial? _sprite;
 
@@ -264,4 +358,6 @@ SpriteMaterial? _sprite;
 /// mid-swing. Nothing mutates it after construction, so sharing is safe.
 SpriteMaterial softAdditiveSprite() =>
     _sprite ??= SpriteMaterial(colorTexture: softDotTexture())
-      ..blendMode = SpriteBlendMode.additive;
+      ..blendMode = SpriteBlendMode.additive
+      // Impact sparks bloom against the body they came off.
+      ..softDepthFade = 0.8;
