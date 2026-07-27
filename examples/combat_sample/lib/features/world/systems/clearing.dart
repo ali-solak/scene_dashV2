@@ -57,6 +57,7 @@ void spawnClearing(World world) {
   // are cached instead of re-rendered every frame. Skips the grass and the
   // ocean: both displace in a vertex stage.
   _markShadowStatic(clearing);
+  clearing.add(buildLavaWarmup(assets.lavaMaterial));
   scene.root.add(clearing);
 
   // The mount adapter parents these at the scene root.

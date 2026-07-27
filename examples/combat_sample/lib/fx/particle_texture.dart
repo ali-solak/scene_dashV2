@@ -219,10 +219,14 @@ Uint8List _flamePixels(int size) {
 Texture2D? _flameAtlas;
 
 /// The animated flame atlas, for emitters running a [FlipbookModule].
+/// 32px cells: 64 of them at 64px cost four times the noise to bake, for a
+/// soft additive tongue nobody reads at that resolution.
+const int flameAtlasCell = 32;
+
 Texture2D flameAtlasTexture() => _flameAtlas ??= Texture2D.fromPixels(
-  _flameAtlasPixels(64),
-  64 * flameAtlasColumns,
-  64 * flameAtlasRows,
+  _flameAtlasPixels(flameAtlasCell),
+  flameAtlasCell * flameAtlasColumns,
+  flameAtlasCell * flameAtlasRows,
 );
 
 SpriteMaterial? _flameAtlasSprite;

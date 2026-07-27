@@ -38,6 +38,9 @@ void setupWorld(World world) {
     ..antiAliasingMode = AntiAliasingMode.auto;
   final boot = qualityPresets[defaultQualityLevel];
   setSoftParticles(boot.softParticles);
+  // Baked here rather than on the first gush: it is ~100k pixels of noise,
+  // and behind the loading screen nobody feels it.
+  flameAtlasSprite();
   // Metered on the GPU over the base exposure. Partial strength: the
   // clearing is meant to stay brighter than the treeline.
   scene.autoExposure

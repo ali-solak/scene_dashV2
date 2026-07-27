@@ -8,7 +8,7 @@ import 'package:flutter_scene/noise.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart'
-    show Matrix4, Vector2, Vector3, Vector4;
+    show Matrix4, Quaternion, Vector2, Vector3, Vector4;
 
 import '../features/skills/skills.dart'
     show lavaPitLift, lavaPitRadius, lavaPitSeconds;
@@ -56,6 +56,18 @@ Node buildLavaPitNode({
         ..addComponent(_globs());
   return node;
 }
+
+/// Compiles the pit's pipeline and uploads its crust from boot, so the
+/// first cast does not hitch. Shrunk to nothing and parked inside the
+/// plateau; it draws, which is the point, but covers no pixels.
+Node buildLavaWarmup(PreprocessedMaterial? material) => Node(
+  name: 'lava-warmup',
+  localTransform: Matrix4.compose(
+    Vector3(0, -3, 0),
+    Quaternion.identity(),
+    Vector3.all(0.01),
+  ),
+)..mesh = Mesh(_crustGeometry(), material ?? _fallbackCrust());
 
 MeshGeometry? _crust;
 
