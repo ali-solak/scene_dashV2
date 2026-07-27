@@ -257,6 +257,56 @@
           0.62,
           1.0
         ]
+      },
+      {
+        "name": "burn_a",
+        "type": "vec4",
+        "default": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "name": "burn_b",
+        "type": "vec4",
+        "default": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "name": "burn_c",
+        "type": "vec4",
+        "default": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "name": "burn_d",
+        "type": "vec4",
+        "default": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "name": "char_color",
+        "type": "vec4",
+        "default": [
+          0.16,
+          0.13,
+          0.11,
+          1.0
+        ]
       }
     ],
     "samplers": []
@@ -445,6 +495,37 @@
           0.95,
           0.8
         ]
+      },
+      {
+        "name": "bands",
+        "type": "float",
+        "default": 5.0,
+        "hint": {
+          "kind": "range",
+          "min": 2.0,
+          "max": 16.0,
+          "step": 1.0
+        }
+      },
+      {
+        "name": "haze_color",
+        "type": "vec3",
+        "default": [
+          0.42,
+          0.58,
+          0.66
+        ]
+      },
+      {
+        "name": "haze",
+        "type": "float",
+        "default": 0.22,
+        "hint": {
+          "kind": "range",
+          "min": 0.0,
+          "max": 1.0,
+          "step": 0.01
+        }
       }
     ],
     "samplers": []
