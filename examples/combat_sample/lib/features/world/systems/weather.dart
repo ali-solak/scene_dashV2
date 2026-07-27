@@ -41,6 +41,8 @@ void updateWindMaterials(World world) {
     drive(ref);
     final material = ref.node.mesh?.primitives.first.material;
     if (material is! PreprocessedMaterial) return;
+    material.parameters.setFloat('burn_any', burns.active ? 1 : 0);
+    if (!burns.active) return;
     for (var i = 0; i < GrassBurns.slots; i++) {
       material.parameters.setVec4(_burnSlots[i], burns.marks[i]);
     }

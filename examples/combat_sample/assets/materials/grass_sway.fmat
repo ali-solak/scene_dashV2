@@ -33,6 +33,9 @@ material {
     { type: vec4, name: burn_c, default: [0, 0, 0, 0] },
     { type: vec4, name: burn_d, default: [0, 0, 0, 0] },
     { type: vec4, name: char_color, default: [0.16, 0.13, 0.11, 1.0] },
+    // 0 while nothing is burning. Uniform, so the branch below is coherent
+    // across every blade and costs nothing in the common case.
+    { type: float, name: burn_any, default: 0 },
   ],
   varyings: [
     { type: float, name: blade_h },
@@ -66,15 +69,18 @@ vertex {
     float heightScale =
         mix(material_params.height_low, material_params.height_high, macro);
 
-    // On the root, so a blade scorches whole.
-    vec2 root = vertex.world_position.xz;
-    burn = clamp(
-        max(max(BurnAt(material_params.burn_a, root),
-                BurnAt(material_params.burn_b, root)),
-            max(BurnAt(material_params.burn_c, root),
-                BurnAt(material_params.burn_d, root))),
-        0.0, 1.0);
-    heightScale *= 1.0 - 0.82 * burn;
+    burn = 0.0;
+    if (material_params.burn_any > 0.0) {
+      // On the root, so a blade scorches whole.
+      vec2 root = vertex.world_position.xz;
+      burn = clamp(
+          max(max(BurnAt(material_params.burn_a, root),
+                  BurnAt(material_params.burn_b, root)),
+              max(BurnAt(material_params.burn_c, root),
+                  BurnAt(material_params.burn_d, root))),
+          0.0, 1.0);
+      heightScale *= 1.0 - 0.82 * burn;
+    }
 
     vec2 phase =
         vertex.world_position.xz * material_params.sway_scale + wind * time * 0.9;

@@ -3,10 +3,10 @@ import 'dart:typed_data';
 
 import 'package:flutter_scene/scene.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
-import 'package:vector_math/vector_math.dart' show Matrix4, Vector3;
+import 'package:vector_math/vector_math.dart' show Matrix4, Vector4;
 
+import '../../common/sets.dart';
 import '../world/data/config.dart' show windDirection;
-import '../../fx/particles.dart' as fx;
 import 'vfx/leaf_texture.dart';
 
 part 'data/resources.dart';
@@ -14,14 +14,28 @@ part 'systems/systems.dart';
 
 /// Ambient decoration: leaves turning down through the clearing.
 ///
-/// One instanced emitter, one draw per card shape, and the engine owns the
-/// fall. Their ambient drift stays independent from the state of the fight.
+/// Each leaf is its own [Node] sharing one quad and a few materials; a
+/// translucent `InstancedMesh` buys nothing here and a per-leaf draw of
+/// one two-triangle quad is cheap. Their ambient drift stays independent
+/// from the state of the fight.
+///
+/// Tried as a `MeshParticleEmitterComponent` and reverted: web went from
+/// 100+ fps to 30, at every quality level. The per-frame `Matrix4` and
+/// `Quaternion` the repack builds per particle cost more than the draws
+/// instancing saves.
 void installDecor(GameBuilder game) {
   game
     ..world.insert(LeafField())
     ..addSystem(
       Schedules.startup,
       spawnLeaves,
+      reads: const {},
+      runIf: hasResource<Scene>(),
+    )
+    ..addSystem(
+      Schedules.update,
+      animateLeaves,
+      inSet: GameSets.logic,
       reads: const {},
       runIf: hasResource<Scene>(),
     );

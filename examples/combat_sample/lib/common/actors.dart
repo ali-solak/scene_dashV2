@@ -116,8 +116,15 @@ final class GrassBurns {
   }
 
   void regrow(double dt, double seconds) {
+    var live = false;
     for (final mark in marks) {
-      if (mark.w > 0) mark.w = math.max(0, mark.w - dt / seconds);
+      if (mark.w > 0) {
+        mark.w = math.max(0, mark.w - dt / seconds);
+        live = true;
+      }
     }
+    active = live;
   }
+
+  bool active = false;
 }

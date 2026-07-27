@@ -5,6 +5,7 @@ import 'package:flutter_scene/scene.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 
+import '../../fx/particle_texture.dart' show setSoftParticles;
 import '../../fx/wave_crash.dart';
 import '../../common/actors.dart' show GrassBurns;
 import '../../common/physics_layers.dart';

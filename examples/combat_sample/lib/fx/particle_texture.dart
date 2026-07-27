@@ -73,11 +73,12 @@ Texture2D dropletTexture() =>
 SpriteMaterial? _dropletSprite;
 
 /// Shared additive droplet material.
-SpriteMaterial dropletAdditiveSprite() =>
-    _dropletSprite ??= SpriteMaterial(colorTexture: dropletTexture())
-      ..blendMode = SpriteBlendMode.additive
-      // Spray meets the ocean plane and the cliff face constantly.
-      ..softDepthFade = 0.6;
+SpriteMaterial dropletAdditiveSprite() => _dropletSprite ??= _fades(
+  SpriteMaterial(colorTexture: dropletTexture())
+    ..blendMode = SpriteBlendMode.additive,
+  // Spray meets the ocean plane and the cliff face constantly.
+  depth: 0.6,
+);
 
 /// Returns a flame color for a normalized temperature.
 (double, double, double) _blackbody(double temp) {
@@ -227,10 +228,11 @@ Texture2D flameAtlasTexture() => _flameAtlas ??= Texture2D.fromPixels(
 SpriteMaterial? _flameAtlasSprite;
 
 /// The flame atlas under additive blending.
-SpriteMaterial flameAtlasSprite() =>
-    _flameAtlasSprite ??= SpriteMaterial(colorTexture: flameAtlasTexture())
-      ..blendMode = SpriteBlendMode.additive
-      ..softDepthFade = 1.1;
+SpriteMaterial flameAtlasSprite() => _flameAtlasSprite ??= _fades(
+  SpriteMaterial(colorTexture: flameAtlasTexture())
+    ..blendMode = SpriteBlendMode.additive,
+  depth: 1.1,
+);
 
 Texture2D? _flame;
 
@@ -241,11 +243,12 @@ Texture2D flameTexture() =>
 SpriteMaterial? _flameSprite;
 
 /// A soft additive sprite material carrying the flame tongue.
-SpriteMaterial flameAdditiveSprite() =>
-    _flameSprite ??= SpriteMaterial(colorTexture: flameTexture())
-      ..blendMode = SpriteBlendMode.additive
-      // Widest of the set: flame licks a burning body from every angle.
-      ..softDepthFade = 1.1;
+SpriteMaterial flameAdditiveSprite() => _flameSprite ??= _fades(
+  SpriteMaterial(colorTexture: flameTexture())
+    ..blendMode = SpriteBlendMode.additive,
+  // Widest of the set: flame licks a burning body from every angle.
+  depth: 1.1,
+);
 
 /// A crisp blob: opaque through most of its radius with a thin
 /// antialiasing rim, shaded brighter top-left so it reads as a ball.
@@ -287,11 +290,12 @@ SpriteMaterial? _crispSprite;
 /// The crisp blob under ALPHA blending: molten globs that occlude each
 /// other and the ground, with defined edges. Additive would let every
 /// overlap add up into the bloom that swallows their shape.
-SpriteMaterial crispAlphaSprite() =>
-    _crispSprite ??= SpriteMaterial(colorTexture: crispDotTexture())
-      ..blendMode = SpriteBlendMode.alpha
-      // Narrow: these are meant to keep their edge.
-      ..softDepthFade = 0.25;
+SpriteMaterial crispAlphaSprite() => _crispSprite ??= _fades(
+  SpriteMaterial(colorTexture: crispDotTexture())
+    ..blendMode = SpriteBlendMode.alpha,
+  // Narrow: these are meant to keep their edge.
+  depth: 0.25,
+);
 
 Uint8List _puffPixels(int size) {
   final pixels = Uint8List(size * size * 4);
@@ -334,30 +338,64 @@ Texture2D puffTexture() =>
 SpriteMaterial? _puffSprite;
 
 /// Shared alpha puff material.
-SpriteMaterial puffAlphaSprite() =>
-    _puffSprite ??= SpriteMaterial(colorTexture: puffTexture())
-      ..blendMode = SpriteBlendMode.alpha
-      // Ground dust sits on the floor it is kicked off.
-      ..softDepthFade = 0.7
-      // The camera pushes through these during a roll.
-      ..cameraNearFade = 1.2;
+SpriteMaterial puffAlphaSprite() => _puffSprite ??= _fades(
+  SpriteMaterial(colorTexture: puffTexture())
+    ..blendMode = SpriteBlendMode.alpha,
+  // Ground dust sits on the floor it is kicked off.
+  depth: 0.7,
+  // The camera pushes through these during a roll.
+  near: 1.2,
+);
 
 SpriteMaterial? _alphaSprite;
 
 /// Shared alpha dust material.
-SpriteMaterial softAlphaSprite() =>
-    _alphaSprite ??= SpriteMaterial(colorTexture: softDotTexture())
-      ..blendMode = SpriteBlendMode.alpha
-      ..softDepthFade = 0.7
-      ..cameraNearFade = 1.2;
+SpriteMaterial softAlphaSprite() => _alphaSprite ??= _fades(
+  SpriteMaterial(colorTexture: softDotTexture())
+    ..blendMode = SpriteBlendMode.alpha,
+  depth: 0.7,
+  near: 1.2,
+);
 
 SpriteMaterial? _sprite;
 
 /// The shared soft additive sprite material. One instance for every
 /// emitter: building a fresh material per hit caused GPU setup stutter
 /// mid-swing. Nothing mutates it after construction, so sharing is safe.
-SpriteMaterial softAdditiveSprite() =>
-    _sprite ??= SpriteMaterial(colorTexture: softDotTexture())
-      ..blendMode = SpriteBlendMode.additive
-      // Impact sparks bloom against the body they came off.
-      ..softDepthFade = 0.8;
+SpriteMaterial softAdditiveSprite() => _sprite ??= _fades(
+  SpriteMaterial(colorTexture: softDotTexture())
+    ..blendMode = SpriteBlendMode.additive,
+  // Impact sparks bloom against the body they came off.
+  depth: 0.8,
+);
+
+bool _softParticles = true;
+
+/// Every material that wants a depth fade, and the amounts it wants.
+final List<(SpriteMaterial, double, double)> _faded = [];
+
+/// Registers [material]'s intended fades and applies them at the current
+/// setting.
+SpriteMaterial _fades(
+  SpriteMaterial material, {
+  double depth = 0,
+  double near = 0,
+}) {
+  _faded.add((material, depth, near));
+  return material
+    ..softDepthFade = _softParticles ? depth : 0
+    ..cameraNearFade = _softParticles ? near : 0;
+}
+
+/// Turns soft particles on or off, including on materials already built.
+/// Soft particles make every sprite declare `RenderInput.depth`, which
+/// costs a full-screen linear depth texture every frame.
+void setSoftParticles(bool enabled) {
+  if (enabled == _softParticles) return;
+  _softParticles = enabled;
+  for (final (material, depth, near) in _faded) {
+    material
+      ..softDepthFade = enabled ? depth : 0
+      ..cameraNearFade = enabled ? near : 0;
+  }
+}

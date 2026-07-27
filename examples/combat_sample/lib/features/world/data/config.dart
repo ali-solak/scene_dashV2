@@ -112,7 +112,7 @@ const double sceneVignetteRadius = 0.85;
 const double sceneVignetteSmoothness = 0.6;
 
 /// Grass blades used by the ultra quality preset.
-const int grassBladeCount = 90000;
+const int grassBladeCount = 80000;
 
 typedef QualityPreset = ({
   String label,
@@ -120,6 +120,8 @@ typedef QualityPreset = ({
   double renderScale,
   bool ambientOcclusion,
   bool godRays,
+  bool softParticles,
+  bool autoExposure,
 });
 
 const List<QualityPreset> qualityPresets = [
@@ -129,6 +131,8 @@ const List<QualityPreset> qualityPresets = [
     renderScale: 0.6,
     ambientOcclusion: false,
     godRays: false,
+    softParticles: false,
+    autoExposure: false,
   ),
   (
     label: 'MED',
@@ -136,6 +140,8 @@ const List<QualityPreset> qualityPresets = [
     renderScale: 0.75,
     ambientOcclusion: false,
     godRays: false,
+    softParticles: false,
+    autoExposure: false,
   ),
   (
     label: 'HIGH',
@@ -143,6 +149,8 @@ const List<QualityPreset> qualityPresets = [
     renderScale: 0.85,
     ambientOcclusion: true,
     godRays: false,
+    softParticles: false,
+    autoExposure: false,
   ),
   (
     label: 'ULTRA',
@@ -150,6 +158,8 @@ const List<QualityPreset> qualityPresets = [
     renderScale: 1.0,
     ambientOcclusion: true,
     godRays: true,
+    softParticles: true,
+    autoExposure: true,
   ),
 ];
 

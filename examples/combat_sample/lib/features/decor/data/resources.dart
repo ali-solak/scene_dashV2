@@ -1,27 +1,46 @@
 part of '../decor.dart';
 
 /// Leaf count.
-const int _leafCount = 60;
+const int _leafCount = 38;
 
 /// Bounds for falling leaves.
 const double _leafFieldRadius = 15;
 const double _leafCeiling = 5.5;
 
 /// Leaf fall speed range.
-const double _fallSlowest = 0.35;
+const double _fallSlowest = 0.55;
 const double _fallFastest = 1.25;
 
-const double _windPush = 0.5;
+/// How hard the constant ambient wind pushes a leaf sideways.
+const double _windPush = 1.7;
 
 /// Leaf tumble and sway.
+const double _tumbleSlowest = 0.5;
 const double _tumbleFastest = 2.2;
+const double _swayAmplitude = 0.9;
+const double _swaySlowest = 0.8;
+const double _swayFastest = 2.0;
 
-const double _leafLifetime = 6.5;
-
-const double _leafGravity = 1.6;
-
+/// Leaf size.
 const double _leafSize = 0.22;
 
+/// Leaf nodes and animation data.
 final class LeafField {
-  Node? node;
+  /// Built by `spawnLeaves`; empty until then (and forever headless).
+  final List<Node> leaves = [];
+
+  /// Drift position per leaf (x, y, z), packed.
+  final Float32List position = Float32List(_leafCount * 3);
+
+  /// Per-leaf fall speed, tumble rate, sway rate and sway phase.
+  final Float32List fall = Float32List(_leafCount);
+  final Float32List tumble = Float32List(_leafCount);
+  final Float32List sway = Float32List(_leafCount);
+  final Float32List phase = Float32List(_leafCount);
+
+  /// Accumulated tumble angle.
+  final Float32List spin = Float32List(_leafCount);
+
+  /// The axis each leaf tumbles about (x, y, z), packed and normalised.
+  final Float32List axis = Float32List(_leafCount * 3);
 }

@@ -53,11 +53,22 @@ void spawnClearing(World world) {
             (UnlitMaterial()..alphaMode = AlphaMode.blend),
       ),
   );
+  // The plateau, treeline and boulders never move, so their shadow tiles
+  // are cached instead of re-rendered every frame. Skips the grass and the
+  // ocean: both displace in a vertex stage.
+  _markShadowStatic(clearing);
   scene.root.add(clearing);
 
   // The mount adapter parents these at the scene root.
   world.spawn([const Grass(), NodeRef(_buildGrass(assets))]);
   world.spawn([const Ocean(), NodeRef(_buildOcean(assets))]);
+}
+
+void _markShadowStatic(Node node) {
+  if (node.mesh != null) node.shadowStatic = true;
+  for (final child in node.children) {
+    _markShadowStatic(child);
+  }
 }
 
 /// The forest: an evenly-spaced jittered pine ring with rocks and bushes

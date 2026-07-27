@@ -36,14 +36,14 @@ void setupWorld(World world) {
     ..toneMapping = ToneMappingMode.aces
     ..exposure = sceneExposure
     ..antiAliasingMode = AntiAliasingMode.auto;
+  final boot = qualityPresets[defaultQualityLevel];
+  setSoftParticles(boot.softParticles);
   // Metered on the GPU over the base exposure. Partial strength: the
   // clearing is meant to stay brighter than the treeline.
   scene.autoExposure
-    ..enabled = heavyAtmospherics
+    ..enabled = boot.autoExposure
     ..strength = autoExposureStrength
     ..compensation = autoExposureCompensation;
-  // Apply the default quality preset.
-  final boot = qualityPresets[defaultQualityLevel];
   scene.renderScale = boot.renderScale;
   scene.fog
     ..enabled = false
@@ -101,9 +101,11 @@ void _applyQuality(Scene scene, Node? grass, int fromLevel, int toLevel) {
   // reallocates the swapchain; doing that mid-session is a hard crash
   // on mobile (see `runtimeRenderScaleIsSafe`).
   if (runtimeRenderScaleIsSafe) scene.renderScale = preset.renderScale;
+  setSoftParticles(preset.softParticles);
   scene
     ..ambientOcclusion.enabled = preset.ambientOcclusion
-    ..godRays.enabled = preset.godRays;
+    ..godRays.enabled = preset.godRays
+    ..autoExposure.enabled = preset.autoExposure;
 
   if (grass == null) return;
   if (qualityPresets[fromLevel].blades == preset.blades) return;
