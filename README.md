@@ -238,42 +238,6 @@ runApp(GameHost(game: game, child: const MyGameApp()));   // yours; the
                             // subtree reaches `game` through GameScope.of
 ```
 
-Asset-backed games should put their loading lifecycle inside the app. Create
-the `Scene` and `ResourceGroup` first, add every load to the group, and mount
-`SceneView` immediately. The view owns progress, reveal, and optional pipeline
-warm-up; once the game is ready, `GameHost` provides scope and hot reload:
-
-```dart
-final scene = Scene();
-final loading = ResourceGroup();
-final gameFuture = loading.add(_boot(scene, loading));
-
-Future<SceneGame> _boot(Scene scene, ResourceGroup loading) async {
-  scene.add(await loading.add(Node.fromGlbAsset('assets/model.glb')));
-  return SceneGame.boot(scene: scene, features: [...]);
-}
-final viewKey = GlobalKey();     
-final sceneView = SceneView(
-  scene,
-  key: viewKey,
-  loading: loading,
-  loadingBuilder: (context, progress) => SplashScreen(progress),
-);
-
-FutureBuilder<SceneGame>(
-  future: gameFuture,
-  builder: (context, snapshot) {
-    final game = snapshot.data;
-    return game == null
-        ? sceneView
-        : GameHost(game: game, child: sceneView);
-  },
-);
-```
-
-The app owns `game.shutdown()` and `loading.dispose()` in its lifecycle. See
-`examples/combat_sample` for the complete mounted-during-boot pattern.
-
 ## Features and systems
 
 A feature registers its systems; a system is a stateless
