@@ -191,6 +191,7 @@ flutter run --enable-flutter-gpu
 [Setup](#application-setup) ·
 [Features and systems](#features-and-systems) ·
 [Queries](#queries) ·
+[Node lookups](#node-lookups) ·
 [Components](#components-tags-bundles) ·
 [Scheduling](#scheduling-sets-and-run-conditions) ·
 [Events](#events) ·
@@ -365,6 +366,29 @@ final class MotionState {
   bool grounded = false;
   double coyoteTimer = 0;
 }
+```
+
+## Node lookups
+
+`NodeRef` runs entity → node. `SceneNodeIndex` runs it back, for anything
+that hands you a bare `Node`: `Scene.raycast`, a tap on the scene, a node
+found by name, a parent walked to from a child mesh.
+
+```dart
+// Inserted by SceneGame.boot; always present.
+final index = world.resource<SceneNodeIndex>();
+```
+
+```dart
+// Walks up to the nearest bound ancestor, so a hit on a child mesh (an
+// axe, a ragdoll limb) resolves to the entity that owns it.
+final Entity? entity = index.entityOf(hitNode);   // null if nothing is bound
+```
+
+```dart
+// Physics does not need it: the overlap helpers take the index and hand
+// back entities, and EntityCollision arrives resolved (Physics).
+world.physics.overlapSphereEntities(index, at, radius, (entity, hit) => true);
 ```
 
 ## Components, tags, bundles
@@ -832,7 +856,7 @@ void playerStrikes(World world) {
   if (!fighter.phase.justEntered(FighterPhase.striking)) return;
 
   world.physics.overlapSphereEntities(
-      world.resource<SceneNodeIndex>(),      // resolves hit nodes → entities
+      world.resource<SceneNodeIndex>(),      // node → entity (Node lookups)
       transform.translation, strikeRange,
       layerMask: Layers.enemy,               // your physics layer masks
       includeTriggers: false, (entity, hit) {
@@ -939,7 +963,6 @@ expect(fighter.phase.state, FighterPhase.idle);
 NodeRef(node)          // mounted into the scene automatically
 SceneTransform.zero()    // when present, synced onto the bound node per frame
 const PhysicsDriven()    // a physics body owns the transform instead
-// SceneNodeIndex maps a hit node back to its entity (playerStrikes, above)
 ```
 
 An entity's transform can also live on the node directly;
