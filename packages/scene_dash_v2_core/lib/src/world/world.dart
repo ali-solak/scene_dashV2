@@ -8,6 +8,7 @@ import '../resources/resources.dart';
 import '../storage/object_store.dart';
 import '../storage/store_registry.dart';
 import '../storage/tag_store.dart';
+import '../surface/observers.dart';
 
 /// Stores entities, components, resources, and events.
 final class World {
@@ -19,6 +20,13 @@ final class World {
 
   /// Singleton application resources.
   final Resources resources = Resources();
+
+  /// Component observers registered for this world's stores.
+  ///
+  /// This is framework infrastructure rather than an application resource,
+  /// so its identity and the store hooks that dispatch through it survive
+  /// resource teardown.
+  late final ObserverRegistry observers = ObserverRegistry(this);
 
   /// Queues structural changes.
   late final Commands commands = Commands(this);
@@ -254,10 +262,42 @@ final class World {
     entities.despawn(entity);
   }
 
-  /// Removes every entity and buffered event.
+  /// Immediately despawns every entity alive when this method is called.
   ///
-  /// Stores, channels, and readers stay registered.
-  /// Resources remain unless [keepResources] is false.
+  /// Unlike [reset], this uses normal component removal, so removal observers
+  /// fire. Entities created by those observers are not part of the entry
+  /// snapshot. Events and resources are left untouched, and commands queued
+  /// by observers remain deferred until the next command flush.
+  ///
+  /// Call only when no query or command is active.
+  void despawnAll() {
+    assert(
+      _activeQueries == 0,
+      'World.despawnAll() while a query is iterating.',
+    );
+    assert(
+      commands.isEmpty,
+      'World.despawnAll() with pending deferred commands: they could target '
+      'despawned entities. Flush or drop them before despawning all.',
+    );
+    final snapshot = <Entity>[];
+    for (var index = 0; index < entities.slotCount; index++) {
+      if (entities.isIndexAlive(index)) {
+        snapshot.add(entities.resolve(index));
+      }
+    }
+    for (final entity in snapshot) {
+      if (entities.isAlive(entity)) despawnNow(entity);
+    }
+  }
+
+  /// Silently removes every entity and buffered event.
+  ///
+  /// Component removal observers do not fire. Stores, channels, and readers
+  /// stay registered. Resources and observer registrations remain unless
+  /// [keepResources] is false; a false value disposes every resource and
+  /// clears observer callbacks while retaining the world-owned registry and
+  /// its store hooks. Use [despawnAll] when removals should be observable.
   /// Call only when no query or command is active.
   void reset({bool keepResources = true}) {
     assert(_activeQueries == 0, 'World.reset() while a query is iterating.');
@@ -273,7 +313,10 @@ final class World {
     for (var i = 0; i < _eventChannelList.length; i++) {
       _eventChannelList[i].clear();
     }
-    if (!keepResources) resources.disposeAll();
+    if (!keepResources) {
+      observers.clear();
+      resources.disposeAll();
+    }
   }
 
   /// Queries entities with every [withTypes] entry and no [withoutTypes] entry.

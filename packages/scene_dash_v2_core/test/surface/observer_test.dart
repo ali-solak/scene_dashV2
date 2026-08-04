@@ -223,6 +223,63 @@ void main() {
       expect(identical(removed, instance), isTrue);
     });
 
+    test('ordinary reset is silent and preserves observer registrations', () {
+      final world = World();
+      var adds = 0;
+      var removes = 0;
+      ObserverRegistry.of(world).observe<Health>(
+        onAdd: (w, entity, health) => adds++,
+        onRemove: (w, entity, health) => removes++,
+      );
+      final before = world.entities.spawn();
+      world.insertNow<Health>(before, Health(1));
+
+      world.reset();
+
+      expect(removes, 0, reason: 'reset clears stores without semantic remove');
+      final after = world.entities.spawn();
+      world.insertNow<Health>(after, Health(2));
+      expect(adds, 2, reason: 'ordinary reset retains registrations');
+    });
+
+    test('nuclear reset keeps registry hooks but clears each registration '
+        'generation', () {
+      final world = World();
+      final registry = ObserverRegistry.of(world);
+      var first = 0;
+      var second = 0;
+      var third = 0;
+      registry.observe<Health>(onAdd: (w, entity, health) => first++);
+
+      final before = world.entities.spawn();
+      world.insertNow<Health>(before, Health(1));
+      expect(first, 1);
+
+      world.reset(keepResources: false);
+      expect(ObserverRegistry.of(world), same(registry));
+
+      final cleared = world.entities.spawn();
+      world.insertNow<Health>(cleared, Health(2));
+      expect(first, 1, reason: 'pre-reset callback was cleared');
+
+      registry.observe<Health>(onAdd: (w, entity, health) => second++);
+      final afterFirstReset = world.entities.spawn();
+      world.insertNow<Health>(afterFirstReset, Health(3));
+      expect((first, second, third), (1, 1, 0));
+
+      world.reset(keepResources: false);
+      expect(ObserverRegistry.of(world), same(registry));
+      registry.observe<Health>(onAdd: (w, entity, health) => third++);
+      final afterSecondReset = world.entities.spawn();
+      world.insertNow<Health>(afterSecondReset, Health(4));
+
+      expect(
+        (first, second, third),
+        (1, 1, 1),
+        reason: 'only the newest registration generation fires',
+      );
+    });
+
     test('identical sequence under TestGame.pumpFixed (determinism)', () {
       List<String> run() {
         final log = <String>[];

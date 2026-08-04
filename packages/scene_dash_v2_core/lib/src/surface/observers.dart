@@ -34,11 +34,24 @@ final class ObserverRegistry {
   int _guardEpoch = -1;
   static const int _cascadeLimit = 16;
 
-  ObserverRegistry._(this.world);
+  /// Creates the registry owned by [world].
+  ObserverRegistry(this.world);
 
-  /// The world's registry, created on first use.
-  static ObserverRegistry of(World world) => world.resources
-      .getOrInsert<ObserverRegistry>(() => ObserverRegistry._(world));
+  /// The registry owned by [world].
+  static ObserverRegistry of(World world) => world.observers;
+
+  /// Removes every registered callback while retaining the store hooks.
+  ///
+  /// Keeping the per-type entries lets observers registered after a nuclear
+  /// world reset reuse the hooks already attached to component stores.
+  void clear() {
+    for (final entry in _byType.values) {
+      entry.onAdd.clear();
+      entry.onRemove.clear();
+    }
+    _fireCounts.clear();
+    _guardEpoch = -1;
+  }
 
   /// Registers add and remove callbacks for [T].
   void observe<T extends Object>({

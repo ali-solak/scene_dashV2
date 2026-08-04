@@ -6,7 +6,7 @@ final class Position {
   Position(this.x);
 }
 
-final class Enemy {
+final class Enemy implements Tag {
   const Enemy();
 }
 
@@ -136,6 +136,81 @@ void main() {
       // After flushing, reset proceeds.
       world.commands.apply();
       expect(() => world.reset(), returnsNormally);
+    });
+  });
+
+  group('World.despawnAll', () {
+    test('fires removal observers and preserves events and resources', () {
+      final world = _worldWithStores()..registerEvent<String>();
+      final score = Score()..value = 7;
+      world.resources.insert<Score>(score);
+      final removedPositions = <int>[];
+      final removedEnemies = <int>[];
+      ObserverRegistry.of(world)
+        ..observe<Position>(
+          onRemove: (w, entity, position) => removedPositions.add(entity.index),
+        )
+        ..observe<Enemy>(
+          onRemove: (w, entity, enemy) => removedEnemies.add(entity.index),
+        );
+      final first = world.entities.spawn();
+      final second = world.entities.spawn();
+      world
+        ..insertNow<Position>(first, Position(1))
+        ..insertNow<Enemy>(first, const Enemy())
+        ..insertNow<Position>(second, Position(2));
+      final reader = world.eventChannel<String>().reader();
+      world.sendEvent('kept');
+
+      world.despawnAll();
+
+      expect(world.entities.aliveCount, 0);
+      expect(world.isAlive(first), isFalse);
+      expect(world.isAlive(second), isFalse);
+      expect(removedPositions, [first.index, second.index]);
+      expect(removedEnemies, [first.index]);
+      expect(world.resource<Score>(), same(score));
+      expect(reader.drain(), ['kept']);
+    });
+
+    test('skips a snapshot entity already despawned by an observer', () {
+      final world = _worldWithStores();
+      final first = world.entities.spawn();
+      final sibling = world.entities.spawn();
+      final removals = <int>[];
+      ObserverRegistry.of(world).observe<Position>(
+        onRemove: (w, entity, position) {
+          removals.add(entity.index);
+          if (entity == first && w.isAlive(sibling)) {
+            w.despawnNow(sibling);
+          }
+        },
+      );
+      world
+        ..insertNow<Position>(first, Position(1))
+        ..insertNow<Position>(sibling, Position(2));
+
+      expect(world.despawnAll, returnsNormally);
+
+      expect(world.entities.aliveCount, 0);
+      expect(removals, [first.index, sibling.index]);
+    });
+
+    test('asserts during a query or with pre-existing deferred commands', () {
+      final querying = _worldWithStores();
+      final queried = querying.entities.spawn();
+      querying.insertNow<Position>(queried, Position(1));
+      expect(
+        () => querying.query1<Position>().each((entity, position) {
+          querying.despawnAll();
+        }),
+        throwsA(isA<AssertionError>()),
+      );
+
+      final pending = _worldWithStores();
+      final target = pending.entities.spawn();
+      pending.commands.remove<Position>(target);
+      expect(pending.despawnAll, throwsA(isA<AssertionError>()));
     });
   });
 }

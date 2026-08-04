@@ -33,9 +33,17 @@ final class SceneCommands {
   /// Applies and clears all queued operations.
   void flush() {
     if (_queue.isEmpty) return;
-    for (var i = 0; i < _queue.length; i++) {
-      _queue[i]();
+    // Advance before invoking an operation so a throw discards that operation
+    // with the successful prefix instead of poisoning the next flush.
+    var consumed = 0;
+    try {
+      // Include operations queued while this flush is running.
+      while (consumed < _queue.length) {
+        final operation = _queue[consumed++];
+        operation();
+      }
+    } finally {
+      _queue.removeRange(0, consumed);
     }
-    _queue.clear();
   }
 }

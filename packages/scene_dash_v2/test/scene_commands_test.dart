@@ -53,4 +53,30 @@ void main() {
       ..flush();
     expect(node.getComponent<_Marker>(), isNull);
   });
+
+  test('a failed flush discards its consumed prefix without replay', () {
+    final root = Node();
+    final commands = SceneCommands(root);
+    final first = Node();
+    final after = Node();
+    final attached = _Marker();
+    final owner = Node()..addComponent(attached);
+
+    commands
+      ..add(first)
+      // Reattaching an attached component is a reliable throwing operation.
+      ..attach(Node(), attached)
+      ..add(after);
+
+    expect(commands.flush, throwsException);
+    expect(first.parent, same(root), reason: 'the successful prefix applied');
+    expect(attached.node, same(owner), reason: 'the throwing op was discarded');
+    expect(after.parent, isNull, reason: 'the untouched suffix remains queued');
+    expect(commands.isEmpty, isFalse);
+
+    expect(commands.flush, returnsNormally);
+    expect(first.parent, same(root), reason: 'the prefix was not replayed');
+    expect(after.parent, same(root));
+    expect(commands.isEmpty, isTrue);
+  });
 }
