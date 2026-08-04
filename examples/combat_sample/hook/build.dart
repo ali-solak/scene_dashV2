@@ -1,10 +1,3 @@
-// One asset per source file. The barbarian pool needs INDEPENDENT skinned
-// instances, but per-slot DataAsset aliases of the same `.fsceneb` are the
-// wrong tool: they ship the same 4.6M scene once per slot (~46MB of web
-// payload). Instead the pool reads the one asset's bytes and realizes each
-// instance with its own resource realizer (see `character_assets.dart`),
-// which sidesteps flutter_scene #257 (template-shared `SkinnedGeometry`
-// renders a pack as one body) at zero payload cost.
 import 'package:flutter_scene/build_hooks.dart';
 import 'package:hooks/hooks.dart';
 
