@@ -33,8 +33,24 @@ abstract class _FrameTickState<W extends StatefulWidget> extends State<W> {
     super.dispose();
   }
 
+  /// Minimum time between polls. Null polls every frame.
+  Duration? get pollInterval => null;
+
+  /// Counted on the frame clock's unscaled delta, not a [Stopwatch]: it is
+  /// the same wall time the pulse decays on, and it is what tests drive.
+  double _sincePoll = 0;
+  bool _polled = false;
+
   void _onFrameTick() {
     if (!mounted) return;
+    final interval = pollInterval;
+    if (interval != null) {
+      _sincePoll += game.world.resource<FrameTime>().unscaledDelta;
+      // The first tick always polls, so a mounted builder is never stale.
+      if (_polled && _sincePoll < interval.inMicroseconds / 1e6) return;
+      _sincePoll = 0;
+      _polled = true;
+    }
     frameTick();
   }
 
@@ -56,6 +72,7 @@ class EntityBuilder<T extends Object, S> extends StatefulWidget {
     required this.select,
     required this.builder,
     this.absent,
+    this.every,
   }) : require = null,
        exclude = null;
 
@@ -67,6 +84,7 @@ class EntityBuilder<T extends Object, S> extends StatefulWidget {
     required this.select,
     required this.builder,
     this.absent,
+    this.every,
   }) : entity = null;
 
   /// The entity to watch (handle form; null in `.matching` form).
@@ -86,6 +104,9 @@ class EntityBuilder<T extends Object, S> extends StatefulWidget {
   /// Shown while the entity is dead or lacks [T].
   final Widget? absent;
 
+  /// Poll no more often than this, on wall time. Null reads every frame.
+  final Duration? every;
+
   @override
   State<EntityBuilder<T, S>> createState() => _EntityBuilderState<T, S>();
 }
@@ -94,6 +115,9 @@ class _EntityBuilderState<T extends Object, S>
     extends _FrameTickState<EntityBuilder<T, S>> {
   bool _present = false;
   S? _value;
+
+  @override
+  Duration? get pollInterval => widget.every;
 
   @override
   void attached(WorldGame? previous) {
@@ -138,6 +162,7 @@ class WorldBuilder<S> extends StatefulWidget {
     required this.select,
     required this.builder,
     this.equals,
+    this.every,
   }) : trigger = null,
        duration = 0,
        pulseBuilder = null,
@@ -156,6 +181,7 @@ class WorldBuilder<S> extends StatefulWidget {
     this.child,
     this.equals,
   }) : builder = null,
+       every = null,
        assert(duration > 0, 'pulse duration is seconds and must be positive');
 
   /// Selects the watched value from the world; compared with `==`.
@@ -163,6 +189,11 @@ class WorldBuilder<S> extends StatefulWidget {
 
   /// Custom equality check.
   final bool Function(S previous, S next)? equals;
+
+  /// Poll no more often than this, on wall time. Null runs [select] every
+  /// frame. The escape hatch for a costly [select]; the value can be up to
+  /// this stale.
+  final Duration? every;
 
   /// Builds from the selected value; runs only when it changed. (Plain
   /// form; null in the pulse form.)
@@ -191,6 +222,9 @@ class WorldBuilder<S> extends StatefulWidget {
 class _WorldBuilderState<S> extends _FrameTickState<WorldBuilder<S>> {
   late S _value;
   double _pulse = 0;
+
+  @override
+  Duration? get pollInterval => widget.every;
 
   @override
   void attached(WorldGame? previous) => _value = widget.select(game.world);

@@ -1,6 +1,6 @@
 # Scene-Dash v2
 
-![Scene-Dash v2: the combat sample](combat_sample_game.gif)
+![Scene-Dash v2: the combat sample](https://raw.githubusercontent.com/ali-solak/scene_dashV2/main/combat_sample_game.gif)
 
 An ECS-based way to organize, coordinate, and headlessly test gameplay code
 built on top of [`flutter_scene`](https://pub.dev/packages/flutter_scene). ECS is
@@ -34,7 +34,7 @@ WorldEventListener<EnemyKilled>(onEvent: (ctx, e) => shakeScore(ctx),
     child: const ScorePanel())                   // world events into UI
 ```
 
-[The rest of the widget layer](docs/reference.md#world-reactive-widgets):
+[The rest of the widget layer](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#world-reactive-widgets):
 `.matching` resolves the entity through the world, `.pulse` drives transient
 feedback, `every:` throttles a heavy select, `GameScope` reaches the game
 from any `context`.
@@ -115,52 +115,52 @@ flutter run --enable-flutter-gpu
 
 ## Reference
 
-[docs/reference.md](docs/reference.md)
+[docs/reference.md](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md)
 
 - UI
-  - [World-reactive widgets](docs/reference.md#world-reactive-widgets)
-    - [GameScope](docs/reference.md#gamescope)
+  - [World-reactive widgets](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#world-reactive-widgets)
+    - [GameScope](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#gamescope)
 - Boot
-  - [Application setup](docs/reference.md#application-setup)
-  - [Features and systems](docs/reference.md#features-and-systems)
+  - [Application setup](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#application-setup)
+  - [Features and systems](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#features-and-systems)
 - World
-  - [Components, tags, bundles](docs/reference.md#components-tags-bundles)
-  - [Queries](docs/reference.md#queries)
-  - [Node lookups](docs/reference.md#node-lookups)
-  - [Resources](docs/reference.md#resources)
+  - [Components, tags, bundles](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#components-tags-bundles)
+  - [Queries](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#queries)
+  - [Node lookups](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#node-lookups)
+  - [Resources](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#resources)
 - Frame
-  - [Scheduling: sets and run conditions](docs/reference.md#scheduling-sets-and-run-conditions)
-  - [Time](docs/reference.md#time)
+  - [Scheduling: sets and run conditions](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#scheduling-sets-and-run-conditions)
+  - [Time](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#time)
 - Coordination
-  - [Events](docs/reference.md#events)
-  - [Input](docs/reference.md#input)
-  - [States](docs/reference.md#states)
-  - [Machine](docs/reference.md#machine)
+  - [Events](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#events)
+  - [Input](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#input)
+  - [States](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#states)
+  - [Machine](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#machine)
 - flutter_scene
-  - [Physics](docs/reference.md#physics)
-  - [The rendering bridge](docs/reference.md#the-rendering-bridge)
+  - [Physics](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#physics)
+  - [The rendering bridge](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#the-rendering-bridge)
 - Tooling
-  - [Debugging](docs/reference.md#debugging)
-    - [Entity debug](docs/reference.md#entity-debug)
-    - [Gizmo debug](docs/reference.md#gizmo-debug)
-    - [Inspector](docs/reference.md#inspector)
-  - [Testing](docs/reference.md#testing)
+  - [Debugging](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#debugging)
+    - [Entity debug](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#entity-debug)
+    - [Gizmo debug](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#gizmo-debug)
+    - [Inspector](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#inspector)
+  - [Testing](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#testing)
 
-[docs/concept.md](docs/concept.md) for the architecture,
-[docs/integration.md](docs/integration.md) for the `flutter_scene` bridge.
+[docs/concept.md](https://github.com/ali-solak/scene_dashV2/blob/main/docs/concept.md) for the architecture,
+[docs/integration.md](https://github.com/ali-solak/scene_dashV2/blob/main/docs/integration.md) for the `flutter_scene` bridge.
 
 ## Packages and examples
 
 | Path | Purpose |
 | --- | --- |
-| [`packages/scene_dash_v2_core`](packages/scene_dash_v2_core) | Pure-Dart ECS runtime, authoring surface, headless `TestGame`. |
-| [`packages/scene_dash_v2`](packages/scene_dash_v2) | `flutter_scene` integration: `SceneGame.boot`, mounting, transform sync, physics bridge, gizmos, widget layer. Re-exports core, so one import covers both. |
-| [`packages/scene_dash_inspector`](packages/scene_dash_inspector) | Optional debug overlay: live entities, resources, system timings, event channels. Read-only, polled at 4 Hz. |
-| [`examples/scene_game`](examples/scene_game) | Complete game: Rapier physics, one feature per folder. |
-| [`examples/headless_example`](examples/headless_example) | The core without Flutter. |
-| [`examples/scene_benchmark`](examples/scene_benchmark) | On-device render benchmark: static vs mount-only vs ECS vs instanced. |
-| [`examples/combat_sample`](examples/combat_sample) | Combat slice: KayKit knight against waves of barbarians, lock-on, buyable skills, giants, Rapier ragdolls, authored `.fmat` materials. Gameplay pinned headless. |
-| [`benchmarks`](benchmarks) | Query, structural, and record-overhead benchmarks. |
+| [`packages/scene_dash_v2_core`](https://github.com/ali-solak/scene_dashV2/blob/main/packages/scene_dash_v2_core) | Pure-Dart ECS runtime, authoring surface, headless `TestGame`. |
+| [`packages/scene_dash_v2`](https://github.com/ali-solak/scene_dashV2/blob/main/packages/scene_dash_v2) | `flutter_scene` integration: `SceneGame.boot`, mounting, transform sync, physics bridge, gizmos, widget layer. Re-exports core, so one import covers both. |
+| [`packages/scene_dash_inspector`](https://github.com/ali-solak/scene_dashV2/blob/main/packages/scene_dash_inspector) | Optional debug overlay: live entities, resources, system timings, event channels. Read-only, polled at 4 Hz. |
+| [`examples/scene_game`](https://github.com/ali-solak/scene_dashV2/blob/main/examples/scene_game) | Complete game: Rapier physics, one feature per folder. |
+| [`examples/headless_example`](https://github.com/ali-solak/scene_dashV2/blob/main/examples/headless_example) | The core without Flutter. |
+| [`examples/scene_benchmark`](https://github.com/ali-solak/scene_dashV2/blob/main/examples/scene_benchmark) | On-device render benchmark: static vs mount-only vs ECS vs instanced. |
+| [`examples/combat_sample`](https://github.com/ali-solak/scene_dashV2/blob/main/examples/combat_sample) | Combat slice: KayKit knight against waves of barbarians, lock-on, buyable skills, giants, Rapier ragdolls, authored `.fmat` materials. Gameplay pinned headless. |
+| [`benchmarks`](https://github.com/ali-solak/scene_dashV2/blob/main/benchmarks) | Query, structural, and record-overhead benchmarks. |
 
 ```text
 examples/scene_game/lib/features/   # feature based structure

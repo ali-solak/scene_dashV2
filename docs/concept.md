@@ -66,7 +66,7 @@ world.query2<SceneTransform, Velocity>().each((entity, transform, velocity) {
 });
 ```
 
-`.each` is the primary spelling for exactly this reason. The record form,
+`.each` is the primary form for exactly this reason. The record form,
 `for (final (e, t, v) in query.records)`, allocates one record per row
 and is the documented cold-path alternative, not the default.
 
@@ -108,10 +108,10 @@ resolve to a fixpoint in one boundary, and `DespawnOnExit`/`DespawnAfter`
 ride the same path. The immediate `*Now` variants exist for setup code and
 live in `advanced.dart` with their no-active-query asserts.
 
-## Components may bear logic: the boundary rule
+## Logic on components
 
-Components may bear logic. The boundary: the object computes, the system
-performs world effects. A component method never holds or touches
+A component may carry logic. The boundary: the object computes, the
+system performs world effects. A component method never holds or touches
 `World`; holding an `Entity` as data is fine. Machines expose edges;
 systems spawn, emit and mutate on them.
 
@@ -134,14 +134,14 @@ they pause, slow and freeze with the game and add nothing to the
 schedule; whole-game state is a framework machine because independent
 features must coordinate on it.
 
-### Where state lives: the doctrine
+### Where state lives
 
 An entity's condition is a component on that entity; an ongoing process
 is a component on its own process entity (run-scoped with
 `DespawnOnExit` like anything else); a resource is reserved for state
 where "two of them" is meaningless: score, indexes, input, shared
-pools. The test is "could there ever be two?" A singleton that names an
-entity's condition or a feature's process is a component in exile.
+pools. The test is "could there ever be two?" A singleton naming an
+entity's condition or a feature's process should be a component.
 
 `world.single<T>()`/`singleOrNull<T>()` make component-singletons as
 ergonomic as the resources they replace; observers and `removeAfter:`
@@ -168,8 +168,8 @@ compares declared access against the component types the system's queries
 actually construct, warning on drift.
 
 The detector is entity-blind: it pairs systems by component *type*, so
-two systems touching disjoint entities — or disjoint fields of one
-component — read as a conflict it cannot see through. When the author
+two systems touching disjoint entities, or disjoint fields of one
+component, read as a conflict it cannot see through. When the author
 knows such a pair is independent, `independentOf: [other]` on either
 side exempts exactly that pairing instead of faking an ordering edge;
 ordering is untouched and every other pairing keeps the full net.

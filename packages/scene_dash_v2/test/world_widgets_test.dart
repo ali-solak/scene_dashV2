@@ -190,6 +190,48 @@ void main() {
     expect(find.text('2'), findsOneWidget);
   });
 
+  testWidgets('every: throttles select to a wall-clock interval', (
+    tester,
+  ) async {
+    final game = await boot();
+    game.world.spawn([Health(1)]);
+    var selects = 0;
+    drive(game);
+    await tester.pumpWidget(
+      GameScope(
+        game: game,
+        child: WorldBuilder<int>(
+          every: const Duration(milliseconds: 50),
+          select: (world) {
+            selects++;
+            return world.query<Health>().count();
+          },
+          builder: (context, count) =>
+              Text('$count', textDirection: TextDirection.ltr),
+        ),
+      ),
+    );
+    expect(find.text('1'), findsOneWidget);
+    // The first frame tick always polls, so a mounted builder is not stale.
+    drive(game);
+    await tester.pump();
+    final afterFirstTick = selects;
+
+    // Frames inside the interval are skipped entirely: 2 more at 1/60s is
+    // 33ms, short of the 50ms window.
+    game.world.spawn([Health(2)]);
+    drive(game, 2);
+    await tester.pump();
+    expect(selects, afterFirstTick, reason: 'no select inside the interval');
+    expect(find.text('1'), findsOneWidget, reason: 'the spawn is not seen yet');
+
+    // Past 50ms it polls again and catches up.
+    drive(game, 2);
+    await tester.pump();
+    expect(selects, greaterThan(afterFirstTick));
+    expect(find.text('2'), findsOneWidget);
+  });
+
   testWidgets('WorldBuilder equals: gives list selections a content '
       'compare', (tester) async {
     final game = await boot();
