@@ -2,6 +2,13 @@
 
 ![Scene-Dash v2: the combat sample](https://raw.githubusercontent.com/ali-solak/scene_dashV2/main/combat_sample_game.gif)
 
+<p align="center">
+  <a title="Pub" href="https://pub.dev/packages/scene_dash_v2"><img src="https://img.shields.io/pub/v/scene_dash_v2.svg?label=scene_dash_v2&style=popout"/></a>
+  <a title="Pub" href="https://pub.dev/packages/scene_dash_v2_core"><img src="https://img.shields.io/pub/v/scene_dash_v2_core.svg?label=scene_dash_v2_core&style=popout"/></a>
+  <a title="CI" href="https://github.com/ali-solak/scene_dashV2/actions/workflows/ci.yaml?query=branch%3Amain"><img src="https://github.com/ali-solak/scene_dashV2/actions/workflows/ci.yaml/badge.svg?branch=main"/></a>
+  <img src="https://img.shields.io/badge/license-MIT-blue.svg"/>
+</p>
+
 An ECS-based way to organize, coordinate, and headlessly test gameplay code
 built on top of [`flutter_scene`](https://pub.dev/packages/flutter_scene). ECS is
 the implementation model. the purpose is keeping a growing game's features,
