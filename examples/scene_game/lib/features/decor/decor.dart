@@ -10,11 +10,9 @@ import '../world/data/config.dart';
 part 'data/resources.dart';
 part 'systems/systems.dart';
 
-/// Ambient decoration: many drifting emissive light motes. Each is its own
-/// PBR [Node] rather than one instanced draw — a PBR `InstancedMesh` drawn
-/// through the lit/shadow/IBL passes device-loses the Impeller Vulkan
-/// backend on Mali GPUs (Pixel 8), while individual PBR nodes (like the rest
-/// of the scene) render fine. 48 small spheres is a cheap handful of draws.
+/// Ambient drifting light motes, one PBR [Node] each. Not instanced: a PBR
+/// `InstancedMesh` through the lit/shadow/IBL passes device-loses Impeller
+/// Vulkan on Mali (Pixel 8). 48 small spheres is a cheap handful of draws.
 void installDecor(GameBuilder game) {
   game.world.insert(MoteField());
   game

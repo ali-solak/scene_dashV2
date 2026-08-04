@@ -1,10 +1,8 @@
 part of '../player.dart';
 
-/// The player's spawn list: a kinematic sphere driven by Rapier's
-/// character controller. `PhysicsDriven` tells the generic transform sync
-/// to leave the node alone; the feedback nodes are built once and attached
-/// as children — one visuals component per writing feature (legs, charge,
-/// shield), so each system's access declaration names only what it owns.
+/// The player's spawn list: a kinematic sphere on Rapier's character
+/// controller. `PhysicsDriven` keeps the transform sync off the node. One
+/// visuals component per writing feature, so access stays honest.
 List<Object> playerBundle() {
   final (legs, charge, shield) = buildPlayerVisuals();
   return [

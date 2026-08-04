@@ -1,8 +1,6 @@
-/// The frame-rate readout.
-///
-/// Counted off a [Ticker], not the world clock: `world.dt` is scaled by
-/// hitstop and death slow-motion, which would misreport deliberate
-/// freezes as low FPS. This counts frames actually presented.
+/// The frame-rate readout. Counted off a [Ticker], not `world.dt`, which
+/// is scaled by slow-motion and would report deliberate freezes as low
+/// FPS.
 library;
 
 import 'package:flutter/material.dart';

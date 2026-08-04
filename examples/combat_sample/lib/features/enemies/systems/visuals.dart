@@ -33,11 +33,8 @@ void spawnBrawlerFx(World world) {
   });
 }
 
-/// Everything the barbarian shows: its model and health bar, the
-/// animation mapper, the giant's growth, and the death materials.
-///
-/// `updateGiantGrowth` orders after `updateBrawlerMaterials`, so both
-/// stay in this one feature.
+/// Everything the barbarian shows: model, health bar, animation mapper,
+/// giant growth and death materials.
 void installEnemyVisuals(GameBuilder game) {
   game
     ..registerComponent<BrawlerVisuals>()

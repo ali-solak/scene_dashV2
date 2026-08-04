@@ -1,11 +1,8 @@
 part of '../rocks.dart';
 
-/// The single shared flame-trail emitter — a component on a scene-scoped
-/// process entity spawned by `spawnFlameTrailEmitter` (startup,
-/// scene-gated) and steered by `updateFlameTrails`. Headless worlds simply
-/// have no carrier: `singleOrNull` is the one absence check, and every
-/// field is non-null by construction (the state doctrine — a feature's
-/// process is a component, not a nullable-field resource).
+/// The shared flame-trail emitter, held on a scene-scoped process entity.
+/// Headless worlds have no carrier at all, so `singleOrNull` is the only
+/// absence check and every field is non-null.
 final class FlameTrailEmitter {
   FlameTrailEmitter({required this.shape, required this.spawner});
 

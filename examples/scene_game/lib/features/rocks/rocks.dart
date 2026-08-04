@@ -18,13 +18,9 @@ part 'data/bundles.dart';
 part 'vfx/vfx.dart';
 part 'systems/systems.dart';
 
-/// Installs the rocks feature — v1's plugin body without the class. The
-/// spawner is a run-scoped process entity (spawned on every
-/// `OnEnter(playing)`). Flame trails are one shared world-space particle
-/// emitter at the scene root (upstream particles simulate in emitter-local
-/// space, so per-rock emitters cannot trail — see [FlameTrailShape]);
-/// `updateFlameTrails` feeds it the flaming rocks' positions and the scene
-/// advances the simulation.
+/// Installs the rocks feature. The spawner is a run-scoped process
+/// entity. Flame trails share one world-space emitter at the scene root,
+/// because per-rock emitters cannot trail (see [FlameTrailShape]).
 void installRocks(GameBuilder game) {
   game
     ..registerTag<Rock>()

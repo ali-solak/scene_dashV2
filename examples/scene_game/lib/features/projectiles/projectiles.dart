@@ -30,11 +30,9 @@ part 'vfx/charge_vfx.dart';
 part 'vfx/impact_vfx.dart';
 part 'vfx/reticle.dart';
 
-/// Installs the player's blaster, projectiles, charge/impact VFX and the
-/// lock-on reticle. The feature owns the [Blaster] *component* and
-/// attaches it to the player on every `OnEnter(playing)`; the HUD reads it
-/// back through the world (`world.singleOrNull<Blaster>()`) — nothing is
-/// constructed in `main` or threaded through parameters.
+/// Installs the blaster, projectiles, charge and impact VFX, and the
+/// lock-on reticle. The feature owns the [Blaster] and attaches it to the
+/// player each run; the HUD reads it back through the world.
 void installProjectiles(GameBuilder game) {
   game
     ..registerComponent<Projectile>()

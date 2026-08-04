@@ -1,10 +1,8 @@
 part of '../projectiles.dart';
 
-/// Drives the player's charge orb, plasma load and orbiting motes from the
-/// [Blaster], the sole source of charge truth. Mutates player-owned nodes
-/// and unique materials in place. The plasma emitter spirals energy into
-/// the orb and the motes ride a rising, converging vortex that tightens
-/// and quickens as the charge builds.
+/// Drives the charge orb, plasma and motes from the [Blaster], the sole
+/// source of charge truth. Mutates player-owned nodes and unique materials
+/// in place.
 void updateChargeVisuals(World world) {
   final plasma = world.singleOrNull<ChargePlasmaEmitter>();
   final player = world

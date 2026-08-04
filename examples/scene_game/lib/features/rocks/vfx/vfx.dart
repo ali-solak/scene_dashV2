@@ -1,20 +1,15 @@
 part of '../rocks.dart';
 
-// FlameTrailShape draws its per-particle rock pick from salt 29 — disjoint
-// from the 20..23 range the wrapped ConeShape uses, per the EmitterShape
-// contract.
+// Disjoint from the 20..23 range the wrapped ConeShape uses, per the
+// EmitterShape contract.
 const int _rockPickSalt = 29;
 
 /// Spawns each ember on one of the current flaming rocks, in world space.
 ///
-/// Upstream particles simulate in the *emitter node's local space*, so the
-/// one shared emitter node is parked at the scene root at identity and
-/// never moves. Parenting an emitter to a rock — or translating a node to
-/// follow one — drags every live ember along with the rock, which is why
-/// the trails were invisible: the whole puff rode inside the rock. Rock
-/// positions enter here instead, at spawn time only: a new ember is born
-/// on a rock, old embers stay where that rock left them, and the gap the
-/// rock opens up is the trail.
+/// Particles simulate in the emitter node's local space, so the shared node
+/// stays at the scene root at identity. Parent it to a rock and every live
+/// ember rides along with it, which leaves no trail. Rock positions enter
+/// at spawn time only.
 final class FlameTrailShape extends fx.EmitterShape {
   final fx.ConeEmitterShape _cone = fx.ConeEmitterShape(
     angle: 0.5,
@@ -39,16 +34,9 @@ final class FlameTrailShape extends fx.EmitterShape {
   }
 }
 
-/// Startup (scene-gated): spawn the shared flame-trail emitter as a
-/// process entity — the mount adapter parents its node at the scene root
-/// (identity, never moved; see [FlameTrailShape]). One emitter serves
-/// every flaming rock — `updateFlameTrails` feeds it the rock positions
-/// and scales the spawn rate with the rock count; there is nothing to
-/// attach, detach, or tear down per rock.
-///
-/// The emitter advances with the scene tick, so trails freeze under
-/// hitstop like everything else; the fixed [rockTrailSeed] keeps replays
-/// visually identical.
+/// One emitter serves every flaming rock; `updateFlameTrails` feeds it
+/// their positions and scales the rate with the count, so there is nothing
+/// to attach or tear down per rock.
 void spawnFlameTrailEmitter(World world) {
   final shape = FlameTrailShape();
   final spawner = fx.Spawner(rate: 0);

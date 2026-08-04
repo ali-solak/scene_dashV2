@@ -4,22 +4,18 @@ part of '../projectiles.dart';
 final Vector3 _projectilePosition = Vector3.zero();
 final Vector3 _rockHitPosition = Vector3.zero();
 
-/// OnEnter(playing): decorate the player with a fresh [Blaster] — a
-/// feature attaching its component to an entity another feature spawned,
-/// with no cross-feature bundle import. Re-adding replaces the previous
-/// instance (S4), so every run starts ready; the old blaster-reset call
-/// died here. Headless boots have no player and simply skip.
+/// Gives the player a fresh [Blaster] each run: one feature attaching its
+/// component to another feature's entity, no bundle import. Re-adding
+/// replaces the instance, so no reset call is needed.
 void attachBlaster(World world) {
   final player = world.entitiesWith(require: const [Player]).firstOrNull;
   if (player == null) return;
   world.add(player, Blaster());
 }
 
-/// Fires the blaster from the frame's input edges. Edges come from events
-/// (consumed once, even across several fixed steps in a frame); the held
-/// level comes from the `ButtonInput` resource. Gated to
-/// `inState(GameStatus.playing)` at registration; the run-end cleanup
-/// lives in [stopBlasterOnRunEnd] on `OnExit`.
+/// Fires the blaster from this frame's input. Edges come from events,
+/// consumed once even across several fixed steps; the held level comes
+/// from `ButtonInput`.
 void shootProjectiles(World world) {
   final pressed = world.consumeAny<FirePressed>();
   final released = world.consumeAny<FireReleased>();
@@ -64,11 +60,8 @@ void resetProjectilesOnRunStart(World world) {
   world.singleOrNull<LockOnReticle>()?.reset();
 }
 
-/// Leaving the run aborts any in-flight charge, so the charge VFX cannot
-/// linger on the lose screen. The shoot system is gated to
-/// `inState(GameStatus.playing)`, so it stops draining fire events here —
-/// any held-button edges sent on the lose screen simply expire unread,
-/// never firing into it.
+/// Leaving the run aborts an in-flight charge, so its VFX cannot linger on
+/// the lose screen. Fire events sent there expire unread.
 void stopBlasterOnRunEnd(World world) {
   world.singleOrNull<Blaster>()?.reset();
 }

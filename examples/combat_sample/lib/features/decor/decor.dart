@@ -14,15 +14,10 @@ part 'systems/systems.dart';
 
 /// Ambient decoration: leaves turning down through the clearing.
 ///
-/// Each leaf is its own [Node] sharing one quad and a few materials; a
-/// translucent `InstancedMesh` buys nothing here and a per-leaf draw of
-/// one two-triangle quad is cheap. Their ambient drift stays independent
-/// from the state of the fight.
-///
-/// Tried as a `MeshParticleEmitterComponent` and reverted: web went from
-/// 100+ fps to 30, at every quality level. The per-frame `Matrix4` and
-/// `Quaternion` the repack builds per particle cost more than the draws
-/// instancing saves.
+/// One [Node] per leaf, sharing a quad. Tried as a
+/// `MeshParticleEmitterComponent` and reverted: web went 100+ fps to 30 at
+/// every quality level, because the per-particle `Matrix4` and
+/// `Quaternion` cost more than the draws instancing saves.
 void installDecor(GameBuilder game) {
   game
     ..world.insert(LeafField())

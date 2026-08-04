@@ -72,28 +72,33 @@ final class Commands {
     );
     if (_ops.isEmpty) return;
     _world.beginFlush();
+    // Counted before the command runs, and dropped in the `finally`: a
+    // command that throws is discarded with the ones before it, so a failed
+    // flush cannot replay work the world has already taken.
+    var consumed = 0;
     try {
       // Include commands added during this flush.
-      for (var i = 0; i < _ops.length; i++) {
-        final entity = _entities[i];
-        switch (_ops[i]) {
+      while (consumed < _ops.length) {
+        final index = consumed++;
+        final entity = _entities[index];
+        switch (_ops[index]) {
           case _opInsert:
-            _world.insertNowByType(_types[i], entity, _payloads[i]);
+            _world.insertNowByType(_types[index], entity, _payloads[index]);
           case _opRemove:
-            _world.removeNowByType(_types[i], entity);
+            _world.removeNowByType(_types[index], entity);
           case _opDespawn:
             // A second despawn queued for the same entity finds it already
             // gone; skipping keeps deferred despawn idempotent (see [despawn]).
             if (_world.isAlive(entity)) _world.despawnNow(entity);
           case _opBundle:
-            (_payloads[i] as SceneDashBundle).insertInto(_world, entity);
+            (_payloads[index] as SceneDashBundle).insertInto(_world, entity);
         }
       }
-      _ops.clear();
-      _entities.clear();
-      _payloads.clear();
-      _types.clear();
     } finally {
+      _ops.removeRange(0, consumed);
+      _entities.removeRange(0, consumed);
+      _payloads.removeRange(0, consumed);
+      _types.removeRange(0, consumed);
       _world.endFlush();
     }
   }

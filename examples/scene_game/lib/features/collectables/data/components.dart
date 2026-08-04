@@ -10,11 +10,9 @@ final class ShieldPickup implements Tag {
   const ShieldPickup();
 }
 
-/// The player's active shield — a condition on the player, not a resource
-/// (the state doctrine's test: there could be two, one per shielded
-/// entity). Pickup adds it with `removeAfter: shieldDuration`; re-pickup
-/// refreshes; deflecting re-adds with the reduced deadline; presence is
-/// the damage gate and `expiryOf<Shielded>` the HUD ring.
+/// The player's active shield. A component, not a resource, because there
+/// could be two. Added with `removeAfter:`; presence is the damage gate and
+/// `expiryOf<Shielded>` drives the HUD ring.
 final class Shielded {
   const Shielded();
 }

@@ -15,11 +15,9 @@ final Material _glowMaterial = PhysicallyBasedMaterial()
 final _pickupGeometry = SphereGeometry(radius: collectableRadius);
 final _glowGeometry = SphereGeometry(radius: collectableRadius * 1.5);
 
-/// A rolling shield pickup's spawn list: a dynamic Rapier sphere with a
-/// pulsing glow child. Its collider masks to `PhysicsLayers.platform`
-/// only, so it rolls on the ramp without rock, player, or projectile
-/// contacts. Scoped to the run: exiting `playing` despawns any pickup in
-/// flight.
+/// A rolling shield pickup: a dynamic sphere with a pulsing glow child.
+/// Masked to `PhysicsLayers.platform` only, so it rolls the ramp without
+/// touching rocks, the player, or shots.
 List<Object> shieldPickupBundle({required double x}) {
   final glow = _makeGlow();
   return [

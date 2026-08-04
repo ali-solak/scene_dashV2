@@ -1,8 +1,6 @@
-/// [GameControls] wraps the whole game surface (scene and hud) and
-/// writes into the input resources `main` inserted. It owns no gameplay:
-/// held state goes to `ButtonInput`/`AxisInput`, edges to `InputBuffer`,
-/// pointer deltas to `LookInput`, and one-shot intents are emitted as
-/// events. Systems read those; nothing reads this.
+/// Wraps the game surface and writes the input resources: held state to
+/// `ButtonInput`/`AxisInput`, edges to `InputBuffer`, pointer deltas to
+/// `LookInput`, one-shot intents as events. Systems read those.
 library;
 
 import 'package:flutter/foundation.dart'

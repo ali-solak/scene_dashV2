@@ -68,14 +68,10 @@ double _valueNoise(double x, double y) {
   return (a + (b - a) * sx) * (1 - sy) + (c + (d - c) * sx) * sy;
 }
 
-/// A wisp puff: a radial body whose rim is eroded by angular noise (wispy,
-/// irregular silhouette instead of a perfect disc) with a baked three-stop
-/// ramp — [coreColor] at the hot center, [bodyColor] over the body,
-/// [rimColor] at the edge. Straight (non-premultiplied) alpha: the sprite
-/// shader treats sampled textures as straight and premultiplies on output,
-/// so a premultiplied bake would darken every soft edge into a black rim.
-/// Per-instance colors multiply on top, so over a particle's life the
-/// whole ramp shifts together.
+/// A wisp puff: a radial body with a noise-eroded rim and a three-stop
+/// ramp from [coreColor] to [rimColor]. Straight alpha, not premultiplied:
+/// the sprite shader premultiplies on output, and baking it in turns every
+/// soft edge into a black rim.
 Uint8List _wispPixels(
   int size, {
   required (double, double, double) coreColor,

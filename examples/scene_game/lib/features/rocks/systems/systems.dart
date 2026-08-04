@@ -31,11 +31,9 @@ void spawnRocks(World world) {
   });
 }
 
-/// Feeds the shared flame-trail emitter: rewrites the spawn shape's rock
-/// positions from this frame's [Flaming] rocks and scales the spawn rate
-/// with their count (zero rocks ⇒ zero rate — outside runs the emitter
-/// just idles). The emitter node itself never moves; see [FlameTrailShape]
-/// for why that is the crux of the whole effect.
+/// Feeds the shared flame-trail emitter this frame's [Flaming] rock
+/// positions and scales the rate with their count. The emitter node never
+/// moves; [FlameTrailShape] explains why that matters.
 void updateFlameTrails(World world) {
   final trails = world.singleOrNull<FlameTrailEmitter>();
   if (trails == null) return; // Headless: no emitter entity.
@@ -58,11 +56,9 @@ void clearHitShell(World world, Entity entity, RockHitReaction reaction) {
   world.tryGet<RockVisuals>(entity)?.shell.setLocalUniform(0, 0, 0, 0);
 }
 
-/// Animates the per-rock flash shell while a hit reaction is active. The
-/// component's `removeAfter:` deadline is the whole lifecycle — the
-/// framework drops it on schedule and the observer zeroes the shell — so
-/// this system only reads the deadline back and shapes the pulse. Only the
-/// child shell is scaled — never the physics-driven root node.
+/// Pulses the flash shell while a hit reaction is live. The component's
+/// `removeAfter:` deadline is the whole lifecycle; this only shapes the
+/// pulse. Scales the child shell, never the physics-driven root.
 void updateRockHitReactions(World world) {
   world.query2<RockHitReaction, RockVisuals>().each((
     entity,

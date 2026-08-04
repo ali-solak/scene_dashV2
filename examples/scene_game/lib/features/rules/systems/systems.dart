@@ -139,15 +139,9 @@ void requestRestart(World world) {
   world.setState(GameStatus.playing);
 }
 
-/// Starts a run clean. Registered in `OnEnter(GameStatus.playing)`, so it
-/// runs once at startup and again on every restart.
-///
-/// Rules only resets what it owns — the run clock, the camera, and the
-/// game clock (undoing [slowMotionOnLoss]). Every feature resets its own
-/// state in its own `OnEnter(GameStatus.playing)` system, and run-scoped
-/// entities (rocks, projectiles, pickups) carry
-/// `DespawnOnExit(GameStatus.playing)` in their bundles, so the transition
-/// itself sweeps them.
+/// Starts a run clean. Resets only what rules owns: the run clock, the
+/// camera, and the game clock. Other features reset in their own
+/// `OnEnter(playing)`, and run-scoped entities carry `DespawnOnExit`.
 void startRun(World world) {
   world.resource<GameState>().reset();
   world.resource<CameraRig>().reset();

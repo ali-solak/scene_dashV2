@@ -16,13 +16,9 @@ final class BlasterShots {
   static const none = BlasterShots();
 }
 
-/// Tap-to-burst / hold-to-charge fire state machine — a component on the
-/// player (attached fresh by an `OnEnter(playing)` system; the HUD reads
-/// it back with `singleOrNull<Blaster>()`). The mode lives on a [Machine]
-/// — `phase.elapsed` is the charge clock and transition edges replace
-/// hand-rolled flags — while recovery stays a [GameTimer] (a genuine
-/// duration spanning the bursting and cooldown states) and burst pellets
-/// stay an emission queue.
+/// Tap-to-burst / hold-to-charge fire state, on the player. The mode is a
+/// [Machine] whose `phase.elapsed` doubles as the charge clock; recovery
+/// is a [GameTimer] because it spans two states.
 final class Blaster {
   Blaster() {
     // Start with recovery fully served, so the blaster is ready and the

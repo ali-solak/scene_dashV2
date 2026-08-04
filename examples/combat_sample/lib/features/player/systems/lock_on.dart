@@ -34,11 +34,9 @@ void installLockOn(GameBuilder game) {
     );
 }
 
-/// Lock-on. [LockPressed] toggles: acquire the nearest living enemy in
-/// [lockAcquireRange], or release. [LockCycled] steps to the next
-/// candidate by angle (wrapping). The lock drops itself on target death
-/// or a [lockBreakRange] break. [Fighter.stance] is derived here and read
-/// everywhere else.
+/// Lock-on. [LockPressed] acquires the nearest living enemy or releases;
+/// [LockCycled] steps by angle. The lock drops on target death or past
+/// [lockBreakRange]. [Fighter.stance] is derived here.
 void lockOnSystem(World world) {
   final pressed = world.consumeAny<LockPressed>();
   final cycled = world.consumeAny<LockCycled>();
@@ -159,11 +157,9 @@ double _angleTo(SceneTransform player, World world, Entity entity) {
   );
 }
 
-/// Updates enemy highlights.
-///
-/// The recursive node walk is the expensive part, so steady states (no
-/// highlight, the static lock gold) write once and are remembered in
-/// [EnemyHighlights]; only a telegraph's rising pulse rewrites per frame.
+/// Updates enemy highlights. The recursive node walk is the cost, so
+/// steady states are written once and remembered in [EnemyHighlights];
+/// only a telegraph's pulse rewrites per frame.
 void updateEnemyHighlights(World world) {
   final player = world.entitiesWith(require: const [Player]).firstOrNull;
   final locked = player == null ? null : world.tryGet<Target>(player)?.entity;

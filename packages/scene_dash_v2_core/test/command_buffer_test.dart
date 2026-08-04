@@ -6,6 +6,15 @@ final class Health {
   const Health(this.value);
 }
 
+/// Throws when flushed, standing in for any command that can fail mid-flush
+/// (an unregistered store, a bad cast, a throwing observer).
+final class _ThrowingBundle implements SceneDashBundle {
+  const _ThrowingBundle();
+
+  @override
+  void insertInto(World world, Entity entity) => throw StateError('boom');
+}
+
 final class _HealthBundle implements SceneDashBundle {
   final Health health;
   const _HealthBundle(this.health);
@@ -131,5 +140,25 @@ void main() {
       world.commands.insert<Health>(entity, const Health(1));
       expect(world.commands.apply, throwsA(isA<AssertionError>()));
     });
+    test('a failed flush drops what it applied instead of replaying it', () {
+      final world = World()
+        ..stores.register<Health>(ObjectComponentStore<Health>());
+      final commands = world.commands;
+      final ok = commands.spawn(const _HealthBundle(Health(1))).entity;
+      commands.spawn(const _ThrowingBundle());
+      final after = commands.spawn(const _HealthBundle(Health(2))).entity;
+
+      expect(commands.apply, throwsStateError);
+      // The thrower and everything before it are gone; the rest still waits.
+      expect(world.get<Health>(ok).value, 1);
+      expect(world.tryGet<Health>(after), isNull);
+
+      // The second flush finishes the queue without repeating the first
+      // insert, which is what a poisoned queue would have done.
+      commands.apply();
+      expect(world.get<Health>(after).value, 2);
+      expect(commands.isEmpty, isTrue);
+    });
+
   });
 }

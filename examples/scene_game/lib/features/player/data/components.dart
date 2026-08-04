@@ -33,18 +33,10 @@ final class CrabLegVisual {
   final int slot;
 }
 
-/// The player's crab legs: player-owned child nodes animated by the
-/// player's own gait system. The charge and shield feedback nodes live in
-/// [PlayerChargeVisuals] and [PlayerShieldVisuals] — one component per
-/// *writing feature*, so the access declarations stay honest and the
-/// conflict detector needs no ordering between features that share the
-/// player's body.
-///
-/// All three are built together ([buildPlayerVisuals]) as children of the
-/// player root, so the physics-driven sync never disturbs them. Hidden
-/// with a zero-scale transform rather than added/removed; materials are
-/// unique to the player so per-frame colour changes never leak into other
-/// entities.
+/// The player's legs. Charge and shield feedback live in their own
+/// components, one per writing feature, so access declarations stay honest.
+/// Hidden by zero scale rather than detaching; materials are per-player, so
+/// colour changes cannot leak.
 final class PlayerVisuals {
   PlayerVisuals._({required this.leftLegs, required this.rightLegs});
 

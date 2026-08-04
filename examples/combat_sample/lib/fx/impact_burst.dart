@@ -1,8 +1,5 @@
-/// The hit's visual punch: a spark burst at the point of contact.
-///
-/// A no-op headless (`hasResource<Scene>`), since emitter construction
-/// builds GPU-side geometry; the hit logic that calls it stays fully
-/// testable. The burst entity's [DespawnAfter] is the whole cleanup.
+/// A spark burst at the point of contact. `DespawnAfter` is the whole
+/// cleanup, and it is a no-op headless so the hit logic stays testable.
 library;
 
 import 'package:flutter_scene/scene.dart';

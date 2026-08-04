@@ -1,8 +1,7 @@
-/// The in-world lock-on reticle widget shown by a single `WidgetComponent`.
+/// The in-world lock-on reticle, shown by one `WidgetComponent`.
 ///
-/// Charge, lock, fire, impact and visibility are owned by ECS and pushed
-/// through [ReticleModel.update]; only the decorative ring rotation and idle
-/// pulse are owned by Flutter, derived from one elapsed visual clock.
+/// ECS owns charge, lock, fire, impact and visibility, pushed through
+/// [ReticleModel.update]. Flutter owns only the ring spin and idle pulse.
 library;
 
 import 'dart:math' as math;
@@ -109,15 +108,9 @@ class _ReticlePainter extends CustomPainter {
   static const Color _hot = Color(0xFFFFC83A); // locked amber
   static const Color _impact = Color(0xFFFF5A2C); // hit confirmation orange
 
-  /// flutter_scene 0.19 binds widget captures as GPU textures holding
-  /// *premultiplied* alpha, but the material shader treats sampled
-  /// textures as straight alpha and premultiplies again on output — every
-  /// partially transparent pixel darkens by an extra factor of its own
-  /// alpha, which turned the reticle blackish. Authoring sqrt(alpha)
-  /// cancels the double multiply, restoring the intended color at the
-  /// intended coverage. Remove once upstream honors the wrapped capture's
-  /// premultiplied encoding (0.18.x read captures back as straight RGBA
-  /// and needed no compensation).
+  /// Widget captures arrive premultiplied but the shader premultiplies
+  /// again, so transparent pixels darken. sqrt(alpha) cancels it. Remove
+  /// when upstream honours the wrapped capture's encoding.
   static Color _shade(Color color, double alpha) =>
       color.withValues(alpha: math.sqrt(alpha.clamp(0.0, 1.0)));
 

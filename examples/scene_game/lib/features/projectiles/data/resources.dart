@@ -1,10 +1,8 @@
 part of '../projectiles.dart';
 
-/// The single charge-plasma emitter — a component on a scene-scoped
-/// process entity spawned by `spawnChargePlasma` (startup, scene-gated);
-/// `updateChargeVisuals` attaches it to the current player and throttles
-/// its spawn rate with the charge. Headless worlds have no carrier;
-/// fields are non-null by construction.
+/// The one charge-plasma emitter, on a scene-scoped process entity.
+/// `updateChargeVisuals` parents it to the player and throttles its rate.
+/// Headless worlds have no carrier at all.
 final class ChargePlasmaEmitter {
   ChargePlasmaEmitter({required this.node, required this.spawner});
 
@@ -17,12 +15,9 @@ final class ChargePlasmaEmitter {
   final fx.Spawner spawner;
 }
 
-/// The single reused lock-on reticle — a component on a scene-scoped
-/// process entity: one [WidgetComponent] on one node, repositioned onto
-/// the current target each frame — never one node per rock. [model]
-/// bridges the ECS systems (writers) and [ReticleWidget] (painter).
-/// Headless worlds have no carrier; `singleOrNull` is the absence check
-/// and both fields are non-null by construction.
+/// The one reused lock-on reticle: a single node repositioned onto the
+/// current target each frame, never one per rock. [model] bridges the
+/// systems that write it and the widget that paints it.
 final class LockOnReticle {
   LockOnReticle({required this.node, required this.model});
 
@@ -104,10 +99,8 @@ final class LockOnReticle {
     hideNode();
   }
 
-  /// The component owns [model]; the widget does not dispose it. Fired by
-  /// the feature's `observe<LockOnReticle>` onRemove (any removal path)
-  /// and by the shutdown system — entities are not despawned at shutdown,
-  /// so the observer alone cannot cover it. The two paths cannot both
-  /// fire: a despawn empties the store before shutdown looks.
+  /// The component owns [model]; the widget does not dispose it. Both the
+  /// `observe` onRemove and the shutdown system call this, because
+  /// shutdown does not despawn entities. They cannot both fire.
   void dispose() => model.dispose();
 }

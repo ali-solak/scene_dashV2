@@ -10,13 +10,10 @@ import '../common/game_state.dart';
 import '../features/projectiles/projectiles.dart';
 import 'debug_panel.dart';
 
-/// Plain Flutter HUD over the scene, built from the widget layer:
-/// [GameStateBuilder] routes playing/lost on state transitions, and each
-/// section is its own [WorldBuilder] selecting exactly what it renders —
-/// quantised values with meaningful `==`, so a section rebuilds only when
-/// something visible changed. Everything reads *through the world*; no
-/// game object is constructed in `main` and threaded here. Touch intent
-/// flows back through callbacks — widgets never mutate components.
+/// Plain Flutter HUD over the scene. Each section is its own
+/// [WorldBuilder] selecting a quantised value, so it rebuilds only when
+/// something visible changed. Reads go through the world; intent flows
+/// back through callbacks, never by mutating components.
 class GameHud extends StatelessWidget {
   const GameHud({
     super.key,
@@ -293,10 +290,8 @@ class _HoldButtonState extends State<_HoldButton> {
   }
 }
 
-/// Hold-capable fire control. A press starts holding; release fires (burst
-/// or charged, decided by the ECS blaster); `onTapCancel` cancels rather
-/// than fires. The ring shows live charge while held and cooldown recovery
-/// while cooling, both from the quantised world selection — never the
+/// Hold-capable fire control: press holds, release fires, `onTapCancel`
+/// cancels. The ring reads the quantised world selection, never the
 /// mutable Blaster.
 class _FireControl extends StatefulWidget {
   const _FireControl({

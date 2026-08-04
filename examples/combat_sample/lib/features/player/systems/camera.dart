@@ -10,11 +10,9 @@ void installPlayerCamera(GameBuilder game) {
   );
 }
 
-/// Follows the fight (writes the [CameraRig] that `cameraBuilder` in
-/// `main` reads) with a souls orbit: a yaw/pitch sphere around the
-/// fighter's chest, position-smoothed. Free = pointer-owned yaw and
-/// pitch; locked = yaw steered toward the target, focus slid toward the
-/// pair's midpoint so both fighters stay framed.
+/// Writes the [CameraRig] the camera builder reads: a smoothed yaw/pitch
+/// orbit around the fighter's chest. Free is pointer-owned; locked steers
+/// yaw at the target and slides focus toward the pair.
 void updateCameraRig(World world) {
   final rig = world.resource<CameraRig>();
   final row = world

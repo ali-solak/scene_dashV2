@@ -39,11 +39,9 @@ const double _flashAlpha = 0.45;
   return (node: node, material: material);
 }
 
-/// Drives the bubble from what the barrier has left.
-///
-/// [remaining] is charges-left over charges-raised-with (1 → 0), [flash]
-/// is 1 on the frame of a block decaying to 0 across the flash window,
-/// and [hitFrom] is the world-space direction the last blow struck from.
+/// Drives the bubble. [remaining] runs 1 to 0 as charges are spent,
+/// [flash] is 1 on a block decaying over the flash window, [hitFrom] is
+/// where the last blow came from.
 void setBarrierCharge(
   Material material, {
   required double time,

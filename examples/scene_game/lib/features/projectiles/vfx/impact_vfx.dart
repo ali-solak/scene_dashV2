@@ -1,16 +1,8 @@
 part of '../projectiles.dart';
 
-/// Spawns one impact burst at [position]: a short-lived entity whose node
-/// carries an upstream particle emitter — crisp velocity-stretched sparks
-/// from a point with a white-hot first instant, deep blue for pellets,
-/// violet and bigger for charged hits ([strength] > 0). The entity's
-/// [DespawnAfter] is the whole cleanup: the built-in ticker despawns it
-/// after the last particle dies, and the node (emitter included) unmounts
-/// with it. Run-scoped like every other spawn.
-///
-/// A no-op headless (`hasResource<Scene>`): emitter construction builds
-/// GPU-side billboard geometry, and the burst is scene-side anyway — the
-/// hit logic that calls this stays fully testable.
+/// Spawns an impact burst at [position]; bigger and violet when [strength]
+/// is above zero. `DespawnAfter` is the whole cleanup. A no-op headless, so
+/// the hit logic that calls it stays testable.
 void spawnImpactBurst(World world, Vector3 position, {double strength = 0}) {
   if (!world.hasResource<Scene>()) return;
   final charged = strength > 0;

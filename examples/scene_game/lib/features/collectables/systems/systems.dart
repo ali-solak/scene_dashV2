@@ -14,11 +14,9 @@ void spawnShieldPickups(World world) {
   world.spawn(shieldPickupBundle(x: world.resource<PickupLanes>().nextLane()));
 }
 
-/// Collectables reset their own state when a run (re)starts. The player
-/// survives the transition, so any shield carried out of the last run is
-/// removed here — the observer pair hides the bubble like on any other
-/// removal path. In-flight deflection bursts are run-scoped entities swept
-/// by `DespawnOnExit`; nothing to reset.
+/// Resets what collectables own when a run starts. The player survives the
+/// transition, so a shield carried over is removed here; bursts are
+/// run-scoped and swept by `DespawnOnExit`.
 void resetCollectablesOnRunStart(World world) {
   world.query<Shielded>().each((entity, shielded) {
     world.remove<Shielded>(entity);

@@ -35,11 +35,8 @@ final _projectileGlowGeometry = SphereGeometry(radius: projectileRadius * 1.35);
 final _projectileTrailGeometry = CuboidGeometry(Vector3(0.07, 0.07, 0.78));
 
 /// A shot's spawn list: a fast trigger sphere with glow and trail children.
-///
-/// Scoped to the run: exiting `playing` despawns shots in flight. Max flight
-/// time is the `DespawnAfter` part and spatial exits are the
-/// `DespawnOutside` part (the world feature's shared sweep), so the update
-/// system only handles hits.
+/// `DespawnAfter` caps flight time and `DespawnOutside` handles leaving the
+/// arena, so the update system only deals with hits.
 List<Object> projectileBundle({required Vector3 position, double charge = 0}) {
   return [
     Projectile(charge: charge),

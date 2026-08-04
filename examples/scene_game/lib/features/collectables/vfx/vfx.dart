@@ -1,13 +1,8 @@
 part of '../collectables.dart';
 
-/// Spawns one shield-deflection burst at [position]: a short-lived entity
-/// whose node carries an upstream particle emitter — bright shards thrown
-/// up and out where the rock bounced off the bubble. The entity's
-/// [DespawnAfter] is the whole cleanup; run-scoped like every other spawn.
-///
-/// A no-op headless (`hasResource<Scene>`): emitter construction builds
-/// GPU-side billboard geometry, and the burst is scene-side anyway — the
-/// deflection logic that calls this stays fully testable.
+/// Spawns a shield-deflection burst at [position]. `DespawnAfter` is the
+/// whole cleanup. A no-op headless, so the deflection logic stays
+/// testable.
 void spawnDeflectBurst(World world, Vector3 position) {
   if (!world.hasResource<Scene>()) return;
   final system = fx.ParticleSystem(

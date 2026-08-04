@@ -45,11 +45,9 @@ void installHitResolution(GameBuilder game) {
     );
 }
 
-/// The strike windows are the machines' edges: the player's
-/// `justEntered(active)` and a barbarian's `justEntered(swing)` each check
-/// reach + frontal arc once, both directions, and emit [HitLanded] for
-/// every connect. One swing can never land twice; the edge is one tick
-/// wide.
+/// Strike windows are machine edges: `justEntered(active)` for the player
+/// and `justEntered(swing)` for a barbarian each check reach and arc once.
+/// The edge is one tick wide, so a swing cannot land twice.
 void resolveStrikes(World world) {
   final playerRow = world
       .query3<Fighter, PlayerMotion, SceneTransform>(require: const [Player])

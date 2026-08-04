@@ -22,11 +22,9 @@ part 'data/bundles.dart';
 part 'vfx/vfx.dart';
 part 'systems/systems.dart';
 
-/// Installs rolling shield pickups, the player's [Shielded] condition, and
-/// the shield feedback and deflection VFX. The shield has no resource and
-/// no tick system: pickup adds `Shielded` with `removeAfter:`, the
-/// framework expires it, and the HUD reads the deadline back through the
-/// world.
+/// Installs shield pickups, the [Shielded] condition, and its VFX. No
+/// resource and no tick system: pickup adds `Shielded` with `removeAfter:`
+/// and the framework expires it.
 void installCollectables(GameBuilder game) {
   game.world.insert(PickupLanes());
   game
@@ -41,14 +39,10 @@ void installCollectables(GameBuilder game) {
       resetCollectablesOnRunStart,
       writes: {Shielded},
     )
-    // fixedUpdate so the body is mounted before the native step. The
-    // spawn itself is deferred to the command boundary, so the declared
-    // writes are the feature-owned types, not the stores the bundle
-    // lands in later. The cadence lives at registration: `.and` short-
-    // circuits, so the period elapses only while playing (it carries any
-    // leftover progress across runs, unlike the old per-run spawner
-    // entity — acceptable for a pickup). Scene-gated like spawnPlayer:
-    // the bundle builds GPU meshes, so headless boots skip the system.
+    // fixedUpdate so the body mounts before the native step. Declared
+    // writes are the feature's own types, not the stores the deferred
+    // bundle lands in. `.and` short-circuits, so the period only elapses
+    // while playing. Scene-gated: the bundle builds GPU meshes.
     ..addSystem(
       Schedules.fixedUpdate,
       spawnShieldPickups,

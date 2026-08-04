@@ -17,11 +17,9 @@ const int _plasmaSaltA = 24;
 const int _plasmaSaltB = 25;
 const int _plasmaSaltC = 26;
 
-/// Spawns plasma motes on a spherical shell around the local origin, headed
-/// inward with a tangential twist — energy spiraling into the charge orb.
-/// The emitter node sits at the orb, so the convergence point is just the
-/// shape's origin, and the node-local simulation moving with the player is
-/// exactly what a carried charge effect wants.
+/// Spawns motes on a shell around the local origin, headed inward with a
+/// twist. The emitter node sits at the orb, so node-local simulation is
+/// what a carried effect wants.
 final class PlasmaShape extends fx.EmitterShape {
   const PlasmaShape();
 
@@ -60,11 +58,9 @@ final class PlasmaShape extends fx.EmitterShape {
   }
 }
 
-/// Startup (scene-gated): spawn the single charge-plasma emitter as a
-/// process entity. `updateChargeVisuals` attaches its node to the current
-/// player and throttles its rate with the charge; it idles at rate zero
-/// the rest of the time. Constructing it here keeps GPU-side billboard
-/// geometry out of headless boots, like the reticle.
+/// Spawns the one charge-plasma emitter. `updateChargeVisuals` parents it
+/// to the player and throttles its rate; it idles at zero otherwise.
+/// Scene-gated, so headless boots build no GPU geometry.
 void spawnChargePlasma(World world) {
   final spawner = fx.Spawner(rate: 0);
   final system = fx.ParticleSystem(

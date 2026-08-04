@@ -1,10 +1,7 @@
-/// Pure crab-leg pose and gait math — no scene or ECS dependencies, so the
-/// leg geometry that has regressed before is unit-testable in isolation.
+/// Pure leg pose and gait math, no scene or ECS, so it is unit-testable.
 ///
-/// Stance convention: a leg reads as planted when the *world* elbow sum
-/// `side.sign * (upperAngle + lowerAngle)` is negative (upper segment out and
-/// up, lower segment folding back down). A positive sum reads as "legs
-/// angled up" — the historical regression.
+/// A leg reads as planted when `side.sign * (upperAngle + lowerAngle)` is
+/// negative. Positive is legs-angled-up, the regression this guards.
 library;
 
 import 'dart:math' as math;

@@ -25,14 +25,10 @@ final Material _shellMaterial = PhysicallyBasedMaterial()
 final _rockGeometry = SphereGeometry(radius: rockRadius);
 final _shellGeometry = SphereGeometry(radius: rockRadius * 1.12);
 
-/// A dynamic rock's spawn list. Rapier owns its node transform, hence
-/// `PhysicsDriven`; each rock carries a hidden flash shell child for the
-/// hit flash, and every rock is scoped to the run.
-///
-/// The [Flaming] *velocities* are spawn-baked (physics initial state); the
-/// flaming *look* is not — the `observe<Flaming>` pair swaps the material,
-/// so the tag part below is the single source of the visual and runtime
-/// ignition is one `world.add` away.
+/// A dynamic rock's spawn list. Rapier owns the transform, hence
+/// `PhysicsDriven`. Flaming velocities are baked here; the flaming *look*
+/// comes from the `observe<Flaming>` pair, so igniting at runtime is one
+/// `world.add`.
 List<Object> rockBundle({required double x, bool flaming = false}) {
   final shell = _makeShell();
   return [
@@ -46,13 +42,9 @@ List<Object> rockBundle({required double x, bool flaming = false}) {
   ];
 }
 
-/// `observe<Flaming>` onAdd: give the rock the on-fire look. Fires when
-/// the spawn list applies (the [NodeRef] part lands earlier in the same
-/// flush) and on any runtime `world.add(rock, const Flaming())`.
-///
-/// The flame trail needs nothing here: the one shared world-space emitter
-/// (see [FlameTrailShape]) picks up the rock automatically because
-/// `updateFlameTrails` queries the [Flaming] tag each frame.
+/// `observe<Flaming>` onAdd: gives the rock its on-fire look, whether the
+/// tag arrives with the spawn list or later. The trail needs nothing here;
+/// `updateFlameTrails` queries the tag each frame.
 void igniteRock(World world, Entity entity, Flaming flaming) {
   final node = world.tryGet<NodeRef>(entity)?.node;
   if (node == null) return;

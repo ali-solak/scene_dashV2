@@ -37,11 +37,8 @@ void spawnClearing(World world) {
       )..mesh = Mesh(CuboidGeometry(Vector3.all(0.3)), dissolve),
     );
   }
-  // Same pre-warm for the shield bubble: the first raise draws a blended
-  // sphere, and compiling that pipeline mid-fight hitches the frame the
-  // barrier goes up. A tiny occluded sphere on the exact material the
-  // cast uses (authored `.fmat` or the unlit-blend fallback) compiles it
-  // from boot instead.
+  // Same pre-warm for the shield bubble, on the exact material the cast
+  // uses, so its pipeline compiles at boot rather than mid-fight.
   clearing.add(
     Node(
         name: 'barrier-warmup',

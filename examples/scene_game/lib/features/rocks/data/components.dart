@@ -19,11 +19,9 @@ final class RockVisuals {
   final Node shell;
 }
 
-/// Transient hit-reaction state, inserted when a projectile connects with
-/// `removeAfter: rockHitReactionDuration` — the framework drops it on
-/// schedule (firing the shell-clearing observer), and the flash system
-/// reads progress back through `expiryOf`. A second hit re-adds it, which
-/// replaces the instance and refreshes the deadline.
+/// Hit-reaction state, inserted with `removeAfter:` so the framework owns
+/// its lifetime and the flash system reads progress via `expiryOf`. A
+/// second hit refreshes the deadline.
 final class RockHitReaction {
   const RockHitReaction({required this.strength});
 
