@@ -10,12 +10,10 @@ Future<void> main() async {
 
   runApp(
     GameScope(
-      // provides the game to the subtree
       game: game,
       child: MaterialApp(
         home: Scaffold(
           body: SceneView(
-            // flutter_scene widget; not wrapped
             game.scene,
             cameraBuilder: _camera,
             onTick: game.onTick, // forwards frame ticks to the game
