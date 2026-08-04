@@ -4,8 +4,8 @@ description: >-
   keeping rendering, scenes, cameras, physics, and widgets native. Includes
   SceneGame boot, node binding, transform sync, physics hooks, and world-backed
   UI primitives over the scene_dash_v2_core engine.
-version: 0.0.1
-publish_to: none
+version: 0.1.0
+repository: https://github.com/ali-solak/scene_dashV2/tree/main/packages/scene_dash_v2
 resolution: workspace
 
 environment:

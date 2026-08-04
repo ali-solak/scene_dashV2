@@ -1,0 +1,49 @@
+name: Publish
+
+# Tag format is `<package>-v<version>`, e.g. scene_dash_v2_core-v0.1.0.
+on:
+  push:
+    tags:
+      - 'scene_dash_v2_core-v[0-9]+.[0-9]+.[0-9]+*'
+      - 'scene_dash_v2-v[0-9]+.[0-9]+.[0-9]+*'
+      - 'scene_dash_inspector-v[0-9]+.[0-9]+.[0-9]+*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # pub.dev exchanges this for a short-lived token; no secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: master
+
+      - name: Resolve the package from the tag
+        id: pkg
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          echo "name=${tag%-v*}" >> "$GITHUB_OUTPUT"
+          echo "version=${tag##*-v}" >> "$GITHUB_OUTPUT"
+          echo "dir=packages/${tag%-v*}" >> "$GITHUB_OUTPUT"
+
+      - run: flutter pub get
+
+      - name: Tag version must match the pubspec
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        run: |
+          declared=$(grep -m1 '^version:' pubspec.yaml | cut -d' ' -f2)
+          if [ "$declared" != "${{ steps.pkg.outputs.version }}" ]; then
+            echo "tag says ${{ steps.pkg.outputs.version }}, pubspec says $declared"
+            exit 1
+          fi
+
+      - run: dart analyze
+
+      - name: Test
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        run: |
+          if grep -q 'flutter_test' pubspec.yaml; then flutter test; else dart test; fi
+
+      - run: flutter pub publish --force
+        working-directory: ${{ steps.pkg.outputs.dir }}
