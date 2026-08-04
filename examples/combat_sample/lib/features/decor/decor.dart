@@ -12,12 +12,8 @@ import 'vfx/leaf_texture.dart';
 part 'data/resources.dart';
 part 'systems/systems.dart';
 
-/// Ambient decoration: leaves turning down through the clearing.
-///
-/// One [Node] per leaf, sharing a quad. Tried as a
-/// `MeshParticleEmitterComponent` and reverted: web went 100+ fps to 30 at
-/// every quality level, because the per-particle `Matrix4` and
-/// `Quaternion` cost more than the draws instancing saves.
+/// Ambient decoration: leaves turning down through the clearing, one
+/// [Node] each.
 void installDecor(GameBuilder game) {
   game
     ..world.insert(LeafField())

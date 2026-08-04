@@ -108,9 +108,7 @@ class _ReticlePainter extends CustomPainter {
   static const Color _hot = Color(0xFFFFC83A); // locked amber
   static const Color _impact = Color(0xFFFF5A2C); // hit confirmation orange
 
-  /// Widget captures arrive premultiplied but the shader premultiplies
-  /// again, so transparent pixels darken. sqrt(alpha) cancels it. Remove
-  /// when upstream honours the wrapped capture's encoding.
+  /// Cancels the shader's double premultiply.
   static Color _shade(Color color, double alpha) =>
       color.withValues(alpha: math.sqrt(alpha.clamp(0.0, 1.0)));
 
