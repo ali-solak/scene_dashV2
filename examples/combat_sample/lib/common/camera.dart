@@ -1,8 +1,5 @@
-/// The combat camera driven by ECS-updated [CameraRig] state.
-///
-/// Built once and reused: [PerspectiveCamera] holds the rig's
-/// position/target vectors by reference, and the rig mutates them in place
-/// each frame (see the player feature's `updateCameraRig`).
+/// The combat camera. Built once: [PerspectiveCamera] holds the rig's
+/// vectors by reference and the rig mutates them in place.
 library;
 
 import 'package:flutter_scene/scene.dart';

@@ -1,7 +1,5 @@
-/// [GameControls] owns every input path into the world and nothing else.
-/// Keyboard and touch both feed the same `ButtonInput`, and button *edges*
-/// go out as events. It owns no gameplay: systems read the resources this
-/// writes, and nothing reads this back.
+/// Owns every input path into the world and nothing else. Keyboard and
+/// touch feed the same `ButtonInput`; edges go out as events.
 library;
 
 import 'package:flutter/material.dart';
@@ -105,10 +103,8 @@ class _GameControlsState extends State<GameControls> {
     widget.game.emit(const RestartRequested());
   }
 
-  /// Resolves the fire button across its two sources (space + touch), then
-  /// forwards the resulting *edge* as an event. The union means releasing
-  /// one source while the other is held is not a release — `ButtonInput`
-  /// reports [ButtonEdge.none] and nothing is dispatched.
+  /// Resolves fire across space and touch, then forwards the edge as an
+  /// event. Releasing one source while the other is held is not a release.
   void _syncFire({bool canceled = false}) {
     final held = _spaceFire || _touchFire;
     final edge = widget.input.setPressed(GameAction.fire, held);

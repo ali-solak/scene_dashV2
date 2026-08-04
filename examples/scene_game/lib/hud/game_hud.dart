@@ -10,10 +10,8 @@ import '../common/game_state.dart';
 import '../features/projectiles/projectiles.dart';
 import 'debug_panel.dart';
 
-/// Plain Flutter HUD over the scene. Each section is its own
-/// [WorldBuilder] selecting a quantised value, so it rebuilds only when
-/// something visible changed. Reads go through the world; intent flows
-/// back through callbacks, never by mutating components.
+/// Plain Flutter HUD over the scene. Each section is a [WorldBuilder] on a
+/// quantised value; intent flows back through callbacks.
 class GameHud extends StatelessWidget {
   const GameHud({
     super.key,
@@ -199,10 +197,8 @@ class _Controls extends StatelessWidget {
           ),
           Align(
             alignment: Alignment.bottomRight,
-            // The ring and cooldown meter read the blaster component
-            // straight off the world (absent until the first run attaches
-            // it — shown ready); the fire button's pressed visuals stay
-            // widget state.
+            // Ring and cooldown read the blaster off the world; the
+            // button's pressed visuals stay widget state.
             child: WorldBuilder<(double, double, bool, bool)>(
               select: (world) {
                 final blaster = world.singleOrNull<Blaster>();

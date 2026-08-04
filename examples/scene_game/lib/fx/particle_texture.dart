@@ -6,10 +6,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_scene/scene.dart';
 
-/// A soft radial dot: bright premultiplied core fading smoothly to a
-/// transparent edge. Premultiplied (rgb already scaled by the falloff) so it
-/// reads correctly under both additive and alpha compositing. Slightly
-/// hot-cored so additive stacks bloom pleasantly.
+/// A soft radial dot, premultiplied so it reads under both additive and
+/// alpha compositing.
 Uint8List _softDotPixels(int size) {
   final pixels = Uint8List(size * size * 4);
   final center = (size - 1) / 2.0;
@@ -68,10 +66,8 @@ double _valueNoise(double x, double y) {
   return (a + (b - a) * sx) * (1 - sy) + (c + (d - c) * sx) * sy;
 }
 
-/// A wisp puff: a radial body with a noise-eroded rim and a three-stop
-/// ramp from [coreColor] to [rimColor]. Straight alpha, not premultiplied:
-/// the sprite shader premultiplies on output, and baking it in turns every
-/// soft edge into a black rim.
+/// A wisp puff: a noise-eroded rim and a three-stop ramp from [coreColor]
+/// to [rimColor]. Straight alpha, not premultiplied.
 Uint8List _wispPixels(
   int size, {
   required (double, double, double) coreColor,
@@ -131,10 +127,8 @@ Texture2D fireWispTexture() => _fireWisp ??= Texture2D.fromPixels(
   128,
 );
 
-/// The flame-puff sprite material. Source-over, not additive: this game's
-/// sky is bright, and additive fire on a bright background can only push
-/// toward white — it desaturates into pale cream. Alpha compositing lets
-/// the flame occlude the sky and keep its deep orange.
+/// The flame-puff sprite material. Source-over, not additive: additive
+/// fire over this game's bright sky washes out to cream.
 SpriteMaterial fireSprite() =>
     SpriteMaterial(colorTexture: fireWispTexture())
       ..blendMode = SpriteBlendMode.alpha;

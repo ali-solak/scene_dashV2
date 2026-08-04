@@ -5,11 +5,8 @@ part of '../rocks.dart';
 const int _rockPickSalt = 29;
 
 /// Spawns each ember on one of the current flaming rocks, in world space.
-///
-/// Particles simulate in the emitter node's local space, so the shared node
-/// stays at the scene root at identity. Parent it to a rock and every live
-/// ember rides along with it, which leaves no trail. Rock positions enter
-/// at spawn time only.
+/// The shared emitter node stays at the scene root; rock positions enter at
+/// spawn time only.
 final class FlameTrailShape extends fx.EmitterShape {
   final fx.ConeEmitterShape _cone = fx.ConeEmitterShape(
     angle: 0.5,

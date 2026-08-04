@@ -13,11 +13,8 @@ void installBrawlerMovement(GameBuilder game) {
   );
 }
 
-/// Barbarian locomotion, one fixed step at a time: approach closes in,
-/// circle orbits at a breathing radius, everything from the telegraph on
-/// is rooted (facing frozen from the swing so rolls beat committed arcs).
-/// Death stops this controller; [launchPhysicsCorpse] hands the body to
-/// Rapier after the hit reaction.
+/// Barbarian locomotion: approach closes in, circle orbits, everything
+/// from the telegraph on is rooted. Death stops this controller.
 void moveBrawlers(World world) {
   final playerRow = world
       .query<SceneTransform>(require: const [Player])
