@@ -1,9 +1,6 @@
 name: scene_dash_v2_core
-description: >-
-  Scene-Dash v2 headless core: organize, coordinate, and test gameplay code
-  with an ECS runtime built on sparse sets, generational entities, events,
-  clocks, command buffers, lifecycle hooks, GameState, and TestGame.
-version: 0.1.0
+description: "Headless ECS runtime for gameplay code: sparse-set stores, generational entities, events, clocks, command buffers, and a TestGame harness."
+version: 0.1.1
 repository: https://github.com/ali-solak/scene_dashV2/tree/main/packages/scene_dash_v2_core
 resolution: workspace
 

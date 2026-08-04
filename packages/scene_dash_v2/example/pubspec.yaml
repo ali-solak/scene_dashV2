@@ -1,0 +1,19 @@
+name: scene_dash_v2_example
+description: "Minimal Scene-Dash v2 game: a cube orbiting under an ECS system."
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+  flutter: ">=3.16.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  scene_dash_v2:
+    path: ../
+  flutter_scene: ^0.20.0
+  vector_math: ^2.1.4
+
+dev_dependencies:
+  flutter_lints: ^6.0.0

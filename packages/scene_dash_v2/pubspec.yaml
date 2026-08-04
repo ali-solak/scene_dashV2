@@ -1,10 +1,6 @@
 name: scene_dash_v2
-description: >-
-  Scene-Dash v2 for flutter_scene: organize and test gameplay code while
-  keeping rendering, scenes, cameras, physics, and widgets native. Includes
-  SceneGame boot, node binding, transform sync, physics hooks, and world-backed
-  UI primitives over the scene_dash_v2_core engine.
-version: 0.1.0
+description: "ECS and feature layer for flutter_scene: SceneGame boot, node binding, transform sync, physics hooks, and world-reactive widgets."
+version: 0.1.1
 repository: https://github.com/ali-solak/scene_dashV2/tree/main/packages/scene_dash_v2
 resolution: workspace
 
@@ -17,7 +13,7 @@ dependencies:
     sdk: flutter
   scene_dash_v2_core: ^0.1.0
   flutter_scene: ^0.20.0
-  vector_math: ^2.4.1
+  vector_math: ^2.1.4
 
 dev_dependencies:
   flutter_test:

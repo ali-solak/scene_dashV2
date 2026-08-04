@@ -1,6 +1,6 @@
 name: Publish
 
-# Tag format is `<package>-v<version>`, e.g. scene_dash_v2_core-v0.1.0.
+
 on:
   push:
     tags:
@@ -12,7 +12,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write # pub.dev exchanges this for a short-lived token; no secret
+      id-token: write 
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -45,5 +45,16 @@ jobs:
         run: |
           if grep -q 'flutter_test' pubspec.yaml; then flutter test; else dart test; fi
 
-      - run: flutter pub publish --force
+      - name: Is live on pub.dev
+        id: live
+        run: |
+          url="https://pub.dev/api/packages/${{ steps.pkg.outputs.name }}/versions/${{ steps.pkg.outputs.version }}"
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$url")
+          echo "published=$([ "$code" = 200 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - if: steps.live.outputs.published == 'true'
+        run: echo "::notice::${GITHUB_REF_NAME} is already on pub.dev; nothing to publish."
+
+      - if: steps.live.outputs.published != 'true'
+        run: flutter pub publish --force
         working-directory: ${{ steps.pkg.outputs.dir }}

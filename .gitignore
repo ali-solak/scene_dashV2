@@ -69,3 +69,6 @@ app.*.map.json
 *.tar
 *.tar.gz
 *.tgz
+
+# example app resolves independently of the workspace
+packages/scene_dash_v2/example/pubspec.lock
