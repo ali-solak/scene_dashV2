@@ -1,6 +1,5 @@
 part of '../player.dart';
 
-/// Spawn, per-run reset, and the intent flush on leaving the fight.
 void installPlayerLifecycle(GameBuilder game) {
   game
     ..addSystem(
@@ -30,12 +29,10 @@ void installPlayerLifecycle(GameBuilder game) {
     );
 }
 
-/// Spawns the player data.
 void spawnPlayer(World world) {
   world.spawn(playerBundle());
 }
 
-/// Resets the player for a new run.
 void resetPlayerRun(World world) {
   final row = world
       .query3<Fighter, PlayerMotion, Health>(require: const [Player])
@@ -50,9 +47,9 @@ void resetPlayerRun(World world) {
     ..sinceHurt = double.infinity;
   motion
     ..facing = math.pi
-    ..velocity.setZero();
-  motion.rollDirection.setValues(0, 0, 1);
-  motion.moveIntent.setZero();
+    ..velocity.setZero()
+    ..rollDirection.setValues(0, 0, 1)
+    ..moveIntent.setZero();
   world.remove<Target>(player);
   world.tryGet<Knockback>(player)?.clear();
   world
@@ -62,7 +59,6 @@ void resetPlayerRun(World world) {
   world.tryGet<PlayerAnimator>(player)?.reset();
 }
 
-/// Clears buffered combat actions when leaving a fight.
 void clearCombatIntents(World world) {
   world.buffer<CombatAction>().clear();
 }

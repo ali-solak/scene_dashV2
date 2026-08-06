@@ -1,10 +1,7 @@
 part of '../skills.dart';
 
-/// Casting: the upgrade purchases, the cast dispatch, the deferred wind
-/// blast, and the per-run reset.
 void installSkillCasting(GameBuilder game) {
   game
-    // The leap is consumed by the next fixed step.
     ..configureEvent<CastLeap>(retainedUpdates: null)
     ..registerComponent<PendingWindBlast>()
     ..world.insert(SkillBook())
@@ -33,9 +30,6 @@ void installSkillCasting(GameBuilder game) {
     );
 }
 
-/// Serves the menu's purchases (frameStart, so it works while the menu
-/// has the world paused). A buy that cannot be afforded is simply
-/// ignored; the menu greys those out, this is the authority.
 void buyUpgrades(World world) {
   final book = world.resource<SkillBook>();
   final score = world.resource<Score>();
@@ -51,7 +45,6 @@ void buyUpgrades(World world) {
     if (book.vitalityLevel >= maxVitalityLevel) continue;
     if (!score.spend(vitalityCost(book.vitalityLevel))) continue;
     book.vitalityLevel++;
-    // Apply vitality immediately.
     world.query<Health>(require: const [Player]).each((entity, health) {
       health.max += vitalityHealthPerLevel;
       health.current += vitalityHealthPerLevel;
@@ -59,9 +52,6 @@ void buyUpgrades(World world) {
   }
 }
 
-/// Runs the cooldowns down and serves every [SkillCast] the player can
-/// actually pay for. Casting is instant: these are panic buttons and
-/// openers, not another attack machine to time.
 void castSkills(World world) {
   final book = world.resource<SkillBook>()..tick(world.dt);
   final row = world
@@ -73,12 +63,10 @@ void castSkills(World world) {
   for (final cast in world.events<SkillCast>()) {
     if (!book.isReady(cast.skill)) continue;
     book.trigger(cast.skill);
-    // Scale by skill level.
     final power = book.powerOf(cast.skill);
     switch (cast.skill) {
       case Skill.fireGush:
         _castFireGush(world, motion, transform, power);
-        // Fire gush recoil.
         world.tryGet<PlayerAnimator>(player)?.playBackwardDash();
         world
             .tryGet<Knockback>(player)
@@ -92,19 +80,16 @@ void castSkills(World world) {
       case Skill.lavaPit:
         _openLavaPit(world, motion, transform, power);
       case Skill.windBlast:
-        // Delay the gust until landing.
+        // Fire after landing.
         world.add(player, PendingWindBlast(power));
         world.emit(const CastLeap());
 
       case Skill.shield:
-        _raiseBarrier(world, player, book.levelOf(cast.skill));
+        world.add(player, Barrier(shieldChargesFor(book.levelOf(cast.skill))));
     }
   }
 }
 
-/// Unleashes a wind gust once its leap has landed: fires the
-/// [PendingWindBlast] `castSkills` armed at [windCastSeconds] (the leap's
-/// flight time), from wherever the fighter came down.
 void firePendingWindBlast(World world) {
   final row = world
       .query2<PendingWindBlast, SceneTransform>(require: const [Player])
@@ -118,14 +103,6 @@ void firePendingWindBlast(World world) {
   }
 }
 
-/// Raises or refreshes the barrier.
-void _raiseBarrier(World world, Entity player, int level) {
-  world.add(player, Barrier(shieldChargesFor(level)));
-}
-
-/// A cone of flame: everything inside takes the hit and catches fire.
-/// The shove is small; this is not a knockback tool, and stacking it
-/// with the burn's ticks would drag the pack out of your reach.
 void _castFireGush(
   World world,
   PlayerMotion motion,
@@ -152,11 +129,9 @@ void _castFireGush(
         enemy,
         fireGushDamage * power,
         knockback: awayFrom(origin, at, fireGushKnockback),
-        // A gush is not a hammer: it burns, it does not interrupt.
         stagger: false,
       ),
     );
-    // Refresh the burn.
     world.add(enemy, Burning(burnTickDamage * power), removeAfter: burnSeconds);
   });
   final scorchX =
@@ -177,9 +152,6 @@ void _castFireGush(
   );
 }
 
-/// Opens a pool of lava on the ground ahead of the player. The pit is its
-/// own entity with its own lifetime; the cast is over the instant it
-/// lands, the pit is not.
 void _openLavaPit(
   World world,
   PlayerMotion motion,
@@ -188,20 +160,15 @@ void _openLavaPit(
 ) {
   final x = origin.translation.x + math.sin(motion.facing) * lavaPitDistance;
   final z = origin.translation.z + math.cos(motion.facing) * lavaPitDistance;
-  // Spawn the opening effect.
   spawnLavaEruption(world, Vector3(x, 0, z));
   world.resource<GrassBurns>().scorch(x, z, lavaPitRadius * 1.15);
   world.spawn([
     LavaPit(lavaTickDamage * power),
     SceneTransform(x, 0, z),
-    // Keep the pit through pauses.
     DespawnAfter(lavaPitSeconds),
   ]);
 }
 
-/// The panic button: everything in the ring goes up and out. Damage is an
-/// afterthought; the launch is the skill, and it rides the same ballistic
-/// knockback a giant's blow puts on the player.
 void _castWindBlast(World world, SceneTransform origin, double power) {
   world.query2<Health, SceneTransform>(require: const [Enemy]).each((
     enemy,
@@ -210,7 +177,6 @@ void _castWindBlast(World world, SceneTransform origin, double power) {
   ) {
     if (!health.alive) return;
     if (planarDistance(origin, at) > windBlastRadius) return;
-    // Scale launch strength.
     final push = awayFrom(origin, at, windBlastSpeed * power)
       ..y = windBlastLift * power;
     world.emit(HitLanded(enemy, windBlastDamage * power, knockback: push));
@@ -218,12 +184,9 @@ void _castWindBlast(World world, SceneTransform origin, double power) {
   spawnWindBlast(world, origin.translation.clone());
 }
 
-/// `OnEnter(fighting)` behind [freshRun]: a new run starts with nothing
-/// bought and nothing on the ground.
 void resetSkills(World world) {
   world.resource<SkillBook>().reset();
   world.entitiesWith(require: const [LavaPit]).each(world.despawn);
-  // The barrier rides the player, who survives the restart; nothing else
-  // would take it back off.
+  // The player survives a restart.
   world.entitiesWith(require: const [Player]).each(world.remove<Barrier>);
 }

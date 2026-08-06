@@ -1,8 +1,5 @@
 part of '../enemies.dart';
 
-/// The barbarian's animation mapper: brawl state + velocity in, clip
-/// weights/times out. Animations follow gameplay; nothing here feeds
-/// combat.
 enum BrawlerLoco { idle, walk, run, strafeLeft, strafeRight }
 
 enum BrawlerShot { rise, taunt, attack, hit, death, fall, dodge, transform }
@@ -15,13 +12,11 @@ final class EnemyAnimator {
 
   BrawlerShot? active;
 
-  /// Last chop the mapper replayed for; see the combo note in [update].
   int _lastChop = -1;
   bool frozen = false;
 
   void update(Brawler brawler, double dt, {bool transforming = false}) {
     if (frozen) return;
-    // The growth spurt overrides everything: the giant is busy swelling.
     if (transforming) {
       if (active != BrawlerShot.transform) _enterShot(BrawlerShot.transform);
       _playShot(dt);
@@ -41,42 +36,31 @@ final class EnemyAnimator {
     _playLocomotion(brawler, phase, dt);
   }
 
-  /// The pose the brawl state asks for, or null to fall through to
-  /// locomotion.
   BrawlerShot? _pickShot(Brawler brawler, BrawlPhase phase) {
-    // Airborne (a wind blast) outranks the phase; death outranks both. The
-    // stagger is far shorter than the arc, so without this a thrown
-    // barbarian would jog its walk cycle across the sky.
+    // Airborne poses override every living phase.
     if (brawler.downed && phase != BrawlPhase.dying) {
       return brawler.airborne ? BrawlerShot.fall : BrawlerShot.death;
     }
     return switch (phase) {
       BrawlPhase.rising => BrawlerShot.rise,
       BrawlPhase.taunting => BrawlerShot.taunt,
-      // One clip spans the whole arc: the slow windup IS the telegraph,
-      // the contact rides the swing window, the tail is the recover.
+      // One clip spans windup, swing, and recovery.
       BrawlPhase.telegraph ||
       BrawlPhase.swing ||
       BrawlPhase.recover => BrawlerShot.attack,
       BrawlPhase.dodging => BrawlerShot.dodge,
       BrawlPhase.staggered || BrawlPhase.dying => BrawlerShot.hit,
-      // The fire/lava flinch: a non-staggering tick still jolts the body,
-      // but only while walking or circling; a barbarian mid-swing swings
-      // through the burn, exactly as the player does (poise).
       BrawlPhase.approach || BrawlPhase.circle =>
         brawler.sinceHurt < brawlerFlinchSeconds ? BrawlerShot.hit : null,
     };
   }
 
-  /// The hit pose serves both the stagger and, while dying, the corpse's
-  /// shorter hit window.
   void _rateHitClip(BrawlPhase phase) {
     shots[BrawlerShot.hit]!.playbackTimeScale =
         hitBClipSeconds /
         (phase == BrawlPhase.dying ? corpseHitSeconds : brawlStaggerSeconds);
   }
 
-  /// Switches to [desired].
   void _enterShot(BrawlerShot? desired) {
     active = desired;
     final clip = desired == null ? null : shots[desired];
@@ -96,7 +80,6 @@ final class EnemyAnimator {
     }
   }
 
-  /// Replays the attack clip for each chop.
   void _replayOnNewChop(Brawler brawler) {
     if (active != BrawlerShot.attack || _lastChop == brawler.chopIndex) return;
     _lastChop = brawler.chopIndex;
@@ -108,7 +91,6 @@ final class EnemyAnimator {
       ..replay();
   }
 
-  /// Weights the active one-shot in and everything else out.
   void _playShot(double dt) {
     final fade = dt / brawlerOneShotFadeSeconds;
     final activeClip = shots[active]!;
@@ -125,16 +107,13 @@ final class EnemyAnimator {
     _fillIdle();
   }
 
-  /// The idle/walk/run/strafe blend, each clip's playback tied to ground
-  /// speed so strides match the distance covered.
   void _playLocomotion(Brawler brawler, BrawlPhase phase, double dt) {
     final speed = brawler.velocity.length;
     final BrawlerLoco target;
     if (speed < 0.05) {
       target = BrawlerLoco.idle;
     } else if (phase == BrawlPhase.circle && !brawler.hasToken) {
-      // The orbit tangent for circleDirection +1 is (-towardZ, towardX):
-      // minus the facing's right vector, so it strafes left.
+      // Positive orbit direction strafes left.
       target = brawler.circleDirection >= 0
           ? BrawlerLoco.strafeLeft
           : BrawlerLoco.strafeRight;
@@ -167,8 +146,7 @@ final class EnemyAnimator {
     _fillIdle();
   }
 
-  /// Idle carries the residual so total clip weight never dips below 1;
-  /// a mid-crossfade dip would flash the bind pose.
+  // Keep total animation weight at one.
   void _fillIdle() {
     var sum = 0.0;
     for (final clip in shots.values) {
@@ -182,7 +160,6 @@ final class EnemyAnimator {
     if (idle.weight < floor) idle.weight = floor;
   }
 
-  /// Restart resurrection: back to a clean idle.
   void reset() {
     frozen = false;
     active = null;
@@ -198,7 +175,7 @@ final class EnemyAnimator {
     }
   }
 
-  /// Holds the final hit pose while Rapier tumbles the whole body.
+  /// Freezes the corpse pose during tumble.
   void freeze() {
     frozen = true;
     for (final clip in shots.values) {
@@ -221,7 +198,6 @@ final class EnemyAnimator {
   }
 }
 
-/// Instantiates the barbarian's clips against its cloned [model].
 EnemyAnimator buildEnemyAnimator(CharacterAssets assets, Node model) {
   AnimationClip loop(String name) =>
       model.createAnimationClip(assets.clip(name))
@@ -243,7 +219,6 @@ EnemyAnimator buildEnemyAnimator(CharacterAssets assets, Node model) {
   };
   const attackWindow = telegraphSeconds + swingSeconds + recoverSeconds;
   final shots = <BrawlerShot, AnimationClip>{
-    // Climbs out of the ground on spawn; taunts between orbits mid-fight.
     BrawlerShot.rise: shot(
       'Skeletons_Awaken_Floor',
       awakenClipSeconds,
@@ -256,14 +231,9 @@ EnemyAnimator buildEnemyAnimator(CharacterAssets assets, Node model) {
       attackWindow,
     ),
     BrawlerShot.hit: shot('Hit_B', hitBClipSeconds, brawlStaggerSeconds),
-
     BrawlerShot.death: shot('Death_B', deathBClipSeconds, deathBClipSeconds),
-
     BrawlerShot.fall: loop('Jump_Idle'),
-    // Backward dodge clip.
     BrawlerShot.dodge: shot('Dodge_Backward', dodgeClipSeconds, dodgeSeconds),
-
-    // The giant's growth spurt, spanning exactly the transform window.
     BrawlerShot.transform: shot(
       'EXPERIMENTAL_Medium_Transform',
       transformClipSeconds,

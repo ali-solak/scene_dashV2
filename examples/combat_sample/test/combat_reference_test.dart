@@ -1,6 +1,7 @@
 /// Combat state tests.
 library;
 
+import 'package:combat_sample/common/actors.dart' show HitLanded;
 import 'package:combat_sample/features/player/combat/combat.dart';
 import 'package:combat_sample/features/rules/rules.dart' show applyDamage;
 import 'package:flutter_test/flutter_test.dart';

@@ -1,8 +1,6 @@
 part of '../player.dart';
 
-/// Target acquisition and the highlights that show it. Must install
-/// after [installPlayerActions]: the exemption list below is by function
-/// reference, so those systems have to exist first.
+/// Installs targeting after player actions because exemptions use references.
 void installLockOn(GameBuilder game) {
   game
     ..world.insert(EnemyHighlights())
@@ -20,8 +18,6 @@ void installLockOn(GameBuilder game) {
       },
       writes: const {Fighter},
       after: const [fighterDriver],
-      // These systems use separate Fighter fields: this one writes the
-      // stance, they read the attack phase.
       independentOf: const [spawnPlayerFx, updateBladeTrail, announceWindup],
       runIf: inState(GameStatus.fighting),
     )
@@ -34,9 +30,6 @@ void installLockOn(GameBuilder game) {
     );
 }
 
-/// Lock-on. [LockPressed] acquires the nearest living enemy or releases;
-/// [LockCycled] steps by angle. The lock drops on target death or past
-/// [lockBreakRange]. [Fighter.stance] is derived here.
 void lockOnSystem(World world) {
   final pressed = world.consumeAny<LockPressed>();
   final cycled = world.consumeAny<LockCycled>();
@@ -47,16 +40,13 @@ void lockOnSystem(World world) {
   final (player, fighter, _, transform) = row;
   final current = world.tryGet<Target>(player)?.entity;
 
-  var held =
-      current != null &&
-          _isValidTarget(world, transform, current, lockBreakRange)
-      ? current
-      : null;
+  var held = current;
+  if (held != null && !_isValidTarget(world, transform, held, lockBreakRange)) {
+    held = null;
+  }
 
   if (pressed) {
-    held = held != null
-        ? null // toggle off
-        : _acquireTarget(world, transform);
+    held = held == null ? _acquireTarget(world, transform) : null;
   } else if (cycled && held != null) {
     held = _nextTarget(world, transform, held);
   }
@@ -64,12 +54,11 @@ void lockOnSystem(World world) {
   if (held == null) {
     if (current != null) world.remove<Target>(player);
   } else if (held != current) {
-    world.add(player, Target(held)); // re-add replaces
+    world.add(player, Target(held));
   }
   fighter.stance = held != null ? Stance.locked : Stance.free;
 }
 
-/// Finds the nearest lock target.
 Entity? _acquireTarget(World world, SceneTransform player) {
   final cameraYaw = world.resource<CameraRig>().yaw;
   _Candidate? bestInView;
@@ -81,35 +70,27 @@ Entity? _acquireTarget(World world, SceneTransform player) {
       if (bestInView == null || candidate.distance < bestInView.distance) {
         bestInView = candidate;
       }
-    } else if (bestBehind == null || candidate.distance < bestBehind.distance) {
+      continue;
+    }
+    if (bestBehind == null || candidate.distance < bestBehind.distance) {
       bestBehind = candidate;
     }
   }
   return (bestInView ?? bestBehind)?.entity;
 }
 
-/// Cycle (Q): the next candidate clockwise by angle, wrapping; [current]
-/// keeps the lock when it is the only candidate left.
 Entity _nextTarget(World world, SceneTransform player, Entity current) {
   final others =
       _lockCandidates(world, player).where((c) => c.entity != current).toList()
         ..sort((a, b) => a.angle.compareTo(b.angle));
   if (others.isEmpty) return current;
-  final currentAngle = _angleTo(player, world, current);
+  final currentAngle = _angleTo(world, player, current);
   return others
-      .firstWhere(
-        (c) => c.angle > currentAngle,
-        orElse: () => others.first, // wrap around
-      )
+      .firstWhere((c) => c.angle > currentAngle, orElse: () => others.first)
       .entity;
 }
 
-final class _Candidate {
-  const _Candidate(this.entity, this.distance, this.angle);
-  final Entity entity;
-  final double distance;
-  final double angle;
-}
+typedef _Candidate = ({Entity entity, double distance, double angle});
 
 List<_Candidate> _lockCandidates(World world, SceneTransform player) {
   final candidates = <_Candidate>[];
@@ -123,7 +104,11 @@ List<_Candidate> _lockCandidates(World world, SceneTransform player) {
     final dz = enemyTransform.translation.z - player.translation.z;
     final distance = math.sqrt(dx * dx + dz * dz);
     if (distance > lockAcquireRange) return;
-    candidates.add(_Candidate(enemy, distance, math.atan2(dx, dz)));
+    candidates.add((
+      entity: enemy,
+      distance: distance,
+      angle: math.atan2(dx, dz),
+    ));
   });
   return candidates;
 }
@@ -148,7 +133,7 @@ SceneTransform? _targetTransform(World world, Entity player) {
   return target == null ? null : world.tryGet<SceneTransform>(target.entity);
 }
 
-double _angleTo(SceneTransform player, World world, Entity entity) {
+double _angleTo(World world, SceneTransform player, Entity entity) {
   final transform = world.tryGet<SceneTransform>(entity);
   if (transform == null) return 0;
   return math.atan2(
@@ -157,9 +142,7 @@ double _angleTo(SceneTransform player, World world, Entity entity) {
   );
 }
 
-/// Updates enemy highlights. The recursive node walk is the cost, so
-/// steady states are written once and remembered in [EnemyHighlights];
-/// only a telegraph's pulse rewrites per frame.
+/// Updates highlights only when their steady state changes.
 void updateEnemyHighlights(World world) {
   final player = world.entitiesWith(require: const [Player]).firstOrNull;
   final locked = player == null ? null : world.tryGet<Target>(player)?.entity;
@@ -190,7 +173,6 @@ void updateEnemyHighlights(World world) {
   });
 }
 
-/// Last enemy highlight states.
 final class EnemyHighlights {
   static const int none = 0;
   static const int locked = 1;
@@ -205,5 +187,3 @@ void _setHighlight(Node node, Vector4? color) {
     _setHighlight(child, color);
   }
 }
-
-// Helpers

@@ -1,7 +1,5 @@
 part of '../enemies.dart';
 
-/// Death: the hit-reaction delay, the handoff to Rapier, the dropped
-/// axe, and the dust a landing corpse kicks up.
 void installEnemyDeath(GameBuilder game) {
   game
     ..registerComponent<PendingCorpse>()
@@ -18,7 +16,6 @@ void installEnemyDeath(GameBuilder game) {
     );
 }
 
-/// `PendingCorpse` expiry hands one dying enemy to Rapier.
 void launchPhysicsCorpse(World world, Entity entity, PendingCorpse pending) {
   final row = world.tryGet3<Brawler, NodeRef, Knockback>(entity);
   if (row == null || world.has<PhysicsDriven>(entity)) return;
@@ -58,9 +55,6 @@ void launchPhysicsCorpse(World world, Entity entity, PendingCorpse pending) {
   _dropAxe(world, entity, commands, velocity, seed);
 }
 
-/// The axe leaves the hand as its own physics object: reparented to the
-/// scene root at the pose it was drawn at, carrying part of the corpse's
-/// throw plus a toss and a spin, so it clatters away separately.
 void _dropAxe(
   World world,
   Entity entity,
@@ -70,7 +64,7 @@ void _dropAxe(
 ) {
   final axe = world.tryGet<ModelSlot>(entity)?.axe;
   if (axe == null || axe.parent == null) return;
-  // Preserve the axe world pose.
+  // Keep the drawn pose while reparenting.
   axe.localTransform = axe.globalTransform.clone();
 
   final body = RigidBody(
@@ -102,9 +96,6 @@ void _dropAxe(
     ..attach(axe, collider);
 }
 
-/// Puffs ground dust where a corpse slams down, reading the body's fall
-/// go flat. Bounces get their own smaller puffs, up to
-/// [corpseDustMaxBursts].
 void dustCorpseLandings(World world) {
   world.query<PhysicsCorpse>(require: const [Enemy]).each((entity, corpse) {
     if (corpse.bursts >= corpseDustMaxBursts) return;
@@ -116,10 +107,8 @@ void dustCorpseLandings(World world) {
     corpse.fallSpeed = velocity.y;
     if (!landed) return;
     corpse.bursts++;
-    // Follow the skid direction.
     final heading = Vector3(velocity.x, 0, velocity.z);
     if (heading.length2 < 1e-4) heading.setValues(0, 0, 1);
-    // On the floor under the body, not at the tumbling body's origin.
     final at = body.node.globalTransform.getTranslation()..y = 0;
     spawnDashDust(world, at, heading);
   });

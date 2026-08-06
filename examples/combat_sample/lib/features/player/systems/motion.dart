@@ -1,7 +1,5 @@
 part of '../player.dart';
 
-/// Ground movement: stick-to-world mapping, the committed roll, and the
-/// knockback arc.
 void installPlayerMotion(GameBuilder game) {
   game.addSystem(
     Schedules.fixedUpdate,
@@ -13,7 +11,6 @@ void installPlayerMotion(GameBuilder game) {
   );
 }
 
-/// Updates player movement and facing.
 void movePlayer(World world) {
   final axes = world.axes<MoveAxis>();
   final rig = world.resource<CameraRig>();
@@ -47,7 +44,6 @@ void movePlayer(World world) {
       });
 }
 
-/// Converts movement input into a clamped world-space vector.
 (double, double) _stickWorldMove(AxisInput<MoveAxis> axes, CameraRig rig) {
   final inputX = axes.value(MoveAxis.x);
   final inputY = axes.value(MoveAxis.y);
@@ -63,7 +59,6 @@ void movePlayer(World world) {
   return (moveX, moveZ);
 }
 
-/// Chooses a roll direction on entry.
 void _commitRollDirection(
   PlayerMotion motion,
   double moveX,
@@ -85,7 +80,6 @@ void _commitRollDirection(
   }
 }
 
-/// Writes the phase's ground-plane velocity.
 void _planarVelocity(
   World world,
   Entity entity,
@@ -107,7 +101,7 @@ void _planarVelocity(
         final dx = targetTransform.translation.x - transform.translation.x;
         final dz = targetTransform.translation.z - transform.translation.z;
         motion.facing = math.atan2(dx, dz);
-        // The back-off walk: moving away from the target is slower.
+        // Retreating while locked is slower.
         if (dx * velocity.x + dz * velocity.z < 0) {
           velocity.scale(backpedalFactor);
         }
@@ -133,10 +127,6 @@ void _planarVelocity(
   }
 }
 
-/// One step of world-space motion: the planar velocity while grounded,
-/// the wind-cast leap's arc, the knockback's ballistic step, the launch
-/// tumble (tips over once, lies flat through the downed beat), and the
-/// final rotation write.
 void _integrateMotion(
   World world,
   Entity entity,
@@ -146,9 +136,8 @@ void _integrateMotion(
   double dt,
 ) {
   final knockback = world.tryGet<Knockback>(entity);
-  // No steering while thrown or still on the floor from it.
-  final grounded = knockback == null || !knockback.incapacitated;
-  if (grounded) {
+  final incapacitated = knockback?.incapacitated ?? false;
+  if (!incapacitated) {
     transform.translation
       ..x += motion.velocity.x * dt
       ..z += motion.velocity.z * dt;
@@ -166,18 +155,19 @@ void _integrateMotion(
   }
   clampToArena(transform.translation);
 
-  if (knockback != null && knockback.incapacitated) {
+  if (incapacitated) {
     motion.tumble = towardProne(
       motion.tumble,
       dt,
-      rate: knockback.airborne ? airborneProneRate : proneSettleRate,
+      rate: (knockback?.airborne ?? false)
+          ? airborneProneRate
+          : proneSettleRate,
     );
   } else {
     motion.tumble = 0;
   }
-  // Copy knockback state for animation.
-  motion.downed = knockback?.incapacitated ?? false;
-  motion.airborne = knockback?.airborne ?? false; // falls vs lies
+  motion.downed = incapacitated;
+  motion.airborne = knockback?.airborne ?? false;
   transform.rotation.setAxisAngle(_up, motion.facing);
   if (motion.tumble != 0) {
     transform.rotation.setFrom(
@@ -188,5 +178,5 @@ void _integrateMotion(
 
 final Vector3 _up = Vector3(0, 1, 0);
 
-/// The tumble axis: head-over-heels, not a flat spin.
+// Rotates head over heels.
 final Vector3 _right = Vector3(1, 0, 0);

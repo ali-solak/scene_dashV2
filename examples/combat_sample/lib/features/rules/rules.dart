@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:scene_dash_v2/scene_dash_v2.dart';
-import 'package:vector_math/vector_math.dart' show Vector3;
 
 import '../enemies/enemies.dart';
 import '../../fx/impact_burst.dart';

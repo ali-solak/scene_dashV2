@@ -1,7 +1,5 @@
 part of '../enemies.dart';
 
-/// Pack locomotion: the per-phase steering, the knockback arc, and the
-/// tumble a thrown body carries.
 void installBrawlerMovement(GameBuilder game) {
   game.addSystem(
     Schedules.fixedUpdate,
@@ -13,8 +11,6 @@ void installBrawlerMovement(GameBuilder game) {
   );
 }
 
-/// Barbarian locomotion: approach closes in, circle orbits, everything
-/// from the telegraph on is rooted. Death stops this controller.
 void moveBrawlers(World world) {
   final playerRow = world
       .query<SceneTransform>(require: const [Player])
@@ -47,7 +43,7 @@ void moveBrawlers(World world) {
     brawler.velocity.setValues(velocityX, 0, velocityZ);
 
     final knockback = world.tryGet<Knockback>(entity);
-    // Sent flying (a wind blast): the arc owns them until they land.
+    // Knockback owns airborne movement.
     if (knockback == null || !knockback.airborne) {
       transform.translation
         ..x += velocityX * dt
@@ -62,13 +58,11 @@ void moveBrawlers(World world) {
 
     _advanceTumble(brawler, knockback, dt);
     brawler.downed = knockback?.incapacitated ?? false;
-    brawler.airborne = knockback?.airborne ?? false; // falls vs lies
+    brawler.airborne = knockback?.airborne ?? false;
     _applyFacingAndTumble(brawler, transform);
   });
 }
 
-/// The living brawler's per-phase steering: ground velocity out, facing
-/// written in place. Everything from the telegraph on is rooted.
 (double, double) _steer(
   Brawler brawler,
   SceneTransform transform,
@@ -82,63 +76,36 @@ void moveBrawlers(World world) {
   final towardX = dx / distance;
   final towardZ = dz / distance;
 
-  var velocityX = 0.0;
-  var velocityZ = 0.0;
-  switch (brawler.phase.state) {
-    case BrawlPhase.approach:
-      velocityX = towardX * approachSpeed;
-      velocityZ = towardZ * approachSpeed;
-      brawler.facing = math.atan2(dx, dz);
-    case BrawlPhase.circle:
-      if (brawler.hasToken) {
-        // The token holder closes in to strike range.
-        velocityX = towardX * tokenCloseSpeed;
-        velocityZ = towardZ * tokenCloseSpeed;
-      } else {
-        brawler.wobble += dt;
-        final radiusTarget =
-            circleRadius +
-            circleWobbleAmplitude *
-                math.sin(
-                  brawler.wobbleSeed +
-                      brawler.wobble * circleWobbleRate * 2 * math.pi,
-                );
-        // Tangential orbit plus a radial correction toward the target
-        // radius.
-        final tangentX = -towardZ * brawler.circleDirection;
-        final tangentZ = towardX * brawler.circleDirection;
-        final radial = (distance - radiusTarget).clamp(-1.0, 1.0);
-        velocityX = tangentX * circleSpeed + towardX * radial * circleSpeed;
-        velocityZ = tangentZ * circleSpeed + towardZ * radial * circleSpeed;
-      }
-      brawler.facing = math.atan2(dx, dz);
-    case BrawlPhase.dodging:
-      // Backward side roll.
-      velocityX =
-          (-towardX * dodgeBackWeight -
-              towardZ * brawler.dodgeSign * dodgeSideWeight) *
-          dodgeSpeed;
-      velocityZ =
-          (-towardZ * dodgeBackWeight +
-              towardX * brawler.dodgeSign * dodgeSideWeight) *
-          dodgeSpeed;
-      brawler.facing = math.atan2(dx, dz);
-    case BrawlPhase.telegraph:
-      brawler.facing = math.atan2(dx, dz); // the tell tracks its mark
-    case BrawlPhase.taunting:
-      brawler.facing = math.atan2(dx, dz); // roots, but taunts at its mark
-    case BrawlPhase.rising:
-      break; // on the floor hauling itself up; no drift, no aim yet
-    case BrawlPhase.swing ||
-        BrawlPhase.recover ||
-        BrawlPhase.staggered ||
-        BrawlPhase.dying:
-      break; // rooted, facing frozen
-  }
+  final tracksPlayer = switch (brawler.phase.state) {
+    BrawlPhase.approach ||
+    BrawlPhase.circle ||
+    BrawlPhase.dodging ||
+    BrawlPhase.telegraph ||
+    BrawlPhase.taunting => true,
+    _ => false,
+  };
+  if (tracksPlayer) brawler.facing = math.atan2(dx, dz);
 
-  // Bogged down in a lava pit. Only the ground speed is mired; the
-  // facing/aim above stay full, so it still tracks the player as it
-  // wades, and a wind blast can still launch it.
+  var (velocityX, velocityZ) = switch (brawler.phase.state) {
+    BrawlPhase.approach => (towardX * approachSpeed, towardZ * approachSpeed),
+    BrawlPhase.circle => _circleVelocity(
+      brawler,
+      distance,
+      towardX,
+      towardZ,
+      dt,
+    ),
+    BrawlPhase.dodging => (
+      (-towardX * dodgeBackWeight -
+              towardZ * brawler.dodgeSign * dodgeSideWeight) *
+          dodgeSpeed,
+      (-towardZ * dodgeBackWeight +
+              towardX * brawler.dodgeSign * dodgeSideWeight) *
+          dodgeSpeed,
+    ),
+    _ => (0.0, 0.0),
+  };
+
   if (mired) {
     velocityX *= miredSpeedFactor;
     velocityZ *= miredSpeedFactor;
@@ -146,7 +113,33 @@ void moveBrawlers(World world) {
   return (velocityX, velocityZ);
 }
 
-/// The one-way tip toward prone for a living wind-blast throw.
+(double, double) _circleVelocity(
+  Brawler brawler,
+  double distance,
+  double towardX,
+  double towardZ,
+  double dt,
+) {
+  if (brawler.hasToken) {
+    return (towardX * tokenCloseSpeed, towardZ * tokenCloseSpeed);
+  }
+  brawler.wobble += dt;
+  final radius =
+      circleRadius +
+      circleWobbleAmplitude *
+          math.sin(
+            brawler.wobbleSeed +
+                brawler.wobble * circleWobbleRate * 2 * math.pi,
+          );
+  final radial = (distance - radius).clamp(-1.0, 1.0);
+  return (
+    -towardZ * brawler.circleDirection * circleSpeed +
+        towardX * radial * circleSpeed,
+    towardX * brawler.circleDirection * circleSpeed +
+        towardZ * radial * circleSpeed,
+  );
+}
+
 void _advanceTumble(Brawler brawler, Knockback? knockback, double dt) {
   if (knockback != null && knockback.airborne) {
     brawler.tumble = towardProne(
@@ -161,7 +154,6 @@ void _advanceTumble(Brawler brawler, Knockback? knockback, double dt) {
   }
 }
 
-/// Yaw to the stored facing, then apply a living throw's tumble pitch.
 void _applyFacingAndTumble(Brawler brawler, SceneTransform transform) {
   transform.rotation.setAxisAngle(_upAxis, brawler.facing);
   if (brawler.tumble != 0) {
@@ -173,5 +165,5 @@ void _applyFacingAndTumble(Brawler brawler, SceneTransform transform) {
 
 final Vector3 _upAxis = Vector3(0, 1, 0);
 
-/// Head over heels, not a flat spin.
+// Head over heels.
 final Vector3 _tumbleAxis = Vector3(1, 0, 0);

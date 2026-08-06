@@ -1,8 +1,5 @@
 part of '../rules.dart';
 
-/// Hit resolution: both fighters' strike windows emit [HitLanded], and
-/// one system serves every hit, so damage, poise, and death have exactly
-/// one path.
 void installHitResolution(GameBuilder game) {
   game
     ..addSystem(
@@ -45,67 +42,72 @@ void installHitResolution(GameBuilder game) {
     );
 }
 
-/// Strike windows are machine edges: `justEntered(active)` for the player
-/// and `justEntered(swing)` for a barbarian each check reach and arc once.
-/// The edge is one tick wide, so a swing cannot land twice.
 void resolveStrikes(World world) {
-  final playerRow = world
+  final row = world
       .query3<Fighter, PlayerMotion, SceneTransform>(require: const [Player])
       .firstOrNull;
-  if (playerRow == null) return;
-  final (player, fighter, motion, playerTransform) = playerRow;
+  if (row == null) return;
+  final (player, fighter, motion, transform) = row;
+  _resolvePlayerStrikes(world, fighter, motion, transform);
+  _resolveEnemyStrikes(world, player, transform);
+}
 
-  // A swing lands one connect; a spin lands one every `heavyHitInterval`
-  // as the axe comes around. `strikeHits` counts taps already fired this
-  // active phase, so each is emitted exactly once across the fixed steps.
+void _resolvePlayerStrikes(
+  World world,
+  Fighter fighter,
+  PlayerMotion motion,
+  SceneTransform transform,
+) {
   final phase = fighter.phase;
   if (phase.justEntered(CombatPhase.active)) fighter.strikeHits = 0;
-  if (phase.state == CombatPhase.active) {
-    final due = fighter.heavy
-        ? (phase.elapsed / heavyHitInterval).floor() + 1
-        : 1;
-    while (fighter.strikeHits < due) {
-      fighter.strikeHits++;
-      _strikeEnemies(world, fighter, motion, playerTransform);
-    }
+  if (phase.state != CombatPhase.active) return;
+  final due = fighter.heavy
+      ? (phase.elapsed / heavyHitInterval).floor() + 1
+      : 1;
+  while (fighter.strikeHits < due) {
+    fighter.strikeHits++;
+    _strikeEnemies(world, fighter, motion, transform);
   }
+}
 
+void _resolveEnemyStrikes(
+  World world,
+  Entity player,
+  SceneTransform playerTransform,
+) {
   world.query2<Brawler, SceneTransform>(require: const [Enemy]).each((
-    enemy,
+    _,
     brawler,
     enemyTransform,
   ) {
-    if (brawler.phase.justEntered(BrawlPhase.swing) &&
-        withinArc(
-          from: enemyTransform,
-          facing: brawler.facing,
-          to: playerTransform,
-          reach: brawlerReach,
-          halfArc: brawlerStrikeHalfArc,
-        )) {
-      final damage = brawlerDamage * brawler.power;
-      final shove = awayFrom(
-        enemyTransform,
-        playerTransform,
-        brawlerKnockback * brawler.power,
-      );
-      // A giant doesn't shove you, it sends you flying.
-      if (brawler.giant) shove.y = giantLaunchSpeed;
-      world.emit(
-        HitLanded(
-          player,
-          damage,
-          knockback: shove,
-          // Poise: an ordinary swing hurts and shoves but does not cancel
-          // what you were doing; a giant's blow does.
-          stagger: damage >= playerPoiseThreshold,
-        ),
-      );
+    if (!brawler.phase.justEntered(BrawlPhase.swing)) return;
+    if (!withinArc(
+      from: enemyTransform,
+      facing: brawler.facing,
+      to: playerTransform,
+      reach: brawlerReach,
+      halfArc: brawlerStrikeHalfArc,
+    )) {
+      return;
     }
+    final damage = brawlerDamage * brawler.power;
+    final shove = awayFrom(
+      enemyTransform,
+      playerTransform,
+      brawlerKnockback * brawler.power,
+    );
+    if (brawler.giant) shove.y = giantLaunchSpeed;
+    world.emit(
+      HitLanded(
+        player,
+        damage,
+        knockback: shove,
+        stagger: damage >= playerPoiseThreshold,
+      ),
+    );
   });
 }
 
-/// Hits enemies inside the strike arc.
 void _strikeEnemies(
   World world,
   Fighter fighter,
@@ -139,101 +141,66 @@ void _strikeEnemies(
   });
 }
 
-/// Applies hit damage and reactions.
 void applyDamage(World world) {
   for (final hit in world.events<HitLanded>()) {
-    final fighter = world.tryGet<Fighter>(hit.target);
-    if (fighter != null) {
-      if (fighter.iFramed) continue; // rolled through it
-      // Launched by a giant: untouchable through the arc (the flight is
-      // an escape, never a juggle). Only the player gets this; an
-      // airborne barbarian is still hittable.
-      if (world.tryGet<Knockback>(hit.target)?.airborne ?? false) continue;
-    }
-
-    // The barrier eats the blow whole (no health, no shove, no stagger)
-    // and spends one charge, whatever the blow was worth. Blows only:
-    // letting DoT ticks spend charges would drain a full barrier in
-    // under a second of lava.
-    final barrier = hit.impact ? world.tryGet<Barrier>(hit.target) : null;
-    if (barrier != null && !barrier.spent) {
-      final broke = barrier.absorb(push: hit.knockback);
-      // A block sparks so it reads as the barrier taking the hit, not the
-      // hit quietly not happening (no hitstop; the freeze read as lag).
-      final at = world.tryGet<SceneTransform>(hit.target);
-      if (at != null) {
-        spawnImpactBurst(
-          world,
-          Vector3(
-            at.translation.x,
-            at.translation.y + impactBurstHeight,
-            at.translation.z,
-          ),
-          heavy: hit.heavy,
-        );
-      }
-      if (broke) world.remove<Barrier>(hit.target);
-      continue;
-    }
-
-    final health = world.tryGet<Health>(hit.target);
-    final wasAlive = health?.alive ?? true;
-    if (health != null) {
-      health.current = math.max(0, health.current - hit.damage);
-    }
-
-    // The shove: the physical half of the feedback.
-    final push = hit.knockback;
-    if (push != null) {
-      final knockback = world.tryGet<Knockback>(hit.target);
-      knockback?.shove(push);
-    }
-
-    // The sparks: the visual half (a no-op headless).
-    final at = hit.impact ? world.tryGet<SceneTransform>(hit.target) : null;
-    if (at != null) {
-      spawnImpactBurst(
-        world,
-        Vector3(
-          at.translation.x,
-          at.translation.y + impactBurstHeight,
-          at.translation.z,
-        ),
-        heavy: hit.heavy,
-      );
-    }
-
-    // Poise: only a blow heavy enough breaks the player's action.
-    if (hit.stagger) fighter?.phase.go(CombatPhase.staggered);
-
-    // The flinch: poise lets an ordinary swing through, but the fighter
-    // still has to look hit. Visual only; nothing here touches the
-    // machine.
-    if (fighter != null && hit.damage > 0) {
-      fighter.sinceHurt = 0;
-    }
-
-    final brawler = world.tryGet<Brawler>(hit.target);
-    if (brawler != null && wasAlive) {
-      if (health != null && !health.alive) {
-        brawler.phase.go(BrawlPhase.dying);
-        world.add(
-          hit.target,
-          const PendingCorpse(),
-          removeAfter: corpseHitSeconds,
-        );
-        // The kill pays out; the wave watches the living count.
-        world.resource<Score>().award(
-          brawler.giant ? giantPoints : enemyPoints,
-        );
-        // Ragdoll, then dissolve, then despawn; waves recycle the slot
-        // (and the pooled model, via the ModelSlot observer).
-        const deathSeconds = dissolveDelaySeconds + dissolveSeconds;
-        world.add(hit.target, const Dissolving(), removeAfter: deathSeconds);
-        world.add(hit.target, DespawnAfter(deathSeconds));
-      } else if (hit.stagger) {
-        brawler.phase.go(BrawlPhase.staggered);
-      }
-    }
+    if (_ignoresHit(world, hit.target)) continue;
+    if (_absorbHit(world, hit)) continue;
+    _applyHit(world, hit);
   }
+}
+
+bool _ignoresHit(World world, Entity target) {
+  final fighter = world.tryGet<Fighter>(target);
+  return fighter != null &&
+      (fighter.iFramed || (world.tryGet<Knockback>(target)?.airborne ?? false));
+}
+
+bool _absorbHit(World world, HitLanded hit) {
+  final barrier = hit.impact ? world.tryGet<Barrier>(hit.target) : null;
+  if (barrier == null || barrier.spent) return false;
+  final broke = barrier.absorb(push: hit.knockback);
+  _spawnImpact(world, hit);
+  if (broke) world.remove<Barrier>(hit.target);
+  return true;
+}
+
+void _applyHit(World world, HitLanded hit) {
+  final health = world.tryGet<Health>(hit.target);
+  final wasAlive = health?.alive ?? true;
+  if (health != null) {
+    health.current = math.max(0, health.current - hit.damage);
+  }
+  if (hit.knockback case final push?) {
+    world.tryGet<Knockback>(hit.target)?.shove(push);
+  }
+  if (hit.impact) _spawnImpact(world, hit);
+
+  final fighter = world.tryGet<Fighter>(hit.target);
+  if (hit.stagger) fighter?.phase.go(CombatPhase.staggered);
+  if (fighter != null && hit.damage > 0) fighter.sinceHurt = 0;
+
+  final brawler = world.tryGet<Brawler>(hit.target);
+  if (brawler == null || !wasAlive) return;
+  if (health != null && !health.alive) {
+    _killBrawler(world, hit.target, brawler);
+  } else if (hit.stagger) {
+    brawler.phase.go(BrawlPhase.staggered);
+  }
+}
+
+void _spawnImpact(World world, HitLanded hit) {
+  final transform = world.tryGet<SceneTransform>(hit.target);
+  if (transform == null) return;
+  final position = transform.translation.clone()..y += impactBurstHeight;
+  spawnImpactBurst(world, position, heavy: hit.heavy);
+}
+
+void _killBrawler(World world, Entity entity, Brawler brawler) {
+  brawler.phase.go(BrawlPhase.dying);
+  world.add(entity, const PendingCorpse(), removeAfter: corpseHitSeconds);
+  world.resource<Score>().award(brawler.giant ? giantPoints : enemyPoints);
+
+  const deathSeconds = dissolveDelaySeconds + dissolveSeconds;
+  world.add(entity, const Dissolving(), removeAfter: deathSeconds);
+  world.add(entity, DespawnAfter(deathSeconds));
 }

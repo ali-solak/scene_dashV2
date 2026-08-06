@@ -1,6 +1,5 @@
 part of '../player.dart';
 
-/// The follow camera: orbit, lock-on framing, and the opening push-in.
 void installPlayerCamera(GameBuilder game) {
   game.addSystem(
     Schedules.fixedUpdate,
@@ -10,9 +9,6 @@ void installPlayerCamera(GameBuilder game) {
   );
 }
 
-/// Writes the [CameraRig] the camera builder reads: a smoothed yaw/pitch
-/// orbit around the fighter's chest. Free is pointer-owned; locked steers
-/// yaw at the target and slides focus toward the pair.
 void updateCameraRig(World world) {
   final rig = world.resource<CameraRig>();
   final row = world
@@ -34,8 +30,6 @@ void updateCameraRig(World world) {
   _ease(rig, _framingDistance(position, target), dt);
 }
 
-/// The title shot: a wide, slow orbit of the clearing. It frames the place,
-/// not the fighter; the push-in at run start introduces him.
 void _orbitTitle(CameraRig rig, double dt) {
   rig
     ..yaw += titleOrbitRate * dt
@@ -49,7 +43,6 @@ void _orbitTitle(CameraRig rig, double dt) {
   );
 }
 
-/// Yaw and pitch: steered by the lock, or owned by the pointer.
 void _aim(
   CameraRig rig,
   LookInput look,
@@ -63,7 +56,7 @@ void _aim(
         .clamp(cameraPitchMin, cameraPitchMax);
     return;
   }
-  // The lock owns the framing; manual look is discarded, not banked.
+  // Locked framing discards manual look.
   look.takeYawDelta();
   look.takePitchDelta();
   final desiredYaw = math.atan2(
@@ -78,8 +71,6 @@ void _aim(
       (1 - math.exp(-cameraPitchSharpness * dt));
 }
 
-/// What the camera looks at: the fighter's chest, slid toward the target so
-/// the pair stays framed.
 void _focus(CameraRig rig, Vector3 position, SceneTransform? target) {
   if (target == null) {
     rig.target.setValues(
@@ -96,7 +87,6 @@ void _focus(CameraRig rig, Vector3 position, SceneTransform? target) {
   );
 }
 
-/// Pulls back as the pair separates, so both stay in shot.
 double _framingDistance(Vector3 position, SceneTransform? target) {
   if (target == null) return cameraDistance;
   final dx = target.translation.x - position.x;
@@ -108,13 +98,9 @@ double _framingDistance(Vector3 position, SceneTransform? target) {
   );
 }
 
-/// Smooths the rig onto the sphere. The opening push-in rides the same
-/// smoothing: same desired framing from the first frame, only the rate
-/// differs during the intro.
 void _ease(CameraRig rig, double distance, double dt) {
   final horizontal = distance * math.cos(rig.pitch);
   final desiredX = rig.target.x - math.sin(rig.yaw) * horizontal;
-  // rig.target.y already carries cameraFocusHeight.
   final desiredY = rig.target.y + distance * math.sin(rig.pitch);
   final desiredZ = rig.target.z - math.cos(rig.yaw) * horizontal;
 

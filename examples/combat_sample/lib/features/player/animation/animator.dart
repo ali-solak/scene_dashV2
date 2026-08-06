@@ -1,6 +1,5 @@
 part of '../player.dart';
 
-/// Maps player state to animation.
 enum PlayerLoco { idle, walk, run, strafeLeft, strafeRight, backpedal }
 
 enum PlayerShot {
@@ -24,128 +23,91 @@ final class PlayerAnimator {
   PlayerShot? active;
   double _backwardDashRemaining = 0;
 
-  /// Plays the existing backward dodge as a visual-only recoil. Gameplay
-  /// remains in its current phase, so this grants neither roll movement nor
-  /// i-frames.
+  /// Plays a visual recoil without changing combat state.
   void playBackwardDash() {
     _backwardDashRemaining = rollClipSeconds / rollPlaybackScale;
   }
 
-  /// Drives the clips from the frame's gameplay state. Phase-to-shot
-  /// mapping derives from state, not machine edges: this runs on the
-  /// update schedule, and a multi-fixed-step frame can skip an edge.
   void update(Fighter fighter, PlayerMotion motion, double dt) {
-    final phase = fighter.phase.state;
     final recoiling = _backwardDashRemaining > 0;
     _backwardDashRemaining = math.max(0.0, _backwardDashRemaining - dt);
 
-    PlayerShot? desired;
-    switch (phase) {
-      case CombatPhase.startup || CombatPhase.active || CombatPhase.recovery:
-        desired = fighter.heavy ? PlayerShot.heavy : PlayerShot.strike;
-      case CombatPhase.rolling:
-        // Committed once per roll: keep the direction picked on entry.
-        desired = _isRoll(active) ? active : _rollShot(motion);
-      case CombatPhase.staggered:
-        desired = PlayerShot.hit;
-      case CombatPhase.idle:
-        // The cast leap and the flinch live in the idle arm alone, so
-        // they stay visual: swing through either and the swing wins, as
-        // poise promises. The leap outranks the flinch.
-        if (fighter.sinceCast < windCastSeconds) {
-          desired = PlayerShot.windCast;
-        } else {
-          desired = fighter.sinceHurt < flinchSeconds ? PlayerShot.hit : null;
-        }
-    }
-
-    if (recoiling && phase != CombatPhase.rolling) {
+    var desired = _desiredShot(fighter, motion);
+    if (recoiling && fighter.phase.state != CombatPhase.rolling) {
       desired = PlayerShot.rollBack;
     }
-
-    // Thrown outranks the phase: the stagger ends while the body is still
-    // metres up, and without this the fighter would run on air. Holds
-    // through the landing beat too; fall pose airborne, hit pose down.
     if (motion.downed) {
       desired = motion.airborne ? PlayerShot.fall : PlayerShot.hit;
     }
-
-    if (desired != active) {
-      final promoted =
-          active == PlayerShot.strike &&
-          desired == PlayerShot.heavy &&
-          phase == CombatPhase.startup;
-      active = desired;
-      final clip = desired == null ? null : shots[desired];
-      if (clip != null) {
-        if (promoted) {
-          // Continue the heavy windup.
-          clip.gotoAndPlay(fighter.phase.elapsed * clip.playbackTimeScale);
-        } else {
-          clip.replay();
-        }
-        if (desired == PlayerShot.hit) {
-          // Snap into stagger.
-          clip.weight = 1;
-          for (final other in shots.values) {
-            if (!identical(other, clip)) other.weight = 0;
-          }
-          for (final loop in locomotion.values) {
-            loop.weight = 0;
-          }
-        }
-      }
-    }
+    if (desired != active) _enterShot(desired, fighter);
 
     if (active != null) {
-      final activeClip = shots[active]!;
-      // A held button delays the swing past the clip's windup: hold the
-      // clip at its windup pose until the machine goes active, otherwise
-      // the visual contact plays before the hit exists.
-      if (phase == CombatPhase.startup) {
-        final windupEnd =
-            (fighter.heavy ? heavyStartupSeconds : startupSeconds) *
-            activeClip.playbackTimeScale;
-        if (activeClip.playbackTime > windupEnd) activeClip.seek(windupEnd);
-      }
-      final fade = dt / oneShotFadeSeconds;
-      for (final clip in shots.values) {
-        clip.weight = _approach(
-          clip.weight,
-          identical(clip, activeClip) ? 1 : 0,
-          fade,
-        );
-      }
-      for (final clip in locomotion.values) {
-        clip.weight = _approach(clip.weight, 0, fade);
-      }
-      _fillIdle();
+      _playShot(fighter, dt);
       return;
     }
+    _playLocomotion(fighter, motion, dt);
+  }
 
-    // Locomotion blend from speed + stance.
-    final speed = motion.velocity.length;
-    PlayerLoco target;
-    if (speed < 0.05) {
-      target = PlayerLoco.idle;
-    } else if (fighter.stance == Stance.free) {
-      target = speed >= runBlendSpeed ? PlayerLoco.run : PlayerLoco.walk;
+  PlayerShot? _desiredShot(Fighter fighter, PlayerMotion motion) {
+    return switch (fighter.phase.state) {
+      CombatPhase.startup || CombatPhase.active || CombatPhase.recovery =>
+        fighter.heavy ? PlayerShot.heavy : PlayerShot.strike,
+      CombatPhase.rolling => _isRoll(active) ? active : _rollShot(motion),
+      CombatPhase.staggered => PlayerShot.hit,
+      CombatPhase.idle =>
+        fighter.sinceCast < windCastSeconds
+            ? PlayerShot.windCast
+            : fighter.sinceHurt < flinchSeconds
+            ? PlayerShot.hit
+            : null,
+    };
+  }
+
+  void _enterShot(PlayerShot? desired, Fighter fighter) {
+    final promoted =
+        active == PlayerShot.strike &&
+        desired == PlayerShot.heavy &&
+        fighter.phase.state == CombatPhase.startup;
+    active = desired;
+    final clip = desired == null ? null : shots[desired];
+    if (clip == null) return;
+    if (promoted) {
+      clip.gotoAndPlay(fighter.phase.elapsed * clip.playbackTimeScale);
     } else {
-      // Strafe set: dominant direction of the velocity in the facing frame.
-      final forwardX = math.sin(motion.facing);
-      final forwardZ = math.cos(motion.facing);
-      final forward =
-          (motion.velocity.x * forwardX + motion.velocity.z * forwardZ) / speed;
-      final side =
-          (motion.velocity.x * forwardZ - motion.velocity.z * forwardX) / speed;
-      // `side` is dot(velocity, right) where right = (cos f, -sin f), so
-      // positive is the fighter's right; map it straight.
-      target = forward.abs() >= side.abs()
-          ? (forward >= 0 ? PlayerLoco.walk : PlayerLoco.backpedal)
-          : (side >= 0 ? PlayerLoco.strafeRight : PlayerLoco.strafeLeft);
+      clip.replay();
     }
+    if (desired != PlayerShot.hit) return;
+    clip.weight = 1;
+    for (final other in shots.values) {
+      if (!identical(other, clip)) other.weight = 0;
+    }
+    for (final loop in locomotion.values) {
+      loop.weight = 0;
+    }
+  }
 
-    // Feet follow the ground: stride playback scales with actual speed.
+  void _playShot(Fighter fighter, double dt) {
+    final activeClip = shots[active]!;
+    if (fighter.phase.state == CombatPhase.startup) {
+      final startup = fighter.heavy ? heavyStartupSeconds : startupSeconds;
+      final windupEnd = startup * activeClip.playbackTimeScale;
+      if (activeClip.playbackTime > windupEnd) activeClip.seek(windupEnd);
+    }
+    final fade = dt / oneShotFadeSeconds;
+    for (final clip in shots.values) {
+      final weight = identical(clip, activeClip) ? 1.0 : 0.0;
+      clip.weight = _approach(clip.weight, weight, fade);
+    }
+    for (final clip in locomotion.values) {
+      clip.weight = _approach(clip.weight, 0, fade);
+    }
+    _fillIdle();
+  }
+
+  void _playLocomotion(Fighter fighter, PlayerMotion motion, double dt) {
+    final speed = motion.velocity.length;
+    final target = _locomotionTarget(fighter, motion, speed);
+
     _stride(PlayerLoco.walk, speed, walkStrideSpeed);
     _stride(PlayerLoco.run, speed, runStrideSpeed);
     _stride(PlayerLoco.strafeLeft, speed, strafeStrideSpeed);
@@ -153,13 +115,10 @@ final class PlayerAnimator {
     _stride(PlayerLoco.backpedal, speed, backpedalStrideSpeed);
 
     final fade = dt / locomotionFadeSeconds;
-    // Fade the attack follow through.
     final tail = dt / oneShotFadeOutSeconds;
     for (final clip in shots.values) {
       clip.weight = _approach(clip.weight, 0, tail);
     }
-    // A gait restart (seek 0) only from a true standstill: restarting on
-    // every direction change froze the model into a first-frame cutout.
     final fromStandstill = locomotion[PlayerLoco.idle]!.weight > 0.9;
     locomotion.forEach((key, clip) {
       final targetWeight = key == target ? 1.0 : 0.0;
@@ -174,7 +133,26 @@ final class PlayerAnimator {
     _fillIdle();
   }
 
-  /// Fills unused animation weight with idle.
+  PlayerLoco _locomotionTarget(
+    Fighter fighter,
+    PlayerMotion motion,
+    double speed,
+  ) {
+    if (speed < 0.05) return PlayerLoco.idle;
+    if (fighter.stance == Stance.free) {
+      return speed >= runBlendSpeed ? PlayerLoco.run : PlayerLoco.walk;
+    }
+    final sinFacing = math.sin(motion.facing);
+    final cosFacing = math.cos(motion.facing);
+    final forward =
+        (motion.velocity.x * sinFacing + motion.velocity.z * cosFacing) / speed;
+    final side =
+        (motion.velocity.x * cosFacing - motion.velocity.z * sinFacing) / speed;
+    return forward.abs() >= side.abs()
+        ? (forward >= 0 ? PlayerLoco.walk : PlayerLoco.backpedal)
+        : (side >= 0 ? PlayerLoco.strafeRight : PlayerLoco.strafeLeft);
+  }
+
   void _fillIdle() {
     var sum = 0.0;
     for (final clip in shots.values) {
@@ -188,7 +166,6 @@ final class PlayerAnimator {
     if (idle.weight < floor) idle.weight = floor;
   }
 
-  /// Restart: back to a clean idle.
   void reset() {
     active = null;
     _backwardDashRemaining = 0;
@@ -214,7 +191,6 @@ final class PlayerAnimator {
         motion.rollDirection.x * forwardX + motion.rollDirection.z * forwardZ;
     final side =
         motion.rollDirection.x * forwardZ - motion.rollDirection.z * forwardX;
-    // Select the directional roll.
     return forward.abs() >= side.abs()
         ? (forward >= 0 ? PlayerShot.rollForward : PlayerShot.rollBack)
         : (side >= 0 ? PlayerShot.rollRight : PlayerShot.rollLeft);
@@ -232,15 +208,13 @@ final class PlayerAnimator {
   }
 }
 
-/// Instantiates the knight's clips against [model] (channels bind by node
-/// name) with playback scaled so each one-shot spans its machine window.
+/// Creates animation clips bound to [model].
 PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
   AnimationClip loop(String name) =>
       model.createAnimationClip(assets.clip(name))
         ..loop = true
         ..weight = 0
         ..play();
-  // Limit one shot playback speed.
   AnimationClip shot(String name, double clipSeconds, double windowSeconds) =>
       model.createAnimationClip(assets.clip(name))
         ..loop = false
@@ -251,7 +225,6 @@ PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
         );
 
   final locomotion = <PlayerLoco, AnimationClip>{
-    // Two-handed guard: the axe is up, ready; reads as a fighter.
     PlayerLoco.idle: loop('Melee_2H_Idle')..weight = 1,
     PlayerLoco.walk: loop('Walking_A'),
     PlayerLoco.run: loop('Running_A'),
@@ -263,8 +236,6 @@ PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
   const heavyWindow =
       heavyStartupSeconds + heavyActiveSeconds + heavyRecoverySeconds;
   final shots = <PlayerShot, AnimationClip>{
-    // Normal is a quick horizontal slice; heavy is the big spin sweep.
-    // Both cover the same wide strike arc.
     PlayerShot.strike: shot(
       'Melee_2H_Attack_Slice',
       strikeClipSeconds,
@@ -275,9 +246,7 @@ PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
       heavyClipSeconds,
       heavyWindow,
     ),
-    // The packs ship no true roll; the dodges are it. Played snappy (not
-    // stretched over the window, which read as a slide): the hop lands
-    // early and the landing pose rides out the i-frame tail.
+    // The asset pack has dodge clips but no roll.
     PlayerShot.rollForward: shot(
       'Dodge_Forward',
       rollClipSeconds,
@@ -299,12 +268,8 @@ PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
       rollClipSeconds / rollPlaybackScale,
     ),
     PlayerShot.hit: shot('Hit_A', hitClipSeconds, staggerSeconds),
-    // The mid-air hang while a launch carries the fighter. Loops: a
-    // launch can outlast the clip, and a finished one-shot drops to the
-    // bind pose (a T-pose in the air).
+    // Loop the airborne pose to avoid returning to the bind pose.
     PlayerShot.fall: loop('Jump_Idle'),
-    // The leap that throws the wind gust: a full jump, played brisk so it
-    // reads as a quick hop.
     PlayerShot.windCast: shot(
       'Jump_Full_Short',
       windCastClipSeconds,

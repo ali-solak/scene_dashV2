@@ -3,35 +3,52 @@ library;
 
 import 'dart:math' as math;
 
-import 'package:scene_dash_v2/scene_dash_v2.dart' show Tag;
+import 'package:scene_dash_v2/scene_dash_v2.dart' show Entity, Tag;
 import 'package:vector_math/vector_math.dart' show Vector3, Vector4;
 
-/// Tags the player entity.
 final class Player implements Tag {
   const Player();
+}
+
+final class PlayerWindup {
+  const PlayerWindup(this.facing);
+  final double facing;
+}
+
+final class HitLanded {
+  const HitLanded(
+    this.target,
+    this.damage, {
+    this.heavy = false,
+    this.knockback,
+    this.stagger = true,
+    this.impact = true,
+  });
+
+  final Entity target;
+  final double damage;
+  final bool heavy;
+  final Vector3? knockback;
+  final bool stagger;
+  final bool impact;
+}
+
+final class CastLeap {
+  const CastLeap();
 }
 
 final class Health {
   Health(this.max) : current = max;
 
-  /// Maximum health.
   double max;
   double current;
 
   bool get alive => current > 0;
 
-  /// Heals up to the ceiling (never past it, never resurrects).
   void heal(double amount) {
     if (!alive) return;
     current = math.min(max, current + amount);
   }
-}
-
-final class PlayerWindup {
-  const PlayerWindup(this.facing);
-
-  /// Committed attack yaw.
-  final double facing;
 }
 
 const double knockbackGravity = 18;
@@ -45,24 +62,17 @@ final class Knockback {
   final double decayRate;
   final double gravity;
 
-  /// Off the ground (mid-launch): movement input has no purchase.
   bool airborne = false;
-
-  /// Remaining time on the ground.
   double downed = 0;
 
-  /// Airborne, or still on the floor from a landing. Nothing that reads
-  /// this may act.
+  /// True while airborne or recovering on the ground.
   bool get incapacitated => airborne || downed > 0;
 
-  /// Replaces the current shove (a fresh hit wins, it does not stack).
   void shove(Vector3 push) {
     velocity.setFrom(push);
     if (push.y > 0) airborne = true;
   }
 
-  /// Integrates one step into [into]: the horizontal shove decays, the
-  /// vertical arc falls under gravity and lands back on the ground plane.
   void step(double dt, Vector3 into) {
     if (airborne || into.y > 0) {
       velocity.y -= gravity * dt;
@@ -70,7 +80,7 @@ final class Knockback {
       if (into.y <= 0) {
         into.y = 0;
         velocity.y = 0;
-        if (airborne) downed = launchDownedSeconds; // landed: stay down
+        if (airborne) downed = launchDownedSeconds;
         airborne = false;
       }
     } else {
@@ -81,7 +91,6 @@ final class Knockback {
       into
         ..x += velocity.x * dt
         ..z += velocity.z * dt;
-      // Apply friction while grounded.
       if (!airborne) {
         final decay = math.exp(-decayRate * dt);
         velocity.x *= decay;

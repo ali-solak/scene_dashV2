@@ -1,7 +1,5 @@
 part of '../rules.dart';
 
-/// The run's shape: the title/restart/menu intents, the per-run clock
-/// reset, and the death slow-motion.
 void installRunFlow(GameBuilder game) {
   game
     ..addSystem(Schedules.frameStart, requestStart, reads: const {})
@@ -22,7 +20,6 @@ void installRunFlow(GameBuilder game) {
     );
 }
 
-/// Leaves the title screen (frameStart, alongside the other intents).
 void requestStart(World world) {
   if (!world.consumeAny<GameStarted>()) return;
   if (world.state<GameStatus>() != GameStatus.title) return;
@@ -30,9 +27,6 @@ void requestStart(World world) {
   world.setState(GameStatus.fighting);
 }
 
-/// Consumes the restart intent (frameStart, so it never lags the event
-/// retention window): while lost, a restart request returns the world to
-/// `fighting`, and `startRun` resets from there.
 void requestRestart(World world) {
   if (!world.consumeAny<RestartRequested>()) return;
   if (world.state<GameStatus>() != GameStatus.lost) return;
@@ -48,25 +42,18 @@ void toggleSkillMenu(World world) {
       world.setState(GameStatus.fighting);
     case GameStatus.lost:
     case GameStatus.title:
-      break; // the death panel and the title screen own their screens
+      break;
   }
 }
 
-/// `OnEnter(fighting)` on a fresh run ([freshRun]): undo the death
-/// slow-motion. Every feature resets its own state through its own
-/// `OnEnter(fighting)` system behind the same gate; the clock is the one
-/// piece rules owns.
 void startRun(World world) {
   world.clock.timeScale = 1;
 }
 
-/// Death drops the world into slow motion behind the restart prompt.
 void slowMotionOnLoss(World world) {
   world.clock.timeScale = loseSlowMoTimeScale;
 }
 
-/// The player is dead when its health hits zero: drop the world into
-/// `lost`. `OnEnter(lost)` slows time; the HUD shows the restart prompt.
 void checkPlayerDeath(World world) {
   final health = world.query<Health>(require: const [Player]).firstOrNull?.$2;
   if (health != null && !health.alive) {

@@ -1,6 +1,5 @@
 part of '../player.dart';
 
-/// Installs player combat actions.
 void installPlayerActions(GameBuilder game) {
   game
     ..addSystem(
@@ -36,7 +35,6 @@ void installPlayerActions(GameBuilder game) {
     );
 }
 
-/// Updates player combat effects.
 void announceWindup(World world) {
   final row = world
       .query2<Fighter, PlayerMotion>(require: const [Player])
@@ -48,9 +46,6 @@ void announceWindup(World world) {
   }
 }
 
-/// Off the machine's entry edge, not the input: a buffered roll can fire
-/// a frame or two after the press. (The swing's crescent lives in the
-/// rules feature, built from the hit check's reach and arc.)
 void spawnPlayerFx(World world) {
   final row = world
       .query3<Fighter, PlayerMotion, SceneTransform>(require: const [Player])
@@ -62,13 +57,11 @@ void spawnPlayerFx(World world) {
     spawnDashDust(
       world,
       transform.translation.clone(),
-      // dirt is thrown away from the committed dodge direction.
       motion.rollDirection.clone(),
     );
   }
 }
 
-/// Updates the sword trail.
 void updateBladeTrail(World world) {
   final row = world
       .query2<Fighter, BladeTrail>(require: const [Player])
@@ -76,11 +69,9 @@ void updateBladeTrail(World world) {
   if (row == null) return;
   final (_, fighter, blade) = row;
 
-  final swinging = switch (fighter.phase.state) {
-    CombatPhase.active || CombatPhase.recovery => true,
-    _ => false,
-  };
-  // Off outside the swing: the ribbon ages out instead of snapping away.
+  final swinging =
+      fighter.phase.state == CombatPhase.active ||
+      fighter.phase.state == CombatPhase.recovery;
   blade.trail
     ..emitting = swinging
     ..colorOverTrail = fighter.heavy ? heavyTrailFade : lightTrailFade;

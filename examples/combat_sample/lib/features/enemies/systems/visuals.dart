@@ -97,64 +97,67 @@ void installEnemyVisuals(GameBuilder game) {
     );
 }
 
-/// Attaches an enemy model or fallback capsule.
 void attachEnemyVisuals(World world) {
-  final hasCharacters = world.hasResource<CharacterAssets>();
+  final assets = world.hasResource<CharacterAssets>()
+      ? world.resource<CharacterAssets>()
+      : null;
   world.entitiesWith(require: const [Enemy]).each((enemy) {
     if (world.tryGet<NodeRef>(enemy) != null) return;
-    final assets = hasCharacters ? world.resource<CharacterAssets>() : null;
-    final brawler = world.tryGet<Brawler>(enemy);
+    final giant = world.tryGet<Brawler>(enemy)?.giant ?? false;
     final lent = assets?.takeBarbarian();
+
+    late final Node body;
+    PhysicallyBasedMaterial? capsuleMaterial;
+    EnemyAnimator? animator;
+    ModelSlot? slot;
+
     if (assets != null && lent != null) {
       final model = assets.barbarians[lent];
-      final bodyScale =
-          characterScale * (brawler?.giant ?? false ? giantScale : 1.0);
-      final axe = assets.axe;
-      Node? mountedAxe;
-      if (axe != null) {
-        mountedAxe = axe.clone();
+      final mountedAxe = assets.axe?.clone();
+      if (mountedAxe != null) {
         model.getChildByName('handslot.r')?.add(mountedAxe);
       }
-      final wrapper = Node(
+      body = Node(
         name: 'enemy-model',
         localTransform: Matrix4.compose(
           Vector3.zero(),
           Quaternion.axisAngle(Vector3(0, 1, 0), characterModelYaw),
-          Vector3.all(bodyScale),
+          Vector3.all(characterScale * (giant ? giantScale : 1)),
         ),
       )..add(model);
-      final root = Node(name: 'enemy')..add(wrapper);
-      _attachHealthBar(world, enemy, root, giant: brawler?.giant ?? false);
-      world.add(enemy, NodeRef(root));
-      world.add(enemy, buildEnemyAnimator(assets, model));
-      world.add(enemy, BrawlerVisuals(bodyRoot: wrapper));
-      world.add(enemy, ModelSlot(lent, axe: mountedAxe));
-      return;
+      animator = buildEnemyAnimator(assets, model);
+      slot = ModelSlot(lent, axe: mountedAxe);
+    } else {
+      capsuleMaterial = PhysicallyBasedMaterial()
+        ..baseColorFactor = Vector4(0.72, 0.26, 0.2, 1)
+        ..roughnessFactor = 0.65;
+      body =
+          Node(
+              localTransform: Matrix4.translation(
+                Vector3(0, enemyCapsuleHeight / 2 + enemyCapsuleRadius, 0),
+              ),
+            )
+            ..mesh = Mesh(
+              CapsuleGeometry(
+                radius: enemyCapsuleRadius,
+                height: enemyCapsuleHeight,
+              ),
+              capsuleMaterial,
+            );
     }
-    final material = PhysicallyBasedMaterial()
-      ..baseColorFactor = Vector4(0.72, 0.26, 0.2, 1)
-      ..roughnessFactor = 0.65;
-    final body =
-        Node(
-            localTransform: Matrix4.translation(
-              Vector3(0, enemyCapsuleHeight / 2 + enemyCapsuleRadius, 0),
-            ),
-          )
-          ..mesh = Mesh(
-            CapsuleGeometry(
-              radius: enemyCapsuleRadius,
-              height: enemyCapsuleHeight,
-            ),
-            material,
-          );
+
     final root = Node(name: 'enemy')..add(body);
-    _attachHealthBar(world, enemy, root, giant: brawler?.giant ?? false);
+    _attachHealthBar(world, enemy, root, giant: giant);
     world.add(enemy, NodeRef(root));
-    world.add(enemy, BrawlerVisuals(bodyRoot: body, capsuleMaterial: material));
+    if (animator != null) world.add(enemy, animator);
+    world.add(
+      enemy,
+      BrawlerVisuals(bodyRoot: body, capsuleMaterial: capsuleMaterial),
+    );
+    if (slot != null) world.add(enemy, slot);
   });
 }
 
-/// Attaches an enemy health bar.
 void _attachHealthBar(
   World world,
   Entity enemy,

@@ -1,6 +1,4 @@
-/// Wraps the game surface and writes the input resources: held state to
-/// `ButtonInput`/`AxisInput`, edges to `InputBuffer`, pointer deltas to
-/// `LookInput`, one-shot intents as events. Systems read those.
+/// Routes keyboard, pointer, and touch input into game resources.
 library;
 
 import 'package:flutter/foundation.dart'
@@ -21,12 +19,9 @@ import '../features/skills/skills.dart' show Skill, SkillCast;
 import '../common/game_state.dart' show GameStatus, SkillMenuToggled;
 import '../common/inputs.dart';
 
-/// A touch that barely moved and released quickly is a lock press, not a
-/// camera swipe.
 const double _tapSlopPixels = 16;
 const Duration _tapWindow = Duration(milliseconds: 280);
 
-/// Skill keys in bar order.
 const List<LogicalKeyboardKey> _skillKeys = [
   LogicalKeyboardKey.digit1,
   LogicalKeyboardKey.digit2,
@@ -34,9 +29,6 @@ const List<LogicalKeyboardKey> _skillKeys = [
   LogicalKeyboardKey.digit4,
 ];
 
-/// Whether this build shows the on-screen sticks and buttons: forced on
-/// for touch platforms, and available anywhere via
-/// `--dart-define=touchControls=true`.
 final bool showTouchControls =
     const bool.fromEnvironment('touchControls') ||
     defaultTargetPlatform == TargetPlatform.android ||
@@ -50,11 +42,7 @@ class GameControls extends StatefulWidget {
     this.showTouchControls = false,
   });
 
-  /// Scene input surface.
   final Widget scene;
-
-  /// Drawn over the scene. Inside the focus-reclaiming listener, so its
-  /// buttons cannot leave the keyboard dead behind them.
   final Widget hud;
 
   final bool showTouchControls;
@@ -68,7 +56,6 @@ class _GameControlsState extends State<GameControls>
   final FocusNode _focus = FocusNode(debugLabel: 'combat-controls');
   final Set<LogicalKeyboardKey> _pressed = <LogicalKeyboardKey>{};
 
-  // Game input resources.
   late WorldGame _game;
   late ButtonInput<CombatAction> _buttons;
   late AxisInput<MoveAxis> _axes;
@@ -79,9 +66,7 @@ class _GameControlsState extends State<GameControls>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Game keys ride the hardware keyboard, not the focus tree: focus
-    // gets stolen constantly (overlays, HUD clicks) and a focus-based
-    // onKeyEvent swallowed casts. A global handler sees every key.
+    // Global handling survives HUD focus changes.
     HardwareKeyboard.instance.addHandler(_handleKey);
   }
 
@@ -130,13 +115,11 @@ class _GameControlsState extends State<GameControls>
 
   bool get _fighting => _game.world.state<GameStatus>() == GameStatus.fighting;
 
-  // Attack is held when either source (J, left button) is held; tracked
-  // independently so releasing one never releases the other.
+  // Keyboard and pointer attacks release independently.
   bool _keyAttack = false;
   bool _pointerAttack = false;
 
   void _syncAttack() {
-    // Buffered on the edge; held state decides light vs heavy.
     final edge = _buttons.setPressed(
       CombatAction.attack,
       _keyAttack || _pointerAttack,
@@ -148,8 +131,6 @@ class _GameControlsState extends State<GameControls>
 
   // Keyboard
 
-  /// A key this game acts on, consumed (returns true) so it never doubles
-  /// as focus traversal (Tab) or leaks to a system shortcut.
   bool _isGameKey(LogicalKeyboardKey key) =>
       _skillKeys.contains(key) ||
       key == LogicalKeyboardKey.keyW ||
@@ -162,7 +143,6 @@ class _GameControlsState extends State<GameControls>
       key == LogicalKeyboardKey.keyQ ||
       key == LogicalKeyboardKey.escape;
 
-  /// Handles hardware keyboard input.
   bool _handleKey(KeyEvent event) {
     final key = event.logicalKey;
     if (event is KeyDownEvent) {
@@ -176,7 +156,7 @@ class _GameControlsState extends State<GameControls>
           _buffer.record(CombatAction.roll);
         case LogicalKeyboardKey.keyJ:
           _keyAttack = true;
-          _syncAttack(); // held always tracked; the record gates inside
+          _syncAttack();
         case LogicalKeyboardKey.tab when _fighting:
           _game.emit(const LockPressed());
         case LogicalKeyboardKey.keyQ when _fighting:
@@ -252,7 +232,6 @@ class _GameControlsState extends State<GameControls>
     _touchDownTime = null;
   }
 
-  // Drag to look.
   void _onPointerMove(PointerMoveEvent event) {
     if (event.kind == PointerDeviceKind.mouse) {
       if ((event.buttons & kSecondaryButton) != 0) {
@@ -266,8 +245,6 @@ class _GameControlsState extends State<GameControls>
 
   @override
   Widget build(BuildContext context) {
-    // Keys are handled globally (see [_handleKey]); the Focus stays only
-    // to hold [autofocus] and keep stray Tab traversal off the HUD.
     return Focus(
       focusNode: _focus,
       autofocus: true,
@@ -284,8 +261,6 @@ class _GameControlsState extends State<GameControls>
               behavior: HitTestBehavior.opaque,
               child: widget.scene,
             ),
-            // Only while there is a fight to steer; no stick over a
-            // title screen or death panel.
             if (widget.showTouchControls)
               GameStateBuilder<GameStatus>(
                 builder: (context, status) => status == GameStatus.fighting

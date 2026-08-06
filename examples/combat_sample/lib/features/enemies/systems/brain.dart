@@ -1,8 +1,5 @@
 part of '../enemies.dart';
 
-/// The barbarian brain: the encounter coordinator, the brawl machine
-/// (approach, circle, telegraph, swing, recover, dodge), and the aggro
-/// token that keeps one attacker readable at a time.
 void installBrawlBrain(GameBuilder game) {
   game
     ..registerComponent<AggroCoordinator>()
@@ -36,12 +33,10 @@ void installBrawlBrain(GameBuilder game) {
     );
 }
 
-/// Spawns the encounter coordinator.
 void spawnEnemies(World world) {
   world.spawn([AggroCoordinator()]);
 }
 
-/// Resets encounter coordination for a new run.
 void resetEncounter(World world) {
   final coordinator = world.query<AggroCoordinator>().firstOrNull?.$2;
   if (coordinator == null) return;
@@ -50,20 +45,13 @@ void resetEncounter(World world) {
     ..cooldown = 0;
 }
 
-/// The brawl machine: approach, circle, (token) telegraph, swing,
-/// recover, back to circle; stagger and death arrive via `applyDamage`.
-/// Every timing is `phase.elapsed`-driven.
 void brawlerDriver(World world) {
-  final playerRow = world
+  final player = world
       .query<SceneTransform>(require: const [Player])
-      .firstOrNull;
-  if (playerRow == null) return;
-  final playerPosition = playerRow.$2.translation;
-  // The tell the pack reads: a windup is committed but has not landed,
-  // which is exactly the window a roll beats. It carries the swing's yaw,
-  // so only the barbarians actually in the arc react.
+      .firstOrNull
+      ?.$2;
+  if (player == null) return;
   final windup = world.events<PlayerWindup>().lastOrNull;
-  final playerTransform = playerRow.$2;
 
   world.query3<Brawler, Health, SceneTransform>(require: const [Enemy]).each((
     entity,
@@ -71,105 +59,129 @@ void brawlerDriver(World world) {
     health,
     transform,
   ) {
-    brawler.sinceHurt += world.dt; // ages the fire/lava flinch (render-only)
-    brawler.sinceDodge += world.dt;
-    final phase = brawler.phase..tick(world.dt);
-    if (!health.alive && phase.state != BrawlPhase.dying) {
-      // Finish externally killed enemies.
-      phase.go(BrawlPhase.dying);
+    final phase = brawler.phase;
+    brawler
+      ..sinceHurt += world.dt
+      ..sinceDodge += world.dt;
+    phase.tick(world.dt);
+
+    if (!health.alive) {
+      if (phase.state != BrawlPhase.dying) phase.go(BrawlPhase.dying);
       return;
     }
-
-    if (phase.state == BrawlPhase.dying) return;
-    // Mid-transformation: the giant is busy growing, not fighting.
-    if (world.expiryOf<Transforming>(entity) != null) return;
-
-    // Airborne: the throw outlasts the stagger, so without this hold the
-    // machine would walk out of `staggered` and start circling and
-    // swinging on the way down. It stays staggered until it lands.
+    if (phase.state == BrawlPhase.dying ||
+        world.expiryOf<Transforming>(entity) != null) {
+      return;
+    }
     if (world.tryGet<Knockback>(entity)?.incapacitated ?? false) {
-      if (phase.state != BrawlPhase.staggered) {
-        phase.go(BrawlPhase.staggered);
-      }
+      if (phase.state != BrawlPhase.staggered) phase.go(BrawlPhase.staggered);
       return;
     }
-    final dx = playerPosition.x - transform.translation.x;
-    final dz = playerPosition.z - transform.translation.z;
-    final distance = math.sqrt(dx * dx + dz * dz);
 
+    final distance = planarDistance(transform, player);
     switch (phase.state) {
       case BrawlPhase.rising:
-        // Held still by moveBrawlers; the awaken clip plays over this.
-        if (phase.elapsed >= risingSeconds) phase.go(BrawlPhase.approach);
+        _advanceAfter(brawler, risingSeconds, BrawlPhase.approach);
       case BrawlPhase.approach:
         if (distance <= engageRange) phase.go(BrawlPhase.circle);
       case BrawlPhase.circle:
-        brawler.sinceTaunt += world.dt;
-        if (windup != null &&
-            withinArc(
-              from: playerTransform,
-              facing: windup.facing,
-              to: transform,
-              reach: dodgeThreatRange,
-              halfArc: dodgeThreatHalfArc,
-            ) &&
-            brawler.sinceDodge >= dodgeCooldownSeconds &&
-            (brawler.wobbleSeed * 3.7 + brawler.wobble * 2.3) % 1.0 <
-                dodgeChance) {
-          brawler
-            ..sinceDodge = 0
-            // Continue the circling direction.
-            ..dodgeSign = brawler.circleDirection >= 0 ? 1 : -1;
-          phase.go(BrawlPhase.dodging);
-        } else if (brawler.hasToken && distance <= brawlerAttackRange) {
-          // Select a seeded opener.
-          final roll = (brawler.wobbleSeed * 7.31 + brawler.wobble * 1.7) % 1.0;
-          final combo = roll < (brawler.giant ? giantComboChance : comboChance);
-          brawler.comboLeft = combo ? 1 : 0;
-          _beginChop(brawler, combo ? comboOpenerSeconds : telegraphSeconds);
-        } else if (distance > engageRange * 1.8) {
-          phase.go(BrawlPhase.approach);
-        } else if (!brawler.hasToken &&
-            brawler.sinceTaunt >=
-                tauntIntervalSeconds + brawler.wobbleSeed.remainder(3.0)) {
-          // Non attackers may taunt.
-          brawler.sinceTaunt = 0;
-          phase.go(BrawlPhase.taunting);
-        }
+        _driveCircle(brawler, transform, player, windup, distance, world.dt);
       case BrawlPhase.taunting:
-        if (phase.elapsed >= tauntSeconds) phase.go(BrawlPhase.circle);
+        _advanceAfter(brawler, tauntSeconds, BrawlPhase.circle);
       case BrawlPhase.telegraph:
-        if (phase.elapsed >= brawler.windup / brawler.tempo) {
-          phase.go(BrawlPhase.swing);
-        }
+        _advanceAfter(
+          brawler,
+          brawler.windup / brawler.tempo,
+          BrawlPhase.swing,
+        );
       case BrawlPhase.swing:
-        if (phase.elapsed >= swingSeconds / brawler.tempo) {
-          phase.go(BrawlPhase.recover);
-        }
+        _advanceAfter(
+          brawler,
+          swingSeconds / brawler.tempo,
+          BrawlPhase.recover,
+        );
       case BrawlPhase.recover:
-        // Mid-combo the recover is only a link: it runs short and feeds
-        // straight back into the next windup.
-        final linking = brawler.comboLeft > 0;
-        final window = (linking ? comboLinkSeconds : recoverSeconds);
-        if (phase.elapsed >= window / brawler.tempo) {
-          if (linking) {
-            brawler.comboLeft--;
-            _beginChop(brawler, comboFollowSeconds);
-          } else {
-            phase.go(BrawlPhase.circle);
-          }
-        }
+        _driveRecovery(brawler);
       case BrawlPhase.dodging:
-        if (phase.elapsed >= dodgeSeconds) phase.go(BrawlPhase.circle);
+        _advanceAfter(brawler, dodgeSeconds, BrawlPhase.circle);
       case BrawlPhase.staggered:
-        if (phase.elapsed >= brawlStaggerSeconds) phase.go(BrawlPhase.circle);
+        _advanceAfter(brawler, brawlStaggerSeconds, BrawlPhase.circle);
       case BrawlPhase.dying:
-        break; // terminal; DespawnAfter owns the removal
+        break;
     }
   });
 }
 
-/// Starts an attack windup.
+void _driveCircle(
+  Brawler brawler,
+  SceneTransform transform,
+  SceneTransform player,
+  PlayerWindup? windup,
+  double distance,
+  double dt,
+) {
+  brawler.sinceTaunt += dt;
+  if (_shouldDodge(brawler, transform, player, windup)) {
+    brawler
+      ..sinceDodge = 0
+      ..dodgeSign = brawler.circleDirection >= 0 ? 1 : -1;
+    brawler.phase.go(BrawlPhase.dodging);
+    return;
+  }
+  if (brawler.hasToken && distance <= brawlerAttackRange) {
+    final roll = (brawler.wobbleSeed * 7.31 + brawler.wobble * 1.7) % 1.0;
+    final combo = roll < (brawler.giant ? giantComboChance : comboChance);
+    brawler.comboLeft = combo ? 1 : 0;
+    _beginChop(brawler, combo ? comboOpenerSeconds : telegraphSeconds);
+    return;
+  }
+  if (distance > engageRange * 1.8) {
+    brawler.phase.go(BrawlPhase.approach);
+    return;
+  }
+  final tauntAt = tauntIntervalSeconds + brawler.wobbleSeed.remainder(3.0);
+  if (!brawler.hasToken && brawler.sinceTaunt >= tauntAt) {
+    brawler.sinceTaunt = 0;
+    brawler.phase.go(BrawlPhase.taunting);
+  }
+}
+
+bool _shouldDodge(
+  Brawler brawler,
+  SceneTransform transform,
+  SceneTransform player,
+  PlayerWindup? windup,
+) {
+  if (windup == null || brawler.sinceDodge < dodgeCooldownSeconds) {
+    return false;
+  }
+  final roll = (brawler.wobbleSeed * 3.7 + brawler.wobble * 2.3) % 1.0;
+  return roll < dodgeChance &&
+      withinArc(
+        from: player,
+        facing: windup.facing,
+        to: transform,
+        reach: dodgeThreatRange,
+        halfArc: dodgeThreatHalfArc,
+      );
+}
+
+void _driveRecovery(Brawler brawler) {
+  final linking = brawler.comboLeft > 0;
+  final window = linking ? comboLinkSeconds : recoverSeconds;
+  if (brawler.phase.elapsed < window / brawler.tempo) return;
+  if (!linking) {
+    brawler.phase.go(BrawlPhase.circle);
+    return;
+  }
+  brawler.comboLeft--;
+  _beginChop(brawler, comboFollowSeconds);
+}
+
+void _advanceAfter(Brawler brawler, double seconds, BrawlPhase next) {
+  if (brawler.phase.elapsed >= seconds) brawler.phase.go(next);
+}
+
 void _beginChop(Brawler brawler, double windup) {
   brawler
     ..windup = windup
@@ -177,68 +189,67 @@ void _beginChop(Brawler brawler, double windup) {
   brawler.phase.go(BrawlPhase.telegraph);
 }
 
-/// The aggro token: one holder at a time. Returned on the holder's
-/// recover/stagger entry or death, with a cooldown before the next grant;
-/// granted to the nearest circling, living barbarian. Only the holder may
-/// enter telegraph; everyone else keeps circling.
 void coordinateAggro(World world) {
   final coordinator = world.query<AggroCoordinator>().firstOrNull?.$2;
   if (coordinator == null) return;
 
+  _releaseAggro(world, coordinator);
+  _grantAggro(world, coordinator);
+  _syncAggro(world, coordinator.holder);
+}
+
+void _releaseAggro(World world, AggroCoordinator coordinator) {
   final holder = coordinator.holder;
-  if (holder != null) {
-    final brawler = world.tryGet<Brawler>(holder);
-    final health = world.tryGet<Health>(holder);
-    // State-based, not edge-based: applyDamage staggers in the resolution
-    // set, whose edges the next driver tick lowers before this runs.
-    final done =
-        brawler == null ||
-        health == null ||
-        !health.alive ||
-        brawler.phase.state == BrawlPhase.dying ||
-        brawler.phase.state == BrawlPhase.staggered ||
-        // Keep the token through combo links.
-        (brawler.phase.state == BrawlPhase.recover && brawler.comboLeft == 0);
-    if (done) {
-      coordinator.holder = null;
-      coordinator.cooldown = aggroCooldownSeconds;
-    }
+  if (holder == null) return;
+  final brawler = world.tryGet<Brawler>(holder);
+  final health = world.tryGet<Health>(holder);
+  if (brawler != null &&
+      health != null &&
+      health.alive &&
+      brawler.phase.state != BrawlPhase.dying &&
+      brawler.phase.state != BrawlPhase.staggered &&
+      (brawler.phase.state != BrawlPhase.recover || brawler.comboLeft > 0)) {
+    return;
   }
+  coordinator
+    ..holder = null
+    ..cooldown = aggroCooldownSeconds;
+}
 
-  if (coordinator.holder == null) {
-    coordinator.cooldown -= world.dt;
-    if (coordinator.cooldown <= 0) {
-      final playerRow = world
-          .query<SceneTransform>(require: const [Player])
-          .firstOrNull;
-      if (playerRow != null) {
-        final playerPosition = playerRow.$2.translation;
-        Entity? nearest;
-        var nearestDistance = double.infinity;
-        world
-            .query3<Brawler, Health, SceneTransform>(require: const [Enemy])
-            .each((entity, brawler, health, transform) {
-              if (!health.alive || brawler.phase.state != BrawlPhase.circle) {
-                return;
-              }
-              final dx = playerPosition.x - transform.translation.x;
-              final dz = playerPosition.z - transform.translation.z;
-              final distance = dx * dx + dz * dz;
-              if (distance < nearestDistance) {
-                nearestDistance = distance;
-                nearest = entity;
-              }
-            });
-        coordinator.holder = nearest;
-      }
-    }
-  }
+void _grantAggro(World world, AggroCoordinator coordinator) {
+  if (coordinator.holder != null) return;
+  coordinator.cooldown -= world.dt;
+  if (coordinator.cooldown > 0) return;
+  final player = world
+      .query<SceneTransform>(require: const [Player])
+      .firstOrNull
+      ?.$2;
+  if (player == null) return;
+  coordinator.holder = _nearestAttacker(world, player);
+}
 
-  // Mirror the grant onto the brawlers every tick: this system is the
-  // flag's single writer, and a stale flag on a released brawler would
-  // let two attack at once.
-  final granted = coordinator.holder;
+Entity? _nearestAttacker(World world, SceneTransform player) {
+  Entity? nearest;
+  var nearestDistance = double.infinity;
+  world.query3<Brawler, Health, SceneTransform>(require: const [Enemy]).each((
+    entity,
+    brawler,
+    health,
+    transform,
+  ) {
+    if (!health.alive || brawler.phase.state != BrawlPhase.circle) return;
+    final dx = player.translation.x - transform.translation.x;
+    final dz = player.translation.z - transform.translation.z;
+    final distance = dx * dx + dz * dz;
+    if (distance >= nearestDistance) return;
+    nearest = entity;
+    nearestDistance = distance;
+  });
+  return nearest;
+}
+
+void _syncAggro(World world, Entity? holder) {
   world.query<Brawler>(require: const [Enemy]).each((entity, brawler) {
-    brawler.hasToken = entity == granted;
+    brawler.hasToken = entity == holder;
   });
 }
