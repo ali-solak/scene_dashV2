@@ -18,38 +18,25 @@ part 'data/bundles.dart';
 part 'vfx/vfx.dart';
 part 'systems/systems.dart';
 
-/// Installs the rocks feature. The spawner is a run-scoped process
-/// entity. Flame trails share one world-space emitter at the scene root,
-/// because per-rock emitters cannot trail (see [FlameTrailShape]).
 void installRocks(GameBuilder game) {
   game
     ..registerTag<Rock>()
     ..registerTag<Flaming>()
     ..registerComponent<RockSpawner>()
     ..registerComponent<FlameTrailEmitter>()
-    // The tag is the single source of the flaming look; runtime ignition
-    // is one `world.add(rock, const Flaming())`. The observers own the
-    // full payload: material swap plus trail-emitter attach/detach.
     ..observe<Flaming>(onAdd: igniteRock, onRemove: extinguishRock)
-    // Invariant: no reaction ⇒ shell hidden, on every removal path.
     ..observe<RockHitReaction>(onRemove: clearHitShell)
     ..addSystem(
       OnEnter(GameStatus.playing),
       spawnRockSpawner,
       writes: {RockSpawner},
     )
-    // The spawn itself is deferred to the command boundary, so the
-    // declared writes are the feature-owned types. Scene-gated like
-    // spawnPlayer: the bundle builds GPU meshes, so headless boots skip
-    // the system (rock tests spawn their own stand-ins).
     ..addSystem(
       Schedules.fixedUpdate,
       spawnRocks,
       writes: {Rock, Flaming, RockSpawner},
       runIf: hasResource<Scene>().and(inState(GameStatus.playing)),
     )
-    // Off-ramp cleanup is the bundle's DespawnOutside part (world feature).
-    // The spawn is deferred; the declared write is the feature-owned type.
     ..addSystem(
       Schedules.startup,
       spawnFlameTrailEmitter,
@@ -62,8 +49,6 @@ void installRocks(GameBuilder game) {
       reads: {NodeRef},
       writes: {FlameTrailEmitter},
     )
-    // The reaction itself is read-only here: its removeAfter deadline is
-    // the lifecycle, so the system never mutates or removes it.
     ..addSystem(
       Schedules.update,
       updateRockHitReactions,

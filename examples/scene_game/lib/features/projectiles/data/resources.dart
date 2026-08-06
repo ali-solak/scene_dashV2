@@ -1,28 +1,16 @@
 part of '../projectiles.dart';
 
-/// The one charge-plasma emitter, on a scene-scoped process entity.
-/// `updateChargeVisuals` parents it to the player and throttles its rate.
-/// Headless worlds have no carrier at all.
 final class ChargePlasmaEmitter {
   ChargePlasmaEmitter({required this.node, required this.spawner});
 
-  /// The emitter node, positioned at the muzzle orb offset; parented to
-  /// the live player's root while a run is on (manual — reparenting under
-  /// the player is this feature's job, so no `NodeRef` mount).
   final Node node;
 
-  /// The emitter's spawner; rate 0 while idle.
   final fx.Spawner spawner;
 }
 
-/// The one reused lock-on reticle: a single node repositioned onto the
-/// current target each frame, never one per rock. [model] bridges the
-/// systems that write it and the widget that paints it.
 final class LockOnReticle {
   LockOnReticle({required this.node, required this.model});
 
-  /// The reticle node; the entity's `NodeRef` mounts it at the scene
-  /// root, and `billboardAt`/`hideNode` steer it in place.
   final Node node;
 
   final ReticleModel model;
@@ -33,7 +21,7 @@ final class LockOnReticle {
   double firedFlash = 0;
   double impactFlash = 0;
 
-  // Scratch basis vectors so per-frame billboarding allocates nothing.
+  // Scratch vectors avoid frame allocations.
   final Vector3 _forward = Vector3.zero();
   final Vector3 _right = Vector3.zero();
   final Vector3 _up = Vector3.zero();
@@ -51,8 +39,6 @@ final class LockOnReticle {
     impactFlash: impactFlash,
   );
 
-  /// Places [node] at the target position facing [camera], mutating the node
-  /// transform in place (no allocation).
   void billboardAt(double tx, double ty, double tz, Vector3 camera) {
     final n = node;
     _forward
@@ -60,7 +46,7 @@ final class LockOnReticle {
       ..normalize();
     _worldUp.crossInto(_forward, _right);
     if (_right.length2 < 1e-6) {
-      // Degenerate (camera directly above): fall back to world X.
+      // Fall back when the camera is directly above.
       _right.setValues(1, 0, 0);
     }
     _right.normalize();
@@ -83,6 +69,7 @@ final class LockOnReticle {
     s[13] = ty;
     s[14] = tz;
     s[15] = 1;
+    // Reassignment marks the transform dirty.
     n.localTransform = n.localTransform;
     n.visible = true;
   }
@@ -99,8 +86,5 @@ final class LockOnReticle {
     hideNode();
   }
 
-  /// The component owns [model]; the widget does not dispose it. Both the
-  /// `observe` onRemove and the shutdown system call this, because
-  /// shutdown does not despawn entities. They cannot both fire.
   void dispose() => model.dispose();
 }

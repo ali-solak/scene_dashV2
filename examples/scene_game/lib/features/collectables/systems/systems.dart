@@ -1,30 +1,18 @@
 part of '../collectables.dart';
 
-// Reused scratch so per-frame position reads allocate nothing.
+// Shared scratch avoids frame allocations.
 final Vector3 _playerScratch = Vector3.zero();
 final Vector3 _pickupScratch = Vector3.zero();
 
-/// Spawns a shield pickup when none is active; the entity query gate is
-/// the single source of "is a pickup active". The cadence is the
-/// registration's `every(shieldPickupInterval)` — no spawner entity, no
-/// timer to tick.
 void spawnShieldPickups(World world) {
   if (world.entitiesWith(require: const [ShieldPickup]).count() > 0) return;
-  // The bundle itself scopes the pickup to the run (DespawnOnExit part).
   world.spawn(shieldPickupBundle(x: world.resource<PickupLanes>().nextLane()));
 }
 
-/// Resets what collectables own when a run starts. The player survives the
-/// transition, so a shield carried over is removed here; bursts are
-/// run-scoped and swept by `DespawnOnExit`.
 void resetCollectablesOnRunStart(World world) {
-  world.query<Shielded>().each((entity, shielded) {
-    world.remove<Shielded>(entity);
-  });
+  world.entitiesWith(require: const [Shielded]).each(world.remove<Shielded>);
 }
 
-/// Pulses and bobs each pickup's glow child; the physics-driven root
-/// transform is left to Rapier.
 void animateShieldPickups(World world) {
   final dt = world.dt;
   world.query<ShieldPickupVisuals>(require: const [ShieldPickup]).each((
@@ -38,10 +26,6 @@ void animateShieldPickups(World world) {
   });
 }
 
-/// Collects a pickup when the player is close enough (a direct squared
-/// distance — only zero or one pickup exists). `eachUntil` stops the scan
-/// at the first collection: one shield per frame, no further distance
-/// checks.
 void collectShieldPickups(World world) {
   final player = world.query<NodeRef>(require: const [Player]).firstOrNull;
   if (player == null) return;
@@ -55,24 +39,17 @@ void collectShieldPickups(World world) {
     final dy = _pickupScratch.y - _playerScratch.y;
     final dz = _pickupScratch.z - _playerScratch.z;
     if (dx * dx + dy * dy + dz * dz <= shieldCollectDistanceSq) {
-      // The condition is a component on the player: full duration on
-      // pickup, and a re-pickup while shielded refreshes the deadline.
       world.add(player.$1, const Shielded(), removeAfter: shieldDuration);
       world.despawn(entity);
-      return false; // collected — stop scanning
+      return false;
     }
     return true;
   });
 }
 
-/// The bubble and badge follow [Shielded]'s lifecycle: the observer pair
-/// (registered in `installCollectables`) flips the target state on every
-/// add/remove path — pickup, expiry, run reset — and fires the badge pop.
 void shieldGained(World world, Entity entity, Shielded shielded) {
-  final v = world.tryGet<PlayerShieldVisuals>(entity);
-  if (v == null) return;
-  v
-    ..shieldActive = true
+  world.tryGet<PlayerShieldVisuals>(entity)
+    ?..shieldActive = true
     ..badgePop = 1;
 }
 
@@ -80,10 +57,6 @@ void shieldLost(World world, Entity entity, Shielded shielded) {
   world.tryGet<PlayerShieldVisuals>(entity)?.shieldActive = false;
 }
 
-/// Drives the player's shield bubble and activation badge each frame:
-/// show/hide eases toward the observer-driven target, the warning flash
-/// reads the live `expiryOf` deadline. Mutates player-owned
-/// nodes/materials in place.
 void updateShieldVisuals(World world) {
   final visuals = world
       .query<PlayerShieldVisuals>(require: const [Player])
@@ -98,7 +71,6 @@ void updateShieldVisuals(World world) {
   final breathe = 1 + 0.05 * math.sin(v.shieldPhase);
   final warnFlash = warning ? 0.5 + 0.5 * math.sin(v.shieldPhase * 1.5) : 1.0;
 
-  // Bubble: eased show factor so expiry shrinks it cleanly.
   v.shieldShow = approach(v.shieldShow, v.shieldActive ? 1.0 : 0.0, dt * 8);
   final bubbleScale = v.shieldShow * breathe;
   v.shieldBubble.setLocalUniform(0, 0, 0, bubbleScale);
@@ -115,7 +87,6 @@ void updateShieldVisuals(World world) {
     1,
   );
 
-  // Activation badge: a short overshoot in front of the player.
   v.badgePop = math.max(0, v.badgePop - dt / 0.45);
   final prog = 1 - v.badgePop;
   final badgeScale = v.badgePop > 0.001 ? math.sin(prog * math.pi) * 1.3 : 0.0;

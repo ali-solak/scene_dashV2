@@ -2,13 +2,11 @@ part of '../projectiles.dart';
 
 enum BlasterPhase { ready, charging, bursting, cooldown }
 
-/// Shots to spawn after advancing the [Blaster] one fixed step.
 final class BlasterShots {
   const BlasterShots({this.burst = 0, this.charged});
 
   final int burst;
 
-  /// Charged-shot strength in [0, 1], or null for none.
   final double? charged;
 
   bool get isEmpty => burst == 0 && charged == null;
@@ -16,28 +14,16 @@ final class BlasterShots {
   static const none = BlasterShots();
 }
 
-/// Tap-to-burst / hold-to-charge fire state, on the player. The mode is a
-/// [Machine] whose `phase.elapsed` doubles as the charge clock; recovery
-/// is a [GameTimer] because it spans two states.
 final class Blaster {
   Blaster() {
-    // Start with recovery fully served, so the blaster is ready and the
-    // HUD shows no cooldown before the first shot.
     _recovery.tick(blasterCooldown);
   }
 
-  /// The fire mode. [update] owns the tick; readers act on transition
-  /// edges — `phase.justEntered(BlasterPhase.charging)` is the
-  /// charging-started signal, readable until the next update.
   final Machine<BlasterPhase> phase = Machine(BlasterPhase.ready);
 
-  /// Recovery after firing. The duration varies per shot type, so each
-  /// fire resets it with the right target; it serves through both the
-  /// bursting and cooldown states.
   final GameTimer _recovery = GameTimer(blasterCooldown);
 
-  // Burst pellets are an emission queue (n shots at a fixed spacing, first
-  // one immediately), not a plain timer, so their pacing stays hand-rolled.
+  // Burst pellets form a timed emission queue.
   int _queuedBurst = 0;
   double _burstTimer = 0;
 
@@ -57,7 +43,6 @@ final class Blaster {
 
   bool get isReady => phase.state == BlasterPhase.ready;
 
-  /// Advances the blaster one fixed step and returns the shots to spawn.
   BlasterShots update({
     required bool pressed,
     required bool released,
@@ -65,8 +50,6 @@ final class Blaster {
     required bool held,
     required double dt,
   }) {
-    // The machine ticks first — closing the previous edge window — so the
-    // transitions below stay readable until the next update.
     phase.tick(dt);
     _recovery.tick(dt);
     if (phase.state == BlasterPhase.cooldown && _recovery.finished) {
@@ -84,14 +67,12 @@ final class Blaster {
         phase.go(BlasterPhase.ready);
       } else if (released) {
         if (phase.elapsed >= blasterChargeThreshold) {
-          charged = charge01; // Read before the phase leaves `charging`.
+          charged = charge01;
           _startCooldown(chargedShotCooldown);
         } else {
           _startBurst();
         }
       } else if (!held) {
-        // Held dropped with no transition flag (focus loss mid-step): abort
-        // so the blaster can't get stuck charging.
         phase.go(BlasterPhase.ready);
       }
     }
@@ -142,14 +123,9 @@ final class Blaster {
 final class Projectile {
   Projectile({this.charge = 0});
 
-  /// Shot strength: `0.0` is a normal burst pellet; `(0, 1]` is a charged shot.
-  /// Immutable for the projectile's life - hit force is derived from it.
   final double charge;
 
-  /// Rock entities already hit by this charged projectile. Burst pellets
-  /// despawn on first impact, so this remains empty for them. Keyed by
-  /// [Entity] (index + generation), so a despawned rock's reused slot never
-  /// aliases with a rock hit earlier in the flight.
+  /// Rocks already hit by this charged shot.
   final Set<Entity> hitRocks = <Entity>{};
 
   bool get charged => charge > 0;

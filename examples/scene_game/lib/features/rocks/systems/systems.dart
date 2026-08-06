@@ -1,11 +1,8 @@
 part of '../rocks.dart';
 
-// Reused scratch so per-rock position reads allocate nothing.
+// Shared scratch avoids frame allocations.
 final Vector3 _rockScratch = Vector3.zero();
 
-/// OnEnter(playing): spawn the spawner — a run-scoped process entity.
-/// Respawning per run *is* the cadence reset, and `DespawnOnExit` sweeps
-/// it with everything else when the run ends.
 void spawnRockSpawner(World world) {
   world.spawn([
     const Name('rock-spawner'),
@@ -14,8 +11,6 @@ void spawnRockSpawner(World world) {
   ]);
 }
 
-/// Drops new rocks at the top of the ramp each fixed step, driven by the
-/// run's spawner process entity (absent outside `playing`).
 void spawnRocks(World world) {
   final game = world.resource<GameState>();
   world.query<RockSpawner>().each((entity, spawner) {
@@ -31,12 +26,9 @@ void spawnRocks(World world) {
   });
 }
 
-/// Feeds the shared flame-trail emitter this frame's [Flaming] rock
-/// positions and scales the rate with their count. The emitter node never
-/// moves; [FlameTrailShape] explains why that matters.
 void updateFlameTrails(World world) {
   final trails = world.singleOrNull<FlameTrailEmitter>();
-  if (trails == null) return; // Headless: no emitter entity.
+  if (trails == null) return;
   final shape = trails.shape;
   shape.origins.clear();
   world.query<NodeRef>(require: const [Rock, Flaming]).each((entity, binding) {
@@ -49,16 +41,10 @@ void updateFlameTrails(World world) {
   trails.spawner.rate = (shape.origins.length ~/ 3) * rockTrailEmberRate;
 }
 
-/// `observe<RockHitReaction>` onRemove: no reaction ⇒ shell hidden, for
-/// *every* removal path — flash finished, rock despawned mid-flash, any
-/// future dispel — not just the animator's happy path.
 void clearHitShell(World world, Entity entity, RockHitReaction reaction) {
   world.tryGet<RockVisuals>(entity)?.shell.setLocalUniform(0, 0, 0, 0);
 }
 
-/// Pulses the flash shell while a hit reaction is live. The component's
-/// `removeAfter:` deadline is the whole lifecycle; this only shapes the
-/// pulse. Scales the child shell, never the physics-driven root.
 void updateRockHitReactions(World world) {
   world.query2<RockHitReaction, RockVisuals>().each((
     entity,

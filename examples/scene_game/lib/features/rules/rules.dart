@@ -17,18 +17,12 @@ import 'package:flutter_scene/physics.dart';
 
 part 'systems/systems.dart';
 
-/// Installs the rules and restart systems. The feature owns and inserts
-/// the [GameState] run data; the HUD reads it back through the world.
 void installRules(GameBuilder game) {
   game.world.insert(GameState());
   game
     ..addSystem(Schedules.frameStart, requestRestart, reads: const {})
-    // Runs once at startup and again on every restart transition.
     ..addSystem(OnEnter(GameStatus.playing), startRun, reads: const {})
     ..addSystem(OnEnter(GameStatus.lost), slowMotionOnLoss, reads: const {})
-    // The rules phase runs after the logic phase (see GameSets), so the
-    // lose/deflect check sees this frame's collection and shield tick
-    // without referencing the collectables feature's systems.
     ..addSystem(
       Schedules.update,
       evaluateGameRules,
@@ -37,7 +31,6 @@ void installRules(GameBuilder game) {
       inSet: GameSets.rules,
       runIf: inState(GameStatus.playing),
     )
-    // Camera follow observes the latest player state.
     ..addSystem(
       Schedules.update,
       playerView,

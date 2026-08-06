@@ -15,9 +15,6 @@ final Material _glowMaterial = PhysicallyBasedMaterial()
 final _pickupGeometry = SphereGeometry(radius: collectableRadius);
 final _glowGeometry = SphereGeometry(radius: collectableRadius * 1.5);
 
-/// A rolling shield pickup: a dynamic sphere with a pulsing glow child.
-/// Masked to `PhysicsLayers.platform` only, so it rolls the ramp without
-/// touching rocks, the player, or shots.
 List<Object> shieldPickupBundle({required double x}) {
   final glow = _makeGlow();
   return [

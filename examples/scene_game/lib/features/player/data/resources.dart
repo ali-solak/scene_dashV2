@@ -1,15 +1,10 @@
 part of '../player.dart';
 
-/// Player-owned shove state, attached fresh each run like `Blaster`.
-/// Per-entity so multi-victim knockback is just more carriers. Rules
-/// decide a rock hit; this decides how it becomes movement.
 final class PlayerKnockback {
   final Vector3 _velocity = Vector3.zero();
   final Vector3 _displacement = Vector3.zero();
   double _fallVelocityY = 0;
 
-  /// Adds a shove away from the rock; falls back to down-ramp when the centres
-  /// overlap.
   void pushFromRock({
     required Vector3 playerPosition,
     required Vector3 rockPosition,
@@ -26,9 +21,6 @@ final class PlayerKnockback {
     _velocity.scale(knockbackPushSpeed);
   }
 
-  /// Returns this fixed step's horizontal displacement and damps the stored
-  /// shove. The returned vector is rewritten by the next call — consume it
-  /// within the same step.
   Vector3 step(double dt) {
     if (_velocity.length2 < 0.0001) {
       _velocity.setZero();
@@ -48,7 +40,6 @@ final class PlayerKnockback {
     return _displacement;
   }
 
-  /// This fixed step's falling displacement while off the ramp.
   double fallStep(double dt) {
     _fallVelocityY -= gravityStrength * dt;
     return _fallVelocityY * dt;

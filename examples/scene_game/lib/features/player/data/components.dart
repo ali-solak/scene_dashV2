@@ -1,6 +1,5 @@
 part of '../player.dart';
 
-/// Tags the player entity.
 final class Player implements Tag {
   const Player();
 }
@@ -33,10 +32,6 @@ final class CrabLegVisual {
   final int slot;
 }
 
-/// The player's legs. Charge and shield feedback live in their own
-/// components, one per writing feature, so access declarations stay honest.
-/// Hidden by zero scale rather than detaching; materials are per-player, so
-/// colour changes cannot leak.
 final class PlayerVisuals {
   PlayerVisuals._({required this.leftLegs, required this.rightLegs});
 
@@ -61,7 +56,6 @@ final class PlayerVisuals {
   final List<CrabLegVisual> leftLegs;
   final List<CrabLegVisual> rightLegs;
 
-  // Visual-only animation state, eased across frames by the gait system.
   double legExtension01 = 0;
   double gaitPhase = 0;
 
@@ -90,9 +84,6 @@ final class PlayerVisuals {
   );
 }
 
-/// The player's charge orb, beam and orbiting motes — written only by the
-/// projectiles feature's charge VFX system. The motes orbit the muzzle in a
-/// rising helix (see `updateChargeVisuals`).
 final class PlayerChargeVisuals {
   PlayerChargeVisuals._({
     required this.chargeOrb,
@@ -153,14 +144,9 @@ final class PlayerChargeVisuals {
   final Node chargeBeam;
   final PhysicallyBasedMaterial chargeBeamMaterial;
 
-  /// The vortex motes, orbited each frame by the charge VFX system. The
-  /// muzzle offset is baked into their motion, so they live on the player
-  /// root like the orb and beam.
   final List<Node> chargeMotes;
   final PhysicallyBasedMaterial chargeMoteMaterial;
 
-  // Visual-only animation state; the blaster resource owns the gameplay
-  // truth.
   double chargePhase = 0;
   double chargeShow = 0;
 
@@ -178,9 +164,6 @@ final class PlayerChargeVisuals {
     segments: 8,
     rings: 6,
   );
-  // A real cylinder as of flutter_scene 0.19 (height 2 so the unit-Y
-  // scale in the charge VFX spans the same extent the old stretched
-  // sphere did).
   static final _beamGeometry = CylinderGeometry(
     bottomRadius: 1,
     topRadius: 1,
@@ -189,8 +172,6 @@ final class PlayerChargeVisuals {
   );
 }
 
-/// The player's shield bubble and activation badge — written only by the
-/// collectables feature's shield VFX system.
 final class PlayerShieldVisuals {
   PlayerShieldVisuals._({
     required this.shieldBubble,
@@ -239,14 +220,10 @@ final class PlayerShieldVisuals {
   final Node shieldBadge;
   final PhysicallyBasedMaterial shieldBadgeMaterial;
 
-  // Visual-only animation state; the Shielded component (and its
-  // removeAfter deadline) owns the gameplay truth.
   double shieldPhase = 0;
   double shieldShow = 0;
   double badgePop = 0;
 
-  /// Bubble target, flipped by the collectables feature's
-  /// `observe<Shielded>` pair; the per-frame VFX system eases toward it.
   bool shieldActive = false;
 
   static final _bubbleGeometry = SphereGeometry(
@@ -261,9 +238,6 @@ final class PlayerShieldVisuals {
   );
 }
 
-/// Builds the player's full visual suite. One construction site so the
-/// bundle stays a list of parts, each owned (written) by exactly one
-/// feature.
 (PlayerVisuals, PlayerChargeVisuals, PlayerShieldVisuals)
 buildPlayerVisuals() => (
   PlayerVisuals._create(),
@@ -280,7 +254,6 @@ PhysicallyBasedMaterial _blendMaterial(Vector4 base, Vector4 emissive) {
     ..alphaMode = AlphaMode.blend;
 }
 
-/// A zero-scale transform at [position]: present in the tree but invisible.
 Matrix4 _hiddenAt(Vector3 position) =>
     Matrix4.translation(position)..scaleByDouble(0, 0, 0, 1);
 

@@ -1,7 +1,5 @@
 part of '../projectiles.dart';
 
-// Geometry and materials are shared across spawns; charged strength is shown
-// with transform scale on the visual child, not a per-shot material.
 final Material _projectileMaterial = PhysicallyBasedMaterial()
   ..baseColorFactor = Vector4(0.5, 0.9, 1.0, 1)
   ..emissiveFactor = Vector4(0.3, 0.85, 1.0, 1)
@@ -34,9 +32,6 @@ final _projectileGeometry = SphereGeometry(radius: projectileRadius);
 final _projectileGlowGeometry = SphereGeometry(radius: projectileRadius * 1.35);
 final _projectileTrailGeometry = CuboidGeometry(Vector3(0.07, 0.07, 0.78));
 
-/// A shot's spawn list: a fast trigger sphere with glow and trail children.
-/// `DespawnAfter` caps flight time and `DespawnOutside` handles leaving the
-/// arena, so the update system only deals with hits.
 List<Object> projectileBundle({required Vector3 position, double charge = 0}) {
   return [
     Projectile(charge: charge),
@@ -60,8 +55,7 @@ Node _makeProjectileNode(Vector3 position, double charge) {
   final trailLength = charge > 0 ? scale * 2.4 : 1.0;
   final trailOffsetZ = charge > 0 ? 0.38 * trailLength : 0.38;
 
-  // The Rapier sync rewrites the root's local transform every frame (which
-  // would erase a root scale), so the charged size lives on this child.
+  // Physics sync replaces the root transform, so scale the child.
   final visual =
       Node(
           mesh: Mesh(_projectileGeometry, mainMaterial),

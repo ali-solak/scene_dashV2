@@ -1,21 +1,15 @@
 part of '../projectiles.dart';
 
-// Reused scratch so the update loop allocates nothing per projectile.
+// Shared scratch avoids frame allocations.
 final Vector3 _projectilePosition = Vector3.zero();
 final Vector3 _rockHitPosition = Vector3.zero();
 
-/// Gives the player a fresh [Blaster] each run: one feature attaching its
-/// component to another feature's entity, no bundle import. Re-adding
-/// replaces the instance, so no reset call is needed.
 void attachBlaster(World world) {
   final player = world.entitiesWith(require: const [Player]).firstOrNull;
   if (player == null) return;
   world.add(player, Blaster());
 }
 
-/// Fires the blaster from this frame's input. Edges come from events,
-/// consumed once even across several fixed steps; the held level comes
-/// from `ButtonInput`.
 void shootProjectiles(World world) {
   final pressed = world.consumeAny<FirePressed>();
   final released = world.consumeAny<FireReleased>();
@@ -39,7 +33,6 @@ void shootProjectiles(World world) {
     ..y += playerBodyVisualRadius * 0.45
     ..z -= playerBodyVisualRadius + projectileRadius + 0.08;
 
-  // The bundle itself scopes each shot to the run (DespawnOnExit part).
   final charged = shots.charged;
   if (charged != null) {
     final strength = math.max(charged, minChargedCharge);
@@ -52,22 +45,14 @@ void shootProjectiles(World world) {
   }
 }
 
-/// Projectiles reset their own state when a run (re)starts; the blaster
-/// needs nothing here — [attachBlaster] replaces it with a fresh one, and
-/// in-flight impact bursts are run-scoped entities swept by `DespawnOnExit`.
-/// The reticle entity is absent headless, hence the null-aware reset.
 void resetProjectilesOnRunStart(World world) {
   world.singleOrNull<LockOnReticle>()?.reset();
 }
 
-/// Leaving the run aborts an in-flight charge, so its VFX cannot linger on
-/// the lose screen. Fire events sent there expire unread.
 void stopBlasterOnRunEnd(World world) {
   world.singleOrNull<Blaster>()?.reset();
 }
 
-/// Flies each shot: rock knocks and hit bookkeeping. Lifetime expiry is
-/// the bundle's `DespawnAfter`; spatial exits are its `DespawnOutside`.
 void updateProjectiles(World world) {
   world.query2<Projectile, NodeRef>().each((entity, projectile, binding) {
     binding.node.globalTranslationInto(_projectilePosition);
@@ -89,9 +74,6 @@ void updateProjectiles(World world) {
   });
 }
 
-/// Applies the native bounce/spin to rocks overlapping [position] and
-/// inserts an ECS hit reaction on each resolved rock entity. Returns the
-/// hit count.
 int _knockRocks(World world, Vector3 position, Projectile projectile) {
   final index = world.resource<SceneNodeIndex>();
   var hitCount = 0;
@@ -106,7 +88,7 @@ int _knockRocks(World world, Vector3 position, Projectile projectile) {
     includeTriggers: false,
     (entity, hit) {
       if (projectile.charged && projectile.hitRocks.contains(entity)) {
-        return true; // already hit this rock; keep scanning the others
+        return true;
       }
 
       hit.node.globalTranslationInto(_rockHitPosition);
@@ -128,7 +110,6 @@ int _knockRocks(World world, Vector3 position, Projectile projectile) {
         RockHitReaction(strength: projectile.charge.clamp(0.0, 1.0).toDouble()),
         removeAfter: rockHitReactionDuration,
       );
-      // Deferred spawn of a run-scoped burst entity — safe inside the scan.
       spawnImpactBurst(world, _rockHitPosition, strength: projectile.charge);
       hitCount++;
       return projectile.charged && hitCount < chargedProjectileMaxHits;

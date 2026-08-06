@@ -30,9 +30,6 @@ part 'vfx/charge_vfx.dart';
 part 'vfx/impact_vfx.dart';
 part 'vfx/reticle.dart';
 
-/// Installs the blaster, projectiles, charge and impact VFX, and the
-/// lock-on reticle. The feature owns the [Blaster] and attaches it to the
-/// player each run; the HUD reads it back through the world.
 void installProjectiles(GameBuilder game) {
   game
     ..registerComponent<Projectile>()
@@ -42,12 +39,7 @@ void installProjectiles(GameBuilder game) {
     ..configureEvent<FirePressed>(retainedUpdates: null)
     ..configureEvent<FireReleased>(retainedUpdates: null)
     ..configureEvent<FireCanceled>(retainedUpdates: null)
-    // The reticle's model dies with the component on any removal path;
-    // shutdown (which despawns nothing) closes it via disposeLockOnReticle.
     ..observe<LockOnReticle>(onRemove: disposeReticleModel)
-    // The attach is deferred (world.add), so the declared write is the
-    // feature-owned component; the player is found by tag, keeping this
-    // clear of the player feature's NodeRef writes in the same enter.
     ..addSystem(
       OnEnter(GameStatus.playing),
       attachBlaster,
@@ -64,8 +56,6 @@ void installProjectiles(GameBuilder game) {
       stopBlasterOnRunEnd,
       reads: {Blaster},
     )
-    // Shooting reads the player position after the movement phase; the
-    // charged-shot flash is a live reticle-component write.
     ..addSystem(
       Schedules.fixedUpdate,
       shootProjectiles,
@@ -74,7 +64,6 @@ void installProjectiles(GameBuilder game) {
       inSet: GameSets.actions,
       runIf: inState(GameStatus.playing),
     )
-    // The spawns are deferred; the declared writes are feature-owned types.
     ..addSystem(
       Schedules.startup,
       spawnLockOnReticle,
@@ -87,9 +76,6 @@ void installProjectiles(GameBuilder game) {
       writes: {ChargePlasmaEmitter},
       runIf: hasResource<Scene>(),
     )
-    // The rock-hit reaction insert is deferred (world.add applies at the
-    // command boundary); the live writes are the projectile and the
-    // reticle's impact flash.
     ..addSystem(
       Schedules.update,
       updateProjectiles,
@@ -102,9 +88,6 @@ void installProjectiles(GameBuilder game) {
       reads: {Blaster, NodeRef},
       writes: {PlayerChargeVisuals, ChargePlasmaEmitter},
     )
-    // Ordered after updateProjectiles: both write the reticle (flash set
-    // vs. flash decay), and the ordering keeps a fresh impact flash from
-    // being decayed in its own frame.
     ..addSystem(
       Schedules.update,
       updateLockOnReticle,
@@ -112,8 +95,6 @@ void installProjectiles(GameBuilder game) {
       writes: {LockOnReticle},
       after: [updateProjectiles],
     )
-    // Entities are not despawned at shutdown, so the reticle's model is
-    // closed by a shutdown system rather than the removal observer.
     ..addSystem(
       Schedules.shutdown,
       disposeLockOnReticle,

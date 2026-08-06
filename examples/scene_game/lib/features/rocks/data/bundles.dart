@@ -1,7 +1,5 @@
 part of '../rocks.dart';
 
-// Geometry and materials are shared across spawns — rocks are the
-// highest-churn entity.
 final Material _rockMaterial = PhysicallyBasedMaterial()
   ..baseColorFactor = Vector4(0.42, 0.24, 0.18, 1)
   ..metallicFactor = 0.12
@@ -13,8 +11,6 @@ final Material _flamingMaterial = PhysicallyBasedMaterial()
   ..metallicFactor = 0.18
   ..roughnessFactor = 0.26;
 
-// Only the shell's transform scale changes per hit, so this material is
-// shared and never mutated per rock.
 final Material _shellMaterial = PhysicallyBasedMaterial()
   ..baseColorFactor = Vector4(1.0, 0.95, 0.7, 0.5)
   ..emissiveFactor = Vector4(1.2, 1.0, 0.6, 1)
@@ -25,10 +21,6 @@ final Material _shellMaterial = PhysicallyBasedMaterial()
 final _rockGeometry = SphereGeometry(radius: rockRadius);
 final _shellGeometry = SphereGeometry(radius: rockRadius * 1.12);
 
-/// A dynamic rock's spawn list. Rapier owns the transform, hence
-/// `PhysicsDriven`. Flaming velocities are baked here; the flaming *look*
-/// comes from the `observe<Flaming>` pair, so igniting at runtime is one
-/// `world.add`.
 List<Object> rockBundle({required double x, bool flaming = false}) {
   final shell = _makeShell();
   return [
@@ -42,18 +34,12 @@ List<Object> rockBundle({required double x, bool flaming = false}) {
   ];
 }
 
-/// `observe<Flaming>` onAdd: gives the rock its on-fire look, whether the
-/// tag arrives with the spawn list or later. The trail needs nothing here;
-/// `updateFlameTrails` queries the tag each frame.
 void igniteRock(World world, Entity entity, Flaming flaming) {
   final node = world.tryGet<NodeRef>(entity)?.node;
   if (node == null) return;
   node.mesh = Mesh(_rockGeometry, _flamingMaterial);
 }
 
-/// `observe<Flaming>` onRemove: back to the plain rock look. The shared
-/// trail emitter stops spawning on this rock the moment the tag is gone;
-/// its remaining embers just live out their fade.
 void extinguishRock(World world, Entity entity, Flaming flaming) {
   final node = world.tryGet<NodeRef>(entity)?.node;
   if (node == null) return;
@@ -68,7 +54,7 @@ Node _makeShell() {
 }
 
 Node _makeRockNode(double x, bool flaming, Node shell) {
-  // Always the plain material: the Flaming observer owns the look.
+  // The Flaming observer owns the material.
   final node = Node(
     mesh: Mesh(_rockGeometry, _rockMaterial),
     localTransform: Matrix4.translation(Vector3(x, rockSpawnY, rockSpawnZ)),
@@ -89,8 +75,6 @@ Node _makeRockNode(double x, bool flaming, Node shell) {
     ..addComponent(buildRockCollider());
 }
 
-/// Tagged with `PhysicsLayers.rock` so overlap hits can be classified by
-/// collider layer; the collision *mask* stays permissive (default).
 Collider buildRockCollider() => Collider(
   shape: SphereShape(radius: rockRadius),
   collisionLayer: PhysicsLayers.rock,

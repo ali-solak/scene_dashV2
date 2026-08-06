@@ -1,5 +1,3 @@
-/// Owns every input path into the world and nothing else. Keyboard and
-/// touch feed the same `ButtonInput`; edges go out as events.
 library;
 
 import 'package:flutter/material.dart';
@@ -20,7 +18,6 @@ class GameControls extends StatefulWidget {
   final SceneGame game;
   final ButtonInput<GameAction> input;
 
-  /// The scene view, drawn under the HUD this widget also builds.
   final Widget scene;
 
   @override
@@ -34,8 +31,6 @@ class _GameControlsState extends State<GameControls> {
   bool _touchLeft = false;
   bool _touchRight = false;
 
-  // Fire is held when either source is held; the two are tracked
-  // independently so releasing one never cancels the other.
   bool _spaceFire = false;
   bool _touchFire = false;
 
@@ -68,7 +63,6 @@ class _GameControlsState extends State<GameControls> {
 
   void _onFocusChange(bool hasFocus) {
     if (hasFocus) return;
-    // Losing focus cancels charging so fire can never stay stuck held.
     _spaceFire = false;
     _touchFire = false;
     _syncFire(canceled: true);
@@ -103,8 +97,6 @@ class _GameControlsState extends State<GameControls> {
     widget.game.emit(const RestartRequested());
   }
 
-  /// Resolves fire across space and touch, then forwards the edge as an
-  /// event. Releasing one source while the other is held is not a release.
   void _syncFire({bool canceled = false}) {
     final held = _spaceFire || _touchFire;
     final edge = widget.input.setPressed(GameAction.fire, held);
@@ -126,8 +118,6 @@ class _GameControlsState extends State<GameControls> {
     final keyRight =
         _pressed.contains(LogicalKeyboardKey.arrowRight) ||
         _pressed.contains(LogicalKeyboardKey.keyD);
-    // Systems read the axis via input.axis(left, right); the widget only
-    // reports which directions are held.
     widget.input
       ..setPressed(GameAction.left, keyLeft || _touchLeft)
       ..setPressed(GameAction.right, keyRight || _touchRight);

@@ -22,27 +22,18 @@ part 'data/bundles.dart';
 part 'vfx/vfx.dart';
 part 'systems/systems.dart';
 
-/// Installs shield pickups, the [Shielded] condition, and its VFX. No
-/// resource and no tick system: pickup adds `Shielded` with `removeAfter:`
-/// and the framework expires it.
 void installCollectables(GameBuilder game) {
   game.world.insert(PickupLanes());
   game
     ..registerTag<Collectable>()
     ..registerTag<ShieldPickup>()
     ..registerComponent<Shielded>()
-    // The bubble and badge follow the component's lifecycle — every
-    // removal path (expiry, run reset, a future dispel) hides the bubble.
     ..observe<Shielded>(onAdd: shieldGained, onRemove: shieldLost)
     ..addSystem(
       OnEnter(GameStatus.playing),
       resetCollectablesOnRunStart,
       writes: {Shielded},
     )
-    // fixedUpdate so the body mounts before the native step. Declared
-    // writes are the feature's own types, not the stores the deferred
-    // bundle lands in. `.and` short-circuits, so the period only elapses
-    // while playing. Scene-gated: the bundle builds GPU meshes.
     ..addSystem(
       Schedules.fixedUpdate,
       spawnShieldPickups,
@@ -64,8 +55,6 @@ void installCollectables(GameBuilder game) {
       inSet: GameSets.logic,
       runIf: inState(GameStatus.playing),
     )
-    // After collection so a fresh pickup's deadline is already tracked
-    // when the warning flash reads it.
     ..addSystem(
       Schedules.update,
       updateShieldVisuals,
@@ -73,5 +62,4 @@ void installCollectables(GameBuilder game) {
       writes: {PlayerShieldVisuals},
       after: [collectShieldPickups],
     );
-  // Off-ramp cleanup is the bundle's DespawnOutside part (world feature).
 }

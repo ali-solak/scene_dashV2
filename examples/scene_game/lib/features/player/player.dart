@@ -17,7 +17,6 @@ part 'data/resources.dart';
 part 'data/bundles.dart';
 part 'systems/systems.dart';
 
-/// Installs the player feature — v1's plugin body without the class.
 void installPlayer(GameBuilder game) {
   game
     ..registerTag<Player>()
@@ -28,9 +27,6 @@ void installPlayer(GameBuilder game) {
       writes: {Player, NodeRef, PlayerVisuals},
       runIf: hasResource<Scene>(),
     )
-    // The attach is deferred (world.add), so the declared write is the
-    // feature-owned component; the player is found by tag, keeping this
-    // clear of resetPlayerOnRunStart's NodeRef write in the same enter.
     ..addSystem(
       OnEnter(GameStatus.playing),
       attachPlayerKnockback,

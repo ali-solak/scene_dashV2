@@ -9,9 +9,6 @@ import 'package:flutter_scene/physics.dart';
 
 part 'systems/systems.dart';
 
-/// Installs world setup: lighting, post-processing, and the ramp — v1's
-/// plugin body without the class. The world also owns the play space, so
-/// it hosts the shared [DespawnOutside] sweep every feature's bundles use.
 void installWorldGeometry(GameBuilder game) {
   game
     ..addSystem(

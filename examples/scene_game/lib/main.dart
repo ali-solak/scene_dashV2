@@ -94,8 +94,6 @@ class RockDodgeApp extends StatefulWidget {
 class _RockDodgeAppState extends State<RockDodgeApp> {
   @override
   void dispose() {
-    // Shutting the game down runs the shutdown schedule and detaches the
-    // scene driver — important for hot restart, navigation and embedding.
     unawaited(widget.game.shutdown());
     super.dispose();
   }
