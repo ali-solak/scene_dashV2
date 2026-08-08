@@ -2,15 +2,23 @@
 
 ![Scene-Dash v2: the combat sample](https://raw.githubusercontent.com/ali-solak/scene_dashV2/main/combat_sample_game.gif)
 
-An ECS-based way to organize, coordinate, and headlessly test gameplay code
-built on top of [`flutter_scene`](https://pub.dev/packages/flutter_scene). ECS is
-the implementation model. the purpose is keeping a growing game's features,
-state, lifecycles, and tests understandable.
+Scene-Dash is an ECS-driven gameplay architecture for [flutter_scene](https://pub.dev/packages/flutter_scene). It gives Flutter games a structured runtime for gameplay state, system orchestration, custom and frame-driven schedules, resources/DI, events and observers, state machines, entity lifecycles, and headless testing.
 
 This is the pure-Dart core: the ECS runtime and `TestGame`, no Flutter
 dependency. The scene binding, widgets and `SceneGame.boot` shown below
 live in [`scene_dash_v2`](https://pub.dev/packages/scene_dash_v2), which
 re-exports this package.
+
+* **Entities and components** sparse sets, queries, deferred structural changes, lifecycle hooks
+* **Systems** plain functions, ordered by sets and run conditions
+* **Schedules** startup, update, fixed step, custom run conditions, plus custom schedules you run yourself
+* **Resources** shared services and state in the world, injected into systems
+* **Events and observers** decoupled communication between systems
+* **States and machines** game states with enter/exit behavior and scoped entities and state machines
+* **Input** buttons, axes, and buffered presses as resources; your app writes, systems read
+* **Time** frame and fixed clocks, timers, schedule-aware `dt`
+* **Diagnostics** entity names, debug descriptions, system timings
+* **Headless testing** run systems, schedules, and whole features with no rendering
 
 ## World-reactive widgets
 
@@ -135,7 +143,7 @@ flutter run --enable-flutter-gpu
   - [Resources](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#resources)
 - Frame
   - [Scheduling: sets and run conditions](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#scheduling-sets-and-run-conditions)
-  - [Custom schedules](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#custom-schedules)
+  - [Custom schedules](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#custom-schedules-game-driven-systems)
   - [Time](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#time)
 - Coordination
   - [Events](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#events)
