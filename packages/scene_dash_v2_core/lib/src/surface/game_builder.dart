@@ -101,6 +101,11 @@ final class GameBuilder {
     );
   }
 
+  /// Registers a custom schedule [label].
+  ///
+  /// Nothing drives it: run it with `world.runSchedule` (or the game's).
+  void addSchedule(ScheduleLabel label) => _app.addSchedule(label);
+
   /// Configures the event channel for [T].
   void configureEvent<T extends Object>({int? retainedUpdates = 8}) =>
       world.registerEvent<T>(retainedUpdates: retainedUpdates);

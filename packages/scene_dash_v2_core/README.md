@@ -135,6 +135,7 @@ flutter run --enable-flutter-gpu
   - [Resources](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#resources)
 - Frame
   - [Scheduling: sets and run conditions](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#scheduling-sets-and-run-conditions)
+  - [Custom schedules](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#custom-schedules)
   - [Time](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#time)
 - Coordination
   - [Events](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#events)
