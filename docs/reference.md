@@ -413,10 +413,11 @@ bool anyEnemiesLeft(World world) =>
     world.query<Health>(require: const [Enemy]).isNotEmpty;
 ```
 
-## Custom schedules
+## Custom schedules (game driven systems)
 
-A schedule you dispatch. fire a systems on demand once. a turn, a round, a battle phase. No frame drives
-it; one `runSchedule` runs its systems once, in order. 
+A schedule you dispatch. fire a systems on demand once. A game driven system, instead of a frame driven.
+for example a turn, a round, a battle phase.
+ `runSchedule` runs its systems once, in order. 
 
 ```dart
 abstract final class BattleSchedules {
