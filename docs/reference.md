@@ -415,9 +415,8 @@ bool anyEnemiesLeft(World world) =>
 
 ## Custom schedules
 
-A schedule you dispatch: a turn, a round, a battle phase. No frame drives
-it; one `runSchedule` runs its systems once, in order. one-shot systems,
-on demand.
+A schedule you dispatch. fire a systems on demand once. a turn, a round, a battle phase. No frame drives
+it; one `runSchedule` runs its systems once, in order. 
 
 ```dart
 abstract final class BattleSchedules {
