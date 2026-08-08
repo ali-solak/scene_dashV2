@@ -1,6 +1,6 @@
 name: scene_dash_v2
 description: "ECS and feature layer for flutter_scene: SceneGame boot, node binding, transform sync, physics hooks, and world-reactive widgets."
-version: 0.1.2
+version: 0.1.3
 repository: https://github.com/ali-solak/scene_dashV2/tree/main/packages/scene_dash_v2
 resolution: workspace
 
