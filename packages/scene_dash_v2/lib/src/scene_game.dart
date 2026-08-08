@@ -91,6 +91,14 @@ class WorldGame {
     world.sendEvent(event);
   }
 
+  /// Runs the custom schedule [label] inline, to completion.
+  ///
+  /// Outside the frame loop: driving a turn from a widget, a test, or a
+  /// network callback. Structural changes have settled when it returns; the
+  /// nodes of entities it spawned mount at the next frame boundary, and a
+  /// queued state transition applies at the next frame start.
+  void runSchedule(ScheduleLabel label) => world.runSchedule(label);
+
   /// Hot-reload hook, forwarded by `GameHost`.
   void reassemble() {}
 

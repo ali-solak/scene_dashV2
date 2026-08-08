@@ -6,6 +6,8 @@ import '../input/axis_input.dart';
 import '../input/button_input.dart';
 import '../input/input_buffer.dart';
 import '../query/entity_query.dart';
+import '../schedule/schedule_label.dart';
+import '../schedule/schedule_runner.dart';
 import '../state/despawn_after.dart';
 import '../state/states.dart';
 import '../time/fixed_time.dart';
@@ -54,6 +56,14 @@ extension WorldSurface on World {
     }
     return any;
   }
+
+  /// Runs the custom schedule [label] inline, to completion.
+  ///
+  /// A command boundary: spawns, adds, removals and despawns have settled
+  /// when it returns. A queued [setState] has not — transitions stay with the
+  /// frame. Call it between queries, never inside `.each`.
+  void runSchedule(ScheduleLabel label) =>
+      resources.get<ScheduleRunner>().run(label);
 
   /// Queues a state change.
   void setState<S extends Object>(S value) =>

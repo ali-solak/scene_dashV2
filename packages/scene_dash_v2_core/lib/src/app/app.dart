@@ -6,6 +6,7 @@ import '../entity/entity.dart';
 import '../schedule/access_conflict.dart';
 import '../schedule/schedule.dart';
 import '../schedule/schedule_label.dart';
+import '../schedule/schedule_runner.dart';
 import '../schedule/schedules.dart';
 import '../schedule/system_descriptor.dart';
 import '../schedule/system_label.dart';
@@ -50,6 +51,10 @@ final class App implements AppBuilder {
   /// Event types whose reader-skip diagnostic has already been reported.
   final Set<Type> _reportedEventSkips = <Type>{};
 
+  /// Schedules currently on the run stack, outermost first. Nesting is legal;
+  /// re-entering one of these is a cycle.
+  final List<ScheduleLabel> _running = <ScheduleLabel>[];
+
   /// Creates an app with the built-in schedules registered.
   App({
     this.accessConflictPolicy = AccessConflictPolicy.warn,
@@ -59,6 +64,9 @@ final class App implements AppBuilder {
     for (final label in Schedules.all) {
       _schedules[label] = Schedule(label);
     }
+    // Lets systems dispatch a custom schedule through world.runSchedule
+    // without reaching the app.
+    world.resources.insert<ScheduleRunner>(ScheduleRunner(world, runSchedule));
     // Built-in runtime behavior, like the state-scoped despawn walk: entities
     // carrying DespawnAfter tick down each update and despawn at zero. Games
     // order against it with before/after on DespawnAfterSystem.label. Gated
@@ -329,6 +337,10 @@ final class App implements AppBuilder {
   }
 
   /// Runs the named schedule, then flushes deferred commands.
+  ///
+  /// A system may run another schedule inline; the inner run completes (and
+  /// flushes) before its caller resumes. Re-entering a schedule already on the
+  /// stack is a cycle and throws rather than overflowing it.
   void runSchedule(ScheduleLabel label) {
     if (!_finalized) {
       throw StateError('Call start() before running schedules.');
@@ -337,8 +349,20 @@ final class App implements AppBuilder {
     if (schedule == null) {
       throw StateError('Unknown schedule: ${label.id}');
     }
-    schedule.run(world, profiler);
-    world.commands.apply();
+    if (_running.contains(label)) {
+      throw StateError(
+        'Recursive schedule run: '
+        '${[..._running, label].map((l) => l.id).join(' -> ')}. A schedule '
+        'cannot run itself, directly or through another schedule.',
+      );
+    }
+    _running.add(label);
+    try {
+      schedule.run(world, profiler);
+      world.commands.apply();
+    } finally {
+      _running.removeLast();
+    }
   }
 
   /// Applies pending state transitions for every registered state machine.

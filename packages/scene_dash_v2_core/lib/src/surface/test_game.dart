@@ -6,6 +6,7 @@ import '../diagnostics/app_diagnostics.dart';
 import '../input/button_input.dart';
 import '../input/input_buffer.dart';
 import '../schedule/access_conflict.dart';
+import '../schedule/schedule_label.dart';
 import '../schedule/schedules.dart';
 import '../time/fixed_time.dart';
 import '../time/frame_time.dart';
@@ -14,6 +15,7 @@ import '../world/world.dart';
 import 'game_builder.dart';
 import 'remove_after.dart';
 import 'spawning.dart';
+import 'world_extensions.dart';
 
 /// Runs game logic without Flutter.
 final class TestGame {
@@ -94,6 +96,14 @@ final class TestGame {
     _boundary();
     app.start(onStartupFlushed: _boundary);
     _boundary();
+  }
+
+  /// Runs the custom schedule [label] inline, starting the game first.
+  ///
+  /// Structural changes have settled when it returns.
+  void runSchedule(ScheduleLabel label) {
+    start();
+    world.runSchedule(label);
   }
 
   /// Advances one frame by [dt].

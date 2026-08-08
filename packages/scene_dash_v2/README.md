@@ -4,7 +4,6 @@
 
 <p align="center">
   <a title="Pub" href="https://pub.dev/packages/scene_dash_v2"><img src="https://img.shields.io/pub/v/scene_dash_v2.svg?label=scene_dash_v2&style=popout"/></a>
-  <a title="Pub" href="https://pub.dev/packages/scene_dash_v2_core"><img src="https://img.shields.io/pub/v/scene_dash_v2_core.svg?label=scene_dash_v2_core&style=popout"/></a>
   <a title="CI" href="https://github.com/ali-solak/scene_dashV2/actions/workflows/ci.yaml?query=branch%3Amain"><img src="https://github.com/ali-solak/scene_dashV2/actions/workflows/ci.yaml/badge.svg?branch=main"/></a>
   <img src="https://img.shields.io/badge/license-MIT-blue.svg"/>
 </p>
@@ -137,6 +136,7 @@ flutter run --enable-flutter-gpu
   - [Resources](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#resources)
 - Frame
   - [Scheduling: sets and run conditions](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#scheduling-sets-and-run-conditions)
+  - [Custom schedules](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#custom-schedules)
   - [Time](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#time)
 - Coordination
   - [Events](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#events)

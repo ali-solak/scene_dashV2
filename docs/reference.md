@@ -15,6 +15,7 @@ The full API surface
   - [Resources](#resources)
 - Frame
   - [Scheduling: sets and run conditions](#scheduling-sets-and-run-conditions)
+  - [Custom schedules](#custom-schedules)
   - [Time](#time)
 - Coordination
   - [Events](#events)
@@ -410,6 +411,60 @@ runIf: not(inState(GameStatus.lost))
 // a custom condition is any bool Function(World)
 bool anyEnemiesLeft(World world) =>
     world.query<Health>(require: const [Enemy]).isNotEmpty;
+```
+
+## Custom schedules
+
+A schedule you dispatch: a turn, a round, a battle phase. No frame drives
+it; one `runSchedule` runs its systems once, in order. one-shot systems,
+on demand.
+
+```dart
+abstract final class BattleSchedules {
+  static const turnStart = ScheduleLabel('battle.turnStart');
+  static const resolveAction = ScheduleLabel('battle.resolveAction');
+  static const turnEnd = ScheduleLabel('battle.turnEnd');
+}
+
+void installBattle(GameBuilder game) {
+  game
+    ..addSchedule(BattleSchedules.turnStart)       // declared at install;
+    ..addSchedule(BattleSchedules.resolveAction)   //   no frame drives them
+    ..addSchedule(BattleSchedules.turnEnd)
+    // the same addSystem: ordering, sets, run conditions, access declarations
+    ..addSystem(BattleSchedules.resolveAction, applyAttack, writes: {Health})
+    ..addSystem(BattleSchedules.resolveAction, reportKills,
+        reads: {Health}, after: [applyAttack])
+    ..addSystem(BattleSchedules.turnEnd, tickStatusEffects,
+        writes: {Poisoned}, runIf: inState(GameStatus.playing));
+}
+```
+
+```dart
+// dispatch from a system: the turn controller, itself a normal update system
+void driveBattle(World world) {
+  final queue = world.resource<TurnQueue>();
+  if (!queue.actionReady) return;
+  world.runSchedule(BattleSchedules.resolveAction);   // runs inline, to
+  queue.advance();                                    //   completion
+}
+
+// or from outside the frame: a widget, a test, a network callback
+GameScope.of(context).runSchedule(BattleSchedules.turnStart);
+```
+
+```dart
+// cheatsheet: custom schedules
+game.addSchedule(label)      // install time only
+world.runSchedule(label)     // its systems, once, in compiled order
+game.runSchedule(label)      // from a widget; TestGame.runSchedule in tests
+
+// custom labels only; a built-in slot or OnEnter/OnExit throws
+// settled on return: spawn, add, remove, despawn — so runs compose
+// still frame-bound: setState, and mounting the nodes you spawned
+// nesting runs inline; a schedule re-entering itself throws
+// never inside a `.each`: the run ends in a flush
+// world.dt = the last frame delta. Count turns with a counter
 ```
 
 ## Events
