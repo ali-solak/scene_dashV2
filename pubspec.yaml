@@ -4,7 +4,7 @@ name: _scene_dash_v2_workspace
 publish_to: none
 
 environment:
-  sdk: ^3.11.0
+  sdk: ^3.13.0
 
 workspace:
   - packages/scene_dash_v2_core

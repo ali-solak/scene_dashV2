@@ -4,17 +4,19 @@ publish_to: none
 resolution: workspace
 
 environment:
-  sdk: ^3.11.0
+  sdk: ^3.13.0
   flutter: ">=3.16.0"
 
 dependencies:
+  cupertino_ui: ^1.0.0
   data_assets: ^0.20.0
   flutter:
     sdk: flutter
   flutter_scene: ^0.20.0
-  flutter_scene_rapier: ^0.3.0
+  flutter_scene_rapier: ^0.4.0
   # hook/build.dart compiles the .fmat materials into a shader bundle.
   hooks: ^2.0.0
+  material_ui: ^1.0.0
   scene_dash_v2:
     path: ../../packages/scene_dash_v2
   vector_math: ^2.1.4

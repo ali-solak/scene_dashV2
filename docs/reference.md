@@ -22,6 +22,9 @@ The full API surface
   - [Input](#input)
   - [States](#states)
   - [Machine](#machine)
+  - [Routine](#routine)
+    - [Steps steer systems](#steps-steer-systems-they-do-not-replace-them)
+    - [The contract](#the-contract)
 - flutter_scene
   - [Physics](#physics)
   - [The rendering bridge](#the-rendering-bridge)
@@ -767,6 +770,153 @@ world.consumeAny<AttackPressed>();  // any since this system's last read?
 
 The strike itself resolves in Physics, below, gated on
 `justEntered(striking)`.
+
+## Routine
+
+`Machine` and your systems execute reactive behaviour. what to do right
+now. A `Routine` sits above them and sequences larger goals over time:
+
+```dart
+Machine<State>   // what is happening now
+Routine<Step>    // what happens next
+```
+
+Anything that unfolds in steps: wave directors, objectives, tutorials,
+patrols, squad manoeuvres.
+
+Steps are plain data — no logic, no `World`:
+
+```dart
+sealed class WaveStep extends Step<WaveStep> {
+  const WaveStep();
+}
+
+final class Spawn extends WaveStep {
+  const Spawn(this.count);
+  final int count;
+}
+
+final class Clear extends WaveStep {
+  const Clear();
+}
+
+final class Rest extends WaveStep {
+  const Rest(this.seconds);
+  final double seconds;
+}
+```
+
+Build them into a plan. It is `const`, so every director shares one copy:
+
+```dart
+const endless = Repeat(Sequence([Spawn(5), Clear(), Rest(3)]));
+```
+
+Each thing running that plan gets its own routine — the bookmark:
+
+```dart
+final class WaveDirector {
+  final routine = Routine(endless);
+}
+```
+
+Then one system says what the steps actually do:
+
+```dart
+void runWaves(World world) {
+  final routine = world.resource<WaveDirector>().routine;
+
+  routine.advance(world.dt, (step) => switch (step) {
+    Spawn(:final count) => spawnEnemies(world, count),
+
+    Clear() => enemiesLeft(world) == 0
+        ? StepResult.success
+        : StepResult.running,
+
+    Rest(:final seconds) => routine.elapsed >= seconds
+        ? StepResult.success
+        : StepResult.running,
+  });
+}
+```
+
+A step can act immediately, wait for time, or wait for any condition in
+your game.
+
+### Steps steer systems, they do not replace them
+
+A step usually changes the data your existing behaviour already reads,
+then waits for the result:
+
+```dart
+const maneuver = Sequence([
+  SetDirective(Directive.flank),
+  UntilEngaged(),
+  SetDirective(Directive.attack),
+]);
+```
+
+`SetDirective` does not move or attack anything. It sets a value your
+movement and combat systems already read. `UntilEngaged` waits until
+those systems reach the result:
+
+```dart
+// routine ──sets──► directive ──read by──► movement, combat, animation
+//                       ▲
+// event / card / AI command ──┘        (same door, different sender)
+```
+
+The routine owns the sequence. Your systems own the gameplay. That is
+what makes it worth having: one plan can direct behaviour you have
+already written, without that behaviour knowing a plan exists.
+
+The same shape drives objectives, tutorials and scripted beats:
+
+```dart
+const objective = Sequence([
+  StartObjective(),
+  UntilCompleted(),
+  StartNextObjective(),
+]);
+```
+
+### The contract
+
+```dart
+// cheatsheet: what a step returns
+StepResult.running   // stay on this step
+StepResult.success   // move on
+StepResult.failure   // this path failed
+```
+
+```dart
+// cheatsheet: the three building blocks
+Sequence([a, b, c])   // run in order; stops if one fails
+Select([a, b, c])     // use the first one that succeeds
+Repeat(a, times: 3)   // repeat; null means forever
+```
+
+Steps that finish immediately do not cost a frame each. A `Sequence`
+keeps advancing until it reaches a step that is still running, fails, or
+finishes.
+
+```dart
+// cheatsheet: reading and saving a routine
+routine.current       // the step being worked on, null once done
+routine.elapsed       // seconds on it, zeroed when it moves on
+routine.finished      // reached the end, or gave up
+routine.failed        // gave up
+routine.restart();    // back to step one
+
+routine.path          // save these three, restore with
+routine.loops         //   Routine.resume(plan, path:, loops:, elapsed:)
+routine.elapsed
+```
+
+Your steps are your own types, so the driver's `switch` is exhaustive:
+add a step and Dart shows you where its behaviour needs to be handled.
+Nothing in a plan touches `World` — the driver does that, same rule as
+`Machine`.
 
 ## Physics
 

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.0
+- adds new routine mechanism for better organizing sequenced game logic
+
 ## 0.1.3
 - adds custom schedules feature
 

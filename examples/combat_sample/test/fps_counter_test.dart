@@ -2,7 +2,7 @@
 library;
 
 import 'package:combat_sample/hud/fps.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Pumps [frames] frames [frameTime] apart and returns the number the

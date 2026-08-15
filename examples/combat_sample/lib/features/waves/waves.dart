@@ -9,6 +9,7 @@ import '../../common/score.dart';
 import '../../common/sets.dart';
 
 part 'data/config.dart';
+part 'data/plan.dart';
 part 'data/resources.dart';
 part 'systems/systems.dart';
 

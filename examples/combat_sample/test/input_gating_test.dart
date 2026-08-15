@@ -13,7 +13,7 @@ import 'package:combat_sample/features/skills/skills.dart';
 import 'package:combat_sample/features/waves/waves.dart';
 import 'package:combat_sample/features/world/data/assets.dart';
 import 'package:combat_sample/features/world/world.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';

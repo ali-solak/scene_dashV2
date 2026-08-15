@@ -8,12 +8,14 @@ publish_to: none
 resolution: workspace
 
 environment:
-  sdk: ^3.11.0
+  sdk: ^3.13.0
   flutter: ">=3.16.0"
 
 dependencies:
+  cupertino_ui: ^1.0.0
   flutter:
     sdk: flutter
+  material_ui: ^1.0.0
   scene_dash_v2:
     path: ../scene_dash_v2
   scene_dash_v2_core:
