@@ -15,7 +15,7 @@ re-exports this package.
 * **Resources** shared services and state in the world, injected into systems
 * **Events and observers** decoupled communication between systems
 * **States and machines** game states with enter/exit behavior and scoped entities and state machines
-* **Routines** step-by-step plans that sequence goals over time and steer the systems you already wrote: wave directors, objectives, patrols
+* **Routines** a reusable sequencer for gameplay with an ordered flow: wave directors, objectives, encounters, tutorials
 * **Input** buttons, axes, and buffered presses as resources; your app writes, systems read
 * **Time** frame and fixed clocks, timers, schedule-aware `dt`
 * **Diagnostics** entity names, debug descriptions, system timings

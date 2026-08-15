@@ -23,7 +23,7 @@ The full API surface
   - [States](#states)
   - [Machine](#machine)
   - [Routine](#routine)
-    - [Steps steer systems](#steps-steer-systems-they-do-not-replace-them)
+    - [Machine or Routine](#machine-or-routine)
     - [The contract](#the-contract)
 - flutter_scene
   - [Physics](#physics)
@@ -773,18 +773,14 @@ The strike itself resolves in Physics, below, gated on
 
 ## Routine
 
-`Machine` and your systems execute reactive behaviour. what to do right
-now. A `Routine` sits above them and sequences larger goals over time:
+A reusable sequencer for gameplay that has an ordered flow: wave
+directors, objectives, encounters, tutorials.
 
-```dart
-Machine<State>   // what is happening now
-Routine<Step>    // what happens next
-```
+The sequence is a `const` value, so one plan drives every entity that runs
+it, and a different `const` is a different game mode through the same
+driver.
 
-Anything that unfolds in steps: wave directors, objectives, tutorials,
-patrols, squad manoeuvres.
-
-Steps are plain data — no logic, no `World`:
+The steps are your own types:
 
 ```dart
 sealed class WaveStep extends Step<WaveStep> {
@@ -812,7 +808,7 @@ Build them into a plan. It is `const`, so every director shares one copy:
 const endless = Repeat(Sequence([Spawn(5), Clear(), Rest(3)]));
 ```
 
-Each thing running that plan gets its own routine — the bookmark:
+Each thing running that plan gets its own routine:
 
 ```dart
 final class WaveDirector {
@@ -840,43 +836,33 @@ void runWaves(World world) {
 }
 ```
 
-A step can act immediately, wait for time, or wait for any condition in
-your game.
+A step can act at once or wait for your game to catch up. `Spawn` is done
+the moment it fires. `Clear` stays running until the field is empty.
 
-### Steps steer systems, they do not replace them
+### Machine or Routine
 
-A step usually changes the data your existing behaviour already reads,
-then waits for the result:
+Both decide what comes next. The difference is where the order lives:
 
 ```dart
-const maneuver = Sequence([
-  SetDirective(Directive.flank),
-  UntilEngaged(),
-  SetDirective(Directive.attack),
+Machine   // states you switch between, any order, decided as you go
+Routine   // steps you go through, in an order written down up front
+```
+
+Patrolling, chasing, reloading, staggered: that is a behaviour loop, and
+`Machine` owns it fine. Reach for `Routine` when the sequence itself is
+the game flow:
+
+```dart
+const encounter = Sequence([
+  StartEncounter(),
+  UntilEnemiesDefeated(),
+  OpenExit(),
 ]);
-```
 
-`SetDirective` does not move or attack anything. It sets a value your
-movement and combat systems already read. `UntilEngaged` waits until
-those systems reach the result:
-
-```dart
-// routine ──sets──► directive ──read by──► movement, combat, animation
-//                       ▲
-// event / card / AI command ──┘        (same door, different sender)
-```
-
-The routine owns the sequence. Your systems own the gameplay. That is
-what makes it worth having: one plan can direct behaviour you have
-already written, without that behaviour knowing a plan exists.
-
-The same shape drives objectives, tutorials and scripted beats:
-
-```dart
-const objective = Sequence([
-  StartObjective(),
-  UntilCompleted(),
-  StartNextObjective(),
+const advance = Sequence([
+  MoveTo(ridge),
+  UntilInPosition(),
+  Attack(leftFlank),
 ]);
 ```
 
@@ -891,14 +877,12 @@ StepResult.failure   // this path failed
 
 ```dart
 // cheatsheet: the three building blocks
-Sequence([a, b, c])   // run in order; stops if one fails
+Sequence([a, b, c])   // run in order. stops if one fails
 Select([a, b, c])     // use the first one that succeeds
-Repeat(a, times: 3)   // repeat; null means forever
+Repeat(a, times: 3)   // repeat. null means forever
 ```
 
-Steps that finish immediately do not cost a frame each. A `Sequence`
-keeps advancing until it reaches a step that is still running, fails, or
-finishes.
+Steps that finish immediately do not cost a frame each.
 
 ```dart
 // cheatsheet: reading and saving a routine
@@ -913,10 +897,7 @@ routine.loops         //   Routine.resume(plan, path:, loops:, elapsed:)
 routine.elapsed
 ```
 
-Your steps are your own types, so the driver's `switch` is exhaustive:
-add a step and Dart shows you where its behaviour needs to be handled.
-Nothing in a plan touches `World` — the driver does that, same rule as
-`Machine`.
+Add a step and the compiler points at the one place to handle it.
 
 ## Physics
 

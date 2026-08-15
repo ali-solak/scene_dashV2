@@ -125,9 +125,11 @@ The same edge vocabulary at every scale:
 - **`Machine<S>`**: an entity's *mode* (idle / charging / rolling):
   `tick(world.dt)`, `elapsed`, `go`, with `justEntered`/`justExited`
   true for exactly one tick-window.
-- **`Routine<L>`**: a *plan* something works through (patrol, wave
-  director, tutorial): `advance(world.dt, run)`, `current`, `elapsed`,
-  where the driver answers `running` / `success` / `failure` per step.
+- **`Routine<L>`**: a reusable *sequencer* for gameplay with an ordered
+  flow (wave director, objective, encounter): `advance(world.dt, run)`,
+  `current`, `elapsed`, where the driver answers `running` / `success` /
+  `failure` per step. The sequence is a `const`, so one plan drives every
+  entity running it.
 - **Whole-game state machines** (`addState<S>`): title / playing /
   lost, with transitions applied at frame boundaries, `OnEnter`/`OnExit`
   as schedules, `inState(...)` as the run condition.
