@@ -31,5 +31,6 @@ export 'src/time/fixed_time.dart';
 export 'src/time/frame_time.dart';
 export 'src/time/game_clock.dart';
 export 'src/time/machine.dart';
+export 'src/time/routine.dart';
 export 'src/time/timers.dart';
 export 'src/world/world.dart';

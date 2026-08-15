@@ -2,7 +2,7 @@
 library;
 
 import 'package:flutter/foundation.dart' show ValueListenable;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class HealthBarWidget extends StatelessWidget {
   const HealthBarWidget({super.key, required this.fraction});

@@ -29,8 +29,7 @@ void armWave(TestGame game, int wave) {
   clearField(game);
   game.world.resource<WaveState>()
     ..wave = wave - 1
-    ..engaged = false
-    ..intermission = 0;
+    ..routine.restart(); // back to the top of the plan: heal, then field
   game.pumpFixed(steps: 1);
 }
 

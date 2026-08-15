@@ -1,7 +1,7 @@
 /// Start screen.
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 
 import '../common/game_state.dart';

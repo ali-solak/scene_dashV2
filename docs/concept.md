@@ -115,7 +115,7 @@ system performs world effects. A component method never holds or touches
 `World`; holding an `Entity` as data is fine. Machines expose edges;
 systems spawn, emit and mutate on them.
 
-### State at three scales
+### State at four scales
 
 The same edge vocabulary at every scale:
 
@@ -125,14 +125,25 @@ The same edge vocabulary at every scale:
 - **`Machine<S>`**: an entity's *mode* (idle / charging / rolling):
   `tick(world.dt)`, `elapsed`, `go`, with `justEntered`/`justExited`
   true for exactly one tick-window.
+- **`Routine<L>`**: a reusable *sequencer* for gameplay with an ordered
+  flow (wave director, objective, encounter): `advance(world.dt, run)`,
+  `current`, `elapsed`, where the driver answers `running` / `success` /
+  `failure` per step. The sequence is a `const`, so one plan drives every
+  entity running it.
 - **Whole-game state machines** (`addState<S>`): title / playing /
   lost, with transitions applied at frame boundaries, `OnEnter`/`OnExit`
   as schedules, `inState(...)` as the run condition.
 
-Timers and machines are plain values ticked by their owner systems, so
-they pause, slow and freeze with the game and add nothing to the
-schedule; whole-game state is a framework machine because independent
+Timers, machines and routines are plain values ticked by their owner
+systems, so they pause, slow and freeze with the game and add nothing to
+the schedule; whole-game state is a framework machine because independent
 features must coordinate on it.
+
+A machine is a mode other systems read; a routine is a plan only its
+driver reads. If anything outside the driver branches on where you are,
+it is a machine. A routine holds no conditions and no callbacks: the
+driver sees the world and reports the result, so a plan stays a value you
+can print, share and test.
 
 ### Where state lives
 

@@ -22,6 +22,9 @@ The full API surface
   - [Input](#input)
   - [States](#states)
   - [Machine](#machine)
+  - [Routine](#routine)
+    - [Machine or Routine](#machine-or-routine)
+    - [The contract](#the-contract)
 - flutter_scene
   - [Physics](#physics)
   - [The rendering bridge](#the-rendering-bridge)
@@ -767,6 +770,134 @@ world.consumeAny<AttackPressed>();  // any since this system's last read?
 
 The strike itself resolves in Physics, below, gated on
 `justEntered(striking)`.
+
+## Routine
+
+A reusable sequencer for gameplay that has an ordered flow: wave
+directors, objectives, encounters, tutorials.
+
+The sequence is a `const` value, so one plan drives every entity that runs
+it, and a different `const` is a different game mode through the same
+driver.
+
+The steps are your own types:
+
+```dart
+sealed class WaveStep extends Step<WaveStep> {
+  const WaveStep();
+}
+
+final class Spawn extends WaveStep {
+  const Spawn(this.count);
+  final int count;
+}
+
+final class Clear extends WaveStep {
+  const Clear();
+}
+
+final class Rest extends WaveStep {
+  const Rest(this.seconds);
+  final double seconds;
+}
+```
+
+Build them into a plan. It is `const`, so every director shares one copy:
+
+```dart
+const endless = Repeat(Sequence([Spawn(5), Clear(), Rest(3)]));
+```
+
+Each thing running that plan gets its own routine:
+
+```dart
+final class WaveDirector {
+  final routine = Routine(endless);
+}
+```
+
+Then one system says what the steps actually do:
+
+```dart
+void runWaves(World world) {
+  final routine = world.resource<WaveDirector>().routine;
+
+  routine.advance(world.dt, (step) => switch (step) {
+    Spawn(:final count) => spawnEnemies(world, count),
+
+    Clear() => enemiesLeft(world) == 0
+        ? StepResult.success
+        : StepResult.running,
+
+    Rest(:final seconds) => routine.elapsed >= seconds
+        ? StepResult.success
+        : StepResult.running,
+  });
+}
+```
+
+A step can act at once or wait for your game to catch up. `Spawn` is done
+the moment it fires. `Clear` stays running until the field is empty.
+
+### Machine or Routine
+
+Both decide what comes next. The difference is where the order lives:
+
+```dart
+Machine   // states you switch between, any order, decided as you go
+Routine   // steps you go through, in an order written down up front
+```
+
+Patrolling, chasing, reloading, staggered: that is a behaviour loop, and
+`Machine` owns it fine. Reach for `Routine` when the sequence itself is
+the game flow:
+
+```dart
+const encounter = Sequence([
+  StartEncounter(),
+  UntilEnemiesDefeated(),
+  OpenExit(),
+]);
+
+const advance = Sequence([
+  MoveTo(ridge),
+  UntilInPosition(),
+  Attack(leftFlank),
+]);
+```
+
+### The contract
+
+```dart
+// cheatsheet: what a step returns
+StepResult.running   // stay on this step
+StepResult.success   // move on
+StepResult.failure   // this path failed
+```
+
+```dart
+// cheatsheet: the three building blocks
+Sequence([a, b, c])   // run in order. stops if one fails
+Select([a, b, c])     // use the first one that succeeds
+Repeat(a, times: 3)   // repeat. null means forever
+```
+
+Steps that finish immediately do not cost a frame each.
+
+```dart
+// cheatsheet: reading and saving a routine
+routine.current       // the step being worked on, null once done
+routine.elapsed       // seconds on it, zeroed when it moves on
+routine.finished      // reached the end, or gave up
+routine.failed        // gave up
+routine.restart();    // back to step one
+
+routine.path          // save these three, restore with
+routine.loops         //   Routine.resume(plan, path:, loops:, elapsed:)
+routine.elapsed
+```
+
+Add a step and the compiler points at the one place to handle it.
 
 ## Physics
 

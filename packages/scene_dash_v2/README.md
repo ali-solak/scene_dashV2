@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/license-MIT-blue.svg"/>
 </p>
 
-Scene-Dash is an ECS-driven gameplay architecture for [flutter_scene](https://pub.dev/packages/flutter_scene). It gives Flutter games a structured runtime for gameplay state, system orchestration, custom and frame-driven schedules, resources/DI, events and observers, state machines, entity lifecycles, and headless testing. Its Flutter builders expose world, entity, and resource state directly to the widget tree, so gameplay logic and UI stay connected without collapsing into one architecture.
+Scene-Dash is an ECS-driven gameplay architecture for [flutter_scene](https://pub.dev/packages/flutter_scene). It gives Flutter games a structured runtime for gameplay state, system orchestration, custom and frame-driven schedules, resources/DI, events and observers, state machines, entity lifecycles, and headless testing. Its Flutter builders expose world, entity, and resource state directly to the widget tree, so gameplay logic and UI stay connected.
 
 * **Entities and components** sparse sets, queries, deferred structural changes, lifecycle hooks
 * **Systems** plain functions, ordered by sets and run conditions
@@ -16,6 +16,7 @@ Scene-Dash is an ECS-driven gameplay architecture for [flutter_scene](https://pu
 * **Resources** shared services and state in the world, injected into systems
 * **Events and observers** decoupled communication between systems
 * **States and machines** game states with enter/exit behavior and scoped entities and state machines
+* **Routines** a reusable sequencer for gameplay with an ordered flow: wave directors, objectives, encounters, tutorials
 * **Input** buttons, axes, and buffered presses as resources; widgets write, systems read
 * **Widgets** `WorldBuilder`, `EntityBuilder`, `GameStateBuilder` read world state straight into the widget tree
 * **Debug tooling** entity debug, gizmos, and a live inspector overlay
@@ -153,6 +154,7 @@ flutter run --enable-flutter-gpu
   - [Input](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#input)
   - [States](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#states)
   - [Machine](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#machine)
+  - [Routine](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#routine)
 - flutter_scene
   - [Physics](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#physics)
   - [The rendering bridge](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#the-rendering-bridge)

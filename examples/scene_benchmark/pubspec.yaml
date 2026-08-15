@@ -4,13 +4,15 @@ publish_to: none
 resolution: workspace
 
 environment:
-  sdk: ^3.11.0
+  sdk: ^3.13.0
   flutter: ">=3.16.0"
 
 dependencies:
+  cupertino_ui: ^1.0.0
   flutter:
     sdk: flutter
   flutter_scene: ^0.20.0
+  material_ui: ^1.0.0
   scene_dash_v2:
     path: ../../packages/scene_dash_v2
   # Direct dependency: mountOnly assembles the driver from the machinery

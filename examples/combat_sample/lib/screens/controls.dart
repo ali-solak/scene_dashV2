@@ -9,7 +9,7 @@ import 'package:flutter/gestures.dart'
         kMiddleMouseButton,
         kPrimaryButton,
         kSecondaryButton;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 

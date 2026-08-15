@@ -7,14 +7,16 @@ publish_to: none
 resolution: workspace
 
 environment:
-  sdk: ^3.11.0
+  sdk: ^3.13.0
   flutter: ">=3.16.0"
 
 dependencies:
+  cupertino_ui: ^1.0.0
   flutter:
     sdk: flutter
   flutter_scene: ^0.20.0
-  flutter_scene_rapier: ^0.3.0
+  flutter_scene_rapier: ^0.4.0
+  material_ui: ^1.0.0
   # The in-app inspector overlay — optional tooling, wired behind the
   # debug toggles.
   scene_dash_inspector:

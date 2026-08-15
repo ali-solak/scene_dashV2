@@ -1,33 +1,33 @@
 part of '../waves.dart';
 
+/// Walks the director through [endlessRun].
 void advanceWaves(World world) {
   final waves = world.resource<WaveState>();
-  final living = _livingEnemies(world);
+  final routine = waves.routine;
 
-  if (waves.engaged && living > 0) return;
+  routine.advance(world.dt, (step) => switch (step) {
+    HealPlayer() => _healPlayer(world),
+    FieldWave() => _fieldWave(world, waves),
+    UntilEngaged() =>
+      _livingEnemies(world) > 0 ? StepResult.success : StepResult.running,
+    UntilCleared() =>
+      _livingEnemies(world) == 0 ? StepResult.success : StepResult.running,
+    Breather(:final seconds) =>
+      routine.elapsed >= seconds ? StepResult.success : StepResult.running,
+  });
 
-  if (waves.engaged) {
-    waves.engaged = false;
-    waves.intermission = waveIntermissionSeconds;
-    return;
-  }
-
-  if (waves.inIntermission) {
-    waves.intermission -= world.dt;
-    if (waves.intermission > 0) return;
-    waves.intermission = 0;
-  }
-
-  waves.wave += 1;
-  waves.engaged = true;
-  _healPlayer(world);
-  _fieldWave(world, waves.wave);
+  // What the HUD reads.
+  waves.intermission = switch (routine.current) {
+    Breather(:final seconds) => seconds - routine.elapsed,
+    _ => 0,
+  };
 }
 
-void _healPlayer(World world) {
+StepResult _healPlayer(World world) {
   world.query<Health>(require: const [Player]).each((entity, health) {
     health.heal(health.max * waveHealFraction);
   });
+  return StepResult.success;
 }
 
 int _livingEnemies(World world) {
@@ -42,7 +42,8 @@ int _livingEnemies(World world) {
   return living;
 }
 
-void _fieldWave(World world, int wave) {
+StepResult _fieldWave(World world, WaveState waves) {
+  final wave = waves.wave += 1;
   final count = enemiesForWave(wave);
   final health = healthForWave(wave);
   final power = powerForWave(wave);
@@ -72,6 +73,7 @@ void _fieldWave(World world, int wave) {
       );
     }
   }
+  return StepResult.success;
 }
 
 void resetWaves(World world) {

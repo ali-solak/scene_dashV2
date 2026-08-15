@@ -4,7 +4,7 @@ library;
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show listEquals;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 
 import '../features/player/player.dart' show Player;

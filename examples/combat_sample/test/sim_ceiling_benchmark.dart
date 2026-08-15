@@ -18,7 +18,6 @@ import 'package:combat_sample/features/enemies/enemies.dart';
 import 'package:combat_sample/common/game_state.dart';
 import 'package:combat_sample/features/player/player.dart' show Player;
 import 'package:combat_sample/features/skills/skills.dart' show LavaPit;
-import 'package:combat_sample/features/waves/waves.dart' show WaveState;
 import 'package:flutter/foundation.dart'
     show debugPrint, kProfileMode, kReleaseMode;
 import 'package:flutter_test/flutter_test.dart';
@@ -35,9 +34,10 @@ const int measuredSteps = 300;
 const double _golden = 2.399963229728653;
 
 /// Boots the full cascade, fields exactly [n] barbarians (the wave
-/// director is parked engaged so it neither counts the fight cleared nor
-/// fields more), optionally opens [pits] lava pits among them, and
-/// returns measured milliseconds per frame.
+/// director latches onto them and then waits for a clear that never
+/// comes, so it neither counts the fight cleared nor fields more),
+/// optionally opens [pits] lava pits among them, and returns measured
+/// milliseconds per frame.
 double measureFrameMs(int n, {int pits = 0}) {
   final game = boot();
   final world = game.world;
@@ -78,11 +78,10 @@ double measureFrameMs(int n, {int pits = 0}) {
       DespawnAfter(1e9),
     ]);
   }
-  // Park the wave director: engaged with living > 0 early-outs forever,
-  // so no intermission countdown and no extra barbarians mid-measure.
-  world.resource<WaveState>()
-    ..engaged = true
-    ..intermission = 0;
+  // The director parks itself: wave 1 was cleared before it ever engaged,
+  // so the plan is still waiting on UntilEngaged. It latches onto these N
+  // barbarians and then waits for a clear that never comes — no countdown
+  // and no extra barbarians mid-measure.
   game.pumpFixed(steps: 1); // flush the queued spawns
 
   game.pumpFixed(steps: warmupSteps);

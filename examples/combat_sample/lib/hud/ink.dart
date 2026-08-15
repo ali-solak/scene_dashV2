@@ -3,7 +3,7 @@
 /// menu, title and loading screens.
 library;
 
-import 'package:flutter/material.dart' show Color;
+import 'package:material_ui/material_ui.dart' show Color;
 
 abstract final class HudInk {
   static const scrim = Color(0xE60B0C0D);
