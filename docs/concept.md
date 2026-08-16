@@ -122,6 +122,9 @@ The same edge vocabulary at every scale:
 - **`GameTimer`**: durations inside gameplay (cooldowns, windups,
   cadences): `tick(world.dt)`, `finished`, `justFinished` true for
   exactly one tick.
+- **`GameTween<T>`**: a *value* over that duration (a camera move, a hit
+  flash, a material fade): `tick(world.dt)`, `value`, `justFinished`, plus
+  a curve. `smoothTo` is the version for a target that keeps moving.
 - **`Machine<S>`**: an entity's *mode* (idle / charging / rolling):
   `tick(world.dt)`, `elapsed`, `go`, with `justEntered`/`justExited`
   true for exactly one tick-window.
@@ -134,10 +137,10 @@ The same edge vocabulary at every scale:
   lost, with transitions applied at frame boundaries, `OnEnter`/`OnExit`
   as schedules, `inState(...)` as the run condition.
 
-Timers, machines and routines are plain values ticked by their owner
-systems, so they pause, slow and freeze with the game and add nothing to
-the schedule; whole-game state is a framework machine because independent
-features must coordinate on it.
+Timers, tweens, machines and routines are plain values ticked by their
+owner systems, so they pause, slow and freeze with the game and add
+nothing to the schedule; whole-game state is a framework machine because
+independent features must coordinate on it.
 
 A machine is a mode other systems read; a routine is a plan only its
 driver reads. If anything outside the driver branches on where you are,

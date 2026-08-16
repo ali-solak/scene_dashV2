@@ -96,10 +96,10 @@ final class PlayerAnimator {
     final fade = dt / oneShotFadeSeconds;
     for (final clip in shots.values) {
       final weight = identical(clip, activeClip) ? 1.0 : 0.0;
-      clip.weight = _approach(clip.weight, weight, fade);
+      clip.weight = moveToward(clip.weight, weight, fade);
     }
     for (final clip in locomotion.values) {
-      clip.weight = _approach(clip.weight, 0, fade);
+      clip.weight = moveToward(clip.weight, 0, fade);
     }
     _fillIdle();
   }
@@ -117,7 +117,7 @@ final class PlayerAnimator {
     final fade = dt / locomotionFadeSeconds;
     final tail = dt / oneShotFadeOutSeconds;
     for (final clip in shots.values) {
-      clip.weight = _approach(clip.weight, 0, tail);
+      clip.weight = moveToward(clip.weight, 0, tail);
     }
     final fromStandstill = locomotion[PlayerLoco.idle]!.weight > 0.9;
     locomotion.forEach((key, clip) {
@@ -128,7 +128,7 @@ final class PlayerAnimator {
           targetWeight > 0) {
         clip.seek(0);
       }
-      clip.weight = _approach(clip.weight, targetWeight, fade);
+      clip.weight = moveToward(clip.weight, targetWeight, fade);
     });
     _fillIdle();
   }
@@ -201,11 +201,6 @@ final class PlayerAnimator {
       shot == PlayerShot.rollBack ||
       shot == PlayerShot.rollLeft ||
       shot == PlayerShot.rollRight;
-
-  static double _approach(double value, double target, double step) {
-    if ((target - value).abs() <= step) return target;
-    return value + (target - value).sign * step;
-  }
 }
 
 /// Creates animation clips bound to [model].

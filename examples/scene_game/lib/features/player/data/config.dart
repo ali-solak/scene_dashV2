@@ -32,7 +32,9 @@ const List<double> crabLegForwardOffsets = <double>[
 ];
 
 const double crabLegCollapsedScale = 0.24;
-const double crabLegExtensionDuration = 1.1;
+// Seconds to close half the gap as the legs extend. Replaces a naive
+// `dt / 1.1` lerp; matched to the old feel at 60fps.
+const double crabLegExtensionHalfLife = 0.76;
 const double crabLegExtensionStagger = 0.14;
 
 const double crabGaitSpeed = 9;
@@ -46,3 +48,8 @@ double playerGroundYAtZ(double z) =>
     rampSurfaceYAtZ(z) + playerCollisionRadius + playerGroundClearance;
 
 final double playerStartY = playerGroundYAtZ(playerStartZ);
+
+// Half of the badge's round trip: it scales up over this, then reverse() plays
+// the same curve backwards. Replaces a hand-rolled sin(pi * t) envelope.
+const double badgePopSeconds = 0.225;
+const double badgePopScale = 1.3;

@@ -54,10 +54,11 @@ void animateCrabLegs(World world) {
   final input = world.buttons<GameAction>();
   final dt = world.dt;
   world.query<PlayerVisuals>(require: const [Player]).each((entity, v) {
-    v.legExtension01 = approach(
+    v.legExtension01 = smoothTo(
       v.legExtension01,
       1.0,
-      dt / crabLegExtensionDuration,
+      dt,
+      crabLegExtensionHalfLife,
     );
 
     final horizontal = input.axis(GameAction.right, GameAction.left);

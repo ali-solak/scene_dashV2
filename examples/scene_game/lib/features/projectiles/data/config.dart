@@ -55,6 +55,11 @@ const double chargePlasmaRateMax = 220;
 const double chargePlasmaShellRadiusMin = 0.5;
 const double chargePlasmaShellRadiusMax = 0.95;
 
+// Seconds to close half the gap on the reticle and charge-orb show factors.
+// Replace naive `dt * 10` / `dt * 12` lerps; matched to the old feel at 60fps.
+const double reticleOpacityHalfLife = 0.065;
+const double chargeShowHalfLife = 0.055;
+
 const double reticleLaneHalfWidth = 1.7;
 
 double chargedProjectileScale(double charge) {

@@ -222,7 +222,13 @@ final class PlayerShieldVisuals {
 
   double shieldPhase = 0;
   double shieldShow = 0;
-  double badgePop = 0;
+
+  /// Scales the badge up and straight back down. Built reversed, so it starts
+  /// finished at rest; `reset()` fires the pop.
+  final GameTween<double> badgePop =
+      GameTween.number(0, badgePopScale, badgePopSeconds,
+        curve: Curves.easeOutSine,
+      )..reverse();
 
   bool shieldActive = false;
 
