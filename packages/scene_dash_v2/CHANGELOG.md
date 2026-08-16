@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.0
+- adds gameTween, vector3Tween, colorTween, smoothTo adn moveToward
+
 ## 0.2.0
 - adds new routine mechanism for better organizing sequenced game logic
 
