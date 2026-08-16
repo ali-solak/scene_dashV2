@@ -346,22 +346,6 @@ leaving `exclude: [Stunned]` queries at the next frame boundary. Its full
 loop is in Events: `applyDamage` adds it, `recoverFromStun` removes it.
 
 ```dart
-// observe: a feature reacts to a component appearing or disappearing on
-// any entity; explicit, per feature, at install time. onRemove gets the
-// still-live instance (despawn strips components, so it fires there too)
-game.observe<Stunned>(
-  onAdd: (world, entity, stunned) => world.add(entity, StunStars()),
-  onRemove: (world, entity, stunned) => world.remove<StunStars>(entity),
-);
-
-// removeAfter: the framework removes the component again on schedule,
-// in fixed-step game time (pause and hitstop consume nothing); expiry fires
-// onRemove like any other removal; re-adding refreshes the deadline
-world.add(enemy, const Stunned(), removeAfter: 1.2);
-world.expiryOf<Stunned>(enemy);          // seconds left, or null
-```
-
-```dart
 final sword = world.spawn(
     [NodeRef(swordNode)],              // swordNode: yours
     ownedBy: player);                    // despawning the player despawns
@@ -471,6 +455,25 @@ game.runSchedule(label)      // from a widget; TestGame.runSchedule in tests
 // nesting runs inline; a schedule re-entering itself throws
 // never inside a `.each`: the run ends in a flush
 // world.dt = the last frame delta. Count turns with a counter
+```
+
+## Observers
+
+React to a component appearing on or disappearing from any entity.
+Observers are registered explicitly per feature at install time. `onRemove`
+receives the still-live component instance and also fires when despawning an
+entity strips its components.
+
+```dart
+game.observe<Stunned>(
+  onAdd: (world, entity, stunned) => world.add(entity, StunStars()),
+  onRemove: (world, entity, stunned) => world.remove<StunStars>(entity),
+);
+
+// removeAfter removes the component again on schedule, in fixed-step game
+// time. Expiry fires onRemove like any other removal; re-adding refreshes it.
+world.add(enemy, const Stunned(), removeAfter: 1.2);
+world.expiryOf<Stunned>(enemy);          // seconds left, or null
 ```
 
 ## Events

@@ -154,6 +154,7 @@ flutter run --enable-flutter-gpu
     - [With Routine](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#with-routine)
   - [Smoothing](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#smoothing)
 - Coordination
+  - [Observers](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#observers)
   - [Events](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#events)
   - [Input](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#input)
   - [States](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#states)

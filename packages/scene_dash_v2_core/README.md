@@ -147,6 +147,7 @@ flutter run --enable-flutter-gpu
   - [Custom schedules](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#custom-schedules-game-driven-systems)
   - [Time](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#time)
 - Coordination
+  - [Observers](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#observers)
   - [Events](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#events)
   - [Input](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#input)
   - [States](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#states)
