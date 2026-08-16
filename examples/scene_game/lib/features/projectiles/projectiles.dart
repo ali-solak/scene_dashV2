@@ -5,7 +5,6 @@ import 'package:flutter_scene/scene.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
 
-import '../../fx/anim.dart';
 import '../../fx/particles.dart' as fx;
 import '../../fx/particle_texture.dart';
 import '../../common/bounds.dart';

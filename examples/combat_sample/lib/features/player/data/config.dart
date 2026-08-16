@@ -25,9 +25,12 @@ const double cameraPitchMax = 1.15;
 
 const double cameraLockedPitch = 0.32;
 
-const double cameraYawSharpness = 5;
-const double cameraPositionSharpness = 14;
-const double cameraPitchSharpness = 6;
+// Seconds to close half the remaining gap. Converted from the old per-second
+// sharpness constants (5, 14, 6) by halfLife = ln2 / sharpness, so the camera
+// moves exactly as it did before.
+const double cameraYawHalfLife = math.ln2 / 5;
+const double cameraPositionHalfLife = math.ln2 / 14;
+const double cameraPitchHalfLife = math.ln2 / 6;
 
 const double lookYawSensitivity = 0.006;
 const double lookPitchSensitivity = 0.0045;
@@ -45,7 +48,7 @@ const double titleCameraPitch = 0.42;
 const double titleOrbitRate = 0.08;
 
 const double introZoomSeconds = 1.6;
-const double introCameraSharpness = 2.2;
+const double introCameraHalfLife = math.ln2 / 2.2;
 
 const double playerCapsuleRadius = 0.42;
 const double playerCapsuleHeight = 0.95;

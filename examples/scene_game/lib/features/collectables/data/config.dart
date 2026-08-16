@@ -33,3 +33,7 @@ const double shieldDeflectSpin = 10;
 const int deflectBurstSeed = 31;
 const int deflectBurstCount = 18;
 const double deflectBurstEntityLifetime = 0.6;
+
+// Seconds to close half the gap on the shield's show factor. Replaces a naive
+// `dt * 8` lerp; matched to the old feel at 60fps.
+const double shieldShowHalfLife = 0.08;

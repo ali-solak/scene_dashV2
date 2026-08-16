@@ -50,7 +50,7 @@ void collectShieldPickups(World world) {
 void shieldGained(World world, Entity entity, Shielded shielded) {
   world.tryGet<PlayerShieldVisuals>(entity)
     ?..shieldActive = true
-    ..badgePop = 1;
+    ..badgePop.reset();
 }
 
 void shieldLost(World world, Entity entity, Shielded shielded) {
@@ -71,7 +71,12 @@ void updateShieldVisuals(World world) {
   final breathe = 1 + 0.05 * math.sin(v.shieldPhase);
   final warnFlash = warning ? 0.5 + 0.5 * math.sin(v.shieldPhase * 1.5) : 1.0;
 
-  v.shieldShow = approach(v.shieldShow, v.shieldActive ? 1.0 : 0.0, dt * 8);
+  v.shieldShow = smoothTo(
+    v.shieldShow,
+    v.shieldActive ? 1.0 : 0.0,
+    dt,
+    shieldShowHalfLife,
+  );
   final bubbleScale = v.shieldShow * breathe;
   v.shieldBubble.setLocalUniform(0, 0, 0, bubbleScale);
   v.shieldBubbleMaterial.baseColorFactor = Vector4(
@@ -87,9 +92,10 @@ void updateShieldVisuals(World world) {
     1,
   );
 
-  v.badgePop = math.max(0, v.badgePop - dt / 0.45);
-  final prog = 1 - v.badgePop;
-  final badgeScale = v.badgePop > 0.001 ? math.sin(prog * math.pi) * 1.3 : 0.0;
+  v.badgePop.tick(dt);
+  // Up on the way out, the same curve backwards on the way home.
+  if (v.badgePop.justFinished && !v.badgePop.reversed) v.badgePop.reverse();
+  final badgeScale = v.badgePop.value;
   v.shieldBadge.setLocalUniform(
     0,
     playerBodyVisualRadius * 0.6,

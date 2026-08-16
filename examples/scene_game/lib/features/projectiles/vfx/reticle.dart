@@ -78,11 +78,17 @@ void updateLockOnReticle(World world) {
   final showing =
       hasRock &&
       (charging || reticle.firedFlash > 0.01 || reticle.impactFlash > 0.01);
-  reticle.opacity = approach(reticle.opacity, showing ? 1.0 : 0.0, dt * 10);
-  reticle.charge01 = approach(
+  reticle.opacity = smoothTo(
+    reticle.opacity,
+    showing ? 1.0 : 0.0,
+    dt,
+    reticleOpacityHalfLife,
+  );
+  reticle.charge01 = smoothTo(
     reticle.charge01,
     charging ? blaster.charge01 : 0.0,
-    dt * 12,
+    dt,
+    chargeShowHalfLife,
   );
   reticle.locked = charging && blaster.charge01 >= 0.98;
   reticle.pushToModel();

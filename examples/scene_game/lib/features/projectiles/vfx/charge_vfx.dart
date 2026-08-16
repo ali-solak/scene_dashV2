@@ -34,10 +34,11 @@ void updateChargeVisuals(World world) {
 
   v.chargePhase += world.dt * (6 + 10 * c);
   // Eased show factor so release/cancel shrinks the orb and beam cleanly.
-  final show = v.chargeShow = approach(
+  final show = v.chargeShow = smoothTo(
     v.chargeShow,
     charging ? 1.0 : 0.0,
-    world.dt * 12,
+    world.dt,
+    chargeShowHalfLife,
   );
 
   final pulse = 1 + 0.08 * math.sin(v.chargePhase);

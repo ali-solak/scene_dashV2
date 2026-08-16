@@ -17,6 +17,7 @@ Scene-Dash is an ECS-driven gameplay architecture for [flutter_scene](https://pu
 * **Events and observers** decoupled communication between systems
 * **States and machines** game states with enter/exit behavior and scoped entities and state machines
 * **Routines** a reusable sequencer for gameplay with an ordered flow: wave directors, objectives, encounters, tutorials
+* **Tweens and smoothing** `GameTween` for a value over a duration, `smoothTo` for a target that keeps moving, both on game time so they pause with it
 * **Input** buttons, axes, and buffered presses as resources; widgets write, systems read
 * **Widgets** `WorldBuilder`, `EntityBuilder`, `GameStateBuilder` read world state straight into the widget tree
 * **Debug tooling** entity debug, gizmos, and a live inspector overlay
@@ -149,6 +150,9 @@ flutter run --enable-flutter-gpu
   - [Scheduling: sets and run conditions](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#scheduling-sets-and-run-conditions)
   - [Custom schedules](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#custom-schedules-game-driven-systems)
   - [Time](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#time)
+  - [GameTween](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#gametween)
+    - [With Routine](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#with-routine)
+  - [Smoothing](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#smoothing)
 - Coordination
   - [Events](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#events)
   - [Input](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#input)

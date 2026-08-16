@@ -95,14 +95,14 @@ final class EnemyAnimator {
     final fade = dt / brawlerOneShotFadeSeconds;
     final activeClip = shots[active]!;
     for (final clip in shots.values) {
-      clip.weight = _approach(
+      clip.weight = moveToward(
         clip.weight,
         identical(clip, activeClip) ? 1 : 0,
         fade,
       );
     }
     for (final clip in locomotion.values) {
-      clip.weight = _approach(clip.weight, 0, fade);
+      clip.weight = moveToward(clip.weight, 0, fade);
     }
     _fillIdle();
   }
@@ -130,7 +130,7 @@ final class EnemyAnimator {
 
     final fade = dt / brawlerLocomotionFadeSeconds;
     for (final clip in shots.values) {
-      clip.weight = _approach(clip.weight, 0, fade);
+      clip.weight = moveToward(clip.weight, 0, fade);
     }
     final fromStandstill = locomotion[BrawlerLoco.idle]!.weight > 0.9;
     locomotion.forEach((key, clip) {
@@ -141,7 +141,7 @@ final class EnemyAnimator {
           targetWeight > 0) {
         clip.seek(0);
       }
-      clip.weight = _approach(clip.weight, targetWeight, fade);
+      clip.weight = moveToward(clip.weight, targetWeight, fade);
     });
     _fillIdle();
   }
@@ -190,11 +190,6 @@ final class EnemyAnimator {
     locomotion[key]!.playbackTimeScale = (speed / strideSpeed)
         .clamp(0.5, 1.8)
         .toDouble();
-  }
-
-  static double _approach(double value, double target, double step) {
-    if ((target - value).abs() <= step) return target;
-    return value + (target - value).sign * step;
   }
 }
 

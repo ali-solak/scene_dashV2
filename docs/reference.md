@@ -17,6 +17,9 @@ The full API surface
   - [Scheduling: sets and run conditions](#scheduling-sets-and-run-conditions)
   - [Custom schedules](#custom-schedules)
   - [Time](#time)
+  - [GameTween](#gametween)
+    - [With Routine](#with-routine)
+  - [Smoothing](#smoothing)
 - Coordination
   - [Events](#events)
   - [Input](#input)
@@ -677,8 +680,128 @@ GameTimer(0.4)             // one-shot: finished / justFinished / reset()
 GameTimer.repeating(1.5)   // completionsThisTick, can be >1 after a hitch
 GameStopwatch()            // counts up: elapsed
 DespawnAfter(2.0)          // component: timed despawn (muzzle flash, corpse)
+GameTween.number(0, 1, .4) // a value over a duration; own section below
+smoothTo(v, target, dt, h) // chasing a moving target; own section below
 Machine<S>(initial)        // modes; own section below
 // system-level cadence → runIf: every(seconds), never a timer resource
+```
+
+## GameTween
+
+Tween world values on game time. It ticks on `world.dt`, so it pauses and
+slows with the game.
+
+```dart
+final fade = GameTween.number(1, 0, 0.8, curve: Curves.easeIn);
+```
+
+```dart
+fade.tick(world.dt);
+material.baseColorFactor.a = fade.value;
+
+if (fade.justFinished) world.despawn(entity);
+```
+
+It also works for vectors and colors:
+
+```dart
+final move = vector3Tween(from, to, 1.2);
+final tint = colorTween(white, red, 0.4);
+```
+
+And changes direction without snapping:
+
+```dart
+tween.reverse();          // back the way you came, from where you are
+tween.retarget(newEnd);   // pick a new end, keep the duration
+```
+
+```dart
+tween.value
+tween.fraction
+tween.eased
+tween.finished
+tween.justFinished
+
+tween.reset();
+tween.reverse();
+tween.retarget(to);
+```
+
+Use Flutter's `Curves` for easing.
+
+### With Routine
+
+`Routine` handles the order, `GameTween` handles the movement. A door
+opens, waits for the player, then swings shut:
+
+```dart
+const doorSequence = Sequence([
+  OpenDoor(),
+  UntilPlayerPassed(),
+  CloseDoor(),
+]);
+```
+
+```dart
+final class Door {
+  Door(this.node);
+  final Node node;
+  final routine = Routine(doorSequence);
+  final angle = GameTween.number(0, math.pi / 2, 0.6,
+      curve: Curves.easeInOut);
+}
+```
+
+```dart
+door.routine.advance(world.dt, (step) {
+  switch (step) {
+    case OpenDoor():
+      return swing(door, world.dt);
+
+    case UntilPlayerPassed():
+      return playerPassed(world) ? StepResult.success : StepResult.running;
+
+    case CloseDoor():
+      if (!door.angle.reversed) door.angle.reverse();
+      return swing(door, world.dt);
+  }
+});
+
+StepResult swing(Door door, double dt) {
+  door.angle.tick(dt);
+  door.node.localTransform = Matrix4.rotationY(door.angle.value);
+  return door.angle.finished ? StepResult.success : StepResult.running;
+}
+```
+
+One tween drives both halves: `reverse()` on the way back, guarded by
+`reversed` so it flips once and not every tick.
+
+So `GameTween` has no chaining. Several animations in order is what
+`Routine` is for.
+
+## Smoothing
+
+When the target itself keeps moving, smooth toward it instead of tweening:
+
+```dart
+rig.position.smoothToward(playerPosition, world.dt, 0.08);
+```
+
+```dart
+smoothTo(value, target, dt, halfLife)
+position.smoothToward(target, dt, halfLife)
+smoothBlend(dt, halfLife)
+moveToward(value, target, amount)
+```
+
+`halfLife` is how long it takes to close half the remaining distance.
+
+```dart
+GameTween   // fixed start to end over a duration
+smoothTo    // follow a changing target
+moveToward  // move at a fixed rate until you arrive
 ```
 
 ## Machine

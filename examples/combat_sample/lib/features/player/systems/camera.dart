@@ -63,12 +63,12 @@ void _aim(
     target.translation.x - position.x,
     target.translation.z - position.z,
   );
+  // Yaw wraps, so it needs the blend factor rather than smoothTo: the gap is
+  // the shortest arc, not plain subtraction.
   rig.yaw +=
       angleDifference(desiredYaw, rig.yaw) *
-      (1 - math.exp(-cameraYawSharpness * dt));
-  rig.pitch +=
-      (cameraLockedPitch - rig.pitch) *
-      (1 - math.exp(-cameraPitchSharpness * dt));
+      smoothBlend(dt, cameraYawHalfLife);
+  rig.pitch = smoothTo(rig.pitch, cameraLockedPitch, dt, cameraPitchHalfLife);
 }
 
 void _focus(CameraRig rig, Vector3 position, SceneTransform? target) {
@@ -104,12 +104,12 @@ void _ease(CameraRig rig, double distance, double dt) {
   final desiredY = rig.target.y + distance * math.sin(rig.pitch);
   final desiredZ = rig.target.z - math.cos(rig.yaw) * horizontal;
 
-  var sharpness = cameraPositionSharpness;
+  var halfLife = cameraPositionHalfLife;
   if (rig.intro > 0) {
     rig.intro = math.max(0, rig.intro - dt);
-    sharpness = introCameraSharpness;
+    halfLife = introCameraHalfLife;
   }
-  final blend = 1 - math.exp(-sharpness * dt);
+  final blend = smoothBlend(dt, halfLife);
   rig.position.setValues(
     rig.position.x + (desiredX - rig.position.x) * blend,
     rig.position.y + (desiredY - rig.position.y) * blend,
