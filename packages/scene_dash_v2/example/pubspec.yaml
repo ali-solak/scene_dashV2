@@ -19,8 +19,3 @@ dependencies:
 
 dev_dependencies:
   flutter_lints: ^6.0.0
-
-# Outside the workspace, so the unpublished core resolves from disk.
-dependency_overrides:
-  scene_dash_v2_core:
-    path: ../../scene_dash_v2_core
