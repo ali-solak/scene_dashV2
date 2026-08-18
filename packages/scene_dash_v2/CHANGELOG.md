@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.0
+- upgrade deps
+
 ## 0.3.0
 - adds gameTween, vector3Tween, colorTween, smoothTo adn moveToward
 

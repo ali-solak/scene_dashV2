@@ -11,8 +11,8 @@ material {
     { type: float, name: time, default: 0.0 },
     { type: float, name: wave_height, hint: range(0, 2, 0.01), default: 0.65 },
     { type: float, name: wave_scale, hint: range(0.001, 0.5, 0.001), default: 0.045 },
-    { type: vec3, name: deep_color, default: [0.05, 0.17, 0.26] },
-    { type: vec3, name: swell_color, default: [0.12, 0.34, 0.40] },
+    { type: vec3, name: deep_color, default: [0.04, 0.14, 0.22] },
+    { type: vec3, name: swell_color, default: [0.14, 0.40, 0.47] },
     { type: vec3, name: sparkle_color, default: [1.0, 0.95, 0.8] },
     // How many steps the swell is quantised into. Low is cartoon, high
     // slides back toward a smooth gradient.

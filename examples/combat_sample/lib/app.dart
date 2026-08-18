@@ -85,6 +85,7 @@ class _CombatAppState extends State<CombatApp> {
       loading: _loading,
       loadingBuilder: (context, progress) =>
           LoadingScreen(stage: _bootStage, progress: progress),
+      warmUp: !config.isMobile,
       cameraBuilder: (elapsed) => buildCombatCamera(elapsed, _cameraRig),
       onTick: (elapsed, deltaSeconds) => _game?.onTick(elapsed, deltaSeconds),
     );

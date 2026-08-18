@@ -71,7 +71,7 @@ world.query2<SceneTransform, Velocity>().each((entity, transform, velocity) {
 and is the documented cold-path alternative, not the default.
 
 The same discipline runs through the integration: `NodeTransformOps`
-mutates node matrices in place, gizmo submissions write plain floats into
+mutates node matrices in place, debug-draw submissions write plain floats into
 instanced pools, and per-frame systems keep scratch vectors at file scope.
 
 ## Drive from the smallest store

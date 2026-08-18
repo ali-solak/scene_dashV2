@@ -1,41 +1,56 @@
-// The pure half of the grass: field baking without a GPU context.
+// The pure half of the grass: field placement without a GPU context.
 import 'dart:math' as math;
 
 import 'package:combat_sample/features/world/vfx/grass_field.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// Column-major translation of blade [blade].
+(double, double) _root(GrassField field, int blade) {
+  final t = blade * GrassField.floatsPerTransform;
+  return (field.transforms[t + 12], field.transforms[t + 14]);
+}
+
+/// Blade height: the Y column's Y component.
+double _height(GrassField field, int blade) =>
+    field.transforms[blade * GrassField.floatsPerTransform + 5];
+
 void main() {
-  test('a field bakes three vertices and both windings per blade', () {
+  test('a field emits one transform and one color per blade', () {
     final field = buildGrassField(98, radius: 10);
-    expect(field.positions.length, 98 * GrassField.verticesPerBlade * 3);
-    expect(field.normals.length, 98 * GrassField.verticesPerBlade * 3);
-    expect(field.colors.length, 98 * GrassField.verticesPerBlade * 4);
-    expect(field.indices.length, 98 * GrassField.indicesPerBlade);
+    expect(field.bladeCount, 98);
+    expect(field.transforms.length, 98 * GrassField.floatsPerTransform);
+    expect(field.colors.length, 98 * GrassField.floatsPerColor);
   });
 
-  test('every blade stays near the field disc and above the ground', () {
+  test('the shared blade carries three vertices and both windings', () {
+    expect(GrassField.bladePositions.length, 3 * 3);
+    expect(GrassField.bladeNormals.length, 3 * 3);
+    expect(GrassField.bladeIndices, [0, 1, 2, 2, 1, 0]);
+  });
+
+  test('every blade stays near the field disc and stands above the ground', () {
     const radius = 10.0;
     final field = buildGrassField(504, radius: radius);
-    for (var v = 0; v < field.positions.length ~/ 3; v++) {
-      final x = field.positions[v * 3];
-      final y = field.positions[v * 3 + 1];
-      final z = field.positions[v * 3 + 2];
+    for (var blade = 0; blade < field.bladeCount; blade++) {
+      final (x, z) = _root(field, blade);
       expect(math.sqrt(x * x + z * z), lessThanOrEqualTo(radius + 0.38));
-      expect(y, inInclusiveRange(0, 0.82));
+      expect(_height(field, blade), inInclusiveRange(0.42, 0.82));
+      // Roots sit on the ground: the transform's Y translation.
+      expect(field.transforms[blade * GrassField.floatsPerTransform + 13], 0);
     }
   });
 
-  test('indices are valid and roots stay distinguishable from tips', () {
+  test('every transform keeps a positive determinant, so winding holds', () {
     final field = buildGrassField(49, radius: 5);
-    final vertexCount = field.positions.length ~/ 3;
-    for (final index in field.indices) {
-      expect(index, lessThan(vertexCount));
-    }
     for (var blade = 0; blade < field.bladeCount; blade++) {
-      final base = blade * GrassField.verticesPerBlade * 3;
-      expect(field.positions[base + 1], 0);
-      expect(field.positions[base + 4], 0);
-      expect(field.positions[base + 7], greaterThan(0));
+      final t = blade * GrassField.floatsPerTransform;
+      // det of the upper-left 3x3, columns (0,1,2).
+      final a = field.transforms;
+      final det =
+          a[t] * (a[t + 5] * a[t + 10] - a[t + 6] * a[t + 9]) -
+          a[t + 4] * (a[t + 1] * a[t + 10] - a[t + 2] * a[t + 9]) +
+          a[t + 8] * (a[t + 1] * a[t + 6] - a[t + 2] * a[t + 5]);
+      expect(det, greaterThan(0));
     }
   });
 
@@ -53,12 +68,9 @@ void main() {
 
     var inner = 0;
     var outer = 0;
-    for (var v = 0; v < faded.positions.length ~/ 3; v++) {
-      if (faded.positions[v * 3 + 1] != 0) continue;
-      final x = faded.positions[v * 3];
-      final z = faded.positions[v * 3 + 2];
-      final r = math.sqrt(x * x + z * z);
-      if (r < falloffStart) {
+    for (var blade = 0; blade < faded.bladeCount; blade++) {
+      final (x, z) = _root(faded, blade);
+      if (math.sqrt(x * x + z * z) < falloffStart) {
         inner++;
       } else {
         outer++;
@@ -72,7 +84,7 @@ void main() {
   test('the same seed re-lays the same field', () {
     final a = buildGrassField(196, radius: 12);
     final b = buildGrassField(196, radius: 12);
-    expect(a.positions, b.positions);
+    expect(a.transforms, b.transforms);
     expect(a.colors, b.colors);
   });
 }

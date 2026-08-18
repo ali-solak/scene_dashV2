@@ -139,7 +139,7 @@ class _PlayingHud extends StatelessWidget {
         ),
         const Positioned(top: 64, left: 24, child: DebugPanel()),
         // The inspector consumes core snapshots only (never the live
-        // world); the debug chip beside gizmos/stats toggles it.
+        // world); the debug chip beside debug-draw/stats toggles it.
         WorldBuilder<bool>(
           select: (world) =>
               world.tryResource<DebugSettings>()?.inspector ?? false,

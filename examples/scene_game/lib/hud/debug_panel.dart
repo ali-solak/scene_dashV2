@@ -6,16 +6,16 @@ import '../features/rocks/rocks.dart';
 
 final class DebugSettings {
   DebugSettings({
-    this.gizmos = false,
+    this.debugDraw = false,
     this.stats = false,
     this.inspector = false,
   });
 
-  bool gizmos;
+  bool debugDraw;
   bool stats;
   bool inspector;
 
-  (bool, bool, bool) get snapshot => (gizmos, stats, inspector);
+  (bool, bool, bool) get snapshot => (debugDraw, stats, inspector);
 }
 
 class DebugPanel extends StatelessWidget {
@@ -44,11 +44,11 @@ class DebugPanel extends StatelessWidget {
                 const SizedBox(width: 8),
                 _ToggleChip(
                   icon: Icons.grid_3x3,
-                  semanticLabel: 'Toggle debug gizmos',
-                  active: settings.gizmos,
+                  semanticLabel: 'Toggle debug draw',
+                  active: settings.debugDraw,
                   onPressed: () {
-                    settings.gizmos = !settings.gizmos;
-                    world.gizmos.enabled = settings.gizmos;
+                    settings.debugDraw = !settings.debugDraw;
+                    world.debugDraw.enabled = settings.debugDraw;
                   },
                 ),
                 const SizedBox(width: 8),

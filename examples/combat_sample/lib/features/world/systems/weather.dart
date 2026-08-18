@@ -10,7 +10,7 @@ void installWeather(GameBuilder game) {
     ..addSystem(
       Schedules.update,
       updateWindMaterials,
-      reads: const {Grass, Ocean, NodeRef},
+      reads: const {Ocean, NodeRef},
       runIf: hasResource<Scene>(),
     )
     // Deferred spawn only (the crash entity), so no live write is declared.
@@ -37,16 +37,21 @@ void updateWindMaterials(World world) {
     }
   }
 
-  world.query<NodeRef>(require: const [Grass]).each((entity, ref) {
-    drive(ref);
-    final material = ref.node.mesh?.primitives.first.material;
-    if (material is! PreprocessedMaterial) return;
-    material.parameters.setFloat('burn_any', burns.active ? 1 : 0);
-    if (!burns.active) return;
-    for (var i = 0; i < GrassBurns.slots; i++) {
-      material.parameters.setVec4(_burnSlots[i], burns.marks[i]);
+  // The blades are instanced, so the node carries no mesh to read the
+  // material back from.
+  final grass = world.hasResource<WorldAssets>()
+      ? world.resource<WorldAssets>().grassMaterial
+      : null;
+  if (grass != null) {
+    grass.parameters
+      ..setFloat('time', wind.time)
+      ..setFloat('burn_any', burns.active ? 1 : 0);
+    if (burns.active) {
+      for (var i = 0; i < GrassBurns.slots; i++) {
+        grass.parameters.setVec4(_burnSlots[i], burns.marks[i]);
+      }
     }
-  });
+  }
   world.query<NodeRef>(require: const [Ocean]).each((entity, ref) {
     drive(ref);
   });

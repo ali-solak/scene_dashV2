@@ -34,7 +34,7 @@ The full API surface
 - Tooling
   - [Debugging](#debugging)
     - [Entity debug](#entity-debug)
-    - [Gizmo debug](#gizmo-debug)
+    - [Debug draw](#debug-draw)
     - [Inspector](#inspector)
   - [Testing](#testing)
 
@@ -150,7 +150,7 @@ final game = await SceneGame.boot(
     installPlayer,
     installEnemies,
     installRules,
-    installGizmos(enabled: kDebugMode),
+    installDebugDraw(enabled: kDebugMode),
   ],
 );
 
@@ -593,7 +593,7 @@ final class Ambience implements Disposable {
 ```
 
 Framework state is promoted to members (`world.dt`, `world.clock`,
-`world.buttons`, `world.physics`, `world.gizmos`), never `resource<T>()`.
+`world.buttons`, `world.physics`, `world.debugDraw`), never `resource<T>()`.
 
 ## States
 
@@ -1091,22 +1091,22 @@ print(world.debugDescribe(grunt));
 // its type; a Machine owner prints e.g. `striking (0.12s)`
 ```
 
-### Gizmo debug
+### Debug draw
 
 ```dart
-features: [installGizmos(enabled: kDebugMode), ...]   // opt-in render layer
+features: [installDebugDraw(enabled: kDebugMode), ...]   // opt-in render layer
 
 void debugDrawCombat(World world) {
   world.query2<Fighter, SceneTransform>(require: const [Player])
       .each((entity, fighter, transform) {
     if (fighter.phase.state == FighterPhase.striking) {
-      world.gizmos.sphere(transform.translation, strikeRange,
-          color: GizmoColor.red);              // the hit volume, visible
+      world.debugDraw.sphere(transform.translation, strikeRange,
+          color: DebugColor.red);              // the hit volume, visible
     }
   });
 }
 
-world.gizmos.enabled = false;   // off = zero draw calls; calls stay in
+world.debugDraw.enabled = false;   // off = zero draw calls; calls stay in
                                 //   shipping code as early-return no-ops
 ```
 

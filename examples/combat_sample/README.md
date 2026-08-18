@@ -15,7 +15,7 @@ flutter config --enable-dart-data-assets
 #   middle mouse / Tab = lock-on toggle · Q = cycle target
 #   1 / 2 / 3 / 4 = fire gush / lava pit / wind blast / shield
 #   Esc = skill menu
-flutter config --enable-dart-data-assets
-flutter run --enable-flutter-gpu
+dart run flutter_scene:init
+flutter run 
 
 ```
