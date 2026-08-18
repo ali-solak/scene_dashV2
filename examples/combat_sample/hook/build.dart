@@ -6,7 +6,6 @@ void main(List<String> args) async {
     buildScenes(
       buildInput: input,
       buildOutput: output,
-      outputDirectory: 'build/scenes/',
       assetMode: SceneAssetMode.dataAssetsRequired,
       inputFilePaths: const [
         'assets/characters/Knight.glb',

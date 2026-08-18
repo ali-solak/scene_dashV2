@@ -15,19 +15,19 @@ import 'package:flutter_scene/scene.dart'
 import 'package:scene_dash_v2_core/advanced.dart';
 import 'package:vector_math/vector_math.dart';
 
-/// Available gizmo colors.
-enum GizmoColor { green, red, blue, yellow }
+/// Available debug-draw colors.
+enum DebugColor { green, red, blue, yellow }
 
 /// Debug shapes for the current frame.
-final class Gizmos {
+final class DebugDraw {
   /// Capacities are per color, per shape kind.
-  Gizmos({
+  DebugDraw({
     int sphereCapacity = 64,
     int lineCapacity = 128,
     int cuboidCapacity = 32,
-  }) : buckets = List<GizmoBucket>.generate(
-         GizmoColor.values.length,
-         (_) => GizmoBucket(
+  }) : buckets = List<DebugDrawBucket>.generate(
+         DebugColor.values.length,
+         (_) => DebugDrawBucket(
            sphereCapacity: sphereCapacity,
            lineCapacity: lineCapacity,
            cuboidCapacity: cuboidCapacity,
@@ -35,14 +35,14 @@ final class Gizmos {
          growable: false,
        );
 
-  /// Whether gizmos are enabled.
+  /// Whether debug drawing is enabled.
   bool enabled = true;
 
   /// Shapes dropped this frame because a buffer was full.
   int droppedThisFrame = 0;
 
   /// Per color staging buffers.
-  final List<GizmoBucket> buckets;
+  final List<DebugDrawBucket> buckets;
 
   // Scratch for ray's endpoint computation.
   static final Vector3 _end = Vector3.zero();
@@ -51,7 +51,7 @@ final class Gizmos {
   void sphere(
     Vector3 center,
     double radius, {
-    GizmoColor color = GizmoColor.green,
+    DebugColor color = DebugColor.green,
   }) {
     if (!enabled) return;
     final b = buckets[color.index];
@@ -72,7 +72,7 @@ final class Gizmos {
     Vector3 a,
     Vector3 b, {
     double thickness = 0.02,
-    GizmoColor color = GizmoColor.green,
+    DebugColor color = DebugColor.green,
   }) {
     if (!enabled) return;
     final bucket = buckets[color.index];
@@ -99,7 +99,7 @@ final class Gizmos {
     Vector3 direction,
     double length, {
     double thickness = 0.02,
-    GizmoColor color = GizmoColor.green,
+    DebugColor color = DebugColor.green,
   }) {
     if (!enabled) return;
     _end
@@ -114,7 +114,7 @@ final class Gizmos {
   void cuboid(
     Vector3 center,
     Vector3 halfExtents, {
-    GizmoColor color = GizmoColor.green,
+    DebugColor color = DebugColor.green,
   }) {
     if (!enabled) return;
     final b = buckets[color.index];
@@ -146,8 +146,8 @@ final class Gizmos {
 /// One color's staging buffers. Packed float layouts:
 /// spheres `x,y,z,radius`; lines `ax,ay,az,bx,by,bz,thickness`;
 /// cuboids `cx,cy,cz,hx,hy,hz`.
-final class GizmoBucket {
-  GizmoBucket({
+final class DebugDrawBucket {
+  DebugDrawBucket({
     required this.sphereCapacity,
     required this.lineCapacity,
     required this.cuboidCapacity,
@@ -168,7 +168,7 @@ final class GizmoBucket {
   int cuboidCount = 0;
 }
 
-/// Writes the transform for a line gizmo into [out]: a unit cube stretched
+/// Writes the transform for a debug line into [out]: a unit cube stretched
 /// to span `a -> b` with square cross-section [thickness]. A degenerate
 /// segment (zero length) collapses to zero scale.
 ///
@@ -234,7 +234,7 @@ void composeLineTransform(
 }
 
 /// Installs debug shape rendering.
-Feature installGizmos({
+Feature installDebugDraw({
   int sphereCapacity = 64,
   int lineCapacity = 128,
   int cuboidCapacity = 32,
@@ -242,24 +242,24 @@ Feature installGizmos({
 }) {
   return (game) {
     game.addPlugin(
-      GizmosPlugin(
+      DebugDrawPlugin(
         sphereCapacity: sphereCapacity,
         lineCapacity: lineCapacity,
         cuboidCapacity: cuboidCapacity,
       ),
     );
-    game.world.resources.get<Gizmos>().enabled = enabled;
+    game.world.resources.get<DebugDraw>().enabled = enabled;
   };
 }
 
 /// Adds debug drawing to a game.
-final class GizmosPlugin extends Plugin {
-  /// Per-color, per-shape instance capacities for the [Gizmos] resource.
+final class DebugDrawPlugin extends Plugin {
+  /// Per-color, per-shape instance capacities for the [DebugDraw] resource.
   final int sphereCapacity;
   final int lineCapacity;
   final int cuboidCapacity;
 
-  GizmosPlugin({
+  DebugDrawPlugin({
     this.sphereCapacity = 64,
     this.lineCapacity = 128,
     this.cuboidCapacity = 32,
@@ -267,84 +267,85 @@ final class GizmosPlugin extends Plugin {
 
   @override
   void build(AppBuilder app) {
-    final gizmos = Gizmos(
+    final debugDraw = DebugDraw(
       sphereCapacity: sphereCapacity,
       lineCapacity: lineCapacity,
       cuboidCapacity: cuboidCapacity,
     );
-    final flush = _GizmoFlushAdapter(gizmos);
+    final flush = _DebugDrawFlushAdapter(debugDraw);
     app
-      ..insertResource<Gizmos>(gizmos)
+      ..insertResource<DebugDraw>(debugDraw)
       ..addSystemAdapter(
-        _GizmoClearAdapter(gizmos),
+        _DebugDrawClearAdapter(debugDraw),
         schedule: Schedules.frameStart,
-        label: const SystemLabel('gizmos.clear'),
+        label: const SystemLabel('debugDraw.clear'),
       )
       ..addSystemAdapter(
         flush,
         schedule: Schedules.renderSync,
-        label: const SystemLabel('gizmos.flush'),
+        label: const SystemLabel('debugDraw.flush'),
       );
   }
 }
 
-Vector4 _tint(GizmoColor color) => switch (color) {
-  GizmoColor.green => Vector4(0.25, 1.0, 0.45, 0.4),
-  GizmoColor.red => Vector4(1.0, 0.3, 0.25, 0.4),
-  GizmoColor.blue => Vector4(0.35, 0.65, 1.0, 0.4),
-  GizmoColor.yellow => Vector4(1.0, 0.9, 0.25, 0.4),
+Vector4 _tint(DebugColor color) => switch (color) {
+  DebugColor.green => Vector4(0.25, 1.0, 0.45, 0.4),
+  DebugColor.red => Vector4(1.0, 0.3, 0.25, 0.4),
+  DebugColor.blue => Vector4(0.35, 0.65, 1.0, 0.4),
+  DebugColor.yellow => Vector4(1.0, 0.9, 0.25, 0.4),
 };
 
 final Matrix4 _hidden = Matrix4.diagonal3Values(0, 0, 0);
 
-/// One color's three instanced meshes.
-final class _GizmoPools {
+/// One instanced pool per shape kind. Color is per instance, so every
+/// [DebugColor] shares a pool: three draws for the whole layer, not twelve.
+final class _DebugDrawPools {
   // Keep debug geometry inexpensive.
-  _GizmoPools(GizmoColor color, GizmoBucket bucket)
+  _DebugDrawPools(List<DebugDrawBucket> buckets)
     : spheres = _pool(
         IcosphereGeometry(radius: 1, subdivisions: 1),
-        color,
-        bucket.sphereCapacity,
+        buckets.fold(0, (sum, b) => sum + b.sphereCapacity),
       ),
       lines = _pool(
         CuboidGeometry(Vector3(1, 1, 1)),
-        color,
-        bucket.lineCapacity,
+        buckets.fold(0, (sum, b) => sum + b.lineCapacity),
       ),
       cuboids = _pool(
         CuboidGeometry(Vector3(1, 1, 1)),
-        color,
-        bucket.cuboidCapacity,
+        buckets.fold(0, (sum, b) => sum + b.cuboidCapacity),
       );
 
   final InstancedMesh spheres;
   final InstancedMesh lines;
   final InstancedMesh cuboids;
 
+  /// Instances written last frame, so this frame only hides its own residue.
   int lastSpheres = 0;
   int lastLines = 0;
   int lastCuboids = 0;
 
-  static InstancedMesh _pool(
-    Geometry geometry,
-    GizmoColor color,
-    int capacity,
-  ) {
+  static InstancedMesh _pool(Geometry geometry, int capacity) {
+    // White base: the unlit shader multiplies it by the instance color.
     final material = UnlitMaterial()
-      ..baseColorFactor = _tint(color)
+      ..baseColorFactor = Vector4(1, 1, 1, 1)
       ..alphaMode = AlphaMode.blend;
-    final mesh = InstancedMesh(geometry: geometry, material: material);
+    final mesh = InstancedMesh(
+      geometry: geometry,
+      material: material,
+      // These blend, but the back-to-front sort buys nothing legible.
+      sortTransparentInstances: false,
+    );
     for (var i = 0; i < capacity; i++) {
       mesh.addInstance(_hidden);
     }
     return mesh;
   }
 
-  /// Scene node containing the gizmo pools.
+  /// Scene node containing the debug-draw pools.
   late final Node node;
 
   void addTo(Scene scene) {
-    // Gizmos move every frame; culling bounds upkeep would be wasted work.
+    // These move every frame; culling bounds upkeep would be wasted work.
     node = Node()
       ..frustumCulled = false
       ..addComponent(InstancedMeshComponent(spheres))
@@ -354,36 +355,39 @@ final class _GizmoPools {
   }
 }
 
-final class _GizmoClearAdapter implements SystemAdapter, SystemAccessProvider {
-  _GizmoClearAdapter(this._gizmos);
+final class _DebugDrawClearAdapter
+    implements SystemAdapter, SystemAccessProvider {
+  _DebugDrawClearAdapter(this._debugDraw);
 
   /// Reads no components.
   @override
   SystemAccess get access => SystemAccess.empty;
 
-  final Gizmos _gizmos;
+  final DebugDraw _debugDraw;
 
   @override
   void initialize(World world) {}
 
   @override
-  void run() => _gizmos.clear();
+  void run() => _debugDraw.clear();
 }
 
 /// Writes this frame's submissions into the instanced pools and hides the
 /// slots used last frame but not this one.
-final class _GizmoFlushAdapter implements SystemAdapter, SystemAccessProvider {
-  _GizmoFlushAdapter(this.gizmos);
+///
+/// Colors are laid out in [DebugColor] order, each span starting where the
+/// previous capacity ends, so a slot's tint is set once and never moves.
+final class _DebugDrawFlushAdapter
+    implements SystemAdapter, SystemAccessProvider {
+  _DebugDrawFlushAdapter(this.debugDraw);
 
   /// Reads no components.
   @override
   SystemAccess get access => SystemAccess.empty;
 
-  final Gizmos gizmos;
-  List<_GizmoPools>? pools;
+  final DebugDraw debugDraw;
+  _DebugDrawPools? pools;
   bool _poolsVisible = false;
-
-  final Matrix4 _scratch = Matrix4.identity();
 
   late World _world;
 
@@ -392,7 +396,7 @@ final class _GizmoFlushAdapter implements SystemAdapter, SystemAccessProvider {
 
   @override
   void run() {
-    if (!gizmos.enabled) {
+    if (!debugDraw.enabled) {
       _hideResidue();
       return;
     }
@@ -401,104 +405,160 @@ final class _GizmoFlushAdapter implements SystemAdapter, SystemAccessProvider {
       // Build pools on first use.
       final scene = _world.resources.tryGet<Scene>();
       if (scene == null) return;
-      pools = List<_GizmoPools>.generate(
-        GizmoColor.values.length,
-        (i) => _GizmoPools(GizmoColor.values[i], gizmos.buckets[i]),
-        growable: false,
-      );
-      for (final pool in pools) {
-        pool.addTo(scene);
-      }
+      pools = _DebugDrawPools(debugDraw.buckets)..addTo(scene);
+      _paintInstanceColors(pools);
       this.pools = pools;
     }
     if (!_poolsVisible) {
-      for (final pool in pools) {
-        pool.node.visible = true;
-      }
+      pools.node.visible = true;
       _poolsVisible = true;
     }
-    for (var c = 0; c < pools.length; c++) {
-      final bucket = gizmos.buckets[c];
-      final pool = pools[c];
 
-      for (var i = 0; i < bucket.sphereCount; i++) {
-        final base = i * 4;
-        final r = bucket.spheres[base + 3];
-        final s = _scratch.storage;
-        _scratch.setZero();
-        s[0] = r;
-        s[5] = r;
-        s[10] = r;
-        s[12] = bucket.spheres[base];
-        s[13] = bucket.spheres[base + 1];
-        s[14] = bucket.spheres[base + 2];
-        s[15] = 1;
-        pool.spheres.setInstanceTransform(i, _scratch);
+    final buckets = debugDraw.buckets;
+    pools.spheres.updateInstanceTransforms(recomputeWinding: false, (
+      transforms,
+    ) {
+      var slot = 0;
+      var written = 0;
+      for (final bucket in buckets) {
+        for (var i = 0; i < bucket.sphereCount; i++) {
+          final base = i * 4;
+          final r = bucket.spheres[base + 3];
+          final out = transforms[slot + i]..setZero();
+          final s = out.storage;
+          s[0] = r;
+          s[5] = r;
+          s[10] = r;
+          s[12] = bucket.spheres[base];
+          s[13] = bucket.spheres[base + 1];
+          s[14] = bucket.spheres[base + 2];
+          s[15] = 1;
+        }
+        written += bucket.sphereCount;
+        _hideRange(transforms, slot, bucket.sphereCount, bucket.sphereCapacity);
+        slot += bucket.sphereCapacity;
       }
-      for (var i = bucket.sphereCount; i < pool.lastSpheres; i++) {
-        pool.spheres.setInstanceTransform(i, _hidden);
-      }
-      pool.lastSpheres = bucket.sphereCount;
+      pools!.lastSpheres = written;
+    });
 
-      for (var i = 0; i < bucket.lineCount; i++) {
-        final base = i * 7;
-        composeLineTransform(
-          _scratch,
-          bucket.lines[base],
-          bucket.lines[base + 1],
-          bucket.lines[base + 2],
-          bucket.lines[base + 3],
-          bucket.lines[base + 4],
-          bucket.lines[base + 5],
-          bucket.lines[base + 6],
-        );
-        pool.lines.setInstanceTransform(i, _scratch);
+    pools.lines.updateInstanceTransforms(recomputeWinding: false, (transforms) {
+      var slot = 0;
+      var written = 0;
+      for (final bucket in buckets) {
+        for (var i = 0; i < bucket.lineCount; i++) {
+          final base = i * 7;
+          composeLineTransform(
+            transforms[slot + i],
+            bucket.lines[base],
+            bucket.lines[base + 1],
+            bucket.lines[base + 2],
+            bucket.lines[base + 3],
+            bucket.lines[base + 4],
+            bucket.lines[base + 5],
+            bucket.lines[base + 6],
+          );
+        }
+        written += bucket.lineCount;
+        _hideRange(transforms, slot, bucket.lineCount, bucket.lineCapacity);
+        slot += bucket.lineCapacity;
       }
-      for (var i = bucket.lineCount; i < pool.lastLines; i++) {
-        pool.lines.setInstanceTransform(i, _hidden);
-      }
-      pool.lastLines = bucket.lineCount;
+      pools!.lastLines = written;
+    });
 
-      for (var i = 0; i < bucket.cuboidCount; i++) {
-        final base = i * 6;
-        final s = _scratch.storage;
-        _scratch.setZero();
-        s[0] = bucket.cuboids[base + 3] * 2;
-        s[5] = bucket.cuboids[base + 4] * 2;
-        s[10] = bucket.cuboids[base + 5] * 2;
-        s[12] = bucket.cuboids[base];
-        s[13] = bucket.cuboids[base + 1];
-        s[14] = bucket.cuboids[base + 2];
-        s[15] = 1;
-        pool.cuboids.setInstanceTransform(i, _scratch);
+    pools.cuboids.updateInstanceTransforms(recomputeWinding: false, (
+      transforms,
+    ) {
+      var slot = 0;
+      var written = 0;
+      for (final bucket in buckets) {
+        for (var i = 0; i < bucket.cuboidCount; i++) {
+          final base = i * 6;
+          final out = transforms[slot + i]..setZero();
+          final s = out.storage;
+          s[0] = bucket.cuboids[base + 3] * 2;
+          s[5] = bucket.cuboids[base + 4] * 2;
+          s[10] = bucket.cuboids[base + 5] * 2;
+          s[12] = bucket.cuboids[base];
+          s[13] = bucket.cuboids[base + 1];
+          s[14] = bucket.cuboids[base + 2];
+          s[15] = 1;
+        }
+        written += bucket.cuboidCount;
+        _hideRange(transforms, slot, bucket.cuboidCount, bucket.cuboidCapacity);
+        slot += bucket.cuboidCapacity;
       }
-      for (var i = bucket.cuboidCount; i < pool.lastCuboids; i++) {
-        pool.cuboids.setInstanceTransform(i, _hidden);
-      }
-      pool.lastCuboids = bucket.cuboidCount;
+      pools!.lastCuboids = written;
+    });
+  }
+
+  /// Collapses the unwritten tail of one color's span to zero scale.
+  static void _hideRange(
+    List<Matrix4> transforms,
+    int slot,
+    int used,
+    int capacity,
+  ) {
+    for (var i = used; i < capacity; i++) {
+      transforms[slot + i].setFrom(_hidden);
     }
   }
 
-  /// Disabled with pools built earlier: hide the slots the last enabled
-  /// frame wrote (once), then stop submitting the pool nodes entirely.
+  /// Tints every slot once; a slot keeps its color for the pool's lifetime.
+  void _paintInstanceColors(_DebugDrawPools pools) {
+    var sphereSlot = 0;
+    var lineSlot = 0;
+    var cuboidSlot = 0;
+    for (var c = 0; c < DebugColor.values.length; c++) {
+      final tint = _tint(DebugColor.values[c]);
+      final bucket = debugDraw.buckets[c];
+      for (var i = 0; i < bucket.sphereCapacity; i++) {
+        pools.spheres.setInstanceColor(sphereSlot + i, tint);
+      }
+      sphereSlot += bucket.sphereCapacity;
+      for (var i = 0; i < bucket.lineCapacity; i++) {
+        pools.lines.setInstanceColor(lineSlot + i, tint);
+      }
+      lineSlot += bucket.lineCapacity;
+      for (var i = 0; i < bucket.cuboidCapacity; i++) {
+        pools.cuboids.setInstanceColor(cuboidSlot + i, tint);
+      }
+      cuboidSlot += bucket.cuboidCapacity;
+    }
+  }
+
+  /// Hides what the last enabled frame wrote, then stops submitting the
+  /// pool node entirely.
   void _hideResidue() {
     final pools = this.pools;
     if (pools == null || !_poolsVisible) return;
-    for (final pool in pools) {
-      for (var i = 0; i < pool.lastSpheres; i++) {
-        pool.spheres.setInstanceTransform(i, _hidden);
-      }
-      pool.lastSpheres = 0;
-      for (var i = 0; i < pool.lastLines; i++) {
-        pool.lines.setInstanceTransform(i, _hidden);
-      }
-      pool.lastLines = 0;
-      for (var i = 0; i < pool.lastCuboids; i++) {
-        pool.cuboids.setInstanceTransform(i, _hidden);
-      }
-      pool.lastCuboids = 0;
-      pool.node.visible = false;
+    if (pools.lastSpheres > 0) {
+      pools.spheres.updateInstanceTransforms(
+        recomputeWinding: false,
+        (t) => _hideAll(t),
+      );
+      pools.lastSpheres = 0;
     }
+    if (pools.lastLines > 0) {
+      pools.lines.updateInstanceTransforms(
+        recomputeWinding: false,
+        (t) => _hideAll(t),
+      );
+      pools.lastLines = 0;
+    }
+    if (pools.lastCuboids > 0) {
+      pools.cuboids.updateInstanceTransforms(
+        recomputeWinding: false,
+        (t) => _hideAll(t),
+      );
+      pools.lastCuboids = 0;
+    }
+    pools.node.visible = false;
     _poolsVisible = false;
+  }
+
+  static void _hideAll(List<Matrix4> transforms) {
+    for (final transform in transforms) {
+      transform.setFrom(_hidden);
+    }
   }
 }

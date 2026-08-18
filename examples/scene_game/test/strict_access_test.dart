@@ -36,7 +36,7 @@ void main() {
             ..world.insert(FpsCounter())
             ..world.insert(DebugSettings());
         },
-        installGizmos(enabled: false),
+        installDebugDraw(enabled: false),
         installWorldGeometry,
         installPlayer,
         installProjectiles,

@@ -230,24 +230,24 @@ void animateMotes(World world) {
 See [`examples/scene_game/lib/decor/`](../examples/scene_game/lib/decor)
 for the full feature.
 
-## Debug gizmos
+## Debug draw
 
-The gizmo render layer is opt-in; add it to the feature list:
+The debug-draw render layer is opt-in; add it to the feature list:
 
 ```dart
 final game = await SceneGame.boot(
-  features: [installGizmos(enabled: showDebugGizmos), ...],
+  features: [installDebugDraw(enabled: showDebugDraw), ...],
 );
 ```
 
-`world.gizmos` then provides immediate-mode debug drawing: any system
+`world.debugDraw` then provides immediate-mode debug drawing: any system
 submits shapes for the current frame and nothing persists.
 
 ```dart
 void probeGround(World world) {
-  world.gizmos
-    ..ray(origin, down, probeDistance, color: GizmoColor.yellow)
-    ..sphere(playerPos, hitRadius, color: GizmoColor.red)
+  world.debugDraw
+    ..ray(origin, down, probeDistance, color: DebugColor.yellow)
+    ..sphere(playerPos, hitRadius, color: DebugColor.red)
     ..line(from, to)
     ..cuboid(center, halfExtents);
 }
@@ -255,15 +255,16 @@ void probeGround(World world) {
 
 Submissions are cleared at frame start and flushed into instanced pools
 at `renderSync`, write plain floats (no allocation), and become
-early-return no-ops while `gizmos.enabled` is `false`. The pools build
+early-return no-ops while `debugDraw.enabled` is `false`. The pools build
 lazily on the first *enabled* frame and hide when the flag goes off, so
 `enabled` is a true runtime toggle: a disabled layer costs zero draw calls
 and zero vertex work. Games that never install the layer still call
-`world.gizmos` safely; it falls back to a disabled recorder. The palette is a fixed
-four-color enum because 0.18 instancing is transform-only: each color is
-its own pool; per-call arbitrary colors would mean one draw per gizmo.
-Overflow past a shape's per-color capacity drops the shape and counts it
-in `droppedThisFrame`.
+`world.debugDraw` safely; it falls back to a disabled recorder. Color is
+per instance, so every `DebugColor` shares one pool per shape kind: the
+whole layer is three meshes and three draws, not three per color. The
+palette stays a fixed enum so a slot's tint is written once at build time
+and only its transform moves each frame. Overflow past a shape's per-color
+capacity drops the shape and counts it in `droppedThisFrame`.
 
 ## Physics and collisions
 

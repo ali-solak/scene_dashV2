@@ -3,25 +3,25 @@ import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart';
 
 void main() {
-  group('Gizmos staging', () {
+  group('DebugDraw staging', () {
     test('sphere writes packed floats into its color bucket', () {
-      final gizmos = Gizmos()
-        ..sphere(Vector3(1, 2, 3), 0.5, color: GizmoColor.red);
+      final debugDraw = DebugDraw()
+        ..sphere(Vector3(1, 2, 3), 0.5, color: DebugColor.red);
 
-      final red = gizmos.buckets[GizmoColor.red.index];
+      final red = debugDraw.buckets[DebugColor.red.index];
       expect(red.sphereCount, 1);
       expect(red.spheres.sublist(0, 4), [1, 2, 3, 0.5]);
-      expect(gizmos.buckets[GizmoColor.green.index].sphereCount, 0);
+      expect(debugDraw.buckets[DebugColor.green.index].sphereCount, 0);
     });
 
     test('disabled makes every submission a no-op', () {
-      final gizmos = Gizmos()
+      final debugDraw = DebugDraw()
         ..enabled = false
         ..sphere(Vector3.zero(), 1)
         ..line(Vector3.zero(), Vector3(1, 0, 0))
         ..cuboid(Vector3.zero(), Vector3.all(1));
 
-      for (final bucket in gizmos.buckets) {
+      for (final bucket in debugDraw.buckets) {
         expect(bucket.sphereCount, 0);
         expect(bucket.lineCount, 0);
         expect(bucket.cuboidCount, 0);
@@ -29,32 +29,32 @@ void main() {
     });
 
     test('overflow drops and counts instead of growing', () {
-      final gizmos = Gizmos(sphereCapacity: 2);
+      final debugDraw = DebugDraw(sphereCapacity: 2);
       for (var i = 0; i < 5; i++) {
-        gizmos.sphere(Vector3.zero(), 1);
+        debugDraw.sphere(Vector3.zero(), 1);
       }
-      expect(gizmos.buckets[GizmoColor.green.index].sphereCount, 2);
-      expect(gizmos.droppedThisFrame, 3);
+      expect(debugDraw.buckets[DebugColor.green.index].sphereCount, 2);
+      expect(debugDraw.droppedThisFrame, 3);
     });
 
     test('ray normalizes direction and lands at origin + length', () {
-      final gizmos = Gizmos()
-        ..ray(Vector3(1, 0, 0), Vector3(0, 0, 5), 2, color: GizmoColor.blue);
+      final debugDraw = DebugDraw()
+        ..ray(Vector3(1, 0, 0), Vector3(0, 0, 5), 2, color: DebugColor.blue);
 
-      final blue = gizmos.buckets[GizmoColor.blue.index];
+      final blue = debugDraw.buckets[DebugColor.blue.index];
       expect(blue.lineCount, 1);
       expect(blue.lines.sublist(0, 6), [1, 0, 0, 1, 0, 2]);
     });
 
     test('clear resets all counts and the drop counter', () {
-      final gizmos = Gizmos(sphereCapacity: 1)
+      final debugDraw = DebugDraw(sphereCapacity: 1)
         ..sphere(Vector3.zero(), 1)
         ..sphere(Vector3.zero(), 1) // dropped
         ..line(Vector3.zero(), Vector3(1, 0, 0));
 
-      gizmos.clear();
-      expect(gizmos.droppedThisFrame, 0);
-      for (final bucket in gizmos.buckets) {
+      debugDraw.clear();
+      expect(debugDraw.droppedThisFrame, 0);
+      for (final bucket in debugDraw.buckets) {
         expect(bucket.sphereCount, 0);
         expect(bucket.lineCount, 0);
       }
@@ -120,24 +120,24 @@ void main() {
     // Staging holds a heavily instrumented frame without dropping shapes.
     test('hundreds of shapes in one frame stage without drops', () {
       const perColor = 200;
-      final gizmos = Gizmos(
+      final debugDraw = DebugDraw(
         sphereCapacity: perColor,
         lineCapacity: perColor,
         cuboidCapacity: perColor,
       );
 
       for (var frame = 0; frame < 3; frame++) {
-        gizmos.clear();
-        for (final color in GizmoColor.values) {
+        debugDraw.clear();
+        for (final color in DebugColor.values) {
           for (var i = 0; i < perColor; i++) {
             final d = i.toDouble();
-            gizmos.sphere(
+            debugDraw.sphere(
               Vector3(d, d + 1, d + 2),
               0.5 + i * 0.01,
               color: color,
             );
-            gizmos.line(Vector3(d, 0, 0), Vector3(d, d + 1, 0), color: color);
-            gizmos.cuboid(
+            debugDraw.line(Vector3(d, 0, 0), Vector3(d, d + 1, 0), color: color);
+            debugDraw.cuboid(
               Vector3(0, d, 0),
               Vector3.all(0.25 + i * 0.01),
               color: color,
@@ -145,8 +145,8 @@ void main() {
           }
         }
 
-        expect(gizmos.droppedThisFrame, 0);
-        for (final bucket in gizmos.buckets) {
+        expect(debugDraw.droppedThisFrame, 0);
+        for (final bucket in debugDraw.buckets) {
           expect(bucket.sphereCount, perColor);
           expect(bucket.lineCount, perColor);
           expect(bucket.cuboidCount, perColor);
@@ -154,7 +154,7 @@ void main() {
       }
 
       // Spot-check the last slot's packed floats survived the volume.
-      final last = gizmos.buckets[GizmoColor.yellow.index];
+      final last = debugDraw.buckets[DebugColor.yellow.index];
       final base = (perColor - 1) * 4;
       expect(last.spheres[base], (perColor - 1).toDouble());
       expect(
@@ -162,8 +162,8 @@ void main() {
         closeTo(0.5 + (perColor - 1) * 0.01, 1e-6),
       );
 
-      gizmos.clear();
-      for (final bucket in gizmos.buckets) {
+      debugDraw.clear();
+      for (final bucket in debugDraw.buckets) {
         expect(bucket.sphereCount, 0);
         expect(bucket.lineCount, 0);
         expect(bucket.cuboidCount, 0);

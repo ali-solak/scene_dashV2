@@ -22,7 +22,7 @@ import 'hud/debug_panel.dart';
 import 'screens/controls.dart';
 import 'package:flutter_scene/physics.dart';
 
-const bool showDebugGizmos = false;
+const bool showDebugDraw = false;
 
 Future<void> main() async {
   final input = ButtonInput<GameAction>();
@@ -47,7 +47,7 @@ Future<void> main() async {
           ..world.insert(input)
           ..world.insert(cameraRig)
           ..world.insert(fps)
-          ..world.insert(DebugSettings(gizmos: showDebugGizmos));
+          ..world.insert(DebugSettings(debugDraw: showDebugDraw));
       },
       installWorldGeometry,
       installPlayer,
@@ -55,7 +55,7 @@ Future<void> main() async {
       installRocks,
       installCollectables,
       installRules,
-      installGizmos(enabled: showDebugGizmos),
+      installDebugDraw(enabled: showDebugDraw),
       installDecor,
     ],
   );

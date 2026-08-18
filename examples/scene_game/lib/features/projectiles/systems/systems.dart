@@ -57,10 +57,10 @@ void updateProjectiles(World world) {
   world.query2<Projectile, NodeRef>().each((entity, projectile, binding) {
     binding.node.globalTranslationInto(_projectilePosition);
     final position = _projectilePosition;
-    world.gizmos.sphere(
+    world.debugDraw.sphere(
       position,
       projectileHitRadiusForCharge(projectile.charge),
-      color: GizmoColor.blue,
+      color: DebugColor.blue,
     );
 
     final hitCount = _knockRocks(world, position, projectile);

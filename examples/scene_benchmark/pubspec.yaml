@@ -5,13 +5,13 @@ resolution: workspace
 
 environment:
   sdk: ^3.13.0
-  flutter: ">=3.16.0"
+  flutter: ">=3.47.0"
 
 dependencies:
   cupertino_ui: ^1.0.0
   flutter:
     sdk: flutter
-  flutter_scene: ^0.20.0
+  flutter_scene: ^0.21.1
   material_ui: ^1.0.0
   scene_dash_v2:
     path: ../../packages/scene_dash_v2
@@ -19,7 +19,7 @@ dependencies:
   # tier (advanced.dart).
   scene_dash_v2_core:
     path: ../../packages/scene_dash_v2_core
-  vector_math: ^2.1.4
+  vector_math: ^2.4.2
 
 dev_dependencies:
   flutter_test:

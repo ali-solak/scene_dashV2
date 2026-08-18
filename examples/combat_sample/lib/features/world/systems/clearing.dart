@@ -214,12 +214,24 @@ Node _buildGrass(WorldAssets assets) {
   // Deliberately NOT shadowStatic: the sway is a vertex displacement, and
   // cached shadow tiles would not follow it.
   final node = Node(name: 'grass');
-  _bakeGrass(node, material, qualityPresets[defaultQualityLevel].blades);
+  _bakeGrass(
+    node,
+    material,
+    qualityPresets[defaultQualityLevel].blades,
+    widthScale: qualityPresets[defaultQualityLevel].bladeWidthScale,
+  );
   return node;
 }
 
-/// Bakes [blades] onto [node].
-void _bakeGrass(Node node, Material material, int blades) {
+/// Bakes [blades] onto [node] as one instanced batch.
+void _bakeGrass(
+  Node node,
+  Material material,
+  int blades, {
+  required double widthScale,
+}) {
+  final previous = node.getChildByName(_grassBladesNode);
+  if (previous != null) node.remove(previous);
   if (blades <= 0) {
     node.visible = false;
     return;
@@ -229,16 +241,44 @@ void _bakeGrass(Node node, Material material, int blades) {
     radius: grassFieldRadius,
     falloffStart: grassFalloffStart,
     seed: grassFieldSeed,
+    widthScale: widthScale,
   );
+  final mesh = InstancedMesh(
+    geometry: MeshGeometry.fromArrays(
+      positions: Float32List.fromList(GrassField.bladePositions),
+      normals: Float32List.fromList(GrassField.bladeNormals),
+      indices: Uint32List.fromList(GrassField.bladeIndices),
+    ),
+    material: material,
+  );
+  // Reused; addInstance copies both.
+  final transform = Matrix4.zero();
+  final color = Vector4.zero();
+  for (var blade = 0; blade < field.bladeCount; blade++) {
+    transform.storage.setRange(
+      0,
+      GrassField.floatsPerTransform,
+      field.transforms,
+      blade * GrassField.floatsPerTransform,
+    );
+    final c = blade * GrassField.floatsPerColor;
+    color.setValues(
+      field.colors[c],
+      field.colors[c + 1],
+      field.colors[c + 2],
+      field.colors[c + 3],
+    );
+    mesh.addInstance(transform, color: color);
+  }
   node
     ..visible = true
-    ..mesh = Mesh(
-      MeshGeometry.fromArrays(
-        positions: field.positions,
-        normals: field.normals,
-        colors: field.colors,
-        indices: field.indices,
-      ),
-      material,
+    ..add(
+      Node(name: _grassBladesNode)
+        ..castsShadows = false
+        ..addComponent(InstancedMeshComponent(mesh)),
     );
 }
+
+/// The blade batch, a child so a quality re-bake can swap it wholesale
+/// (`InstancedMeshComponent.instancedMesh` is final).
+const String _grassBladesNode = 'grass-blades';

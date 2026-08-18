@@ -153,7 +153,8 @@ Node buildCliffRocks() {
       jagAmount: cliffRockSpike,
     );
   }
-  return mesher.toNode('cliff-rocks');
+  // Below the rim: nothing downhill of them receives a shadow.
+  return mesher.toNode('cliff-rocks')..castsShadows = false;
 }
 
 /// Accumulates transformed, vertex-coloured copies of base shapes into one

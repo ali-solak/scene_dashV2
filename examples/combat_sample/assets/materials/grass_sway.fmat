@@ -96,6 +96,10 @@ vertex {
     // Stretch from the root.
     vertex.world_position.y *= heightScale;
 
+    // The instance transform leans the tip, which shears the up normal with
+    // it. Flat again, so the field lights evenly.
+    vertex.world_normal = vec3(0.0, 1.0, 0.0);
+
     blade_h = bend;
   }
 }

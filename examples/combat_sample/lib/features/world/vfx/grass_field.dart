@@ -1,72 +1,60 @@
-// Pure blade-field baking: real tapered blades grouped into small tufts in
-// flat vertex arrays, ready for MeshGeometry.fromArrays. The stage uploads
-// the whole field as one mesh and one draw.
+// Pure blade-field placement: real tapered blades grouped into small tufts,
+// emitted as instance transforms over one shared blade geometry. The stage
+// uploads three vertices once and one 80-byte instance per blade.
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-/// Vertex data for tapered grass blades.
+/// Instance data for tapered grass blades.
 class GrassField {
-  GrassField({
-    required this.positions,
-    required this.normals,
-    required this.colors,
-    required this.indices,
-  });
+  GrassField({required this.transforms, required this.colors});
 
-  static const int verticesPerBlade = 3;
-  static const int indicesPerBlade = 6;
+  /// Column-major `Matrix4` storage, one per blade.
+  static const int floatsPerTransform = 16;
+  static const int floatsPerColor = 4;
 
-  final Float32List positions;
-  final Float32List normals;
+  /// The shared blade: a triangle standing on the XZ plane, one unit tall and
+  /// one unit wide, which each instance transform stretches into place.
+  static const List<double> bladePositions = [
+    -0.5, 0, 0, //
+    0.5, 0, 0, //
+    0, 1, 0, //
+  ];
+
+  /// Flat, so the field lights evenly; the material re-flattens the world
+  /// normal after the instance transform shears it.
+  static const List<double> bladeNormals = [
+    0, 1, 0, //
+    0, 1, 0, //
+    0, 1, 0, //
+  ];
+
+  /// Both windings, so material-less shadow passes do not cull roughly half
+  /// the randomly oriented blades. Shared, so it costs six indices total.
+  static const List<int> bladeIndices = [0, 1, 2, 2, 1, 0];
+
+  final Float32List transforms;
   final Float32List colors;
-  final Uint32List indices;
 
   /// Blades that survived the tuft-level density falloff.
-  int get bladeCount => positions.length ~/ (verticesPerBlade * 3);
+  int get bladeCount => transforms.length ~/ floatsPerTransform;
 }
 
-/// Bakes grass blade tufts over a disc.
+/// Places grass blade tufts over a disc.
 GrassField buildGrassField(
   int blades, {
   required double radius,
   double? falloffStart,
   int seed = 11,
+  double widthScale = 1.0,
 }) {
   const bladesPerTuft = 7;
   // Tuft size.
   const tuftRadius = 0.24;
   final rng = math.Random(seed);
-  final positions = Float32List(blades * GrassField.verticesPerBlade * 3);
-  final normals = Float32List(blades * GrassField.verticesPerBlade * 3);
-  final colors = Float32List(blades * GrassField.verticesPerBlade * 4);
-  final indices = Uint32List(blades * GrassField.indicesPerBlade);
-  var vertexCount = 0;
-  var positionOffset = 0;
-  var normalOffset = 0;
+  final transforms = Float32List(blades * GrassField.floatsPerTransform);
+  final colors = Float32List(blades * GrassField.floatsPerColor);
+  var transformOffset = 0;
   var colorOffset = 0;
-  var indexOffset = 0;
-
-  void addVertex(
-    double x,
-    double y,
-    double z,
-    double red,
-    double green,
-    double blue,
-  ) {
-    positions[positionOffset++] = x;
-    positions[positionOffset++] = y;
-    positions[positionOffset++] = z;
-    // Use even ground lighting.
-    normals[normalOffset++] = 0;
-    normals[normalOffset++] = 1;
-    normals[normalOffset++] = 0;
-    colors[colorOffset++] = red;
-    colors[colorOffset++] = green;
-    colors[colorOffset++] = blue;
-    colors[colorOffset++] = 1;
-    vertexCount++;
-  }
 
   for (var tuft = 0; tuft < blades; tuft += bladesPerTuft) {
     // Uniform tuft distribution.
@@ -91,58 +79,38 @@ GrassField buildGrassField(
       final cx = tuftX + math.cos(localTheta) * localRadius;
       final cz = tuftZ + math.sin(localTheta) * localRadius;
       final yaw = rng.nextDouble() * math.pi;
-      final width = 0.035 + rng.nextDouble() * 0.04;
+      final width = (0.035 + rng.nextDouble() * 0.04) * widthScale;
       final height = 0.42 + rng.nextDouble() * 0.40;
       final curve = (rng.nextDouble() - 0.5) * 0.18;
       final tint = (tuftTint * 0.7 + rng.nextDouble() * 0.3).clamp(0.0, 1.0);
       final sideX = math.cos(yaw);
       final sideZ = math.sin(yaw);
-      final halfRoot = width * 0.5;
-      final red = 0.30 + 0.25 * tint;
-      final green = 0.42 + 0.20 * tint;
-      final blue = 0.13 + 0.10 * tint;
-      final base = vertexCount;
 
-      addVertex(
-        cx - sideX * halfRoot,
-        0,
-        cz - sideZ * halfRoot,
-        red,
-        green,
-        blue,
-      );
-      addVertex(
-        cx + sideX * halfRoot,
-        0,
-        cz + sideZ * halfRoot,
-        red,
-        green,
-        blue,
-      );
-      addVertex(
-        cx + sideX * curve,
-        height,
-        cz + sideZ * curve,
-        red,
-        green,
-        blue,
-      );
+      // Columns: the root edge along `side`, the tip lifted by `height` and
+      // leaned by `curve`, and a perpendicular third so the basis stays
+      // right-handed (a negative determinant would flip the winding).
+      final t = transformOffset;
+      transforms[t] = sideX * width;
+      transforms[t + 2] = sideZ * width;
+      transforms[t + 4] = sideX * curve;
+      transforms[t + 5] = height;
+      transforms[t + 6] = sideZ * curve;
+      transforms[t + 8] = -sideZ * width;
+      transforms[t + 10] = sideX * width;
+      transforms[t + 12] = cx;
+      transforms[t + 14] = cz;
+      transforms[t + 15] = 1;
+      transformOffset += GrassField.floatsPerTransform;
 
-      // Front and back windings: material-less shadow passes otherwise cull
-      // roughly half of the randomly oriented blades.
-      indices[indexOffset++] = base;
-      indices[indexOffset++] = base + 1;
-      indices[indexOffset++] = base + 2;
-      indices[indexOffset++] = base + 2;
-      indices[indexOffset++] = base + 1;
-      indices[indexOffset++] = base;
+      colors[colorOffset++] = 0.30 + 0.25 * tint;
+      colors[colorOffset++] = 0.42 + 0.20 * tint;
+      colors[colorOffset++] = 0.13 + 0.10 * tint;
+      colors[colorOffset++] = 1;
     }
   }
 
   return GrassField(
-    positions: Float32List.sublistView(positions, 0, positionOffset),
-    normals: Float32List.sublistView(normals, 0, normalOffset),
+    transforms: Float32List.sublistView(transforms, 0, transformOffset),
     colors: Float32List.sublistView(colors, 0, colorOffset),
-    indices: Uint32List.sublistView(indices, 0, indexOffset),
   );
 }

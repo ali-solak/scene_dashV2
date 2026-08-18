@@ -32,8 +32,11 @@ void setupWorld(World world) {
       sky,
       intensityScale: sunIntensityScale,
       shadowMaxDistance: shadowMaxDistance,
+      shadowFilter: qualityPresets[defaultQualityLevel].shadowFilter,
+      contactShadows: qualityPresets[defaultQualityLevel].contactShadows,
+      angularRadius: sunAngularRadius,
     )
-    ..toneMapping = ToneMappingMode.aces
+    ..toneMapping = sceneToneMapping
     ..exposure = sceneExposure
     ..antiAliasingMode = AntiAliasingMode.auto;
   final boot = qualityPresets[defaultQualityLevel];
@@ -74,7 +77,7 @@ void setupWorld(World world) {
     ..smoothness = sceneVignetteSmoothness;
   scene.ambientOcclusion
     ..enabled = boot.ambientOcclusion
-    ..intensity = 1.1
+    ..intensity = 0.55 // 0.21 folded the estimator's 2x
     ..radius = 0.4;
 }
 
@@ -90,7 +93,15 @@ void applyGraphicsQuality(World world) {
   if (level == quality.level) return;
 
   final grass = world.query<NodeRef>(require: const [Grass]).firstOrNull;
-  _applyQuality(world.resource<Scene>(), grass?.$2.node, quality.level, level);
+  _applyQuality(
+    world.resource<Scene>(),
+    grass?.$2.node,
+    world.hasResource<WorldAssets>()
+        ? world.resource<WorldAssets>().grassMaterial
+        : null,
+    quality.level,
+    level,
+  );
   quality.level = level; // what the menu reads back
 }
 
@@ -98,7 +109,13 @@ void applyGraphicsQuality(World world) {
 ///
 /// The grass re-bake is the expensive half (a full vertex-buffer upload),
 /// so it is skipped when the new preset asks for the same blade count.
-void _applyQuality(Scene scene, Node? grass, int fromLevel, int toLevel) {
+void _applyQuality(
+  Scene scene,
+  Node? grass,
+  Material? grassMaterial,
+  int fromLevel,
+  int toLevel,
+) {
   final preset = qualityPresets[toLevel];
   // Everything here is a flag flip except the render scale, which
   // reallocates the swapchain; doing that mid-session is a hard crash
@@ -109,10 +126,16 @@ void _applyQuality(Scene scene, Node? grass, int fromLevel, int toLevel) {
     ..ambientOcclusion.enabled = preset.ambientOcclusion
     ..godRays.enabled = preset.godRays
     ..autoExposure.enabled = preset.autoExposure;
+  scene.sunLight
+    ?..shadowFilter = preset.shadowFilter
+    ..contactShadows = preset.contactShadows;
 
-  if (grass == null) return;
+  if (grass == null || grassMaterial == null) return;
   if (qualityPresets[fromLevel].blades == preset.blades) return;
-  final material = grass.mesh?.primitives.first.material;
-  if (material == null) return;
-  _bakeGrass(grass, material, preset.blades);
+  _bakeGrass(
+    grass,
+    grassMaterial,
+    preset.blades,
+    widthScale: preset.bladeWidthScale,
+  );
 }

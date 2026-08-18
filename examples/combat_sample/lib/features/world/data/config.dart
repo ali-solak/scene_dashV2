@@ -4,6 +4,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform;
+import 'package:flutter_scene/scene.dart'
+    show DirectionalShadowFilter, ToneMappingMode;
 import 'package:vector_math/vector_math.dart' show Vector2, Vector3;
 
 final bool isMobile =
@@ -16,7 +18,7 @@ final bool runtimeRenderScaleIsSafe = !isMobile;
 
 const double characterScale = 2.6 / 2.543;
 
-const double characterModelYaw = 0;
+const double characterModelYaw = math.pi;
 
 const double propScale = 1.0;
 
@@ -69,7 +71,9 @@ const double oceanLevel = -5;
 
 const double oceanHalfExtent = 700;
 
-const int oceanGridSegments = 96;
+// The chop octave runs at 2.6x the swell, so the grid has to resolve it:
+// at 96 the crests fell between vertices and read as a slow heave.
+const int oceanGridSegments = 144;
 
 const double oceanWaveHeight = 2.4;
 
@@ -83,6 +87,13 @@ final Vector3 sunDirection = Vector3(0.62, 0.34, 0.42);
 const double sunIntensityScale = 1.1;
 const double shadowMaxDistance = 70;
 const double sceneExposure = 1.05;
+
+/// Penumbra width under `pcss`. Wider than the real sun, which reads
+/// knife-sharp at arena scale.
+const double sunAngularRadius = 0.02;
+
+/// `agx` holds highlight hue on the fire gushes; `aces` is the swap back.
+const ToneMappingMode sceneToneMapping = ToneMappingMode.aces;
 
 const double autoExposureStrength = 0.45;
 const double autoExposureCompensation = 0.1;
@@ -122,6 +133,12 @@ typedef QualityPreset = ({
   bool godRays,
   bool softParticles,
   bool autoExposure,
+  DirectionalShadowFilter shadowFilter,
+  // Grounds what cascade resolution misses: feet on grass, weapon on body.
+  bool contactShadows,
+  // Denser fields need wider blades. At one width for every count the extra
+  // blades land as sub-pixel slivers, which shimmer instead of thickening.
+  double bladeWidthScale,
 });
 
 const List<QualityPreset> qualityPresets = [
@@ -133,6 +150,9 @@ const List<QualityPreset> qualityPresets = [
     godRays: false,
     softParticles: false,
     autoExposure: false,
+    shadowFilter: DirectionalShadowFilter.fixedPcf,
+    contactShadows: false,
+    bladeWidthScale: 1.0,
   ),
   (
     label: 'MED',
@@ -142,6 +162,9 @@ const List<QualityPreset> qualityPresets = [
     godRays: false,
     softParticles: false,
     autoExposure: false,
+    shadowFilter: DirectionalShadowFilter.fixedPcf,
+    contactShadows: false,
+    bladeWidthScale: 1.0,
   ),
   (
     label: 'HIGH',
@@ -151,6 +174,9 @@ const List<QualityPreset> qualityPresets = [
     godRays: false,
     softParticles: false,
     autoExposure: false,
+    shadowFilter: DirectionalShadowFilter.rotatedPoisson,
+    contactShadows: false,
+    bladeWidthScale: 1.0,
   ),
   (
     label: 'ULTRA',
@@ -160,6 +186,9 @@ const List<QualityPreset> qualityPresets = [
     godRays: true,
     softParticles: true,
     autoExposure: true,
+    shadowFilter: DirectionalShadowFilter.rotatedPoisson,
+    contactShadows: false,
+    bladeWidthScale: 1.0,
   ),
 ];
 

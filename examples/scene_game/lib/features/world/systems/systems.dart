@@ -39,7 +39,7 @@ void setupWorld(World world) {
   // SSAO is off by default and requires the PerspectiveCamera this game uses.
   scene.ambientOcclusion
     ..enabled = true
-    ..intensity = 1.1
+    ..intensity = 0.55 // 0.21 folded the estimator's 2x
     ..radius = 0.4;
 
   final ramp =

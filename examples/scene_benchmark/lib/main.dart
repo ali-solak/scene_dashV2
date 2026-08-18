@@ -126,7 +126,7 @@ final class SceneBenchmark {
         // The shipped path, exactly as a game boots it: `SceneGame.boot`
         // with a feature spawning the grid through the deferred world
         // verbs. The measured cost therefore includes everything boot
-        // wires (mounting and transform sync; debug gizmos are opt-in and
+        // wires (mounting and transform sync; debug draw is opt-in and
         // not installed here).
         final game = await SceneGame.boot(
           scene: scene,

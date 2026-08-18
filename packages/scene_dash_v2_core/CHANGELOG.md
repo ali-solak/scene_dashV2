@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.0
+- upgrade deps
+
 ## 0.2.0
 - adds new routine mechanism for better organizing sequenced game logic
 
