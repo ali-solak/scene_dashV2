@@ -62,12 +62,13 @@ void orbitNodes(World world) {
   // Mutating the node through SceneNode counts as writing SceneNode.
   world.query2<Orbit, SceneNode>().each((entity, orbit, binding) {
     orbit.phase += orbit.speed * world.dt;
-    binding.node.localTransform.setTranslationRaw(
-      orbit.radius * cos(orbit.phase),
-      0,
-      orbit.radius * sin(orbit.phase),
+    binding.node.mutateLocalTransform(
+      (m) => m.setTranslationRaw(
+        orbit.radius * cos(orbit.phase),
+        0,
+        orbit.radius * sin(orbit.phase),
+      ),
     );
-    binding.node.markTransformDirty();
   });
 }
 ```
@@ -117,9 +118,9 @@ complete gameplay API: translation (`setTranslation`, `translate`), scale
 `setRotationEuler`, `setRotationAxisAngle`, `setRotation`, and relative
 `rotate`/`rotateX/Y/Z`), `lookAt`, copy/reset (`setFrom`, `setIdentity`),
 and a matrix escape hatch (`setFromMatrix`, `toMatrix`). Angles are
-radians; forward is −Z and up is +Y. The fields stay directly mutable, so
-there is no dirty tracking; helper calls and direct field mutation are
-equivalent.
+radians; forward is +Z and up is +Y, matching the engine. The fields stay
+directly mutable, so there is no dirty tracking; helper calls and direct
+field mutation are equivalent.
 
 The integration writes it onto the bound node during
 `Schedules.renderSync`. Add `PhysicsDriven` to entities whose node

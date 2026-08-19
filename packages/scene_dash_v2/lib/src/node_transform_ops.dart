@@ -12,11 +12,12 @@ extension NodeTransformOps on Node {
     double sy,
     double sz,
   ) {
-    final m = localTransform
-      ..setIdentity()
-      ..setTranslationRaw(x, y, z)
-      ..scaleByDouble(sx, sy, sz, 1);
-    localTransform = m;
+    mutateLocalTransform(
+      (m) => m
+        ..setIdentity()
+        ..setTranslationRaw(x, y, z)
+        ..scaleByDouble(sx, sy, sz, 1),
+    );
   }
 
   /// [setLocalTRS] with one uniform [scale].
