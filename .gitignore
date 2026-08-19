@@ -72,3 +72,6 @@ app.*.map.json
 
 # example app resolves independently of the workspace
 packages/scene_dash_v2/example/pubspec.lock
+
+# agent skill, installed by `dart run flutter_scene:skills`
+.github/skills/
