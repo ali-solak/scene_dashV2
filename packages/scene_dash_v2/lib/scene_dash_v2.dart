@@ -12,6 +12,7 @@ export 'src/debug_draw.dart';
 export 'src/node_transform_ops.dart';
 export 'src/physics_event_bridge.dart';
 export 'src/physics_plugin.dart';
+export 'src/scene_baker.dart';
 export 'src/scene_commands.dart';
 export 'src/scene_game.dart';
 export 'src/scene_mount.dart';

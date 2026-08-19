@@ -156,6 +156,7 @@ flutter run --enable-flutter-gpu
 - flutter_scene
   - [Physics](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#physics)
   - [The rendering bridge](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#the-rendering-bridge)
+  - [Scene components](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#scene-components)
 - Tooling
   - [Debugging](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#debugging)
     - [Entity debug](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#entity-debug)

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.0
+- upgrade deps
+
 ## 0.4.0
 - upgrade deps
 

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.0
+- upgrade to flutter scene 0.22.1 and introduces a way to use authored components for .fscene in ecs via installSceneBaker
+
 ## 0.4.0
 - upgrade deps
 

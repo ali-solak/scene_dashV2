@@ -162,11 +162,11 @@ void main() {
   });
 
   group('lookAt', () {
-    test('points local -Z at the target', () {
+    test('points local +Z at the target', () {
       final t = SceneTransform.fromVector(Vector3(0, 0, 0))
         ..lookAt(Vector3(1, 0, 0));
-      // Local forward (-Z) should now point toward +X.
-      final forward = t.rotation.rotated(Vector3(0, 0, -1));
+      // Local forward (+Z, the engine convention) now points toward +X.
+      final forward = t.rotation.rotated(Vector3(0, 0, 1));
       _expectVec3Close(forward, Vector3(1, 0, 0), tol: 1e-6);
     });
 
@@ -190,7 +190,7 @@ void main() {
     test('stays well-defined when look direction is parallel to up', () {
       // Looking straight down: forward == -up.
       final t = SceneTransform.zero()..lookAt(Vector3(0, -1, 0));
-      final forward = t.rotation.rotated(Vector3(0, 0, -1));
+      final forward = t.rotation.rotated(Vector3(0, 0, 1));
       _expectVec3Close(forward, Vector3(0, -1, 0), tol: 1e-6);
       // Result must be a valid (finite, unit) quaternion.
       expect(t.rotation.length, closeTo(1, 1e-6));

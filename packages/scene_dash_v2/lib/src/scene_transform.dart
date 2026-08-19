@@ -17,7 +17,7 @@ import 'package:vector_math/vector_math.dart'
 /// * [rotation] is a unit quaternion. Methods that compose rotations
 ///   re-normalize to prevent drift; the absolute setters assume their inputs
 ///   are already normalized.
-/// * Forward is **−Z** and up is **+Y**.
+/// * Forward is **+Z** and up is **+Y**, the engine's convention.
 ///
 /// ## Mutability
 ///
@@ -242,9 +242,13 @@ final class SceneTransform {
 
   // Look at
 
-  /// Orients this transform so its local **−Z** axis points at [target] (in the
+  /// Orients this transform so its local **+Z** axis points at [target] (in the
   /// same local space as [translation]) and its local **+Y** stays as close to
   /// [up] as possible. Defaults to up = +Y.
+  ///
+  /// `+Z` is `flutter_scene`'s forward convention, the same axis `Node.lookAt`
+  /// aims: cameras look down it, directional and spot lights aim down it, and
+  /// imported models face it.
   ///
   /// Leaves the rotation unchanged if [target] coincides with [translation].
   /// If the look direction is parallel to [up], a fallback up axis is chosen so
@@ -256,8 +260,9 @@ final class SceneTransform {
     }
     forward.normalize();
 
-    // Local +Z points away from the target (camera/glTF convention).
-    final zAxis = -forward;
+    // Local +Z points at the target: the engine's forward convention, which
+    // the offline glTF import bakes source coordinates into.
+    final zAxis = forward;
     var upHint = up ?? Vector3(0, 1, 0);
     var xAxis = upHint.cross(zAxis);
     if (xAxis.length2 < 1e-12) {

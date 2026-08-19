@@ -15,12 +15,13 @@ The full API surface
   - [Resources](#resources)
 - Frame
   - [Scheduling: sets and run conditions](#scheduling-sets-and-run-conditions)
-  - [Custom schedules](#custom-schedules)
+  - [Custom schedules](#custom-schedules-game-driven-systems)
   - [Time](#time)
   - [GameTween](#gametween)
     - [With Routine](#with-routine)
   - [Smoothing](#smoothing)
 - Coordination
+  - [Observers](#observers)
   - [Events](#events)
   - [Input](#input)
   - [States](#states)
@@ -31,6 +32,7 @@ The full API surface
 - flutter_scene
   - [Physics](#physics)
   - [The rendering bridge](#the-rendering-bridge)
+  - [Scene components](#scene-components)
 - Tooling
   - [Debugging](#debugging)
     - [Entity debug](#entity-debug)
@@ -216,6 +218,82 @@ game.addSystem(OnExit(GameStatus.playing), stopMusic);   //   frame, one-shot
 Spawn/despawn/add/remove are deferred to the frame boundary, so
 structural changes never break a running query.
 
+## Components, tags, bundles
+
+```dart
+final class Health {
+  double current;
+  final double max;
+  Health(this.max) : current = max;
+}
+
+final class Player implements Tag { const Player(); }   // bit-cheap,
+final class Enemy implements Tag { const Enemy(); }     //   filter-only
+final class Stunned implements Tag { const Stunned(); }
+```
+
+```dart
+List<Object> combatantBundle({required Node node, required double maxHealth}) =>
+    [NodeRef(node), Health(maxHealth)];
+
+List<Object> playerBundle(Node body) => [
+  const Player(),                        // present for the whole lifetime
+  ...combatantBundle(node: body, maxHealth: 100),
+  Fighter(),                             // the state machine (see Machine)
+];
+
+List<Object> enemyBundle(Node node, {required Entity target}) => [
+  const Enemy(),                         // composition = spread
+  ...combatantBundle(node: node, maxHealth: 40),
+  Target(target),                        // who to advance on (closeIn)
+  EnemyAttack(),                         // the windup timer (see Time)
+  const DespawnOnExit(GameStatus.playing),   // run-scoped (see States)
+];
+```
+
+`Stunned` is the transient kind: flipped at runtime, entering and
+leaving `exclude: [Stunned]` queries at the next frame boundary. Its full
+loop is in Events: `applyDamage` adds it, `recoverFromStun` removes it.
+
+A bundle binds to a plain `flutter_scene` node, usually built by the system
+that spawns the entity. Models loaded with `loadScene` come in as a resource
+instead, since loading is async and a system cannot await (Application setup).
+
+```dart
+void spawnPlayer(World world) {
+  final body = Node(
+    mesh: Mesh(
+      CapsuleGeometry(radius: 0.3, height: 1.2),
+      PhysicallyBasedMaterial(),
+    ),
+  );
+  world.spawn(playerBundle(body));   // NodeRef mounts it into the scene
+}
+```
+
+```dart
+final sword = world.spawn(
+    [NodeRef(swordNode)],              // swordNode: yours
+    ownedBy: player);                    // despawning the player despawns
+                                         //   everything it owns
+```
+
+A component's store is created the first time the type is used generically:
+`query2<Health, NodeRef>()`, `world.add<Mired>(...)`, `tryGet<Brawler>(...)`.
+Two cases cannot do that and need registering at install time.
+
+```dart
+void installEnemies(GameBuilder game) {
+  game
+    ..registerTag<Enemy>()            // spawning an unregistered tag throws:
+                                      //   a tag store cannot be built from an
+                                      //   instance
+    ..registerComponent<Mired>();     // named only in require:/exclude:, which
+                                      //   take Type objects and cannot create
+                                      //   a store, so the query throws
+}
+```
+
 ## Queries
 
 `closeIn` already shows the whole iteration surface: `require:`/`exclude:`
@@ -310,47 +388,34 @@ final Entity? entity = index.entityOf(hitNode);   // null if nothing is bound
 world.physics.overlapSphereEntities(index, at, radius, (entity, hit) => true);
 ```
 
-## Components, tags, bundles
+## Resources
+
+One instance per world, keyed by type: the game's singletons (score,
+wave number, settings). Any system reaches one without a query:
 
 ```dart
-final class Health {
-  double current;
-  final double max;
-  Health(this.max) : current = max;
+final class Score { int value = 0; }
+
+game.world.insert(Score());              // once, in the owning feature
+world.resource<Score>().value += 10;     // read/write from any system
+
+WorldBuilder<int>(                       // reactive read in the UI:
+    select: (w) => w.resource<Score>().value,   //   rebuilds on change
+    builder: (context, score) => Text('$score'))
+```
+
+```dart
+// owns teardown? implement Disposable; the framework calls dispose():
+// game shutdown (reverse insertion order), a dropping reset, replacement.
+final class Ambience implements Disposable {
+  final ValueNotifier<double> volume = ValueNotifier(0.6);
+  @override
+  void dispose() => volume.dispose();
 }
-
-final class Player implements Tag { const Player(); }   // bit-cheap,
-final class Enemy implements Tag { const Enemy(); }     //   filter-only
-final class Stunned implements Tag { const Stunned(); }
-
-List<Object> combatantBundle({required Node node, required double maxHealth}) =>
-    [NodeRef(node), Health(maxHealth)];
-
-List<Object> playerBundle(Node body) => [
-  const Player(),                        // present for the whole lifetime
-  ...combatantBundle(node: body, maxHealth: 100),
-  Fighter(),                             // the state machine (see Machine)
-];
-
-List<Object> enemyBundle(Node node, {required Entity target}) => [
-  const Enemy(),                         // composition = spread
-  ...combatantBundle(node: node, maxHealth: 40),
-  Target(target),                        // who to advance on (closeIn)
-  EnemyAttack(),                         // the windup timer (see Time)
-  const DespawnOnExit(GameStatus.playing),   // run-scoped (see States)
-];
 ```
 
-`Stunned` is the transient kind: flipped at runtime, entering and
-leaving `exclude: [Stunned]` queries at the next frame boundary. Its full
-loop is in Events: `applyDamage` adds it, `recoverFromStun` removes it.
-
-```dart
-final sword = world.spawn(
-    [NodeRef(swordNode)],              // swordNode: yours
-    ownedBy: player);                    // despawning the player despawns
-                                         //   everything it owns
-```
+Framework state is promoted to members (`world.dt`, `world.clock`,
+`world.buttons`, `world.physics`, `world.debugDraw`), never `resource<T>()`.
 
 ## Scheduling: sets and run conditions
 
@@ -456,173 +521,6 @@ game.runSchedule(label)      // from a widget; TestGame.runSchedule in tests
 // never inside a `.each`: the run ends in a flush
 // world.dt = the last frame delta. Count turns with a counter
 ```
-
-## Observers
-
-React to a component appearing on or disappearing from any entity.
-Observers are registered explicitly per feature at install time. `onRemove`
-receives the still-live component instance and also fires when despawning an
-entity strips its components.
-
-```dart
-game.observe<Stunned>(
-  onAdd: (world, entity, stunned) => world.add(entity, StunStars()),
-  onRemove: (world, entity, stunned) => world.remove<StunStars>(entity),
-);
-
-// removeAfter removes the component again on schedule, in fixed-step game
-// time. Expiry fires onRemove like any other removal; re-adding refreshes it.
-world.add(enemy, const Stunned(), removeAfter: 1.2);
-world.expiryOf<Stunned>(enemy);          // seconds left, or null
-```
-
-## Events
-
-One-shot messages between systems. Sender and reader never reference
-each other. Any class is an event; the channel opens on first emit.
-
-```dart
-final class EnemyKilled { final int bounty; EnemyKilled(this.bounty); }
-```
-
-```dart
-// Emit. Nothing to register.
-world.emit(EnemyKilled(10));                  // from a system
-game.emit(const PauseRequested());            // from a widget
-```
-
-```dart
-// System reads. Everything unread since this system last ran, in
-// emission order; the cursor is per registration, so the function stays
-// stateless and no system consumes another's events.
-void awardBounty(World world) {
-  for (final event in world.events<EnemyKilled>()) {
-    world.resource<Score>().value += event.bounty;
-  }
-}
-
-world.consumeAny<AttackPressed>();   // boolean form: any unread? true drains
-                                     //   them. Same cursor as events()
-                                     // both throw outside a running system
-```
-
-```dart
-// Skip the system entirely on frames carrying none.
-game.addSystem(Schedules.update, awardBounty,
-    runIf: hasEvents<EnemyKilled>());
-
-// Widget reads. Cleanup follows the widget's lifetime.
-WorldEventListener<EnemyKilled>(
-    onEvent: (context, event) => confetti(), child: const ScorePanel())
-```
-
-```dart
-// Retention: the emitting frame plus seven update passes, so a
-// fixed-step or briefly-gated reader keeps its edges on a high-refresh
-// display. A reader lagging past the window skips the older events and a
-// diagnostic reports it once.
-game.configureEvent<AttackPressed>(retainedUpdates: null);
-                             // null: keep until every reader consumed. What
-                             //   an input edge crossing into a fixed step wants
-```
-
-## Input
-
-Held state → `ButtonInput`. Analog → `AxisInput`. Buffered presses →
-`InputBuffer`. Discrete intents → events. Widgets write, systems read.
-
-```dart
-enum PlayerAction { left, right, attack, roll }
-
-enum GameAxis { moveX, moveY }
-
-void installControls(GameBuilder game) {
-  game
-    ..world.insert(InputBuffer<PlayerAction>(window: 0.15))
-    ..world.insert(AxisInput<GameAxis>());
-}     // only to override a default: the accessors below create the resource
-      //   on first use, so most games insert nothing
-```
-
-```dart
-// Widget writes. Resolve once in a State, releaseAll() in dispose.
-final buttons = GameScope.of(context).world.buttons<PlayerAction>();
-
-buttons.setPressed(PlayerAction.attack, keyDown || touchDown);
-                             // returns the edge crossed; OR-combine sources
-                             //   so releasing one never releases the other
-world.axes<GameAxis>().setValue(GameAxis.moveX, stick.dx);   // clamped [-1, 1]
-world.buffer<PlayerAction>().record(PlayerAction.roll);
-```
-
-```dart
-// System reads.
-world.buttons<PlayerAction>().pressed(PlayerAction.attack);        // bool
-world.buttons<PlayerAction>().axis(PlayerAction.left,
-    PlayerAction.right);                                    // -1, 0, or +1
-world.axes<GameAxis>().value(GameAxis.moveX);       // 0.0 if never written
-world.buffer<PlayerAction>().consume(PlayerAction.roll);
-                             // oldest unexpired match; the window expires on
-                             //   wall time, so hitstop never eats an input
-```
-
-## Resources
-
-One instance per world, keyed by type: the game's singletons (score,
-wave number, settings). Any system reaches one without a query:
-
-```dart
-final class Score { int value = 0; }
-
-game.world.insert(Score());              // once, in the owning feature
-world.resource<Score>().value += 10;     // read/write from any system
-
-WorldBuilder<int>(                       // reactive read in the UI:
-    select: (w) => w.resource<Score>().value,   //   rebuilds on change
-    builder: (context, score) => Text('$score'))
-```
-
-```dart
-// owns teardown? implement Disposable; the framework calls dispose():
-// game shutdown (reverse insertion order), a dropping reset, replacement.
-final class Ambience implements Disposable {
-  final ValueNotifier<double> volume = ValueNotifier(0.6);
-  @override
-  void dispose() => volume.dispose();
-}
-```
-
-Framework state is promoted to members (`world.dt`, `world.clock`,
-`world.buttons`, `world.physics`, `world.debugDraw`), never `resource<T>()`.
-
-## States
-
-```dart
-enum GameStatus { playing, lost }
-
-game.addState<GameStatus>(GameStatus.playing);   // one machine per enum;
-                                                 //   machines of different
-                                                 //   enums are orthogonal
-game.addSystem(Schedules.update, evaluateGameRules,
-    reads: const {}, runIf: inState(GameStatus.playing));
-
-void evaluateGameRules(World world) {
-  final row = world.query<Health>(require: const [Player]).firstOrNull;
-  if (row == null) return;
-  final (_, health) = row;                       // destructure the record
-  if (health.current <= 0) {
-    world.setState(GameStatus.lost);   // applies at next frame start:
-  }                                    //   OnExit(playing) → OnEnter(lost)
-}
-
-// the transition's other side (null before the first): an OnEnter system
-// tells a resume from a fresh run without a hand-rolled flag
-world.previousState<GameStatus>()
-```
-
-`enemyBundle` carries `DespawnOnExit(GameStatus.playing)`: leaving the
-state despawns every enemy automatically; a run spawns freely and needs
-no cleanup system.
 
 ## Time
 
@@ -806,6 +704,144 @@ GameTween   // fixed start to end over a duration
 smoothTo    // follow a changing target
 moveToward  // move at a fixed rate until you arrive
 ```
+
+## Observers
+
+React to a component appearing on or disappearing from any entity.
+Observers are registered explicitly per feature at install time. `onRemove`
+receives the still-live component instance and also fires when despawning an
+entity strips its components.
+
+```dart
+game.observe<Stunned>(
+  onAdd: (world, entity, stunned) => world.add(entity, StunStars()),
+  onRemove: (world, entity, stunned) => world.remove<StunStars>(entity),
+);
+
+// removeAfter removes the component again on schedule, in fixed-step game
+// time. Expiry fires onRemove like any other removal; re-adding refreshes it.
+world.add(enemy, const Stunned(), removeAfter: 1.2);
+world.expiryOf<Stunned>(enemy);          // seconds left, or null
+```
+
+## Events
+
+One-shot messages between systems. Sender and reader never reference
+each other. Any class is an event; the channel opens on first emit.
+
+```dart
+final class EnemyKilled { final int bounty; EnemyKilled(this.bounty); }
+```
+
+```dart
+// Emit. Nothing to register.
+world.emit(EnemyKilled(10));                  // from a system
+game.emit(const PauseRequested());            // from a widget
+```
+
+```dart
+// System reads. Everything unread since this system last ran, in
+// emission order; the cursor is per registration, so the function stays
+// stateless and no system consumes another's events.
+void awardBounty(World world) {
+  for (final event in world.events<EnemyKilled>()) {
+    world.resource<Score>().value += event.bounty;
+  }
+}
+
+world.consumeAny<AttackPressed>();   // boolean form: any unread? true drains
+                                     //   them. Same cursor as events()
+                                     // both throw outside a running system
+```
+
+```dart
+// Skip the system entirely on frames carrying none.
+game.addSystem(Schedules.update, awardBounty,
+    runIf: hasEvents<EnemyKilled>());
+
+// Widget reads. Cleanup follows the widget's lifetime.
+WorldEventListener<EnemyKilled>(
+    onEvent: (context, event) => confetti(), child: const ScorePanel())
+```
+
+```dart
+// Retention: the emitting frame plus seven update passes, so a
+// fixed-step or briefly-gated reader keeps its edges on a high-refresh
+// display. A reader lagging past the window skips the older events and a
+// diagnostic reports it once.
+game.configureEvent<AttackPressed>(retainedUpdates: null);
+                             // null: keep until every reader consumed. What
+                             //   an input edge crossing into a fixed step wants
+```
+
+## Input
+
+Held state → `ButtonInput`. Analog → `AxisInput`. Buffered presses →
+`InputBuffer`. Discrete intents → events. Widgets write, systems read.
+
+```dart
+enum PlayerAction { left, right, attack, roll }
+
+enum GameAxis { moveX, moveY }
+
+void installControls(GameBuilder game) {
+  game
+    ..world.insert(InputBuffer<PlayerAction>(window: 0.15))
+    ..world.insert(AxisInput<GameAxis>());
+}     // only to override a default: the accessors below create the resource
+      //   on first use, so most games insert nothing
+```
+
+```dart
+// Widget writes. Resolve once in a State, releaseAll() in dispose.
+final buttons = GameScope.of(context).world.buttons<PlayerAction>();
+
+buttons.setPressed(PlayerAction.attack, keyDown || touchDown);
+                             // returns the edge crossed; OR-combine sources
+                             //   so releasing one never releases the other
+world.axes<GameAxis>().setValue(GameAxis.moveX, stick.dx);   // clamped [-1, 1]
+world.buffer<PlayerAction>().record(PlayerAction.roll);
+```
+
+```dart
+// System reads.
+world.buttons<PlayerAction>().pressed(PlayerAction.attack);        // bool
+world.buttons<PlayerAction>().axis(PlayerAction.left,
+    PlayerAction.right);                                    // -1, 0, or +1
+world.axes<GameAxis>().value(GameAxis.moveX);       // 0.0 if never written
+world.buffer<PlayerAction>().consume(PlayerAction.roll);
+                             // oldest unexpired match; the window expires on
+                             //   wall time, so hitstop never eats an input
+```
+
+## States
+
+```dart
+enum GameStatus { playing, lost }
+
+game.addState<GameStatus>(GameStatus.playing);   // one machine per enum;
+                                                 //   machines of different
+                                                 //   enums are orthogonal
+game.addSystem(Schedules.update, evaluateGameRules,
+    reads: const {}, runIf: inState(GameStatus.playing));
+
+void evaluateGameRules(World world) {
+  final row = world.query<Health>(require: const [Player]).firstOrNull;
+  if (row == null) return;
+  final (_, health) = row;                       // destructure the record
+  if (health.current <= 0) {
+    world.setState(GameStatus.lost);   // applies at next frame start:
+  }                                    //   OnExit(playing) → OnEnter(lost)
+}
+
+// the transition's other side (null before the first): an OnEnter system
+// tells a resume from a fresh run without a hand-rolled flag
+world.previousState<GameStatus>()
+```
+
+`enemyBundle` carries `DespawnOnExit(GameStatus.playing)`: leaving the
+state despawns every enemy automatically; a run spawns freely and needs
+no cleanup system.
 
 ## Machine
 
@@ -1075,6 +1111,110 @@ final hit = world.physics.raycast(
     maxDistance: 1.1);
 ```
 
+## The rendering bridge
+
+```dart
+// the only bridge between world and scene; everything you see is a real Node
+NodeRef(node)          // mounted into the scene automatically
+SceneTransform.zero()    // when present, synced onto the bound node per frame
+const PhysicsDriven()    // a physics body owns the transform instead
+```
+
+An entity's transform can also live on the node directly;
+`NodeTransformOps` keeps per-frame mutation allocation-free:
+
+```dart
+const playerStrafeSpeed = 6.0;
+
+void strafePlayer(World world) {
+  final row = world.query<NodeRef>(require: const [Player]).firstOrNull;
+  if (row == null) return;
+  final (_, binding) = row;
+
+  final strafe = world.buttons<PlayerAction>()
+      .axis(PlayerAction.left, PlayerAction.right);
+  binding.node.mutateLocalTransform(   // edits in place and marks it dirty
+    (m) => m.storage[12] += strafe * playerStrafeSpeed * world.dt,
+  );
+}
+```
+
+## Scene components
+
+`flutter_scene` attaches authored components to nodes as `.fscene` loads.
+They are not ECS components: nothing spawns an entity for them and no query
+sees them. Bake them into entities when gameplay owns them. read the tree
+directly when you only want the authored values.
+
+
+```dart
+// The authored side: a flutter_scene Component, annotated so
+// flutter_scene_codegen writes its .fscene codec. Fields are mutable and
+// carry their defaults; the class needs no constructor.
+@SceneComponent('game.torch')
+class Torch extends Component {
+  @NumberProperty(min: 0)
+  double radius = 1;
+
+  @BoolProperty()
+  bool enabled = true;
+}
+```
+
+Baking spawns one entity per authored node:
+
+```dart
+features: [
+  installSceneBaker<Torch>(),   // one entity per node: [torch, NodeRef(node)]
+]
+```
+
+```dart
+// Which is the point: authored markers are now ordinary entities, and
+// NodeRef gets back to the node each came from.
+world.query2<Torch, NodeRef>().each((entity, torch, ref) {
+  ref.node.visible = torch.enabled;
+});
+```
+
+`bundle` sets what the entity carries, so add your own components:
+
+```dart
+installSceneBaker<SpawnPoint>(
+  bundle: (node, spawn) => [
+    spawn,                            // the authored data, as loaded
+    NodeRef(node),
+    Patrol(radius: spawn.radius),     // your component, free to change
+  ],
+)
+```
+
+`spawn` is the same object the node holds, so a system writing to it also
+changes the node's copy. Put anything that changes in your own component.
+
+```dart
+// The baker runs once at startup, seeing only nodes parented by then: queued
+// SceneCommands have not flushed yet. Loading is async, so a level mounted
+// later is baked from your loading code, not from a system. Nodes already
+// baked are skipped, and `root:` scopes the walk to the level just added.
+final levelRoot = await loadScene('assets/level2.fscene');
+scene.add(levelRoot);
+world.bakeSceneComponents<Torch>(root: levelRoot);
+```
+
+When no entity is wanted, a marker you only draw or a one-off pass at load,
+read the scene graph instead:
+
+```dart
+// Lazy, so breaking out of the loop stops the walk.
+for (final (node, torch) in world.sceneComponents<Torch>()) {
+  world.debugDraw.sphere(node.globalTransform.getTranslation(), torch.radius);
+}
+```
+
+Both calls take `root:`, which scopes them to one level instead of everything
+loaded. A system cannot `await loadScene` itself, so keep the node it returned
+in a resource (Resources) when systems need to scope to that level.
 ## Debugging
 
 ### Entity debug
@@ -1147,31 +1287,3 @@ expect(fighter.phase.state, FighterPhase.idle);
 // identical spawns + identical inputs ⇒ identical runs
 ```
 
-## The rendering bridge
-
-```dart
-// the only bridge between world and scene; everything you see is a real Node
-NodeRef(node)          // mounted into the scene automatically
-SceneTransform.zero()    // when present, synced onto the bound node per frame
-const PhysicsDriven()    // a physics body owns the transform instead
-```
-
-An entity's transform can also live on the node directly;
-`NodeTransformOps` keeps per-frame mutation allocation-free:
-
-```dart
-const playerStrafeSpeed = 6.0;
-
-void strafePlayer(World world) {
-  final row = world.query<NodeRef>(require: const [Player]).firstOrNull;
-  if (row == null) return;
-  final (_, binding) = row;
-
-  final strafe = world.buttons<PlayerAction>()
-      .axis(PlayerAction.left, PlayerAction.right);
-  final node = binding.node;
-  final transform = node.localTransform;
-  transform.storage[12] += strafe * playerStrafeSpeed * world.dt;
-  node.localTransform = transform;   // reassignment marks the transform dirty
-}
-```
