@@ -1194,9 +1194,10 @@ changes the node's copy. Put anything that changes in your own component.
 
 ```dart
 // The baker runs once at startup, seeing only nodes parented by then: queued
-// SceneCommands have not flushed yet. Loading is async, so a level mounted
-// later is baked from your loading code, not from a system. Nodes already
-// baked are skipped, and `root:` scopes the walk to the level just added.
+// SceneCommands have not flushed yet, and it says so in debug when it finds
+// nothing. Loading is async, so a level mounted later is baked from your
+// loading code, not from a system. Nodes already baked are skipped, and
+// `root:` scopes the walk to the level just added.
 final levelRoot = await loadScene('assets/level2.fscene');
 scene.add(levelRoot);
 world.bakeSceneComponents<Torch>(root: levelRoot);

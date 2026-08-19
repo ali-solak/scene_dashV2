@@ -1,5 +1,6 @@
 // Scene-authored components crossing into the ECS: the read-side walk and
 // the baker that spawns an entity per authored node.
+import 'package:flutter/foundation.dart' show debugPrint, debugPrintThrottled;
 import 'package:flutter_scene/scene.dart' show Component, Node;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
@@ -172,6 +173,25 @@ void main() {
   });
 
   group('installSceneBaker', () {
+    test('warns when the startup pass finds nothing', () {
+      final logged = <String>[];
+      debugPrint = (message, {wrapWidth}) => logged.add(message ?? '');
+      addTearDown(() => debugPrint = debugPrintThrottled);
+
+      // An explicit root runs the pass without a Scene; this one has no
+      // torches under it.
+      TestGame.headless(
+        features: [installSceneBaker<_Torch>(root: Node(name: 'empty'))],
+      ).start();
+
+      expect(
+        logged.where((m) => m.contains('sceneBaker<_Torch>')),
+        isNotEmpty,
+        reason: 'silence would be indistinguishable from a torchless document',
+      );
+      expect(logged.join(), contains('bakeSceneComponents<_Torch>()'));
+    });
+
     test('boots clean under strictAccess', () {
       final game = TestGame.headless(
         strictAccess: true,

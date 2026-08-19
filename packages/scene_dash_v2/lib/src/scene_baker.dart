@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:flutter_scene/scene.dart' show Node, Scene;
 import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
 
@@ -86,9 +87,27 @@ Feature installSceneBaker<T extends Object>({
       ..registerComponent<NodeRef>()
       ..addSystem(
         Schedules.startup,
-        (world) => world.bakeSceneComponents<T>(bundle: bundle, root: root),
+        (world) {
+          final spawned = world.bakeSceneComponents<T>(
+            bundle: bundle,
+            root: root,
+          );
+          // Finding nothing looks the same as a document with no [T] in it,
+          // and the likeliest cause is timing: startup runs before the first
+          // SceneCommands flush, so a queued node is not reachable yet.
+          if (kDebugMode && spawned == 0) {
+            debugPrint(
+              'scene_dash_v2: sceneBaker<$T> found no nodes at startup. A '
+              'scene mounted later, or a node still queued through '
+              'SceneCommands, is not visible yet: call '
+              'world.bakeSceneComponents<$T>() once it is mounted.',
+            );
+          }
+        },
         writes: <Type>{T, NodeRef, ...writes},
-        runIf: hasResource<Scene>(),
+        // An explicit root is walked directly, so only the default (walk the
+        // scene) needs a Scene to exist.
+        runIf: root == null ? hasResource<Scene>() : null,
         // Generated closures otherwise all label as `closure`.
         label: 'sceneBaker<$T>',
       );

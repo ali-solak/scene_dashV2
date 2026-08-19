@@ -19,11 +19,3 @@ dependencies:
 
 dev_dependencies:
   flutter_lints: ^6.0.0
-
-# This example is outside the workspace, so it resolves scene_dash_v2_core from
-# pub.dev. Until the matching core version is published, point it at the local
-# copy. REMOVE BEFORE PUBLISHING: example/ ships inside the package archive and
-# this path does not exist for consumers.
-dependency_overrides:
-  scene_dash_v2_core:
-    path: ../../scene_dash_v2_core
