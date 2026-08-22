@@ -6,7 +6,6 @@ void main(List<String> args) async {
     buildScenes(
       buildInput: input,
       buildOutput: output,
-      assetMode: SceneAssetMode.dataAssetsRequired,
       inputFilePaths: const [
         'assets/characters/Knight.glb',
         'assets/characters/Barbarian.glb',
@@ -21,7 +20,6 @@ void main(List<String> args) async {
     await buildMaterials(
       buildInput: input,
       buildOutput: output,
-      assetMode: MaterialAssetMode.dataAssetsRequired,
     );
   });
 }
