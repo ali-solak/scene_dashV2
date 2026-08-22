@@ -12,18 +12,18 @@ void placeTowers(World world) {
   }
 }
 
+void dressTowers(World world) => world
+    .entitiesWith(require: const [Tower], exclude: const [TowerBeam])
+    .each((entity) {
+      final (body, beam) = towerVisuals();
+      world
+        ..add(entity, body)
+        ..add(entity, beam);
+    });
+
 bool _occupied(World world, Vector3 spot) => world
     .query<SceneTransform>(require: const [Tower])
     .any((_, at) => at.translation.distanceTo(spot) < towerFootprint);
-
-void giveTowersBodies(World world) => world
-    .entitiesWith(require: const [Tower], exclude: const [NodeRef])
-    .each((entity) {
-      final (ref, beam) = towerVisuals();
-      world
-        ..add(entity, ref)
-        ..add(entity, beam);
-    });
 
 void fireTowers(World world) {
   final creeps = world

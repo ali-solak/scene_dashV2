@@ -1,8 +1,11 @@
 part of '../creeps.dart';
 
-void spawnCreep(World world) => world.spawn(creepBundle());
+void spawnCreep(World world) {
+  world.spawn(creepBundle());
+  world.emit(const CreepSpawned());
+}
 
-void giveCreepsBodies(World world) => world
+void dressCreeps(World world) => world
     .entitiesWith(require: const [Creep], exclude: const [NodeRef])
     .each((entity) => world.add(entity, NodeRef(creepNode())));
 
