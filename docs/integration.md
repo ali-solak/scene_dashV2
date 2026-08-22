@@ -30,7 +30,7 @@ A mounted entity also gains an integration-managed `Mounted` tag (removed
 on unmount/despawn) for the rare system that wants to filter on
 scene-mounted entities; bundles never author it.
 
-`SceneGame.scene` is non-null, a `SceneGame` always owns a scene (D13);
+`SceneGame.scene` is non-null, a `SceneGame` always owns a scene.
 a real `Scene` needs a Flutter GPU context, so this boot fails fast
 without one. A widget tree over a *scene-less* world (editor panels,
 widget-test harnesses) is a different type, `WorldGame.boot(...)`: same
