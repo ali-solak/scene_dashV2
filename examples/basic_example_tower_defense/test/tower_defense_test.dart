@@ -74,7 +74,7 @@ void main() {
   test('placement is refused on the creeps lane', () {
     final game = boot();
     final onLane = towerPath.first;
-    placeTowerAt(game.world, onLane.x + 4, onLane.z);
+    placeTowerAt(game.world, Vector3(onLane.x + 4, 0, onLane.z));
 
     expect(game.world.query<Tower>().isEmpty, isTrue);
     expect(game.world.resource<Gold>().value, startingGold);
@@ -82,8 +82,8 @@ void main() {
 
   test('a second tower cannot stack on the first', () {
     final game = boot();
-    placeTowerAt(game.world, 0, -2);
-    placeTowerAt(game.world, 0.4, -2);
+    placeTowerAt(game.world, Vector3(0, 0, -2));
+    placeTowerAt(game.world, Vector3(0.4, 0, -2));
 
     expect(game.world.query<Tower>().count(), 1);
     expect(game.world.resource<Gold>().value, startingGold - towerCost);
@@ -92,7 +92,7 @@ void main() {
   test('placement is refused when gold is short', () {
     final game = boot();
     game.world.resource<Gold>().value = towerCost - 1;
-    placeTowerAt(game.world, 0, 0);
+    placeTowerAt(game.world, Vector3.zero());
 
     expect(game.world.query<Tower>().isEmpty, isTrue);
     expect(game.world.resource<Gold>().value, towerCost - 1);

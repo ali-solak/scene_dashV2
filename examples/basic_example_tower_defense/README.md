@@ -31,7 +31,6 @@ one place:
 void installTowers(GameBuilder game) {
   game
     ..registerComponent<Tower>()
-    ..registerComponent<TowerBeam>()
     ..configureEvent<PlaceTowerRequested>()
     ..addSystem(
       Schedules.fixedUpdate,
@@ -42,11 +41,6 @@ void installTowers(GameBuilder game) {
       Schedules.fixedUpdate,
       fireTowers,
       runIf: inState(GameStatus.playing),
-    )
-    ..addSystem(
-      Schedules.update,
-      animateBeams,
-      runIf: hasResource<Scene>(),
     );
 }
 ```
@@ -57,19 +51,15 @@ The placement system resolves the tap and changes the world:
 
 ```dart
 void placeTowers(World world) {
-  final scene = world.resource<Scene>();
-  final camera = scene.camera;
-  if (camera == null) return;
-
   for (final request in world.events<PlaceTowerRequested>()) {
-    final ray = camera.screenPointToRay(request.position, request.viewSize);
-    final ground = scene
-        .raycast(ray, where: (node) => node.name == groundNodeName)
-        ?.worldPoint;
-    if (ground != null) placeTowerAt(world, ground.x, ground.z);
+    final ground = groundFromTap(world, request);
+    if (ground != null) placeTowerAt(world, ground);
   }
 }
 ```
+
+`groundFromTap` contains the camera/raycast details; `placeTowerAt` validates
+the cost and location, then spawns the tower bundle.
 
 The Flutter shell only emits the request:
 

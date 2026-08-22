@@ -1,23 +1,27 @@
 part of '../towers.dart';
 
 void placeTowers(World world) {
-  final scene = world.resource<Scene>();
-  final camera = scene.camera;
-  if (camera == null) return;
   for (final request in world.events<PlaceTowerRequested>()) {
-    final ray = camera.screenPointToRay(request.position, request.viewSize);
-    final ground = scene
-        .raycast(ray, where: (node) => node.name == groundNodeName)
-        ?.worldPoint;
-    if (ground != null) placeTowerAt(world, ground.x, ground.z);
+    final ground = groundFromTap(world, request);
+    if (ground != null) placeTowerAt(world, ground);
   }
 }
 
-bool placeTowerAt(World world, double x, double z) {
+Vector3? groundFromTap(World world, PlaceTowerRequested request) {
+  final scene = world.resource<Scene>();
+  final camera = scene.camera;
+  if (camera == null) return null;
+  final ray = camera.screenPointToRay(request.position, request.viewSize);
+  return scene
+      .raycast(ray, where: (node) => node.name == groundNodeName)
+      ?.worldPoint;
+}
+
+bool placeTowerAt(World world, Vector3 ground) {
   final gold = world.resource<Gold>();
-  final spot = Vector3(x, towerRadius, z);
+  final spot = Vector3(ground.x, towerRadius, ground.z);
   if (gold.value < towerCost) return false;
-  if (onTowerPath(x, z)) return false;
+  if (onTowerPath(ground.x, ground.z)) return false;
   if (_occupied(world, spot)) return false;
   gold.value -= towerCost;
   world.spawn(towerBundle(spot));
