@@ -208,39 +208,6 @@ void pick(World world) {
 }
 ```
 
-### Hardware instancing: many visuals, one draw call
-
-For many identical visuals (foliage, debris, particles), an
-`InstancedMesh` (one node, one draw call) beats one entity/node each. A
-startup system builds it on the scene; an update system animates the
-instances **allocation-free** by reusing a single scratch matrix
-(`setInstanceTransform` copies it in):
-
-```dart
-void animateMotes(World world) {
-  final field = world.resource<MoteField>();
-  final mesh = field.mesh;
-  final scratch = field.scratch; // one Matrix4, reused every instance & frame
-  for (var i = 0; i < field.count; i++) {
-    scratch.setTranslationRaw(field.x[i], field.bob(i, world.dt), field.z[i]);
-    mesh.setInstanceTransform(i, scratch);
-  }
-}
-```
-
-See [`examples/scene_game/lib/decor/`](../examples/scene_game/lib/decor)
-for the full feature.
-
-## Debug draw
-
-The debug-draw render layer is opt-in; add it to the feature list:
-
-```dart
-final game = await SceneGame.boot(
-  features: [installDebugDraw(enabled: showDebugDraw), ...],
-);
-```
-
 `world.debugDraw` then provides immediate-mode debug drawing: any system
 submits shapes for the current frame and nothing persists.
 
