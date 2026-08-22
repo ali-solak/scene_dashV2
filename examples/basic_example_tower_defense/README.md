@@ -6,8 +6,8 @@ A minimal game showing how Scene-Dash keeps gameplay in features and reads the s
 lib/
   main.dart
   features/
-    creeps/
-      creeps.dart
+    towers/
+      towers.dart
       data/
       systems/
   hud/
@@ -22,39 +22,44 @@ final game = await SceneGame.boot(
 runApp(GameHost(game: game, child: TowerDefenseApp(game)));
 ```
 
-`lib/features/creeps/creeps.dart`
+`lib/features/towers/towers.dart`
 
 ```dart
-void installCreeps(GameBuilder game) {
-  game.addSystem(
-    Schedules.fixedUpdate,
-    walkPath,
-    runIf: inState(GameStatus.playing),
-  );
+void installTowers(GameBuilder game) {
+  game
+    ..configureEvent<PlaceTowerRequested>()
+    ..addSystem(
+      Schedules.fixedUpdate,
+      placeTowers,
+      runIf: hasEvents<PlaceTowerRequested>(),
+    );
 }
 ```
 
-`lib/features/creeps/systems/systems.dart`
+`lib/features/towers/systems/systems.dart`
 
 ```dart
-void walkPath(World world) {
-  world.query2<SceneTransform, PathProgress>(
-    require: const [Creep],
-  ).each((entity, at, progress) {
-    final target = towerPath[progress.next];
-    final step = creepSpeed * world.dt;
-    at.x = moveToward(at.x, target.x, step);
-    at.z = moveToward(at.z, target.z, step);
-  });
+void placeTowers(World world) {
+  final gold = world.resource<Gold>();
+  for (final request in world.events<PlaceTowerRequested>()) {
+    if (gold.value < towerCost) continue;
+    gold.value -= towerCost;
+    world.spawn(towerBundle(Vector3(request.x, towerRadius, request.z)));
+  }
 }
 ```
 
 `lib/hud/stats.dart`
 
 ```dart
-WorldBuilder<int>(
-  select: (world) => world.query<Health>(require: const [Creep]).count(),
-  builder: (context, alive) => Text('$alive creeps'),
+GestureDetector(
+  onTap: () => GameScope.of(context).emit(
+    const PlaceTowerRequested(0, -2),
+  ),
+  child: WorldBuilder<int>(
+    select: (world) => world.resource<Gold>().value,
+    builder: (context, gold) => Text('$gold gold'),
+  ),
 )
 ```
 
