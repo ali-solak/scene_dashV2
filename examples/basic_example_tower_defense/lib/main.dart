@@ -61,8 +61,6 @@ class const _ArenaTaps({required final Widget child}) extends StatelessWidget {
     final viewSize = context.size;
     if (viewSize == null) return;
     final game = GameScope.of(context);
-    final ground = groundPointAt(game.world, at, viewSize);
-    if (ground == null) return;
-    game.emit(PlaceTowerRequested(ground.x, ground.z));
+    game.emit(PlaceTowerRequested(at, viewSize));
   }
 }

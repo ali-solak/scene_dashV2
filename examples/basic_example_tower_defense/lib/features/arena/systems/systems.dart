@@ -9,16 +9,6 @@ void spawnArena(World world) {
   }
 }
 
-Vector3? groundPointAt(World world, Offset localPosition, Size viewSize) {
-  final scene = world.resource<Scene>();
-  final camera = scene.camera;
-  if (camera == null) return null;
-  final ray = camera.screenPointToRay(localPosition, viewSize);
-  return scene
-      .raycast(ray, where: (node) => node.name == groundNodeName)
-      ?.worldPoint;
-}
-
 bool onTowerPath(double x, double z) {
   final spot = Vector3(x, 0, z);
   for (var i = 1; i < towerPath.length; i++) {

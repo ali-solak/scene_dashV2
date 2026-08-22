@@ -22,44 +22,80 @@ final game = await SceneGame.boot(
 runApp(GameHost(game: game, child: TowerDefenseApp(game)));
 ```
 
+The feature declares its components, events, schedules, and run conditions in
+one place:
+
 `lib/features/towers/towers.dart`
 
 ```dart
 void installTowers(GameBuilder game) {
   game
+    ..registerComponent<Tower>()
+    ..registerComponent<TowerBeam>()
     ..configureEvent<PlaceTowerRequested>()
     ..addSystem(
       Schedules.fixedUpdate,
       placeTowers,
-      runIf: hasEvents<PlaceTowerRequested>(),
+      runIf: hasEvents<PlaceTowerRequested>().and(hasResource<Scene>()),
+    )
+    ..addSystem(
+      Schedules.fixedUpdate,
+      fireTowers,
+      runIf: inState(GameStatus.playing),
+    )
+    ..addSystem(
+      Schedules.update,
+      animateBeams,
+      runIf: hasResource<Scene>(),
     );
 }
 ```
+
+The placement system resolves the tap and changes the world:
 
 `lib/features/towers/systems/systems.dart`
 
 ```dart
 void placeTowers(World world) {
-  final gold = world.resource<Gold>();
+  final scene = world.resource<Scene>();
+  final camera = scene.camera;
+  if (camera == null) return;
+
   for (final request in world.events<PlaceTowerRequested>()) {
-    if (gold.value < towerCost) continue;
-    gold.value -= towerCost;
-    world.spawn(towerBundle(Vector3(request.x, towerRadius, request.z)));
+    final ray = camera.screenPointToRay(request.position, request.viewSize);
+    final ground = scene
+        .raycast(ray, where: (node) => node.name == groundNodeName)
+        ?.worldPoint;
+    if (ground != null) placeTowerAt(world, ground.x, ground.z);
   }
 }
 ```
 
-`lib/hud/stats.dart`
+The Flutter shell only emits the request:
+
+`lib/main.dart`
 
 ```dart
 GestureDetector(
-  onTap: () => GameScope.of(context).emit(
-    const PlaceTowerRequested(0, -2),
-  ),
-  child: WorldBuilder<int>(
-    select: (world) => world.resource<Gold>().value,
-    builder: (context, gold) => Text('$gold gold'),
-  ),
+  onTapDown: (details) {
+    final viewSize = context.size;
+    if (viewSize == null) return;
+    GameScope.of(context).emit(
+      PlaceTowerRequested(details.localPosition, viewSize),
+    );
+  },
+  child: child,
+)
+```
+
+The HUD reads the world reactively:
+
+`lib/hud/stats.dart`
+
+```dart
+WorldBuilder<int>(
+  select: (world) => world.resource<Gold>().value,
+  builder: (context, gold) => Text('$gold gold'),
 )
 ```
 

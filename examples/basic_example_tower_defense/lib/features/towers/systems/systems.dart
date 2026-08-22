@@ -1,15 +1,27 @@
 part of '../towers.dart';
 
 void placeTowers(World world) {
-  final gold = world.resource<Gold>();
+  final scene = world.resource<Scene>();
+  final camera = scene.camera;
+  if (camera == null) return;
   for (final request in world.events<PlaceTowerRequested>()) {
-    final spot = Vector3(request.x, towerRadius, request.z);
-    if (gold.value < towerCost) continue;
-    if (onTowerPath(request.x, request.z)) continue;
-    if (_occupied(world, spot)) continue;
-    gold.value -= towerCost;
-    world.spawn(towerBundle(spot));
+    final ray = camera.screenPointToRay(request.position, request.viewSize);
+    final ground = scene
+        .raycast(ray, where: (node) => node.name == groundNodeName)
+        ?.worldPoint;
+    if (ground != null) placeTowerAt(world, ground.x, ground.z);
   }
+}
+
+bool placeTowerAt(World world, double x, double z) {
+  final gold = world.resource<Gold>();
+  final spot = Vector3(x, towerRadius, z);
+  if (gold.value < towerCost) return false;
+  if (onTowerPath(x, z)) return false;
+  if (_occupied(world, spot)) return false;
+  gold.value -= towerCost;
+  world.spawn(towerBundle(spot));
+  return true;
 }
 
 bool _occupied(World world, Vector3 spot) => world
@@ -21,19 +33,24 @@ void fireTowers(World world) {
       .query2<Health, SceneTransform>(require: const [Creep])
       .records
       .toList(growable: false);
-  for (final (entity, tower, at)
-      in world.query2<Tower, SceneTransform>().records) {
-    tower.cooldown.tick(world.dt);
-    if (!tower.cooldown.finished) continue;
 
-    final target = _nearestCreep(creeps, at.translation);
-    if (target == null) continue;
+  final dt = world.dt;
+  world.query2<Tower, SceneTransform>().each((entity, tower, towerTransform) {
+    tower.cooldown.tick(dt);
+    if (!tower.cooldown.finished) return;
+
+    final target = _nearestCreep(creeps, towerTransform.translation);
+    if (target == null) return;
     final (victim, victimAt) = target;
 
     victim.current -= towerDamage;
     tower.cooldown.reset();
-    _aimBeam(world.tryGet<TowerBeam>(entity), at.translation, victimAt);
-  }
+    _aimBeam(
+      world.tryGet<TowerBeam>(entity),
+      towerTransform.translation,
+      victimAt,
+    );
+  });
 }
 
 (Health, Vector3)? _nearestCreep(
@@ -41,11 +58,12 @@ void fireTowers(World world) {
   Vector3 from,
 ) {
   (Health, Vector3)? best;
-  var nearest = towerRange;
+  var nearestSquared = towerRange * towerRange;
   for (final (_, health, at) in creeps) {
-    final distance = at.translation.distanceTo(from);
-    if (distance >= nearest) continue;
-    nearest = distance;
+    if (health.current <= 0) continue;
+    final distanceSquared = at.translation.distanceToSquared(from);
+    if (distanceSquared >= nearestSquared) continue;
+    nearestSquared = distanceSquared;
     best = (health, at.translation);
   }
   return best;
@@ -54,10 +72,11 @@ void fireTowers(World world) {
 void _aimBeam(TowerBeam? beam, Vector3 from, Vector3 to) {
   if (beam == null) return;
   final along = to - from;
-  if (along.length < 1e-4) return;
+  final length = along.length;
+  if (length == 0) return;
 
   beam.node.localTransform = Node.lookAtTransform(along.scaled(0.5), along)
-    ..scaleByDouble(1, 1, along.length, 1);
+    ..scaleByDouble(1, 1, length, 1);
   beam.fade.reset();
 }
 

@@ -6,6 +6,7 @@ import 'package:vector_math/vector_math.dart' show Vector3;
 
 import '../../common/game_state.dart';
 import '../arena/arena.dart';
+import '../arena/data/config.dart' show groundNodeName;
 import '../creeps/creeps.dart';
 import '../rules/rules.dart';
 import 'data/config.dart';
@@ -22,7 +23,7 @@ void installTowers(GameBuilder game) {
     ..addSystem(
       Schedules.fixedUpdate,
       placeTowers,
-      runIf: hasEvents<PlaceTowerRequested>(),
+      runIf: hasEvents<PlaceTowerRequested>().and(hasResource<Scene>()),
     )
     ..addSystem(
       Schedules.fixedUpdate,

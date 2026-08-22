@@ -14,7 +14,6 @@ part 'systems/systems.dart';
 void installCreeps(GameBuilder game) {
   game
     ..registerTag<Creep>()
-    ..registerComponent<NodeRef>()
     ..addSystem(
       Schedules.fixedUpdate,
       spawnCreep,
