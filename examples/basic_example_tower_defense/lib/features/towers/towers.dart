@@ -29,10 +29,5 @@ void installTowers(GameBuilder game) {
       fireTowers,
       runIf: inState(GameStatus.playing),
     )
-    ..addSystem(
-      Schedules.update,
-      dressTowers,
-      runIf: hasResource<Scene>().and(hasEvents<PlaceTowerRequested>()),
-    )
     ..addSystem(Schedules.update, animateBeams, runIf: hasResource<Scene>());
 }

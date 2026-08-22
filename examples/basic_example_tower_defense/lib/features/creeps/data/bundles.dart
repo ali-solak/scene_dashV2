@@ -8,6 +8,7 @@ List<Object> creepBundle() {
     PathProgress(),
     SceneTransform(start.x, creepRadius, start.z),
     const DespawnOnExit(GameStatus.playing),
+    NodeRef(creepNode()),
   ];
 }
 

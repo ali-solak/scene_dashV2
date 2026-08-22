@@ -15,7 +15,6 @@ void installCreeps(GameBuilder game) {
   game
     ..registerTag<Creep>()
     ..registerComponent<NodeRef>()
-    ..configureEvent<CreepSpawned>()
     ..addSystem(
       Schedules.fixedUpdate,
       spawnCreep,
@@ -26,10 +25,5 @@ void installCreeps(GameBuilder game) {
       walkPath,
       runIf: inState(GameStatus.playing),
     )
-    ..addSystem(Schedules.fixedUpdate, reapCreeps, after: [walkPath])
-    ..addSystem(
-      Schedules.update,
-      dressCreeps,
-      runIf: hasResource<Scene>().and(hasEvents<CreepSpawned>()),
-    );
+    ..addSystem(Schedules.fixedUpdate, reapCreeps, after: [walkPath]);
 }

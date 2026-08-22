@@ -1,13 +1,6 @@
 part of '../creeps.dart';
 
-void spawnCreep(World world) {
-  world.spawn(creepBundle());
-  world.emit(const CreepSpawned());
-}
-
-void dressCreeps(World world) => world
-    .entitiesWith(require: const [Creep], exclude: const [NodeRef])
-    .each((entity) => world.add(entity, NodeRef(creepNode())));
+void spawnCreep(World world) => world.spawn(creepBundle());
 
 void walkPath(World world) {
   final creeps = world.query2<SceneTransform, PathProgress>(

@@ -1,10 +1,15 @@
 part of '../towers.dart';
 
-List<Object> towerBundle(Vector3 at) => [
-  Tower(),
-  SceneTransform.fromVector(at),
-  const DespawnOnExit(GameStatus.playing),
-];
+List<Object> towerBundle(Vector3 at) {
+  final (body, beam) = towerVisuals();
+  return [
+    Tower(),
+    SceneTransform.fromVector(at),
+    const DespawnOnExit(GameStatus.playing),
+    body,
+    beam,
+  ];
+}
 
 (NodeRef, TowerBeam) towerVisuals() {
   final node = Node(
