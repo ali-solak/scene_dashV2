@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/license-MIT-blue.svg"/>
 </p>
 
-Scene-Dash is an ECS-driven gameplay architecture for [flutter_scene](https://pub.dev/packages/flutter_scene). It gives Flutter games a structured runtime for gameplay state, system orchestration, custom and frame-driven schedules, resources/DI, events and observers, state machines, entity lifecycles, and headless testing. Its Flutter builders expose world, entity, and resource state directly to the widget tree, so gameplay logic and UI stay connected.
+Scene-Dash is an ECS-driven gameplay architecture for [flutter_scene](https://pub.dev/packages/flutter_scene). It gives Flutter games a runtime for gameplay state, and a way to test that state with nothing rendering.
 
 * **Entities and components** sparse sets, queries, deferred structural changes, lifecycle hooks
 * **Systems** plain functions, ordered by sets and run conditions
@@ -18,7 +18,7 @@ Scene-Dash is an ECS-driven gameplay architecture for [flutter_scene](https://pu
 * **States and machines** game states with enter/exit behavior and scoped entities and state machines
 * **Routines** a reusable sequencer for gameplay with an ordered flow: wave directors, objectives, encounters, tutorials
 * **Tweens and smoothing** `GameTween` for a value over a duration, `smoothTo` for a target that keeps moving, both on game time so they pause with it
-* **Input** buttons, axes, and buffered presses as resources; widgets write, systems read
+* **Input** buttons, axes, and buffered presses as resources. Widgets write, systems read
 * **Widgets** `WorldBuilder`, `EntityBuilder`, `GameStateBuilder` read world state straight into the widget tree
 * **Scene components** components authored in a `.fscene` read straight off the scene graph, or baked into entities
 * **Debug tooling** entity debug, debug draw, and a live inspector overlay
@@ -28,8 +28,8 @@ Scene-Dash is an ECS-driven gameplay architecture for [flutter_scene](https://pu
 
 ## World-reactive widgets
 
-A widget selects one value out of the world and rebuilds only when that
-value changes:
+A widget selects one value out of the world and rebuilds only when it
+changes:
 
 ```dart
 EntityBuilder<Health, double>(
@@ -121,7 +121,7 @@ List<Object> cubeBundle() => [       // a bundle: a function → the spawn list
 ];
 ```
 
-Hot reload applies edits to system bodies; there is no build step.
+Hot reload applies edits to system bodies. There is no build step.
 
 ## Quick start
 

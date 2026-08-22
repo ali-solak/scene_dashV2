@@ -1,48 +1,45 @@
 # `flutter_scene` Integration Guide
 
-How Scene-Dash composes with `flutter_scene`: node mounting, transform
-authority, scene commands, reaching native engine features, and the
-physics bridge. The [README](../README.md) covers the core ECS; this is
-the integration detail. Scene-Dash organizes gameplay code around
-`flutter_scene`; rendering, scene construction, cameras, physics, and widgets
-remain the native `flutter_scene` APIs.
+Node mounting, transform authority, scene commands, reaching native
+engine features, and the physics bridge. The [README](../README.md)
+covers the core ECS. Rendering, cameras, physics and widgets stay native
+`flutter_scene` APIs.
 
 ## Lifecycle
 
 `SceneGame.boot` wires the pure-Dart core to a `flutter_scene` scene. On
 boot, it:
 
-- exposes the real `Scene` and `SceneCommands` as resources;
+- exposes the real `Scene` and `SceneCommands` as resources
 - mounts entity-bound `SceneNode` nodes into the scene **before** the
-  `update` phase (and once at startup), so a gameplay system never needs a
-  `node.parent == null` guard: a queried node is already in the scene;
-- syncs optional `SceneTransform` components onto bound nodes;
-- exposes a `SceneNodeIndex` resource, the node → entity reverse lookup;
-- attaches physics when the `physics:` parameter is given (below);
-- exposes `game.onTick` for **your** `SceneView` (the framework never
-  constructs one) and drives the scene tick on `GameClock`-scaled time,
-  so `timeScale`, `paused`, and `freezeFor` (hitstop) slow or halt physics
-  stepping, animations, and gameplay together. Systems that keep moving
-  while game time is stopped (HUD, camera shake) read
-  `FrameTime.unscaledDelta` instead.
+  `update` phase, and once at startup, so a queried node is already in
+  the scene and no system needs a `node.parent == null` guard
+- syncs optional `SceneTransform` components onto bound nodes
+- exposes a `SceneNodeIndex` resource, the node to entity reverse lookup
+- attaches physics when the `physics:` parameter is given (below)
+- exposes `game.onTick` for **your** `SceneView`, which the framework
+  never constructs
 
-A mounted entity also gains an integration-managed `Mounted` tag (removed
-on unmount/despawn) for the rare system that wants to filter on
-scene-mounted entities; bundles never author it.
+The scene tick runs on `GameClock` time, so `timeScale`, `paused` and
+`freezeFor` slow or stop physics, animation and gameplay together. HUD
+and camera shake, which should keep moving anyway, read
+`FrameTime.unscaledDelta`.
 
-`SceneGame.scene` is non-null, a `SceneGame` always owns a scene.
-a real `Scene` needs a Flutter GPU context, so this boot fails fast
-without one. A widget tree over a *scene-less* world (editor panels,
-widget-test harnesses) is a different type, `WorldGame.boot(...)`: same
-physics and gameplay wiring, same `onTick`-driven frames, no scene member
-at all. Pure-logic suites with no widget tree want the core package's
-`TestGame.headless` instead.
+A mounted entity also gets a `Mounted` tag, which goes away on unmount or
+despawn. It is there if you ever want to query for what is in the scene.
+Your bundles never add it.
+
+A `SceneGame` always owns a scene, so `SceneGame.scene` is never null. A
+real `Scene` needs a Flutter GPU context, so boot fails fast without one.
+For a widget tree over a world with no scene, editor panels or widget
+tests, use `WorldGame.boot(...)` instead. Same physics and gameplay
+wiring, same `onTick`-driven frames, no scene. For pure logic with no
+widget tree, use the core package's `TestGame.headless`.
 
 ## Direct node path: mutate nodes yourself
 
-The starter example uses `SceneTransform` because it is the easiest path
-to understand. When you want to avoid duplicated transform state, store a
-`SceneNode` and mutate the native `flutter_scene` node directly:
+To avoid duplicated transform state, store a `SceneNode` and mutate the
+native `flutter_scene` node directly:
 
 ```dart
 final class Orbit {
@@ -73,21 +70,15 @@ void orbitNodes(World world) {
 }
 ```
 
-The ECS stores the node reference directly and mutates the native node,
-which keeps visual-only state where `flutter_scene` already holds it.
+> **Access-metadata rule:** changing something you reached *through* a
+> component, a `Node` or a Rapier body behind `SceneNode`, still counts
+> as writing that component. Register with `writes: {SceneNode}` whenever
+> a system touches the node or its native components.
 
-> **Access-metadata rule:** mutating an object reached through a component
-> (a `Node` or a Rapier body behind `SceneNode`) counts as *writing* that
-> component for scheduling diagnostics. The scheduler runs sequentially
-> and cannot infer transitive mutations, so register with
-> `writes: {SceneNode}` whenever a system changes the referenced node or
-> its native components.
-
-Two idioms recur on this path: a node matrix must be *reassigned* (or
-marked) after an in-place edit so the dirty flag trips, and
-`getTranslation()` allocates a fresh vector per call. The
-`NodeTransformOps` extension encodes both once, so per-frame systems
-neither rediscover the rules nor allocate:
+Two traps on this path. A node matrix must be reassigned, or marked,
+after an in-place edit, or the dirty flag never trips. And
+`getTranslation()` allocates a fresh vector per call. `NodeTransformOps`
+handles both:
 
 ```dart
 node.setLocalTRS(x, y, z, sx, sy, sz);   // rebuild translate+scale in place
@@ -95,9 +86,9 @@ node.setLocalUniform(0, bob, 0, pulse);  // one uniform scale
 node.globalTranslationInto(scratch);     // world position, no allocation
 ```
 
-(The orbit example above edits translation *within* an existing rotation,
-so it uses `setTranslationRaw` + `markTransformDirty` directly;
-`setLocalTRS` rebuilds the whole matrix.)
+The orbit example edits translation inside an existing rotation, so it
+uses `setTranslationRaw` directly. `setLocalTRS` rebuilds the whole
+matrix.
 
 ## ECS-owned transforms
 
@@ -112,23 +103,18 @@ final transform = SceneTransform.zero()
   ..setUniformScale(1.5);
 ```
 
-`SceneTransform` is a local translation/rotation/scale component with a
-complete gameplay API: translation (`setTranslation`, `translate`), scale
-(`setScale`, `setUniformScale`), rotation (`setRotationX/Y/Z`,
-`setRotationEuler`, `setRotationAxisAngle`, `setRotation`, and relative
-`rotate`/`rotateX/Y/Z`), `lookAt`, copy/reset (`setFrom`, `setIdentity`),
-and a matrix escape hatch (`setFromMatrix`, `toMatrix`). Angles are
-radians; forward is +Z and up is +Y, matching the engine. The fields stay
-directly mutable, so there is no dirty tracking; helper calls and direct
-field mutation are equivalent.
+`SceneTransform` holds a local position, rotation and scale, with the
+usual move, rotate, scale and `lookAt` helpers and a way in and out of a
+raw matrix. Angles are radians, forward is +Z, up is +Y. The fields are
+plain and mutable, so writing one directly is the same as calling a
+helper.
 
-The integration writes it onto the bound node during
-`Schedules.renderSync`. Add `PhysicsDriven` to entities whose node
-transform is owned by physics or another authority, so generic sync skips
-them.
+It gets written onto the bound node during `Schedules.renderSync`. Add
+`PhysicsDriven` when physics or something else owns the transform
+instead, and the sync skips that entity.
 
-Games with a different transform type can use `CustomSceneSyncPlugin<T>`
-and provide either a translation callback or a full matrix writer.
+Got your own transform type? `CustomSceneSyncPlugin<T>` takes either a
+translation callback or a full matrix writer.
 
 ## Scene commands
 
@@ -142,10 +128,8 @@ void addDecoration(World world) {
 
 ## Using flutter_scene directly
 
-Scene-Dash deliberately does **not** wrap `flutter_scene`. New engine
-features become usable through two access points it already gives you, so
-there is no bridge layer to keep in sync with each `flutter_scene`
-release:
+Scene-Dash does **not** wrap `flutter_scene`. New engine features reach
+you through two access points:
 
 - **Scene-wide features → the `Scene` resource.** A startup system
   mutates the live scene directly.
@@ -183,17 +167,15 @@ void setupScene(World world) {
 ```
 
 `runIf: hasResource<Scene>()` is the standard shape for systems that
-build visuals: headless boots (tests) skip them at the schedule, the body
-reads the scene unconditionally, and the dependency sits in the manifest
-next to `reads:`/`writes:` instead of repeating as a guard in every body.
-The example game gates every `vfx` spawn system this way.
+build visuals. Headless boots skip them, so the body can read the scene
+without a guard.
 
 ### Picking: `SceneNodeIndex` (node → entity)
 
-`SceneNode` is entity → node. `Scene.raycast` and `ScenePointer` return a
-`Node`, so to act on the entity you hit, read the `SceneNodeIndex`
-resource the integration maintains. `entityOf` walks up ancestors, so a
-hit on a child mesh still resolves to the bound entity:
+`SceneNode` gets you entity → node. `Scene.raycast` and `ScenePointer`
+hand back a `Node`, so go the other way through the `SceneNodeIndex`
+resource. `entityOf` walks up parents, so hitting a child mesh still
+finds the entity that owns it:
 
 ```dart
 void pick(World world) {
@@ -211,7 +193,7 @@ void pick(World world) {
 ## Physics and collisions
 
 Scene-Dash does not implement physics. Hand `SceneGame.boot` the native
-`flutter_scene` `PhysicsWorld` you want; it is attached to the scene graph
+`flutter_scene` `PhysicsWorld` you want. It is attached to the scene graph
 and bridged into the ECS:
 
 ```dart
@@ -221,11 +203,10 @@ final game = await SceneGame.boot(
 );
 ```
 
-`BasicPhysicsWorld` is useful for picking, raycasts, overlap checks,
-trigger events, and kinematic-only gameplay. It does not simulate dynamic
-rigid bodies. For full rigid-body contact response, use a backend world
-such as `flutter_scene_rapier`; the bridge works through the same
-`PhysicsWorld` interface either way.
+`BasicPhysicsWorld` covers picking, raycasts, overlap checks, triggers
+and kinematic gameplay. It does not simulate dynamic rigid bodies. For
+those, use a backend like `flutter_scene_rapier`. The bridge is the same
+either way.
 
 Physics objects live on the `flutter_scene` node. The ECS entity stores a
 `SceneNode`, plus `PhysicsDriven` when physics owns the transform:
@@ -275,11 +256,9 @@ void probeGround(World world) {
 
 ### Entity-carrying overlap queries
 
-Overlap results name scene nodes, so gameplay code would otherwise repeat
-the same preamble on every hit: check the collider's layer, call
-`SceneNodeIndex.entityOf`, skip the misses. `overlapSphereEntities` and
-`overlapBoxEntities` do that resolution once and deliver each hit's
-*entity* (plus the raw `OverlapHit`) to a callback:
+Overlap results name scene nodes. `overlapSphereEntities` and
+`overlapBoxEntities` resolve them and hand each hit's *entity*, plus the
+raw `OverlapHit`, to a callback:
 
 ```dart
 void meleeSwing(World world) {
@@ -294,30 +273,26 @@ void meleeSwing(World world) {
 }
 ```
 
-Semantics worth knowing:
+Worth knowing:
 
-- Hits whose node (and ancestors) is not entity-bound are skipped; use
-  the raw `overlapSphere` when unmanaged geometry matters.
-- `layerMask` is passed to the backend *and* re-checked result-side
-  against the abstract `Collider.collisionLayer`, covering backends that
-  accept the parameter without forwarding it natively
+- Hits whose node and ancestors are not entity-bound are skipped. Use the
+  raw `overlapSphere` when unmanaged geometry matters.
+- `layerMask` goes to the backend and is checked again on the results,
+  because some backends take the parameter without actually using it
   (`flutter_scene_rapier` 0.2.x).
-- A node carrying several colliders on the queried layer delivers once per
-  collider; per-entity dedup belongs to the consumer (the per-swing set
-  above).
-- The extension types only against the abstract `PhysicsWorld`/`Collider`
-  contract from core `flutter_scene`, so every backend works unchanged.
+- A node with several colliders on that layer fires once per collider.
+  Deduping per entity is your job, like the per-swing set above.
 
-This is the synchronous counterpart of the collision *events* below:
-overlap queries resolve inside the running system (melee swings, blast
-radii), while collision events arrive the following frame.
+This is the immediate version of the collision *events* below. An overlap
+query answers inside the system that ran it, which is what a melee swing
+or a blast radius needs. Collision events land the following frame.
 
 ### Collision events
 
-The physics bridge registers `CollisionEvent` as an ECS event and drains
-the native async stream at `Schedules.frameStart`; on top of it, each
-collision's nodes are resolved back to entities once and republished as
-`EntityCollision`, so systems never repeat the node-to-entity lookup:
+The bridge drains the native collision stream at `Schedules.frameStart`
+and publishes it as `CollisionEvent`. It also looks each collision's
+nodes back up to entities once and republishes that as
+`EntityCollision`, so your systems never do the lookup themselves:
 
 ```dart
 void damageOnImpact(World world) {
@@ -337,14 +312,10 @@ void _hurt(World world, Entity? entity) {
 }
 ```
 
-Events arrive a frame late, a platform constraint rather than a scheduling
-choice: `flutter_scene`'s collision streams are async, so a contact from
-frame N's physics is only readable in frame N+1.
+Collision events arrive a frame late: the native streams are async.
 
-For larger games, treat raw collision data as a bridge boundary. Keep
-gameplay semantics in your own components and resources (layers, teams,
-sensors, hitboxes, damage) and translate physics events or query results
-into game-specific events (`world.emit(HitLanded(...))`). That keeps the
-physics backend swappable: Scene-Dash owns scheduling, resources, events,
-and queries; `flutter_scene` and the selected backend own colliders,
-bodies, raycasts, overlap checks, and collision generation.
+In a bigger game, stop at the bridge. Keep the gameplay meaning in your
+own components and resources, things like layers, teams, sensors,
+hitboxes and damage, and turn physics events into your own events with
+`world.emit(HitLanded(...))`. Then swapping the physics backend stays a
+small job.

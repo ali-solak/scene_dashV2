@@ -32,33 +32,32 @@ entity IDs: [4, 9, 12]
 values:     [Velocity(...), Velocity(...), Velocity(...)]
 ```
 
-Queries hand systems direct references to the stored objects, and systems
-mutate those objects in place. There is no per-result wrapper, copy, or
-record on the hot path.
+A query hands your system the stored object itself, and the system
+changes it in place. Nothing is wrapped or copied on the way.
 
-Tags implement the `Tag` marker and are stored as bitsets: filtering on
-one is a bit test, and `require:`/`exclude:` never cost a query slot.
+A tag is a component with no data, kept in the same stores. Checking for
+one is a single lookup, it holds nothing per entity, and it never uses up
+a query slot.
 
 ## Cache everything stable
 
 Registration resolves stable handles once:
 
-- component stores register lazily on first insert and are then permanent;
-- a system's event cursor (`world.events<T>()`) is created at its first
-  run and memoized per registration;
-- query construction registers its stores at the typed site and the
-  iteration driver reuses them.
+- a component store is built the first time you insert that type, and
+  then it stays
+- a system gets its own event cursor (`world.events<T>()`) on its first
+  run and keeps it
+- a query registers its stores where you write the types, and the loop
+  reuses them
 
-A frame should not repeatedly perform service lookup, reflection, or
-channel registration. (One deliberate exception: a record query view is
-constructed per `world.query…()` call; it is a thin façade over the
-cached machinery, and the [benchmarks](../benchmarks) price it.)
+One exception. Every `world.query…()` call builds a small view object.
+The [benchmarks](../benchmarks) measure it.
 
 ## Allocate nothing per matching entity
 
-Hot queries avoid result lists, per-entity records, component copies,
-iterator wrappers, temporary vectors, and closures created inside the
-inner loop. The target loop stays simple:
+A hot query allocates nothing per row. No result list, no record, no
+copy, no iterator wrapper, no scratch vector, no closure built inside the
+loop:
 
 ```dart
 world.query2<SceneTransform, Velocity>().each((entity, transform, velocity) {
@@ -66,13 +65,8 @@ world.query2<SceneTransform, Velocity>().each((entity, transform, velocity) {
 });
 ```
 
-`.each` is the primary form for exactly this reason. The record form,
-`for (final (e, t, v) in query.records)`, allocates one record per row
-and is the documented cold-path alternative, not the default.
-
-The same discipline runs through the integration: `NodeTransformOps`
-mutates node matrices in place, debug-draw submissions write plain floats into
-instanced pools, and per-frame systems keep scratch vectors at file scope.
+`.each` is the main form. `for (final (e, t, v) in query.records)`
+allocates one record per row, so keep it off the hot path.
 
 ## Drive from the smallest store
 
@@ -82,85 +76,76 @@ For a query like:
 world.query2<SceneTransform, Velocity>(require: const [Player])
 ```
 
-Scene-Dash iterates whichever positive store has the fewest members, then
-checks the rest through sparse arrays. This helps selective gameplay
-queries; it is not aimed at broad homogeneous table iteration.
+Scene-Dash walks whichever store holds the fewest entities, then checks
+the others by lookup. That helps picky gameplay queries. It is not built
+for sweeping one big uniform table.
 
-It is also why composites beat fragments here, unlike in archetype ECSes:
-fewer components per query means fewer sparse lookups per entity, so state
-that always travels together belongs in one component, and queries stop at
-four slots by design.
+Every extra component in a query is another lookup per entity, so state
+that always travels together belongs in one component. Queries stop at
+four.
 
 ## Avoid duplicated scene data by default
 
-Duplicating every node transform into ECS state and syncing it every frame
-is not always the best default. For visual-only state, store a `SceneNode`
-and mutate the native node directly. Reach for `SceneTransform` (ECS-owned
-transforms) when that state actually buys serialization, rollback,
-networking, renderer independence, or headless simulation.
+For visual-only state, store a `SceneNode` and mutate the native node
+directly. Reach for `SceneTransform` when ECS-owned transforms buy you
+something real: serialization, rollback, networking, renderer
+independence, or headless simulation.
 
 ## Deferred by construction
 
-The structural verbs (`spawn`, `despawn`, `add`, `remove`, `ownedBy:`)
-are command-buffered and flushed at frame boundaries, so despawning inside
-`.each` is safe by construction rather than by care. Owned-spawn chains
-resolve to a fixpoint in one boundary, and `DespawnOnExit`/`DespawnAfter`
-ride the same path. The immediate `*Now` variants exist for setup code and
-live in `advanced.dart` with their no-active-query asserts.
+`spawn`, `despawn`, `add`, `remove` and `ownedBy:` are queued and applied
+at the frame boundary, so despawning inside `.each` is safe. If an owned
+entity spawns more owned entities, all of it settles in the same
+boundary, and `DespawnOnExit`/`DespawnAfter` go the same way. The `*Now`
+versions happen immediately. They are for setup code, they live in
+`advanced.dart`, and they assert if a query is running.
 
 ## Logic on components
 
 A component may carry logic. The boundary: the object computes, the
 system performs world effects. A component method never holds or touches
-`World`; holding an `Entity` as data is fine. Machines expose edges;
-systems spawn, emit and mutate on them.
+`World`. Holding an `Entity` as data is fine. Machines expose edges.
+Systems spawn, emit and mutate on them.
 
 ### State at four scales
 
 The same edge vocabulary at every scale:
 
-- **`GameTimer`**: durations inside gameplay (cooldowns, windups,
-  cadences): `tick(world.dt)`, `finished`, `justFinished` true for
-  exactly one tick.
-- **`GameTween<T>`**: a *value* over that duration (a camera move, a hit
-  flash, a material fade): `tick(world.dt)`, `value`, `justFinished`, plus
+- **`GameTimer`**: a duration. Cooldowns, windups, cadences.
+  `tick(world.dt)`, `finished`, `justFinished` true for exactly one tick.
+- **`GameTween<T>`**: a *value* over that duration. A camera move, a hit
+  flash, a material fade. `tick(world.dt)`, `value`, `justFinished`, plus
   a curve. `smoothTo` is the version for a target that keeps moving.
-- **`Machine<S>`**: an entity's *mode* (idle / charging / rolling):
-  `tick(world.dt)`, `elapsed`, `go`, with `justEntered`/`justExited`
-  true for exactly one tick-window.
-- **`Routine<L>`**: a reusable *sequencer* for gameplay with an ordered
-  flow (wave director, objective, encounter): `advance(world.dt, run)`,
-  `current`, `elapsed`, where the driver answers `running` / `success` /
-  `failure` per step. The sequence is a `const`, so one plan drives every
-  entity running it.
-- **Whole-game state machines** (`addState<S>`): title / playing /
-  lost, with transitions applied at frame boundaries, `OnEnter`/`OnExit`
-  as schedules, `inState(...)` as the run condition.
+- **`Machine<S>`**: an entity's *mode*. Idle, charging, rolling.
+  `tick(world.dt)`, `elapsed`, `go`, with `justEntered`/`justExited` true
+  for exactly one tick-window.
+- **`Routine<L>`**: a *sequencer*. A wave director, an objective, an
+  encounter. `advance(world.dt, run)`, `current`, `elapsed`, and the
+  driver answers `running` / `success` / `failure` per step. The sequence
+  is a `const`, so one plan drives every entity running it.
+- **Whole-game state machines** (`addState<S>`): title, playing, lost.
+  Transitions apply at frame boundaries, `OnEnter`/`OnExit` are
+  schedules, `inState(...)` is the run condition.
 
-Timers, tweens, machines and routines are plain values ticked by their
-owner systems, so they pause, slow and freeze with the game and add
-nothing to the schedule; whole-game state is a framework machine because
-independent features must coordinate on it.
+The first four are plain values ticked by their owner system, so they
+pause, slow and freeze with the game and never touch the schedule.
+Whole-game state is a framework machine because separate features have to
+agree on it.
 
-A machine is a mode other systems read; a routine is a plan only its
+A machine is a mode other systems read. A routine is a plan only its
 driver reads. If anything outside the driver branches on where you are,
-it is a machine. A routine holds no conditions and no callbacks: the
-driver sees the world and reports the result, so a plan stays a value you
-can print, share and test.
+it is a machine.
 
 ### Where state lives
 
-An entity's condition is a component on that entity; an ongoing process
-is a component on its own process entity (run-scoped with
-`DespawnOnExit` like anything else); a resource is reserved for state
-where "two of them" is meaningless: score, indexes, input, shared
-pools. The test is "could there ever be two?" A singleton naming an
-entity's condition or a feature's process should be a component.
+An entity's condition is a component on that entity. An ongoing process
+is a component on its own entity, scoped with `DespawnOnExit` like
+anything else. A resource is a service you register once, for state where
+"two of them" is meaningless: score, indexes, input, shared pools. The
+test is "could there ever be two?"
 
-`world.single<T>()`/`singleOrNull<T>()` make component-singletons as
-ergonomic as the resources they replace; observers and `removeAfter:`
-carry the lifecycle work (activation VFX, timed expiry) the resource
-version hand-rolled.
+`world.single<T>()` and `singleOrNull<T>()` read a one-of-a-kind
+component without a query.
 
 ## Access metadata is diagnostic, not enforced
 
@@ -168,33 +153,25 @@ version hand-rolled.
 touches. The scheduler uses this to detect access conflicts between
 unordered systems (write/write and read/write) and to validate ordering.
 
-Dart cannot prevent mutation through an object declared read-only, and the
-scheduler cannot infer transitive mutations: when a system mutates a
-native object reached through a component reference (a `flutter_scene`
-node or a Rapier body behind a `SceneNode`), declare `writes: {SceneNode}`
-so the metadata stays honest. Scene-Dash runs schedules sequentially, so
-these declarations drive diagnostics rather than a borrow checker.
+Dart cannot stop you writing to something you declared read-only, and the
+scheduler cannot see through a reference. So when a system changes a
+node or a Rapier body it reached through a `SceneNode`, declare
+`writes: {SceneNode}` anyway. Otherwise the declaration is a lie and the
+diagnostics go with it.
 
-Declarations are optional: omitting both marks the system *undeclared* and
-excludes it from detection. `boot(strictAccess: true)` turns undeclared
-into an error for projects that want the full net, and a debug-mode check
-compares declared access against the component types the system's queries
-actually construct, warning on drift.
+Declaring is optional. Leave both off and the detector ignores the
+system. `boot(strictAccess: true)` makes that an error instead. Debug
+builds also warn when what you declared drifts from what your queries
+actually use.
 
-The detector is entity-blind: it pairs systems by component *type*, so
-two systems touching disjoint entities, or disjoint fields of one
-component, read as a conflict it cannot see through. When the author
-knows such a pair is independent, `independentOf: [other]` on either
-side exempts exactly that pairing instead of faking an ordering edge;
-ordering is untouched and every other pairing keeps the full net.
+The detector only looks at types, not entities. Two systems on completely
+different entities, or on different fields of one component, still look
+like a conflict to it. When you know a pair is fine,
+`independentOf: [other]` excuses just that pair.
 
 ## Optional system profiling
 
-System execution can be measured per system and per schedule via
-`AppDiagnostics(profileSystems: true)`. Profiling is off by default and
-adds no per-system work when disabled. When enabled, the `SystemProfiler`
-resource keeps a reusable `SystemTiming` record per (system, schedule)
-pair (run count, total/latest/maximum duration, last frame), keyed by the
-system's identity (its function reference, or the `label:` override) plus
-the schedule it ran in, and can warn when a system exceeds a configured
-`slowSystemThreshold`.
+`AppDiagnostics(profileSystems: true)` times every system, per schedule.
+It is off by default and costs nothing off. Turn it on and the
+`SystemProfiler` resource keeps a `SystemTiming` record for each one, and
+can warn you when a system runs longer than `slowSystemThreshold`.

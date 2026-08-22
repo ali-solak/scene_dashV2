@@ -56,7 +56,7 @@ EntityBuilder<Health, double>(
 )
 ```
 
-The siblings share the same heartbeat and the same select-and-compare:
+Same heartbeat, same select-and-compare:
 
 ```dart
 WorldBuilder<int>(select: (w) => w.query<Health>(require: const [Enemy]).count(),
@@ -84,8 +84,8 @@ WorldBuilder<int>(select: countAmmo, builder: ..., every: Duration(seconds: 1))
                                      //   wall-clock interval, not every frame
 ```
 
-When a feature spawned the entity (nothing in `main` holds the handle),
-`.matching` resolves it through the world instead:
+When a feature spawned the entity and nothing in `main` holds it,
+`.matching` finds it through the world:
 
 ```dart
 EntityBuilder<Health, double>.matching(
@@ -99,17 +99,17 @@ EntityBuilder<Health, double>.matching(
 // WorldBuilder<Entity?> (resolve) wrapping EntityBuilder (watch)
 ```
 
-A widget *in* the 3D world (a health bar above an enemy) is not a
-framework concern: put a `flutter_scene` `WidgetComponent` on a child
-node and the scene graph positions, projects and occludes it.
+For a widget *in* the 3D world, like a health bar above an enemy, put a
+`flutter_scene` `WidgetComponent` on a child node. The scene graph
+positions, projects and occludes it.
 
 Write path: UI → `ButtonInput` / `game.emit`. Widgets never mutate
 components.
 
 ### GameScope
 
-One `InheritedWidget` over the tree; every widget below it reaches the
-game from its own `context`, so nothing is threaded through constructors:
+One `InheritedWidget` over the tree. Every widget below it reaches the
+game from its own `context`, so nothing threads through constructors:
 
 ```dart
 runApp(GameScope(game: game, child: const MyGameApp()));
@@ -162,9 +162,8 @@ runApp(GameHost(game: game, child: const MyGameApp()));   // yours; the
 
 ## Features and systems
 
-A feature registers its systems; a system is a stateless
-`void Function(World)`, and every type it touches appears in a query
-signature or on a `world.` call.
+A feature registers its systems. A system is a stateless
+`void Function(World)`.
 
 ```dart
 const enemyCloseSpeed = 1.5;
@@ -251,13 +250,13 @@ List<Object> enemyBundle(Node node, {required Entity target}) => [
 ];
 ```
 
-`Stunned` is the transient kind: flipped at runtime, entering and
-leaving `exclude: [Stunned]` queries at the next frame boundary. Its full
-loop is in Events: `applyDamage` adds it, `recoverFromStun` removes it.
+`Stunned` is the kind you flip at runtime. It enters and leaves
+`exclude: [Stunned]` queries at the next frame boundary. Events has the
+full loop: `applyDamage` adds it, `recoverFromStun` removes it.
 
 A bundle binds to a plain `flutter_scene` node, usually built by the system
-that spawns the entity. Models loaded with `loadScene` come in as a resource
-instead, since loading is async and a system cannot await (Application setup).
+that spawns the entity. A system cannot await, so models from `loadScene`
+are loaded up front and handed over in a resource (Application setup).
 
 ```dart
 void spawnPlayer(World world) {
@@ -296,12 +295,11 @@ void installEnemies(GameBuilder game) {
 
 ## Queries
 
-`closeIn` already shows the whole iteration surface: `require:`/`exclude:`
-shape the match set; `.each` hands components to a callback,
-allocation-free (`return` = continue, `eachUntil` = break); and a held
-`Entity` (`Target.entity`, plain data on a component) resolves in O(1)
-with `tryGet`, degrading to a safe `null` when the target despawned or
-its slot was reused.
+`closeIn` already shows all of it. `require:`/`exclude:` shape the match
+set. `.each` hands you the components and allocates nothing (`return`
+continues, `eachUntil` breaks). An `Entity` you stored on a component,
+like `Target.entity`, comes back through `tryGet`, which gives you `null`
+once that entity is gone.
 
 ```dart
 final class Target {           // Entity is a value type: store it on
@@ -390,8 +388,9 @@ world.physics.overlapSphereEntities(index, at, radius, (entity, hit) => true);
 
 ## Resources
 
-One instance per world, keyed by type: the game's singletons (score,
-wave number, settings). Any system reaches one without a query:
+A service you register once and any system can ask for by type. Score,
+settings, the wave number, an audio bus, a shared pool. One instance per
+world, injected on demand, no query involved:
 
 ```dart
 final class Score { int value = 0; }
@@ -414,8 +413,9 @@ final class Ambience implements Disposable {
 }
 ```
 
-Framework state is promoted to members (`world.dt`, `world.clock`,
-`world.buttons`, `world.physics`, `world.debugDraw`), never `resource<T>()`.
+Framework state sits on `world` directly (`world.dt`, `world.clock`,
+`world.buttons`, `world.physics`, `world.debugDraw`), never behind
+`resource<T>()`.
 
 ## Scheduling: sets and run conditions
 
@@ -470,9 +470,9 @@ bool anyEnemiesLeft(World world) =>
 
 ## Custom schedules (game driven systems)
 
-A schedule you dispatch. fire a systems on demand once. A game driven system, instead of a frame driven.
-for example a turn, a round, a battle phase.
- `runSchedule` runs its systems once, in order. 
+A schedule you dispatch yourself. Systems fire on demand instead of every
+frame: a turn, a round, a battle phase. `runSchedule` runs its systems
+once, in order.
 
 ```dart
 abstract final class BattleSchedules {
@@ -540,7 +540,7 @@ world.clock.paused = true;           //   gameplay together; the fixed step
 ```
 
 Durations live on components and tick with `world.dt`, so they pause,
-slow and freeze with the game for free. The whole idiom is three lines:
+slow and freeze with the game:
 
 ```dart
 final cooldown = GameTimer(0.8);                     // a field on a component
@@ -589,7 +589,7 @@ Machine<S>(initial)        // modes; own section below
 
 ## GameTween
 
-Tween world values on game time. It ticks on `world.dt`, so it pauses and
+Tween a value on game time. It ticks with `world.dt`, so it pauses and
 slows with the game.
 
 ```dart
@@ -676,10 +676,10 @@ StepResult swing(Door door, double dt) {
 }
 ```
 
-One tween drives both halves: `reverse()` on the way back, guarded by
-`reversed` so it flips once and not every tick.
+One tween drives both halves. `reverse()` on the way back, guarded by
+`reversed` so it flips once instead of every tick.
 
-So `GameTween` has no chaining. Several animations in order is what
+`GameTween` has no chaining. Several animations in order is what
 `Routine` is for.
 
 ## Smoothing
@@ -708,9 +708,8 @@ moveToward  // move at a fixed rate until you arrive
 ## Observers
 
 React to a component appearing on or disappearing from any entity.
-Observers are registered explicitly per feature at install time. `onRemove`
-receives the still-live component instance and also fires when despawning an
-entity strips its components.
+Register them per feature at install time. `onRemove` still gets the live
+component, and it also fires when a despawn strips an entity.
 
 ```dart
 game.observe<Stunned>(
@@ -726,8 +725,8 @@ world.expiryOf<Stunned>(enemy);          // seconds left, or null
 
 ## Events
 
-One-shot messages between systems. Sender and reader never reference
-each other. Any class is an event; the channel opens on first emit.
+One-shot messages between systems. Sender and reader never reference each
+other. Any class works as an event, and the channel opens on first emit.
 
 ```dart
 final class EnemyKilled { final int bounty; EnemyKilled(this.bounty); }
@@ -839,9 +838,9 @@ void evaluateGameRules(World world) {
 world.previousState<GameStatus>()
 ```
 
-`enemyBundle` carries `DespawnOnExit(GameStatus.playing)`: leaving the
-state despawns every enemy automatically; a run spawns freely and needs
-no cleanup system.
+`enemyBundle` carries `DespawnOnExit(GameStatus.playing)`, so leaving the
+state despawns every enemy. A run spawns freely and needs no cleanup
+system.
 
 ## Machine
 
@@ -935,12 +934,11 @@ The strike itself resolves in Physics, below, gated on
 
 ## Routine
 
-A reusable sequencer for gameplay that has an ordered flow: wave
-directors, objectives, encounters, tutorials.
+A sequencer for gameplay that runs in a set order. Wave directors,
+objectives, encounters, tutorials.
 
 The sequence is a `const` value, so one plan drives every entity that runs
-it, and a different `const` is a different game mode through the same
-driver.
+it.
 
 The steps are your own types:
 
@@ -964,7 +962,7 @@ final class Rest extends WaveStep {
 }
 ```
 
-Build them into a plan. It is `const`, so every director shares one copy:
+Build them into a plan:
 
 ```dart
 const endless = Repeat(Sequence([Spawn(5), Clear(), Rest(3)]));
@@ -978,7 +976,7 @@ final class WaveDirector {
 }
 ```
 
-Then one system says what the steps actually do:
+Then one system says what the steps do:
 
 ```dart
 void runWaves(World world) {
@@ -1010,9 +1008,9 @@ Machine   // states you switch between, any order, decided as you go
 Routine   // steps you go through, in an order written down up front
 ```
 
-Patrolling, chasing, reloading, staggered: that is a behaviour loop, and
-`Machine` owns it fine. Reach for `Routine` when the sequence itself is
-the game flow:
+Patrolling, chasing, reloading, staggered is a behaviour loop, and
+`Machine` handles it. Reach for `Routine` when the order itself is the
+game flow:
 
 ```dart
 const encounter = Sequence([
@@ -1120,7 +1118,7 @@ SceneTransform.zero()    // when present, synced onto the bound node per frame
 const PhysicsDriven()    // a physics body owns the transform instead
 ```
 
-An entity's transform can also live on the node directly;
+An entity's transform can also live on the node directly.
 `NodeTransformOps` keeps per-frame mutation allocation-free:
 
 ```dart
@@ -1142,10 +1140,9 @@ void strafePlayer(World world) {
 ## Scene components
 
 `flutter_scene` attaches authored components to nodes as `.fscene` loads.
-They are not ECS components: nothing spawns an entity for them and no query
-sees them. Bake them into entities when gameplay owns them. read the tree
-directly when you only want the authored values.
-
+They are not ECS components. No entity is spawned for them and no query
+sees them. Bake them into entities when gameplay owns them, or read them
+off the tree when you only want the authored values.
 
 ```dart
 // The authored side: a flutter_scene Component, annotated so
@@ -1203,8 +1200,8 @@ scene.add(levelRoot);
 world.bakeSceneComponents<Torch>(root: levelRoot);
 ```
 
-When no entity is wanted, a marker you only draw or a one-off pass at load,
-read the scene graph instead:
+When you do not want an entity at all, a marker you only draw or a
+one-off pass at load, read the scene graph:
 
 ```dart
 // Lazy, so breaking out of the loop stops the walk.
@@ -1213,9 +1210,10 @@ for (final (node, torch) in world.sceneComponents<Torch>()) {
 }
 ```
 
-Both calls take `root:`, which scopes them to one level instead of everything
-loaded. A system cannot `await loadScene` itself, so keep the node it returned
-in a resource (Resources) when systems need to scope to that level.
+Both take `root:` to scope them to one level instead of everything
+loaded. A system cannot `await loadScene`, so keep the node it returned
+in a resource (Resources) if systems need to scope to that level.
+
 ## Debugging
 
 ### Entity debug
@@ -1261,15 +1259,15 @@ Stack(children: [
 ```
 
 Live entities (filter by `Name`, tap for component values), resources,
-system timings, event channels: read-only snapshots polled at 4 Hz,
-zero cost hidden. Debug builds also warn once per system when a query
-iterates inside another query's `each` (the accidental O(N×M) shape);
-hoist the inner query (see the query rules above).
+system timings, event channels. Read-only snapshots polled at 4 Hz, and
+nothing at all while hidden. Debug builds also warn once per system when
+a query iterates inside another query's `each`, which is the accidental
+O(N×M) shape. Hoist the inner query.
 
 ## Testing
 
-The fighter's i-frames, frame-exact: `TestGame` runs the exact device
-pipeline (schedule order, command boundaries, clock) with no scene, no
+The fighter's i-frames, frame-exact. `TestGame` runs the real device
+pipeline (schedule order, command boundaries, clock) with no scene and no
 GPU:
 
 ```dart

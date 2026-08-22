@@ -1,5 +1,3 @@
-# Dart workspace root. scene_dash_v2 depends on Flutter + flutter_scene, so
-# the workspace resolves via `flutter pub get` (not `dart pub get`).
 name: _scene_dash_v2_workspace
 publish_to: none
 
