@@ -14,6 +14,3 @@ workspace:
   - examples/combat_sample
   - benchmarks
 
-flutter:
-  assets:
-    - flutter_scene_generated/
