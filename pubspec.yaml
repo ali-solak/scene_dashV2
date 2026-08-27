@@ -13,3 +13,7 @@ workspace:
   - examples/basic_example_tower_defense
   - examples/combat_sample
   - benchmarks
+
+flutter:
+  assets:
+    - flutter_scene_generated/

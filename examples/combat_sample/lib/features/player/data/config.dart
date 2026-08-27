@@ -42,6 +42,13 @@ const double flinchSeconds = 0.28;
 
 const double lockedCameraBias = 0.5;
 
+/// Boom collision. The camera pulls in the instant the ground crosses the
+/// boom and eases back out, so a clip is never visible but the recovery is
+/// not a snap.
+const double cameraCollisionPadding = 0.35;
+const double minBoomLength = 1.6;
+final double cameraBoomRecoverHalfLife = math.ln2 / 4;
+
 const double lockOnLightHeight = 2.2;
 const double lockOnLightIntensity = 9;
 const double lockOnLightRange = 4.5;

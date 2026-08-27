@@ -17,5 +17,6 @@ void mountCombatCamera(Scene scene) {
 }
 
 void aimCombatCamera(CameraRig rig) {
-  _cameraNode?.localTransform = Node.lookAtTransform(rig.position, rig.target);
+  _cameraNode?.localTransform =
+      Node.lookAtTransform(rig.position, rig.target) * rig.shakeOffset;
 }

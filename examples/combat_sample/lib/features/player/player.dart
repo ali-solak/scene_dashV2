@@ -2,8 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter_scene/scene.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
+import 'package:flutter_scene/physics.dart' show PhysicsWorld;
 import 'package:vector_math/vector_math.dart'
-    show Matrix4, Quaternion, Vector3, Vector4;
+    show Matrix4, Quaternion, Ray, Vector3, Vector4;
 
 import '../enemies/enemies.dart'
     show Enemy, Brawler, BrawlPhase, telegraphSeconds;
@@ -11,6 +12,7 @@ import '../../fx/dash_dust.dart';
 import '../../common/actors.dart';
 import '../../common/camera.dart';
 import '../../common/light_channels.dart';
+import '../../common/physics_layers.dart';
 import '../../common/camera_rig.dart';
 import '../../common/combat_math.dart';
 import '../../assets/character_assets.dart';

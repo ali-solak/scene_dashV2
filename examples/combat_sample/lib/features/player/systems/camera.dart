@@ -1,11 +1,8 @@
 part of '../player.dart';
 
 // Shared scratch, reused each frame.
-final Vector3 _shakeForward = Vector3.zero();
-final Vector3 _shakeRight = Vector3.zero();
-final Vector3 _shakeUp = Vector3.zero();
-final Vector3 _shakeAim = Vector3.zero();
-final Vector3 _shakeWorldUp = Vector3(0, 1, 0);
+final Vector3 _boomDir = Vector3.zero();
+final Ray _boomRay = Ray.originDirection(Vector3.zero(), Vector3(0, 0, 1));
 
 void installPlayerCamera(GameBuilder game) {
   game
@@ -51,59 +48,61 @@ void updateCameraRig(World world) {
   _aim(rig, world.resource<LookInput>(), position, target, dt);
   _focus(rig, position, target);
   _ease(rig, _framingDistance(position, target), dt);
+  _retract(world, rig, dt);
   _applyShake(rig, dt);
   aimCombatCamera(rig);
 }
 
-/// Publishes the boom's vectors with this frame's shake folded in. The
-/// translation rides the camera's own axes so a jolt reads as the camera
-/// being knocked, not the world sliding.
-void _applyShake(CameraRig rig, double dt) {
-  rig.position.setFrom(rig.basePosition);
-  rig.target.setFrom(rig.baseTarget);
-  if (rig.shake.trauma <= 0) return;
-
-  final offset = rig.shake.update(dt);
-  _shakeForward
-    ..setFrom(rig.baseTarget)
-    ..sub(rig.basePosition);
-  final reach = _shakeForward.length;
-  if (reach < 1e-6) return;
-  _shakeForward.scale(1 / reach);
-  _shakeRight
-    ..setFrom(_shakeWorldUp)
-    ..crossInto(_shakeForward, _shakeRight);
-  if (_shakeRight.length2 < 1e-12) return;
-  _shakeRight.normalize();
-  _shakeUp
-    ..setFrom(_shakeForward)
-    ..crossInto(_shakeRight, _shakeUp);
-
-  rig.position
-    ..addScaled(_shakeRight, offset.translation.x)
-    ..addScaled(_shakeUp, offset.translation.y)
-    ..addScaled(_shakeForward, offset.translation.z);
-
-  // Pitch about the camera's right, not its forward, which would roll.
-  _shakeAim
-    ..setFrom(_shakeForward)
-    ..applyAxisAngle(_shakeWorldUp, offset.rotationEuler.y)
-    ..applyAxisAngle(_shakeRight, offset.rotationEuler.x);
-  rig.target
+/// Pulls the eye in when the ground crosses the boom, so the camera never
+/// ends up under the plateau looking up through it.
+void _retract(World world, CameraRig rig, double dt) {
+  if (!world.hasResource<PhysicsWorld>()) return;
+  _boomDir
     ..setFrom(rig.position)
-    ..addScaled(_shakeAim, reach);
+    ..sub(rig.target);
+  final reach = _boomDir.length;
+  if (reach < 1e-4) return;
+  _boomDir.scale(1 / reach);
+  _boomRay.origin.setFrom(rig.target);
+  _boomRay.direction.setFrom(_boomDir);
+  final hit = world.physics.raycast(
+    _boomRay,
+    maxDistance: reach,
+    layerMask: PhysicsLayers.ground,
+    includeFixed: true,
+    includeKinematic: false,
+    includeDynamic: false,
+  );
+  final allowed = hit == null
+      ? reach
+      : math.max(hit.distance - cameraCollisionPadding, minBoomLength);
+  rig.boom = allowed < rig.boom
+      ? allowed
+      : smoothTo(rig.boom, allowed, dt, cameraBoomRecoverHalfLife);
+  if (rig.boom >= reach) return;
+  rig.position
+    ..setFrom(rig.target)
+    ..addScaled(_boomDir, rig.boom);
+}
+
+void _applyShake(CameraRig rig, double dt) {
+  if (rig.shake.trauma <= 0) {
+    rig.shakeOffset.setIdentity();
+    return;
+  }
+  rig.shakeOffset.setFrom(rig.shake.update(dt).toMatrix4());
 }
 
 void _orbitTitle(CameraRig rig, double dt) {
   rig
     ..yaw += titleOrbitRate * dt
     ..pitch = titleCameraPitch;
-  rig.baseTarget.setValues(0, cameraFocusHeight, 0);
+  rig.target.setValues(0, cameraFocusHeight, 0);
   final horizontal = titleCameraDistance * math.cos(rig.pitch);
-  rig.basePosition.setValues(
-    rig.baseTarget.x - math.sin(rig.yaw) * horizontal,
-    rig.baseTarget.y + titleCameraDistance * math.sin(rig.pitch),
-    rig.baseTarget.z - math.cos(rig.yaw) * horizontal,
+  rig.position.setValues(
+    rig.target.x - math.sin(rig.yaw) * horizontal,
+    rig.target.y + titleCameraDistance * math.sin(rig.pitch),
+    rig.target.z - math.cos(rig.yaw) * horizontal,
   );
 }
 
@@ -137,14 +136,14 @@ void _aim(
 
 void _focus(CameraRig rig, Vector3 position, SceneTransform? target) {
   if (target == null) {
-    rig.baseTarget.setValues(
+    rig.target.setValues(
       position.x,
       position.y + cameraFocusHeight,
       position.z,
     );
     return;
   }
-  rig.baseTarget.setValues(
+  rig.target.setValues(
     position.x + (target.translation.x - position.x) * lockedCameraBias,
     position.y + cameraFocusHeight,
     position.z + (target.translation.z - position.z) * lockedCameraBias,
@@ -164,9 +163,9 @@ double _framingDistance(Vector3 position, SceneTransform? target) {
 
 void _ease(CameraRig rig, double distance, double dt) {
   final horizontal = distance * math.cos(rig.pitch);
-  final desiredX = rig.baseTarget.x - math.sin(rig.yaw) * horizontal;
-  final desiredY = rig.baseTarget.y + distance * math.sin(rig.pitch);
-  final desiredZ = rig.baseTarget.z - math.cos(rig.yaw) * horizontal;
+  final desiredX = rig.target.x - math.sin(rig.yaw) * horizontal;
+  final desiredY = rig.target.y + distance * math.sin(rig.pitch);
+  final desiredZ = rig.target.z - math.cos(rig.yaw) * horizontal;
 
   var halfLife = cameraPositionHalfLife;
   if (rig.intro > 0) {
@@ -174,9 +173,9 @@ void _ease(CameraRig rig, double distance, double dt) {
     halfLife = introCameraHalfLife;
   }
   final blend = smoothBlend(dt, halfLife);
-  rig.basePosition.setValues(
-    rig.basePosition.x + (desiredX - rig.basePosition.x) * blend,
-    rig.basePosition.y + (desiredY - rig.basePosition.y) * blend,
-    rig.basePosition.z + (desiredZ - rig.basePosition.z) * blend,
+  rig.position.setValues(
+    rig.position.x + (desiredX - rig.position.x) * blend,
+    rig.position.y + (desiredY - rig.position.y) * blend,
+    rig.position.z + (desiredZ - rig.position.z) * blend,
   );
 }
