@@ -9,6 +9,8 @@ import 'package:vector_math/vector_math.dart'
 
 import '../../common/actors.dart';
 import '../../common/camera_rig.dart';
+import '../../common/light_channels.dart';
+import '../../common/widget_quad.dart';
 import '../../common/combat_math.dart';
 import '../../assets/character_assets.dart';
 import '../../common/game_state.dart';

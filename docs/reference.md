@@ -36,7 +36,6 @@ The full API surface
 - Tooling
   - [Debugging](#debugging)
     - [Entity debug](#entity-debug)
-    - [Debug draw](#debug-draw)
     - [Inspector](#inspector)
   - [Testing](#testing)
 
@@ -152,7 +151,6 @@ final game = await SceneGame.boot(
     installPlayer,
     installEnemies,
     installRules,
-    installDebugDraw(enabled: kDebugMode),
   ],
 );
 
@@ -414,7 +412,7 @@ final class Ambience implements Disposable {
 ```
 
 Framework state sits on `world` directly (`world.dt`, `world.clock`,
-`world.buttons`, `world.physics`, `world.debugDraw`), never behind
+`world.buttons`, `world.physics`), never behind
 `resource<T>()`.
 
 ## Scheduling: sets and run conditions
@@ -1206,7 +1204,7 @@ one-off pass at load, read the scene graph:
 ```dart
 // Lazy, so breaking out of the loop stops the walk.
 for (final (node, torch) in world.sceneComponents<Torch>()) {
-  world.debugDraw.sphere(node.globalTransform.getTranslation(), torch.radius);
+  lightUp(node.globalTransform.getTranslation(), torch.radius);   // yours
 }
 ```
 
@@ -1228,25 +1226,6 @@ print(world.debugDescribe(grunt));
 
 // a component that overrides toString renders its live value instead of
 // its type; a Machine owner prints e.g. `striking (0.12s)`
-```
-
-### Debug draw
-
-```dart
-features: [installDebugDraw(enabled: kDebugMode), ...]   // opt-in render layer
-
-void debugDrawCombat(World world) {
-  world.query2<Fighter, SceneTransform>(require: const [Player])
-      .each((entity, fighter, transform) {
-    if (fighter.phase.state == FighterPhase.striking) {
-      world.debugDraw.sphere(transform.translation, strikeRange,
-          color: DebugColor.red);              // the hit volume, visible
-    }
-  });
-}
-
-world.debugDraw.enabled = false;   // off = zero draw calls; calls stay in
-                                //   shipping code as early-return no-ops
 ```
 
 ### Inspector

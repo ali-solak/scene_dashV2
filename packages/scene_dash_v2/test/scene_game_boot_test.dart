@@ -51,8 +51,6 @@ void main() {
     expect(game.world.physics, same(physics));
     expect(game.engine.root.getComponent<PhysicsWorld>(), same(physics));
     game.world.eventChannel<EntityCollision>();
-    // Headless games still have the debug-draw buffer.
-    game.world.debugDraw.enabled = false;
   });
 
   test('strictAccess is enforced through boot', () async {

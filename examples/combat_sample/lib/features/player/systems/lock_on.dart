@@ -27,6 +27,14 @@ void installLockOn(GameBuilder game) {
       inSet: GameSets.logic,
       reads: const {Player, Enemy, Target, Brawler, NodeRef},
       runIf: hasResource<Scene>(),
+    )
+    ..addSystem(
+      Schedules.update,
+      trackLockOnLight,
+      inSet: GameSets.logic,
+      reads: const {Player, Target, SceneTransform},
+      after: const [updateEnemyHighlights],
+      runIf: hasResource<Scene>(),
     );
 }
 
@@ -166,11 +174,61 @@ void updateEnemyHighlights(World world) {
         : EnemyHighlights.none;
     if (applied[enemy.index] == state) return;
     applied[enemy.index] = state;
-    _setHighlight(
+    final isLocked = state == EnemyHighlights.locked;
+    _setHighlight(ref.node, isLocked ? Vector4(1.0, 0.78, 0.25, 1.0) : null);
+    setLightChannels(
       ref.node,
-      state == EnemyHighlights.locked ? Vector4(1.0, 0.78, 0.25, 1.0) : null,
+      isLocked
+          ? defaultLightChannels | lockOnLightChannel
+          : defaultLightChannels,
     );
   });
+}
+
+/// Parks the lock-on light above the target. It is masked to
+/// [lockOnLightChannel], which only that enemy carries, so it rims the
+/// target without touching the ground, the grass, or the enemy beside it.
+void trackLockOnLight(World world) {
+  final scene = world.resource<Scene>();
+  final player = world.entitiesWith(require: const [Player]).firstOrNull;
+  final locked = player == null ? null : world.tryGet<Target>(player)?.entity;
+  final node = _lockOnLightNode ??= _buildLockOnLight(scene);
+
+  final transform = locked == null
+      ? null
+      : world.tryGet<SceneTransform>(locked);
+  if (transform == null) {
+    node.visible = false;
+    return;
+  }
+  node
+    ..visible = true
+    ..localTransform = Matrix4.translation(
+      Vector3(
+        transform.translation.x,
+        transform.translation.y + lockOnLightHeight,
+        transform.translation.z,
+      ),
+    );
+}
+
+Node? _lockOnLightNode;
+
+Node _buildLockOnLight(Scene scene) {
+  final node = Node(name: 'lock-on-light')
+    ..frustumCulled = false
+    ..addComponent(
+      PointLightComponent(
+        PointLight(
+          color: Vector3(1.0, 0.82, 0.42),
+          intensity: lockOnLightIntensity,
+          range: lockOnLightRange,
+          channelMask: lockOnLightChannel,
+        ),
+      ),
+    );
+  scene.root.add(node);
+  return node;
 }
 
 final class EnemyHighlights {

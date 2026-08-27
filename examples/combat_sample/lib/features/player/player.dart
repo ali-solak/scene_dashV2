@@ -9,6 +9,8 @@ import '../enemies/enemies.dart'
     show Enemy, Brawler, BrawlPhase, telegraphSeconds;
 import '../../fx/dash_dust.dart';
 import '../../common/actors.dart';
+import '../../common/camera.dart';
+import '../../common/light_channels.dart';
 import '../../common/camera_rig.dart';
 import '../../common/combat_math.dart';
 import '../../assets/character_assets.dart';

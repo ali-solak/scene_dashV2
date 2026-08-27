@@ -8,6 +8,7 @@ import 'package:vector_math/vector_math.dart' show Vector3;
 
 import 'common/camera.dart';
 import 'common/camera_rig.dart';
+import 'common/debug_draw.dart';
 import 'common/game_state.dart';
 import 'common/sets.dart';
 import 'features/collectables/collectables.dart';
@@ -55,7 +56,7 @@ Future<void> main() async {
       installRocks,
       installCollectables,
       installRules,
-      installDebugDraw(enabled: showDebugDraw),
+      installDebugDraw(),
       installDecor,
     ],
   );

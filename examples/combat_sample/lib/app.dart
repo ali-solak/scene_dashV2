@@ -10,7 +10,6 @@ import 'package:flutter_scene/scene.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 
 import 'boot.dart';
-import 'common/camera.dart';
 import 'common/camera_rig.dart';
 import 'features/world/data/config.dart' as config;
 import 'screens/game_screen.dart';
@@ -86,7 +85,6 @@ class _CombatAppState extends State<CombatApp> {
       loadingBuilder: (context, progress) =>
           LoadingScreen(stage: _bootStage, progress: progress),
       warmUp: !config.isMobile,
-      cameraBuilder: (elapsed) => buildCombatCamera(elapsed, _cameraRig),
       onTick: (elapsed, deltaSeconds) => _game?.onTick(elapsed, deltaSeconds),
     );
 

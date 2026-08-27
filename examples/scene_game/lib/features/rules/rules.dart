@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter_scene/kit.dart' show DebugDraw;
 import 'package:flutter_scene/scene.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart' show Ray, Vector3;
@@ -7,6 +8,7 @@ import 'package:vector_math/vector_math.dart' show Ray, Vector3;
 import '../collectables/collectables.dart';
 import '../collectables/data/config.dart';
 import '../../common/camera_rig.dart';
+import '../../common/debug_draw.dart';
 import '../../common/game_state.dart';
 import '../../common/physics_layers.dart';
 import '../../common/sets.dart';
@@ -14,6 +16,8 @@ import '../player/data/config.dart';
 import '../player/player.dart';
 import 'data/config.dart';
 import 'package:flutter_scene/physics.dart';
+
+import '../../hud/debug_panel.dart';
 
 part 'systems/systems.dart';
 

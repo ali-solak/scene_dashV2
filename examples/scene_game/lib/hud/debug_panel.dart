@@ -46,10 +46,8 @@ class DebugPanel extends StatelessWidget {
                   icon: Icons.grid_3x3,
                   semanticLabel: 'Toggle debug draw',
                   active: settings.debugDraw,
-                  onPressed: () {
-                    settings.debugDraw = !settings.debugDraw;
-                    world.debugDraw.enabled = settings.debugDraw;
-                  },
+                  onPressed: () =>
+                      settings.debugDraw = !settings.debugDraw,
                 ),
                 const SizedBox(width: 8),
                 _ToggleChip(

@@ -21,12 +21,14 @@ void evaluateGameRules(World world) {
 
 bool _fellOff(World world, GameState game, Vector3 position) {
   if (game.survived <= startupGrace) return false;
-  world.debugDraw.ray(
-    position,
-    _down,
-    groundProbeDistance,
-    color: DebugColor.yellow,
-  );
+  if (world.resource<DebugSettings>().debugDraw) {
+    DebugDraw.ray(
+      position,
+      _down,
+      length: groundProbeDistance,
+      color: DebugColors.yellow,
+    );
+  }
   _groundRay.origin.setFrom(position);
   final ground = world.physics.raycast(
     _groundRay,
@@ -42,11 +44,13 @@ bool _fellOff(World world, GameState game, Vector3 position) {
 }
 
 void _resolveRockHits(World world, Entity player, Vector3 position) {
-  world.debugDraw.sphere(
-    position,
-    playerCollisionRadius + hitPadding,
-    color: DebugColor.red,
-  );
+  if (world.resource<DebugSettings>().debugDraw) {
+    DebugDraw.sphere(
+      position,
+      playerCollisionRadius + hitPadding,
+      color: DebugColors.red,
+    );
+  }
   final knockback = world.single<PlayerKnockback>();
   // Shield state is fixed for this scan.
   final shielded = world.has<Shielded>(player);

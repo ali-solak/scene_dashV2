@@ -54,14 +54,17 @@ void stopBlasterOnRunEnd(World world) {
 }
 
 void updateProjectiles(World world) {
+  final drawDebug = world.resource<DebugSettings>().debugDraw;
   world.query2<Projectile, NodeRef>().each((entity, projectile, binding) {
     binding.node.globalTranslationInto(_projectilePosition);
     final position = _projectilePosition;
-    world.debugDraw.sphere(
-      position,
-      projectileHitRadiusForCharge(projectile.charge),
-      color: DebugColor.blue,
-    );
+    if (drawDebug) {
+      DebugDraw.sphere(
+        position,
+        projectileHitRadiusForCharge(projectile.charge),
+        color: DebugColors.blue,
+      );
+    }
 
     final hitCount = _knockRocks(world, position, projectile);
     if (hitCount > 0) {

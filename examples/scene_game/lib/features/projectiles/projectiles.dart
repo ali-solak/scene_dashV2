@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart' show Size;
+import 'package:flutter_scene/kit.dart' show DebugDraw;
 import 'package:flutter_scene/scene.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:vector_math/vector_math.dart' show Matrix4, Vector3, Vector4;
@@ -9,6 +10,8 @@ import '../../fx/particles.dart' as fx;
 import '../../fx/particle_texture.dart';
 import '../../common/bounds.dart';
 import '../../common/camera_rig.dart';
+import '../../common/widget_quad.dart';
+import '../../common/debug_draw.dart';
 import '../../common/sets.dart';
 import '../../common/game_state.dart';
 import '../../common/physics_layers.dart';
@@ -19,6 +22,8 @@ import '../rocks/rocks.dart';
 import 'data/config.dart';
 import 'vfx/reticle_widget.dart';
 import 'package:flutter_scene/physics.dart';
+
+import '../../hud/debug_panel.dart';
 
 part 'data/components.dart';
 part 'data/resources.dart';

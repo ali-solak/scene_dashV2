@@ -18,6 +18,9 @@ const double lockAcquireRange = 12;
 const double lockBreakRange = 15;
 
 const double cameraDistance = 10;
+
+const double lightHitTrauma = 0.28;
+const double heavyHitTrauma = 0.55;
 const double cameraFocusHeight = 2.0;
 
 const double cameraPitchMin = -0.1;
@@ -38,6 +41,10 @@ const double lookPitchSensitivity = 0.0045;
 const double flinchSeconds = 0.28;
 
 const double lockedCameraBias = 0.5;
+
+const double lockOnLightHeight = 2.2;
+const double lockOnLightIntensity = 9;
+const double lockOnLightRange = 4.5;
 
 const double lockedDistanceGain = 0.55;
 const double maxLockedCameraDistance = 16;

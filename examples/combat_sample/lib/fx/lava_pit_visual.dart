@@ -98,7 +98,7 @@ MeshGeometry _jaggedDisc(double radius, {int segments = 64}) {
     final v = (i + 1) * 3;
     positions[v] = math.cos(theta) * r;
     positions[v + 2] = math.sin(theta) * r;
-    if (i > 0) indices.addAll([0, i, i + 1]);
+    if (i > 0) indices.addAll([0, i + 1, i]);
   }
   return MeshGeometry.fromArrays(
     positions: positions,

@@ -28,6 +28,8 @@ const double enemyCapsuleHeight = 0.8;
 const double healthBarHeight = 3;
 const double healthBarWorldHeight = 0.2;
 
+const Size healthBarCanvas = Size(240, 64);
+
 const double healthBarShakeSeconds = 0.3;
 const double healthBarShakePop = 0.45;
 const double healthBarShakeTilt = 0.22;

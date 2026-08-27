@@ -8,7 +8,6 @@ export 'src/entity_collision.dart';
 export 'src/entity_queries.dart';
 export 'src/game.dart';
 export 'src/game_scope.dart';
-export 'src/debug_draw.dart';
 export 'src/node_transform_ops.dart';
 export 'src/physics_event_bridge.dart';
 export 'src/physics_plugin.dart';

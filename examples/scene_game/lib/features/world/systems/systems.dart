@@ -34,8 +34,15 @@ void setupWorld(World world) {
     ..smoothness = 0.62;
 
   scene
-    ..antiAliasingMode = AntiAliasingMode.auto
+    // Cleaner edges than fxaa with far less blurring of the platform's
+    // texture detail, at three post passes instead of one.
+    ..antiAliasingMode = AntiAliasingMode.smaa
     ..renderScale = 1.0;
+  // Cascade 0 covers the platform the camera actually watches; the rest of
+  // the range spreads over the falling rocks.
+  scene.directionalLight
+    ?..firstCascadeFarBound = 24
+    ..cascadeOverlap = 0.15;
   // SSAO is off by default and requires the PerspectiveCamera this game uses.
   scene.ambientOcclusion
     ..enabled = true

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1
+- breaking: removed debugDraw since flutterscene now provides DebugDraw itself.
+- upgrade to flutter_scene 0.23
+- updated examples
+
 ## 0.5.0
 - upgrade to flutter scene 0.22.1 and introduces a way to use authored components for .fscene in ecs via installSceneBaker
 

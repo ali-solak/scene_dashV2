@@ -9,13 +9,16 @@ final Vector3 _reticlePlayerPos = Vector3.zero();
 /// and never carry a reticle.
 void spawnLockOnReticle(World world) {
   final model = ReticleModel();
+  const size = Size.square(reticleCanvas);
+  const worldHeight = rockRadius * 4.4;
   final component = WidgetComponent(
     child: ReticleWidget(model),
-    size: const Size.square(reticleCanvas),
-    worldHeight: rockRadius * 4.4,
+    size: size,
+    worldHeight: worldHeight,
     pixelRatio: 1.5,
     input: WidgetInput.manual,
     update: WidgetUpdatePolicy.everyFrame,
+    geometry: widgetQuad(size: size, worldHeight: worldHeight),
   );
   final node = Node()
     ..frustumCulled = false

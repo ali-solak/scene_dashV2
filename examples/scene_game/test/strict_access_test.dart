@@ -3,6 +3,7 @@ import 'package:scene_dash_v2/scene_dash_v2.dart';
 import 'package:scene_game/features/collectables/collectables.dart';
 import 'package:scene_game/features/decor/decor.dart';
 import 'package:scene_game/common/camera_rig.dart';
+import 'package:scene_game/common/debug_draw.dart';
 import 'package:scene_game/common/game_state.dart';
 import 'package:scene_game/common/sets.dart';
 import 'package:scene_game/hud/debug_panel.dart';
@@ -36,7 +37,7 @@ void main() {
             ..world.insert(FpsCounter())
             ..world.insert(DebugSettings());
         },
-        installDebugDraw(enabled: false),
+        installDebugDraw(),
         installWorldGeometry,
         installPlayer,
         installProjectiles,

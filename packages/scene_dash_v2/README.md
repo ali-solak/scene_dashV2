@@ -21,7 +21,7 @@ Scene-Dash is an ECS-driven gameplay architecture for [flutter_scene](https://pu
 * **Input** buttons, axes, and buffered presses as resources. Widgets write, systems read
 * **Widgets** `WorldBuilder`, `EntityBuilder`, `GameStateBuilder` read world state straight into the widget tree
 * **Scene components** components authored in a `.fscene` read straight off the scene graph, or baked into entities
-* **Debug tooling** entity debug, debug draw, and a live inspector overlay
+* **Debug tooling** entity debug and a live inspector overlay
 * **Headless testing** run systems, schedules, and whole features with no rendering
 
 [flutter_scene](https://pub.dev/packages/flutter_scene) keeps doing the rendering. Scene-Dash is the gameplay layer on top.
@@ -168,7 +168,6 @@ flutter run --enable-flutter-gpu
 - Tooling
   - [Debugging](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#debugging)
     - [Entity debug](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#entity-debug)
-    - [Debug draw](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#debug-draw)
     - [Inspector](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#inspector)
   - [Testing](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#testing)
 
@@ -180,7 +179,7 @@ flutter run --enable-flutter-gpu
 | Path | Purpose |
 | --- | --- |
 | [`packages/scene_dash_v2_core`](https://github.com/ali-solak/scene_dashV2/blob/main/packages/scene_dash_v2_core) | Pure-Dart ECS runtime, authoring surface, headless `TestGame`. |
-| [`packages/scene_dash_v2`](https://github.com/ali-solak/scene_dashV2/blob/main/packages/scene_dash_v2) | `flutter_scene` integration: `SceneGame.boot`, mounting, transform sync, physics bridge, debug draw, widget layer. Re-exports core, so one import covers both. |
+| [`packages/scene_dash_v2`](https://github.com/ali-solak/scene_dashV2/blob/main/packages/scene_dash_v2) | `flutter_scene` integration: `SceneGame.boot`, mounting, transform sync, physics bridge, widget layer. Re-exports core, so one import covers both. |
 | [`packages/scene_dash_inspector`](https://github.com/ali-solak/scene_dashV2/blob/main/packages/scene_dash_inspector) | Optional debug overlay: live entities, resources, system timings, event channels. Read-only, polled at 4 Hz. |
 | [`examples/scene_game`](https://github.com/ali-solak/scene_dashV2/blob/main/examples/scene_game) | Complete game: Rapier physics, one feature per folder. |
 | [`examples/headless_example`](https://github.com/ali-solak/scene_dashV2/blob/main/examples/headless_example) | The core without Flutter. |

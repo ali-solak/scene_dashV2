@@ -49,7 +49,9 @@ void attachPlayerVisuals(World world) {
         Vector3.all(characterScale),
       ),
     )..add(model);
-    world.add(player, NodeRef(Node(name: 'player')..add(wrapper)));
+    final playerRoot = Node(name: 'player')..add(wrapper);
+    setLightChannels(playerRoot, defaultLightChannels);
+    world.add(player, NodeRef(playerRoot));
     world.add(player, buildPlayerAnimator(assets, model));
     if (weapon != null) {
       // Rides a node at the blade tip; points are recorded in world space,
@@ -95,6 +97,7 @@ void attachPlayerVisuals(World world) {
         ),
       )..mesh = Mesh(CuboidGeometry(Vector3(0.14, 0.14, 0.3)), material),
     );
+  setLightChannels(root, defaultLightChannels);
   world.add(player, NodeRef(root));
 }
 

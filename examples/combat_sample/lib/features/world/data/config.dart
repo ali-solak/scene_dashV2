@@ -5,7 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter_scene/scene.dart'
-    show DirectionalShadowFilter, ToneMappingMode;
+    show AntiAliasingMode, DirectionalShadowFilter, ToneMappingMode;
 import 'package:vector_math/vector_math.dart' show Vector2, Vector3;
 
 final bool isMobile =
@@ -125,6 +125,32 @@ const double sceneVignetteSmoothness = 0.6;
 /// Grass blades used by the ultra quality preset.
 const int grassBladeCount = 80000;
 
+/// Where cascade 0 ends, out of [shadowMaxDistance].
+///
+/// The boom sits ten units behind the player, so everything the eye
+/// actually audits is inside this radius. Pinning it holds one cascade's
+/// full resolution there instead of letting the split scheme spend it on
+/// the treeline.
+const double shadowFirstCascadeFarBound = 18;
+
+/// Fraction of each cascade tile that cross-fades into the next. Costs a
+/// second lookup only for fragments inside the band.
+const double shadowCascadeOverlap = 0.15;
+
+/// The irradiance volume, placed by hand rather than fitted. fitScene would
+/// swallow the ocean's 700-unit grid and spread every probe over open water.
+/// Half-size, centred on [giVolumeCenterHeight]: wide enough to hold the
+/// plateau and the orbiting camera, which has to be inside it to select it.
+final Vector3 giVolumeExtents = Vector3(28, 12, 28);
+const double giVolumeCenterHeight = 3;
+
+/// Roughly one probe every three units.
+final Vector3 giResolution = Vector3(16, 8, 16);
+
+/// The clearing is lit by a low sun off warm ground, so the bounce is
+/// strong. Held back from 1.0 so it reads as fill, not a second sun.
+const double giIntensity = 0.75;
+
 typedef QualityPreset = ({
   String label,
   int blades,
@@ -133,12 +159,19 @@ typedef QualityPreset = ({
   bool godRays,
   bool softParticles,
   bool autoExposure,
+  AntiAliasingMode antiAliasing,
   DirectionalShadowFilter shadowFilter,
+  // 0 hands cascades off hard, which reads as a seam across the clearing
+  // floor where the resolution steps.
+  double cascadeOverlap,
   // Grounds what cascade resolution misses: feet on grass, weapon on body.
   bool contactShadows,
   // Denser fields need wider blades. At one width for every count the extra
   // blades land as sub-pixel slivers, which shimmer instead of thickening.
   double bladeWidthScale,
+  // The probe field. Desktop only: it forces the normals prepass and adds
+  // the injection, blend, and filter passes.
+  bool globalIllumination,
 });
 
 const List<QualityPreset> qualityPresets = [
@@ -150,8 +183,13 @@ const List<QualityPreset> qualityPresets = [
     godRays: false,
     softParticles: false,
     autoExposure: false,
-    shadowFilter: DirectionalShadowFilter.fixedPcf,
+    // Three post passes buy little at 0.6 scale; msaa where the backend
+    // has it is the cheaper edge.
+    antiAliasing: AntiAliasingMode.auto,
+    shadowFilter: DirectionalShadowFilter.bilinearPcf,
+    cascadeOverlap: 0,
     contactShadows: false,
+    globalIllumination: false,
     bladeWidthScale: 1.0,
   ),
   (
@@ -162,8 +200,13 @@ const List<QualityPreset> qualityPresets = [
     godRays: false,
     softParticles: false,
     autoExposure: false,
-    shadowFilter: DirectionalShadowFilter.fixedPcf,
+    antiAliasing: AntiAliasingMode.auto,
+    // Smooth analog penumbras inside the same 16-sample budget the stepped
+    // fixedPcf grid was spending.
+    shadowFilter: DirectionalShadowFilter.bilinearPcf,
+    cascadeOverlap: shadowCascadeOverlap,
     contactShadows: false,
+    globalIllumination: false,
     bladeWidthScale: 1.0,
   ),
   (
@@ -174,8 +217,13 @@ const List<QualityPreset> qualityPresets = [
     godRays: false,
     softParticles: false,
     autoExposure: false,
+    // Trades 4x msaa's geometric edges for smaa's far gentler treatment of
+    // texture detail, which the grass field and bark need more.
+    antiAliasing: AntiAliasingMode.smaa,
     shadowFilter: DirectionalShadowFilter.rotatedPoisson,
+    cascadeOverlap: shadowCascadeOverlap,
     contactShadows: false,
+    globalIllumination: false,
     bladeWidthScale: 1.0,
   ),
   (
@@ -186,8 +234,11 @@ const List<QualityPreset> qualityPresets = [
     godRays: true,
     softParticles: true,
     autoExposure: true,
+    antiAliasing: AntiAliasingMode.smaa,
     shadowFilter: DirectionalShadowFilter.rotatedPoisson,
+    cascadeOverlap: shadowCascadeOverlap,
     contactShadows: false,
+    globalIllumination: true,
     bladeWidthScale: 1.0,
   ),
 ];

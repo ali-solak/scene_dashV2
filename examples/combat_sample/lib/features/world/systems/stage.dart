@@ -38,8 +38,13 @@ void setupWorld(World world) {
     )
     ..toneMapping = sceneToneMapping
     ..exposure = sceneExposure
-    ..antiAliasingMode = AntiAliasingMode.auto;
+    ..antiAliasingMode = qualityPresets[defaultQualityLevel].antiAliasing;
   final boot = qualityPresets[defaultQualityLevel];
+  // SunLight.resolve rewrites the managed light every frame from its own
+  // fields, and it carries neither of these, so they stay put once set.
+  scene.sunLight!.light
+    ..firstCascadeFarBound = shadowFirstCascadeFarBound
+    ..cascadeOverlap = boot.cascadeOverlap;
   setSoftParticles(boot.softParticles);
   // Baked here rather than on the first gush: it is ~100k pixels of noise,
   // and behind the loading screen nobody feels it.
@@ -79,6 +84,25 @@ void setupWorld(World world) {
     ..enabled = boot.ambientOcclusion
     ..intensity = 0.55 // 0.21 folded the estimator's 2x
     ..radius = 0.4;
+
+  scene.root.add(
+    Node(
+        name: 'irradiance-volume',
+        localTransform: Matrix4.translation(
+          Vector3(0, giVolumeCenterHeight, 0),
+        ),
+      )
+      ..addComponent(
+        IrradianceVolumeComponent(
+          extents: giVolumeExtents,
+          resolution: giResolution,
+        ),
+      ),
+  );
+  scene.globalIllumination
+    ..enabled = boot.globalIllumination
+    ..volumeMode = IrradianceVolumeMode.component
+    ..intensity = giIntensity;
 }
 
 /// Applies requested quality settings.
@@ -125,10 +149,17 @@ void _applyQuality(
   scene
     ..ambientOcclusion.enabled = preset.ambientOcclusion
     ..godRays.enabled = preset.godRays
-    ..autoExposure.enabled = preset.autoExposure;
+    ..autoExposure.enabled = preset.autoExposure
+    ..antiAliasingMode = preset.antiAliasing;
+  if (scene.globalIllumination.enabled != preset.globalIllumination) {
+    scene.globalIllumination.enabled = preset.globalIllumination;
+    // Switching back on, the field still holds what it accumulated before.
+    if (preset.globalIllumination) scene.invalidateGlobalIllumination();
+  }
   scene.sunLight
     ?..shadowFilter = preset.shadowFilter
-    ..contactShadows = preset.contactShadows;
+    ..contactShadows = preset.contactShadows
+    ..light.cascadeOverlap = preset.cascadeOverlap;
 
   if (grass == null || grassMaterial == null) return;
   if (qualityPresets[fromLevel].blades == preset.blades) return;

@@ -93,7 +93,8 @@ Node _buildGround(WorldAssets assets) {
                 ..baseColorFactor = Vector4(0.12, 0.3, 0.08, 1)
                 ..roughnessFactor = 1),
         )
-        ..shadowStatic = true;
+        ..shadowStatic = true
+        ..lightChannelMask = defaultLightChannels;
 
   final wall =
       Node(
@@ -213,7 +214,7 @@ Node _buildGrass(WorldAssets assets) {
   }
   // Deliberately NOT shadowStatic: the sway is a vertex displacement, and
   // cached shadow tiles would not follow it.
-  final node = Node(name: 'grass');
+  final node = Node(name: 'grass')..lightChannelMask = defaultLightChannels;
   _bakeGrass(
     node,
     material,

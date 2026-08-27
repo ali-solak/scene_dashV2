@@ -148,6 +148,7 @@ void attachEnemyVisuals(World world) {
 
     final root = Node(name: 'enemy')..add(body);
     _attachHealthBar(world, enemy, root, giant: giant);
+    setLightChannels(root, defaultLightChannels);
     world.add(enemy, NodeRef(root));
     if (animator != null) world.add(enemy, animator);
     world.add(
@@ -174,10 +175,14 @@ void _attachHealthBar(
       )..addComponent(
         WidgetComponent(
           child: HealthBarWidget(fraction: fraction),
-          size: const Size(240, 64),
+          size: healthBarCanvas,
           worldHeight: healthBarWorldHeight,
           pixelRatio: 1.5,
           input: WidgetInput.manual,
+          geometry: widgetQuad(
+            size: healthBarCanvas,
+            worldHeight: healthBarWorldHeight,
+          ),
         ),
       );
   root.add(barNode);

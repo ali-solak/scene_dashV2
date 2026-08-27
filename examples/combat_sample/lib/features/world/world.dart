@@ -9,6 +9,7 @@ import '../../fx/particle_texture.dart' show flameAtlasSprite, setSoftParticles;
 import '../../fx/lava_pit_visual.dart' show buildLavaWarmup;
 import '../../fx/wave_crash.dart';
 import '../../common/actors.dart' show GrassBurns;
+import '../../common/light_channels.dart';
 import '../../common/physics_layers.dart';
 import 'data/assets.dart';
 import 'data/components.dart';
