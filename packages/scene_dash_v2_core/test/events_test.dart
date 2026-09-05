@@ -18,6 +18,28 @@ final class Ponged extends Signal {
 
 void main() {
   group('EventChannel', () {
+    test('forEach leaves callback-emitted events for the next read', () {
+      final channel = EventChannel<Pinged>();
+      final reader = channel.reader();
+      final other = channel.reader();
+      // Exercise a nonzero base after consumed events are reclaimed.
+      channel.send(const Pinged(0));
+      reader.consume();
+      other.consume();
+      channel.update();
+      channel.send(const Pinged(1));
+      final seen = <int>[];
+      reader.forEach((event) {
+        seen.add(event.id);
+        channel.send(const Pinged(2));
+      });
+      expect(seen, [1]);
+      expect(reader.hasUnread, isTrue);
+      channel.update();
+      expect(reader.drain().map((e) => e.id), [2]);
+      expect(other.drain().map((e) => e.id), [1, 2]);
+    });
+
     test('a reader drains only events sent after it was created', () {
       final channel = EventChannel<Pinged>();
       channel.send(const Pinged(0)); // before reader exists

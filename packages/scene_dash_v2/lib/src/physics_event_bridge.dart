@@ -20,7 +20,8 @@ final class PhysicsEventBridge {
   /// Starts listening to the physics world's collision stream.
   void start() {
     if (_subscription != null) return;
-    _subscription = world.collisions.listen(_incoming.add);
+    // Read the current buffer when an event arrives; drainTo swaps the lists.
+    _subscription = world.collisions.listen((event) => _incoming.add(event));
   }
 
   /// Sends all buffered events to [writer] and clears the buffer.

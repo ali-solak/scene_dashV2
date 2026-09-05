@@ -27,7 +27,8 @@ final class SpawnQueue {
   /// Where the aged-parked-part diagnostic goes; wired by the game shell.
   void Function(String message)? onDiagnostic;
 
-  final List<_PendingSpawn> _pending = <_PendingSpawn>[];
+  // Cancels queued spawn/add callbacks on reset without a second command FIFO.
+  int _resetEpoch = 0;
   final Map<Entity, List<Object>> _parked = <Entity, List<Object>>{};
   final Map<Entity, int> _parkedAtFrame = <Entity, int>{};
   final Set<Type> _reportedParkedTypes = <Type>{};
@@ -47,13 +48,37 @@ final class SpawnQueue {
   /// Reserves an entity now and queues [parts] for the next [flush].
   Entity enqueue(List<Object> parts, {Entity? ownedBy}) {
     final entity = world.entities.spawn();
-    _pending.add(_PendingSpawn(entity, parts, ownedBy));
+    _queueParts(entity, parts, ownedBy);
     return entity;
   }
 
   /// Adds [part] to [entity] during the next [flush].
   void addPart(Entity entity, Object part) {
-    _pending.add(_PendingSpawn(entity, <Object>[part], null));
+    _queueParts(entity, <Object>[part], null);
+  }
+
+  void _queueParts(Entity entity, List<Object> parts, Entity? ownedBy) {
+    final epoch = _resetEpoch;
+    world.commands.defer(entity, (world, entity) {
+      if (epoch != _resetEpoch || !world.isAlive(entity)) return;
+      _applyParts(entity, parts, ownedBy);
+    });
+  }
+
+  /// Removes [T] at its position in the structural command FIFO, including
+  /// parts that have not yet been claimed by a typed store.
+  void removePart<T>(Entity entity) {
+    world.commands.defer(entity, (world, entity) {
+      final parts = _parked[entity];
+      if (parts != null) {
+        parts.removeWhere((part) => part is T);
+        if (parts.isEmpty) {
+          _parked.remove(entity);
+          _parkedAtFrame.remove(entity);
+        }
+      }
+      world.removeNow<T>(entity);
+    });
   }
 
   /// Creates the store for [T] and inserts waiting parts.
@@ -93,16 +118,13 @@ final class SpawnQueue {
       var passes = 0;
       do {
         world.commands.apply();
-        _applyPending();
         passes++;
         if (passes > 64) {
           throw StateError(
             'Spawns and owned despawns did not settle after 64 passes.',
           );
         }
-      } while (_sweepOwnedOnce() ||
-          _pending.isNotEmpty ||
-          !world.commands.isEmpty);
+      } while (_sweepOwnedOnce() || !world.commands.isEmpty);
     } finally {
       world.endFlush();
     }
@@ -110,32 +132,24 @@ final class SpawnQueue {
     _reportAgedParked();
   }
 
-  void _applyPending() {
-    if (_pending.isEmpty) return;
-    for (var i = 0; i < _pending.length; i++) {
-      final pending = _pending[i];
-      final entity = pending.entity;
-      if (!world.isAlive(entity)) continue;
-      final owner = pending.ownedBy;
-      if (owner != null) world.insertNow<OwnedBy>(entity, OwnedBy(owner));
-      for (final part in pending.parts) {
-        final type = part.runtimeType;
-        if (world.stores.isRegistered(type)) {
-          world.insertNowByType(type, entity, part);
-        } else if (part is Tag) {
-          throw StateError(
-            'spawn(...) included tag $type, but no tag store is registered '
-            'for it. Tag stores cannot be created from an instance; call '
-            'registerTag<$type>() at install time.',
-          );
-        } else {
-          (_parked[entity] ??= <Object>[]).add(part);
-          _parkedAtFrame[entity] ??=
-              world.resources.tryGet<FrameTime>()?.frame ?? 0;
-        }
+  void _applyParts(Entity entity, List<Object> parts, Entity? owner) {
+    if (owner != null) world.insertNow<OwnedBy>(entity, OwnedBy(owner));
+    for (final part in parts) {
+      final type = part.runtimeType;
+      if (world.stores.isRegistered(type)) {
+        world.insertNowByType(type, entity, part);
+      } else if (part is Tag) {
+        throw StateError(
+          'spawn(...) included tag $type, but no tag store is registered '
+          'for it. Tag stores cannot be created from an instance; call '
+          'registerTag<$type>() at install time.',
+        );
+      } else {
+        (_parked[entity] ??= <Object>[]).add(part);
+        _parkedAtFrame[entity] ??=
+            world.resources.tryGet<FrameTime>()?.frame ?? 0;
       }
     }
-    _pending.clear();
   }
 
   bool _sweepOwnedOnce() {
@@ -224,16 +238,8 @@ final class SpawnQueue {
 
   /// Drops all pending spawns.
   void reset() {
-    _pending.clear();
+    _resetEpoch++;
     _parked.clear();
     _parkedAtFrame.clear();
   }
-}
-
-final class _PendingSpawn {
-  final Entity entity;
-  final List<Object> parts;
-  final Entity? ownedBy;
-
-  _PendingSpawn(this.entity, this.parts, this.ownedBy);
 }

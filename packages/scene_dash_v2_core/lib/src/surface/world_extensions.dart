@@ -109,7 +109,7 @@ extension WorldSurface on World {
   /// Removes [T] from [entity] at the next command flush.
   void remove<T>(Entity entity) {
     resources.tryGet<RemoveAfterTracker>()?.cancel(entity, T);
-    commands.remove<T>(entity);
+    SpawnQueue.of(this).removePart<T>(entity);
   }
 
   /// Time until [T] is removed from [entity].

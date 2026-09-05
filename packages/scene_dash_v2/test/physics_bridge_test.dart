@@ -40,6 +40,29 @@ CollisionBegan _collision() => CollisionBegan(
 );
 
 void main() {
+  test('collision delivery continues across buffer swaps', () async {
+    final world = _FakeWorld();
+    final bridge = PhysicsEventBridge(world)..start();
+    final channel = EventChannel<CollisionEvent>();
+    final reader = channel.reader();
+    addTearDown(() async {
+      await bridge.dispose();
+      await world.controller.close();
+    });
+
+    for (var batch = 0; batch < 3; batch++) {
+      final collision = _collision();
+      world.controller.add(collision);
+      await Future<void>.delayed(Duration.zero);
+      expect(bridge.pending, 1);
+      bridge.drainTo(channel.writer());
+      expect(reader.drain(), [same(collision)]);
+      expect(bridge.pending, 0);
+      bridge.drainTo(channel.writer());
+      expect(reader.drain(), isEmpty);
+    }
+  });
+
   test(
     'PhysicsEventBridge subscribes on start and disposes idempotently',
     () async {

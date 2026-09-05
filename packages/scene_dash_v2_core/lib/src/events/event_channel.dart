@@ -189,16 +189,19 @@ final class EventReader<T> {
   /// Invokes [callback] for every unread event without allocating a result
   /// list, then advances this reader's cursor.
   ///
+  /// Events sent by the callback remain unread until the next read.
+  ///
   /// If [callback] throws, the cursor is left unchanged so the unread events can
   /// be retried.
   void forEach(void Function(T event) callback) {
     final from = _cursor - _channel._base;
     final start = from < 0 ? 0 : from;
     final end = _channel._events.length;
+    final endCursor = _channel._base + end;
     for (var i = start; i < end; i++) {
       callback(_channel._events[i]);
     }
-    _cursor = _channel._end;
+    _cursor = endCursor;
   }
 
   /// Consumes unread events and reports whether any existed.
