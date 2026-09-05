@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.1
+- a variety of ordering fixes for events and command buffers
+
 ## 0.5.0
 - upgrade deps
 

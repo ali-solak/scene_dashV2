@@ -56,11 +56,11 @@ final class Game {
   /// Pulses after each rendered frame.
   Listenable get frameTick => _frameTick;
 
-  /// Mounts new nodes and flushes scene commands.
+  /// Settles gameplay changes before reconciling mounts and scene commands.
   void _mountStep() {
+    _extraCommandBoundary?.call();
     _mountAdapter.run();
     sceneCommands.flush();
-    _extraCommandBoundary?.call();
   }
 
   bool _started = false;

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.2
+- - a variety of ordering fixes for events and command buffers
+
 ## 0.5.1
 - breaking: removed debugDraw since flutterscene now provides DebugDraw itself.
 - upgrade to flutter_scene 0.23
