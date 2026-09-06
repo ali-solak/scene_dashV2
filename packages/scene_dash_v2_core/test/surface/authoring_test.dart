@@ -332,13 +332,18 @@ void main() {
       expect(game.world.entities.aliveCount, 0);
     });
 
-    test('World.reset drops pending spawns safely', () {
+    test('World.reset rejects pending spawns; flush before resetting', () {
       final game = TestGame.headless(
         features: [(game) => game.registerComponent<Position>()],
       );
       game.world.spawn([Position(0)]);
       game.start();
       game.world.spawn([Position(1)]); // pending
+      expect(() => game.world.reset(), throwsA(isA<AssertionError>()));
+
+      // Settle pending spawns at a command boundary before resetting.
+      game.pump();
+      expect(game.world.query<Position>().count(), 2);
       game.world.reset();
       game.pump();
       expect(game.world.query<Position>().count(), 0);
