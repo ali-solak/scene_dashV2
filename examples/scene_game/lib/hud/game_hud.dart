@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
-import 'package:scene_dash_inspector/scene_dash_inspector.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
 
 import '../features/collectables/collectables.dart';
@@ -138,13 +137,6 @@ class _PlayingHud extends StatelessWidget {
           ),
         ),
         const Positioned(top: 64, left: 24, child: DebugPanel()),
-        // The inspector consumes core snapshots only (never the live
-        // world); the debug chip beside debug-draw/stats toggles it.
-        WorldBuilder<bool>(
-          select: (world) =>
-              world.tryResource<DebugSettings>()?.inspector ?? false,
-          builder: (context, visible) => InspectorOverlay(visible: visible),
-        ),
         _Controls(
           onLeftChanged: onLeftChanged,
           onRightChanged: onRightChanged,

@@ -3,13 +3,34 @@ abstract interface class Disposable {
   void dispose();
 }
 
+/// Failures reported after all cleanup callbacks have been attempted.
+/// Original exceptions and stack traces are retained in disposal order.
+final class CleanupException implements Exception {
+  CleanupException(Iterable<({Object error, StackTrace stackTrace})> errors)
+    : failures = List.unmodifiable([
+        for (final failure in errors)
+          if (failure.error is CleanupException)
+            ...(failure.error as CleanupException).failures
+          else
+            failure,
+      ]);
+
+  final List<({Object error, StackTrace stackTrace})> failures;
+
+  @override
+  String toString() =>
+      'CleanupException: ${failures.length} failure(s): '
+      '${failures.map((f) => f.error).join('; ')}';
+}
+
 /// Stores one resource per type.
 final class Resources {
   // Keeps disposal order predictable.
   final Map<Type, Object> _resources = <Type, Object>{};
 
-  // Prevents duplicate disposal.
-  final Set<Object> _disposed = Set.identity();
+  // Weak identity tracking prevents duplicate disposal without retaining
+  // every replaced resource for the lifetime of this collection.
+  final Expando<bool> _disposed = Expando<bool>('disposed resource');
 
   /// Inserts or replaces the resource instance for type [T]. A replaced
   /// instance is disposed (if [Disposable]); re-inserting the identical
@@ -17,7 +38,7 @@ final class Resources {
   void insert<T extends Object>(T resource) {
     final outgoing = _resources[T];
     _resources[T] = resource;
-    _disposed.remove(resource);
+    if (resource is Disposable) _disposed[resource] = null;
     if (outgoing != null && !identical(outgoing, resource)) {
       _dispose(outgoing);
     }
@@ -41,7 +62,7 @@ final class Resources {
     if (existing != null) return existing as T;
     final created = orElse();
     _resources[T] = created;
-    _disposed.remove(created);
+    if (created is Disposable) _disposed[created] = null;
     return created;
   }
 
@@ -65,17 +86,25 @@ final class Resources {
     return removed as T?;
   }
 
-  /// Removes and disposes every resource in reverse order.
+  /// Removes and disposes every resource in reverse order. Attempts all
+  /// disposals before reporting failures in a [CleanupException].
   void disposeAll() {
     final values = _resources.values.toList();
     _resources.clear();
+    final failures = <({Object error, StackTrace stackTrace})>[];
     for (var i = values.length - 1; i >= 0; i--) {
-      _dispose(values[i]);
+      try {
+        _dispose(values[i]);
+      } catch (error, stackTrace) {
+        failures.add((error: error, stackTrace: stackTrace));
+      }
     }
+    if (failures.isNotEmpty) throw CleanupException(failures);
   }
 
   void _dispose(Object resource) {
-    if (resource is Disposable && _disposed.add(resource)) {
+    if (resource is Disposable && _disposed[resource] != true) {
+      _disposed[resource] = true;
       resource.dispose();
     }
   }

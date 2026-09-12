@@ -209,13 +209,25 @@ final class Game {
   Future<void> shutdown() async {
     if (!_started || _shutdown) return;
     _shutdown = true;
-    await app.shutdown();
-    final driver = _driver;
-    if (driver != null) {
-      root.removeComponent(driver);
-      _driver = null;
+    final failures = <({Object error, StackTrace stackTrace})>[];
+    try {
+      await app.shutdown();
+    } catch (error, stackTrace) {
+      failures.add((error: error, stackTrace: stackTrace));
     }
-    sceneCommands.flush();
-    _frameTick.dispose();
+    final driver = _driver;
+    _driver = null;
+    for (final cleanup in <void Function()>[
+      if (driver != null) () => root.removeComponent(driver),
+      sceneCommands.flush,
+      _frameTick.dispose,
+    ]) {
+      try {
+        cleanup();
+      } catch (error, stackTrace) {
+        failures.add((error: error, stackTrace: stackTrace));
+      }
+    }
+    if (failures.isNotEmpty) throw CleanupException(failures);
   }
 }

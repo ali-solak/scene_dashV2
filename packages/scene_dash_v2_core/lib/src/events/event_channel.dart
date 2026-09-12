@@ -68,6 +68,9 @@ final class EventChannel<T> implements EventChannelMaintenance {
   /// Whether the channel has readers.
   bool get hasReaders => _readers.isNotEmpty;
 
+  /// Active readers participating in retention and maintenance.
+  int get readerCount => _readers.length;
+
   /// Appends an event to the channel.
   void send(T event) => _events.add(event);
 
@@ -177,14 +180,29 @@ final class EventChannel<T> implements EventChannelMaintenance {
 ///
 /// Each call to [drain] returns the events sent since the previous call and
 /// advances this reader's cursor to the channel's current end.
+/// Call [dispose] when finished so this reader stops retaining events and
+/// participating in channel maintenance.
 final class EventReader<T> {
-  final EventChannel<T> _channel;
+  EventChannel<T>? _channel;
   int _cursor = 0;
 
   EventReader._(this._channel);
 
+  /// Whether this reader has been released. Disposal is idempotent.
+  bool get isDisposed => _channel == null;
+
+  /// Unregisters this reader and releases its reference to the channel.
+  /// Subsequent reads throw [StateError]. Other readers are unaffected.
+  void dispose() {
+    _channel?._readers.remove(this);
+    _channel = null;
+  }
+
+  EventChannel<T> get _activeChannel =>
+      _channel ?? (throw StateError('This EventReader has been disposed.'));
+
   /// Whether unread events are available for this reader.
-  bool get hasUnread => _cursor < _channel._end;
+  bool get hasUnread => _cursor < _activeChannel._end;
 
   /// Invokes [callback] for every unread event without allocating a result
   /// list, then advances this reader's cursor.
@@ -193,13 +211,16 @@ final class EventReader<T> {
   ///
   /// If [callback] throws, the cursor is left unchanged so the unread events can
   /// be retried.
+  /// Disposing this reader from a callback stops delivery of the batch.
   void forEach(void Function(T event) callback) {
-    final from = _cursor - _channel._base;
+    final channel = _activeChannel;
+    final from = _cursor - channel._base;
     final start = from < 0 ? 0 : from;
-    final end = _channel._events.length;
-    final endCursor = _channel._base + end;
+    final end = channel._events.length;
+    final endCursor = channel._base + end;
     for (var i = start; i < end; i++) {
-      callback(_channel._events[i]);
+      if (isDisposed) return;
+      callback(channel._events[i]);
     }
     _cursor = endCursor;
   }
@@ -207,7 +228,7 @@ final class EventReader<T> {
   /// Consumes unread events and reports whether any existed.
   bool consume() {
     final had = hasUnread;
-    _cursor = _channel._end;
+    _cursor = _activeChannel._end;
     return had;
   }
 
@@ -215,10 +236,11 @@ final class EventReader<T> {
   ///
   /// Allocates the returned list; prefer [forEach] in per-frame systems.
   List<T> drain() {
-    final from = _cursor - _channel._base;
+    final channel = _activeChannel;
+    final from = _cursor - channel._base;
     final start = from < 0 ? 0 : from;
-    final result = _channel._events.sublist(start);
-    _cursor = _channel._end;
+    final result = channel._events.sublist(start);
+    _cursor = channel._end;
     return result;
   }
 }

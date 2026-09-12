@@ -22,6 +22,7 @@ dart run benchmarks/despawn_store_scaling_benchmark.dart [entityCount]
 dart run benchmarks/query_entity_allocation_benchmark.dart [entityCount]
 dart run benchmarks/rts_workload_benchmark.dart [unitCount]
 dart run benchmarks/schedule_dispatch_benchmark.dart [systemCount]
+dart run benchmarks/package_overhead_benchmark.dart
 ```
 
 Use `dart compile exe` AOT executables for numbers that should be
@@ -46,13 +47,30 @@ arity iteration the classic API uses. Desktop JIT, N = 10k
 | classic `query2(...)` construction alone | ~87 ns/call |
 | record `query2(...)` construction alone | ~75 ns/call |
 
-Reading it: **the sugar is free where it matters.** Per-entity iteration
-through the record view is indistinguishable from the cached classic
-query, because `.each` *is* the classic loop behind a façade. The per-call
-construction is well under 100 ns — noise unless a system constructs
-queries in an inner loop — and the `.records` for-in form costs about one
-extra allocation-driven 2× per row, which is exactly why the docs lead
-with `.each` and call records the cold-path alternative.
+These are historical JIT measurements. `.each` delegates to the cached
+classic loop. `.records` eagerly allocates a list and a record per match;
+`snapshot()` is its explicit spelling. Allocation costs vary substantially
+between JIT and AOT, so the old 2× ratio is not a general estimate. Prefer
+`.each` for frame loops and snapshots when a caller needs fixed membership.
+
+## Package overhead
+
+[`package_overhead_benchmark.dart`](package_overhead_benchmark.dart) measures
+queries while unrelated spawn parts await typed registration, event cursor
+consumption, and a throwing-cleanup lifecycle probe. The
+[2026-09-12 AOT capture](results/2026-09-12-package-overhead-aot-desktop.txt)
+records before/after results:
+
+| Operation | Before | After |
+| --- | ---: | ---: |
+| Empty query, 10,000 unchanged parked parts | 275.33 µs | 99.00 ns |
+| Empty query, no parked parts | 81.96 ns | 88.40 ns |
+| Consume a 10,000-event batch (cursor operation only) | 9.70 µs | 61.69 ns |
+
+Query scans are cached until new parts arrive; the first typed use after
+invalidation still scans the backlog. Event consumption advances the cursor
+without copying the batch. These are single desktop measurements, including
+timer overhead; they do not predict a rendered frame rate.
 
 ## The carried suites
 
@@ -84,45 +102,19 @@ thousands of query executions per frame are dominated by per-entity work,
 not the skeleton. Re-capture on this machine before relying on absolute
 numbers.
 
-## On-device scene benchmark
+## Historical scene captures
 
-[`examples/scene_benchmark`](../examples/scene_benchmark) renders a 40×40
-grid of **1,600 cubes** on a device in Flutter profile mode (Flutter GPU /
-Impeller). All modes use the same grid, cube geometry, material, camera,
-light, viewport, and no animation:
+The scene benchmark application is no longer shipped. The
+[`aggregate_scene_benchmark.dart`](aggregate_scene_benchmark.dart) parser
+is retained for historical `SCENE_BENCHMARK` logs. For current rendering
+performance, profile a representative application such as
+[`examples/scene_game`](../examples/scene_game) on its target device.
 
-| Mode | Purpose |
-| --- | --- |
-| `static` | Direct `flutter_scene` `Node` per cube, no ECS. |
-| `mountOnly` | ECS lifecycle plus `SceneNode` mounting, no `SceneTransform` sync (hand-assembled from the machinery tier). |
-| `ecs` | The shipped path — `SceneGame.boot` with an entity per cube, `SceneNode` + `SceneTransform` full sync. |
-| `instanced` | One `flutter_scene` `InstancedMesh` containing the same visible cubes. |
+## Documentation checks
 
-The app prints stable machine-readable lines
-(`SCENE_BENCHMARK config|result|system ...`). Run one mode:
-
-```powershell
-cd examples\scene_benchmark
-
-flutter run --profile -d <device> --enable-flutter-gpu `
-  --dart-define=benchmarkMode=ecs `
-  --dart-define=profileSystems=false `
-  --dart-define=warmupFrames=60 `
-  --dart-define=sampleFrames=180
-```
-
-Alternate modes across several rounds so thermal drift doesn't bias one
-mode, then aggregate the captured output:
-
-```powershell
-cd benchmarks
-dart run aggregate_scene_benchmark.dart results\<capture>.txt
-```
-
-Set `profileSystems=true` in a separate run for per-system timing lines;
-profiler data is reset after warmup so run counts match the sampled frame
-window. The v1 Pixel 8 capture (2026-06-23) is the reference shape: the
-ECS entity-per-cube path costs a few ms of build time over raw static
-nodes at 1,600 visible cubes, and instancing beats everything by an order
-of magnitude — the reason the gizmo layer and `decor/` use instanced
-pools. Re-capture on-device before relying on absolute numbers.
+From the workspace root, run `dart run tool/check_docs.dart`. This verifies
+relative Markdown links and links into this repository on GitHub, then
+extracts fenced blocks marked `dart doc-test:name` and runs their `main()`
+functions through `flutter test`. Each marked block must be a standalone
+Dart library with its imports. CI runs the same check. Fragment anchors
+and external websites are not checked.

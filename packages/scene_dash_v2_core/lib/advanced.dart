@@ -11,7 +11,6 @@ export 'src/commands/commands.dart';
 export 'src/commands/entity_commands.dart';
 export 'src/diagnostics/app_diagnostics.dart';
 // Also exports SystemTiming.
-export 'src/diagnostics/inspector_snapshot.dart';
 export 'src/diagnostics/system_profiler.dart';
 export 'src/events/event_channel.dart'
     show EventChannel, EventReader, EventWriter;

@@ -36,13 +36,13 @@ The full API surface
 - Tooling
   - [Debugging](#debugging)
     - [Entity debug](#entity-debug)
-    - [Inspector](#inspector)
   - [Testing](#testing)
 
 ## World-reactive widgets
 
-A widget selects one value from the world and rebuilds only when it
-changes:
+A widget polls one selected value from the world each frame. Frame ticks
+request a rebuild only when that value changes; parent rebuilds can also
+invoke the builder:
 
 ```dart
 final player = world.spawn(playerBundle());    // spawn returns the Entity;
@@ -97,6 +97,12 @@ EntityBuilder<Health, double>.matching(
 // resolving by one component while watching another stays the composition:
 // WorldBuilder<Entity?> (resolve) wrapping EntityBuilder (watch)
 ```
+
+- `select`: return the value to display, such as `health.current`. Copy lists
+  before returning them so the previous contents stay available for comparison.
+- `equals`: optional comparison, defaulting to `==`. Return `true` to skip
+  a frame update, `false` to rebuild.
+- `every`: how often to check the value. Omit it to check each frame.
 
 For a widget *in* the 3D world, like a health bar above an enemy, put a
 `flutter_scene` `WidgetComponent` on a child node. The scene graph
@@ -293,6 +299,11 @@ void installEnemies(GameBuilder game) {
 
 ## Queries
 
+Use `.each` for frame loops. `snapshot()` eagerly allocates a list of
+records, fixing the matching entities at the time of the call. `.records`
+remains compatible and performs the same allocation. Neither form clones
+the components; their fields can still change or outlive a despawned entity.
+
 `closeIn` already shows all of it. `require:`/`exclude:` shape the match
 set. `.each` hands you the components and allocates nothing (`return`
 continues, `eachUntil` breaks). An `Entity` you stored on a component,
@@ -328,7 +339,8 @@ world.query2<Health, SceneTransform>()
 world.query<Health>()
     .eachUntil((entity, health) => health.current > 0);   // false stops the loop
 
-for (final (entity, health) in world.query<Health>().records) {}
+for (final (entity, health) in world.query<Health>().snapshot()) {}
+// .records remains an alias for the same eager snapshot allocation.
                                                   // for-loop form: allocates per row
 
 final row = world.query<Health>(require: const [Player]).firstOrNull;
@@ -746,10 +758,16 @@ void awardBounty(World world) {
   }
 }
 
-world.consumeAny<AttackPressed>();   // boolean form: any unread? true drains
-                                     //   them. Same cursor as events()
+world.consumeAny<AttackPressed>();   // boolean form: advances the cursor in
+                                     //   constant time without a result list
+                                     // same cursor as events()
                                      // both throw outside a running system
 ```
+
+System readers are released at shutdown, and widget readers are released
+on unmount. If you create an `EventReader` yourself through the advanced
+API, call `dispose()` when finished. Disposed readers stop retaining events
+and participating in channel maintenance; subsequent reads throw `StateError`.
 
 ```dart
 // Skip the system entirely on frames carrying none.
@@ -1228,20 +1246,8 @@ print(world.debugDescribe(grunt));
 // its type; a Machine owner prints e.g. `striking (0.12s)`
 ```
 
-### Inspector
-
-```dart
-Stack(children: [
-  SceneView(game.scene, onTick: game.onTick),
-  InspectorOverlay(visible: showInspector),   // package: scene_dash_inspector
-])                                            //   reads the world it is under
-```
-
-Live entities (filter by `Name`, tap for component values), resources,
-system timings, event channels. Read-only snapshots polled at 4 Hz, and
-nothing at all while hidden. Debug builds also warn once per system when
-a query iterates inside another query's `each`, which is the accidental
-O(N×M) shape. Hoist the inner query.
+Debug builds warn once per system when a query iterates inside another
+query's `each`, which can cause quadratic work. Hoist the inner query.
 
 ## Testing
 

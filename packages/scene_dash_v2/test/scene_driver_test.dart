@@ -103,6 +103,30 @@ void main() {
   });
 
   test(
+    'headless shutdown detaches and disposes after cleanup failure',
+    () async {
+      final game = Game.headless();
+      final error = StateError('cleanup');
+      game.app.addCleanup(() => throw error);
+      await game.start();
+      expect(game.root.getComponent<EcsSceneDriver>(), isNotNull);
+      await expectLater(
+        game.shutdown(),
+        throwsA(
+          isA<CleanupException>().having(
+            (e) => e.failures.single.error,
+            'original error',
+            same(error),
+          ),
+        ),
+      );
+      expect(game.root.getComponent<EcsSceneDriver>(), isNull);
+      expect(() => game.frameTick.addListener(() {}), throwsFlutterError);
+      await game.shutdown();
+    },
+  );
+
+  test(
     'Game.shutdown runs app shutdown and removes the scene driver',
     skip:
         'Constructs a real flutter_scene Scene, which needs Flutter GPU / '

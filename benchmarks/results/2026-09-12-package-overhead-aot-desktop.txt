@@ -1,0 +1,63 @@
+Package performance / DX review, 2026-09-12
+Windows desktop, Dart 3.13.3, Flutter 3.47.4, AOT executables.
+Base checkout: fe11591, with working-tree changes from this review.
+Single local captures; timings are directional, not device frame-budget claims.
+
+BEFORE: build/package_perf_review.exe, compiled before the package changes.
+The query cases and lifecycle probe match package_overhead_benchmark.dart.
+
+  empty Position query; 0 parked parts   81.96 ns/op
+  empty Position query; 1000 parked parts 27.50 us/op
+  empty Position query; 10000 parked parts 275.33 us/op
+  same world after claiming parked parts 82.61 ns/op
+After throwing cleanup + retry: earlier cleanup=false, resource disposed=false
+sink=0
+
+AFTER:
+dart compile exe benchmarks/package_overhead_benchmark.dart -o build/package_overhead_after.exe
+build/package_overhead_after.exe
+
+  empty Position query; 0 parked parts   88.40 ns/op
+  empty Position query; 1000 parked parts 95.25 ns/op
+  empty Position query; 10000 parked parts 99.00 ns/op
+  same world after claiming parked parts 88.69 ns/op
+  drain().isNotEmpty; 0 events           31.48 ns/op
+  consume(); 0 events                    27.24 ns/op
+  drain().isNotEmpty; 1000 events        989.42 ns/op
+  consume(); 1000 events                 35.15 ns/op
+  drain().isNotEmpty; 10000 events       9.70 us/op
+  consume(); 10000 events                61.69 ns/op
+After throwing cleanup + retry: earlier cleanup=true, resource disposed=true
+sink=235954
+
+The parked-query benchmark measures steady-state queries after warmup. A
+newly parked part invalidates the cache and still requires a scan on the
+next typed use. The event cases isolate reader operations, excluding channel
+setup/emission and system dispatch. drain().isNotEmpty reproduces the old
+consumeAny cursor operation; consume() is the new operation. Setup is outside
+the timer. Very short operations include Stopwatch overhead and cache noise.
+There was a small increase in the no-parked query case (82 to 88 ns); the
+improvement concerns repeated scans of an unchanged backlog.
+
+QUERY ITERATION AFTER:
+dart compile exe benchmarks/record_query_benchmark.dart -o build/record_query_after.exe
+build/record_query_after.exe 10000
+
+=== Integrate motion: position += velocity * dt  (N = 10000) ===
+  classic Query2.each (cached)           8.88 ns/op
+  record view .each (per-call construct) 9.39 ns/op
+  record view .records for-in            189.28 ns/op
+
+=== Filtered: skip half the entities (Frozen tag)  (N = 10000) ===
+  classic Query2.each excludes (cached)  10.06 ns/op
+  record view .each exclude:             9.94 ns/op
+
+=== Construction alone (object kept observable)  (N = 1) ===
+  classic query2(...) construct          85.55 ns/op
+  record query2(...) construct           99.50 ns/op
+
+The pre-change review capture measured 8.61 / 8.59 / 182.31 ns/entity for
+cached each / public each / records. Snapshot allocation remains the larger
+cost: roughly 1.9 ms for 10,000 rows here versus 0.094 ms for public each.
+snapshot() is an explicit name for the existing records behavior, not a
+speedup of materialized row iteration.

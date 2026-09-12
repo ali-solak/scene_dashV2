@@ -11,7 +11,7 @@ covers the core ECS. Rendering, cameras, physics and widgets stay native
 boot, it:
 
 - exposes the real `Scene` and `SceneCommands` as resources
-- mounts entity-bound `SceneNode` nodes into the scene **before** the
+- mounts entity-bound `NodeRef` nodes into the scene **before** the
   `update` phase, and once at startup, so a queried node is already in
   the scene and no system needs a `node.parent == null` guard
 - syncs optional `SceneTransform` components onto bound nodes
@@ -38,10 +38,14 @@ widget tree, use the core package's `TestGame.headless`.
 
 ## Direct node path: mutate nodes yourself
 
-To avoid duplicated transform state, store a `SceneNode` and mutate the
+To avoid duplicated transform state, store a `NodeRef` and mutate the
 native `flutter_scene` node directly:
 
-```dart
+```dart doc-test:node_binding
+import 'dart:math';
+import 'package:flutter_scene/scene.dart' show Node;
+import 'package:scene_dash_v2/scene_dash_v2.dart';
+
 final class Orbit {
   final double radius;
   final double speed;
@@ -50,14 +54,14 @@ final class Orbit {
   Orbit({required this.radius, required this.speed, required this.phase});
 }
 
-List<Object> cubeBundle({required double phase}) => [
+List<Object> cubeBundle(Node node, {required double phase}) => [
   Orbit(radius: 3, speed: 1, phase: phase),
-  SceneNode(Node(mesh: cubeMesh)),
+  NodeRef(node),
 ];
 
 void orbitNodes(World world) {
-  // Mutating the node through SceneNode counts as writing SceneNode.
-  world.query2<Orbit, SceneNode>().each((entity, orbit, binding) {
+  // Mutating the node through NodeRef counts as writing NodeRef.
+  world.query2<Orbit, NodeRef>().each((entity, orbit, binding) {
     orbit.phase += orbit.speed * world.dt;
     binding.node.mutateLocalTransform(
       (m) => m.setTranslationRaw(
@@ -68,11 +72,21 @@ void orbitNodes(World world) {
     );
   });
 }
+
+Future<void> main() async {
+  final game = await WorldGame.boot(features: [
+    (g) => g.addSystem(Schedules.update, orbitNodes, writes: {Orbit, NodeRef}),
+  ]);
+  // Supply a mesh-bearing node from your scene in a rendered application.
+  game.world.spawn(cubeBundle(Node(), phase: 0));
+  game.onTick(const Duration(milliseconds: 16), 1 / 60);
+  await game.shutdown();
+}
 ```
 
 > **Access-metadata rule:** changing something you reached *through* a
-> component, a `Node` or a Rapier body behind `SceneNode`, still counts
-> as writing that component. Register with `writes: {SceneNode}` whenever
+> component, a `Node` or a Rapier body behind `NodeRef`, still counts
+> as writing that component. Register with `writes: {NodeRef}` whenever
 > a system touches the node or its native components.
 
 Two traps on this path. A node matrix must be reassigned, or marked,
@@ -172,7 +186,7 @@ without a guard.
 
 ### Picking: `SceneNodeIndex` (node → entity)
 
-`SceneNode` gets you entity → node. `Scene.raycast` and `ScenePointer`
+`NodeRef` gets you entity → node. `Scene.raycast` and `ScenePointer`
 hand back a `Node`, so go the other way through the `SceneNodeIndex`
 resource. `entityOf` walks up parents, so hitting a child mesh still
 finds the entity that owns it:
@@ -209,12 +223,12 @@ those, use a backend like `flutter_scene_rapier`. The bridge is the same
 either way.
 
 Physics objects live on the `flutter_scene` node. The ECS entity stores a
-`SceneNode`, plus `PhysicsDriven` when physics owns the transform:
+`NodeRef`, plus `PhysicsDriven` when physics owns the transform:
 
 ```dart
 List<Object> playerBodyBundle() => [
   const Player(),
-  SceneNode(
+  NodeRef(
     Node(mesh: playerMesh)
       ..addComponent(RapierRigidBody(type: BodyType.dynamic_))
       ..addComponent(
@@ -238,7 +252,7 @@ queries:
 final Vector3 _origin = Vector3.zero();
 
 void probeGround(World world) {
-  final player = world.query<SceneNode>(require: const [Player]).firstOrNull;
+  final player = world.query<NodeRef>(require: const [Player]).firstOrNull;
   if (player == null) return;
   player.$2.node.globalTranslationInto(_origin);
   final ground = world.physics.raycast(

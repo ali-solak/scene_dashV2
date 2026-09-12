@@ -34,4 +34,3 @@ jobs:
       - run: flutter test
         working-directory: examples/scene_game
 
-

@@ -21,7 +21,6 @@ export 'src/scene_sync.dart';
 export 'src/smoothing.dart';
 export 'src/tween.dart';
 export 'src/tween_vectors.dart';
-export 'src/world_inspector.dart';
 export 'src/world_scene_extensions.dart';
 export 'src/world_widgets.dart';
 export 'src/scene_transform.dart';

@@ -55,7 +55,7 @@ class WorldGame {
     required void Function(String message)? onDiagnostic,
   }) async {
     final world = engine.world;
-    SpawnQueue.of(world).onDiagnostic = onDiagnostic;
+    SpawnQueue.of(world).onDiagnostic = onDiagnostic ?? engine.app.onDiagnostic;
     // Register scene component stores.
     world
       ..ensureObjectStore<NodeRef>()

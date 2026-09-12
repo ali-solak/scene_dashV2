@@ -3,6 +3,7 @@ import 'dart:async';
 import '../diagnostics/app_diagnostics.dart';
 import '../diagnostics/system_profiler.dart';
 import '../entity/entity.dart';
+import '../resources/resources.dart';
 import '../schedule/access_conflict.dart';
 import '../schedule/schedule.dart';
 import '../schedule/schedule_label.dart';
@@ -431,15 +432,31 @@ final class App implements AppBuilder {
   /// frame at a safe boundary (typically frame start).
   void updateEvents() => world.updateEvents();
 
-  /// Runs shutdown and disposes resources.
+  /// Runs shutdown, then attempts every cleanup and resource disposal even
+  /// when a preceding stage fails. Reports failures in [CleanupException].
   Future<void> shutdown() async {
     if (!_finalized || _shutdown) return;
     _shutdown = true;
-    runSchedule(Schedules.shutdown);
-    for (var i = _cleanups.length - 1; i >= 0; i--) {
-      await _cleanups[i]();
+    final failures = <({Object error, StackTrace stackTrace})>[];
+    try {
+      runSchedule(Schedules.shutdown);
+    } catch (error, stackTrace) {
+      failures.add((error: error, stackTrace: stackTrace));
     }
-    world.resources.disposeAll();
+    for (var i = _cleanups.length - 1; i >= 0; i--) {
+      try {
+        await _cleanups[i]();
+      } catch (error, stackTrace) {
+        failures.add((error: error, stackTrace: stackTrace));
+      }
+    }
+    _cleanups.clear();
+    try {
+      world.resources.disposeAll();
+    } catch (error, stackTrace) {
+      failures.add((error: error, stackTrace: stackTrace));
+    }
+    if (failures.isNotEmpty) throw CleanupException(failures);
   }
 
   void _assertOpen() {

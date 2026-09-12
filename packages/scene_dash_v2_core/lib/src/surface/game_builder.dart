@@ -1,5 +1,7 @@
 library;
 
+import 'dart:collection';
+
 import '../app/app.dart';
 import '../app/plugin.dart';
 import '../events/event_channel.dart';
@@ -12,6 +14,7 @@ import '../system/system_access.dart';
 import '../system/system_adapter.dart';
 import '../world/world.dart';
 import 'observers.dart';
+import 'spawning.dart';
 
 /// A system that updates the world.
 typedef WorldSystem = void Function(World world);
@@ -37,7 +40,9 @@ final class GameBuilder {
   /// Registers [system] into [schedule].
   ///
   /// [reads] and [writes] enable conflict checks.
-  /// Systems in [before], [after], and [independentOf] must already exist.
+  /// Systems in [before], [after], and [independentOf] can be registered
+  /// later. References are resolved when the app starts and must name systems
+  /// in the same schedule.
   /// [independentOf] skips conflict checks for those systems.
   void addSystem(
     ScheduleLabel schedule,
@@ -91,14 +96,16 @@ final class GameBuilder {
       adapter,
       schedule: schedule,
       label: systemLabel,
-      before: [for (final s in before) _requireLabel(s, 'before')],
-      after: [for (final s in after) _requireLabel(s, 'after')],
-      independentOf: [
-        for (final s in independentOf) _requireLabel(s, 'independentOf'),
-      ],
+      before: _DeferredSystemLabels(before, (s) => _requireLabel(s, 'before')),
+      after: _DeferredSystemLabels(after, (s) => _requireLabel(s, 'after')),
+      independentOf: _DeferredSystemLabels(
+        independentOf,
+        (s) => _requireLabel(s, 'independentOf'),
+      ),
       runIf: condition,
       inSet: inSet,
     );
+    _app.addCleanup(adapter.disposeReaders);
   }
 
   /// Registers a custom schedule [label].
@@ -131,7 +138,8 @@ final class GameBuilder {
 
   /// Registers the component store for [T] up front, for types that only
   /// ever appear in spawn lists (never queried). Idempotent.
-  void registerComponent<T extends Object>() => world.ensureObjectStore<T>();
+  void registerComponent<T extends Object>() =>
+      SpawnQueue.of(world).ensureStore<T>();
 
   /// Registers the tag store for [T].
   void registerTag<T>() => world.ensureTagStore<T>();
@@ -154,8 +162,8 @@ final class GameBuilder {
     if (label == null) {
       throw StateError(
         '$edge: [${_nameOf(system)}] references a system that has not been '
-        'registered yet. Ordering edges are by function reference; register '
-        'the referenced system first.',
+        'registered. Ordering edges use function references; install the '
+        'feature that registers this function before starting the game.',
       );
     }
     return label;
@@ -167,6 +175,27 @@ final class GameBuilder {
     final match = RegExp("from Function '([^']+)'").firstMatch(text);
     return match?.group(1) ?? 'closure';
   }
+}
+
+/// A snapshot of function references, resolved by the schedule compiler after
+/// all features have installed. Late explicit labels are preserved.
+final class _DeferredSystemLabels extends ListBase<SystemLabel> {
+  _DeferredSystemLabels(List<WorldSystem> systems, this.resolve)
+    : _systems = List.of(systems);
+
+  final List<WorldSystem> _systems;
+  final SystemLabel Function(WorldSystem) resolve;
+
+  @override
+  int get length => _systems.length;
+  @override
+  set length(int value) =>
+      throw UnsupportedError('Immutable system references');
+  @override
+  SystemLabel operator [](int index) => resolve(_systems[index]);
+  @override
+  void operator []=(int index, SystemLabel value) =>
+      throw UnsupportedError('Immutable system references');
 }
 
 /// Stores event readers for one system.
@@ -190,6 +219,13 @@ base class _FunctionSystem implements SystemAdapter, EventCursorHost {
 
   @override
   void initialize(World world) => _world = world;
+
+  void disposeReaders() {
+    for (final reader in _readers.values) {
+      reader.dispose();
+    }
+    _readers.clear();
+  }
 
   @override
   void run() {

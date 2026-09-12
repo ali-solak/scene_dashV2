@@ -50,7 +50,7 @@ void main() {
       expect(log, ['first', 'second']);
     });
 
-    test('an ordering edge to an unregistered function fails loudly', () {
+    test('an ordering edge to an unregistered function fails at boot', () {
       void a(World world) {}
       void b(World world) {}
       expect(
@@ -58,7 +58,7 @@ void main() {
           features: [
             (game) => game.addSystem(Schedules.update, a, after: [b]),
           ],
-        ),
+        ).start(),
         throwsA(
           isA<StateError>().having((e) => e.message, 'message', contains('b')),
         ),
