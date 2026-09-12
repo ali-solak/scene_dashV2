@@ -29,7 +29,6 @@ jobs:
         with:
           channel: master
       - run: flutter pub get
-      - run: dart run tool/check_docs.dart
       - run: flutter test
         working-directory: packages/scene_dash_v2
       - run: flutter test

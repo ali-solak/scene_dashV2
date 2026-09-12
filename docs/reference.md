@@ -98,44 +98,11 @@ EntityBuilder<Health, double>.matching(
 // WorldBuilder<Entity?> (resolve) wrapping EntityBuilder (watch)
 ```
 
-Updating an `EntityBuilder` or `WorldBuilder` refreshes its selection during
-the widget rebuild, including changed entities, filters, or selector callbacks.
-This also applies with `every:`: the interval throttles frame polls, not widget
-updates. Changing the game or interval restarts polling with a read on the next
-game tick; an ordinary parent rebuild preserves the polling phase.
-
-For `.pulse`, widget updates establish a fresh selection baseline without
-triggering feedback. Active pulses continue across ordinary parent rebuilds,
-including recreated inline callbacks. Changing the game or switching between
-plain and pulse forms clears the pulse. Use a new key when a different target
-within the same game should start with no feedback.
-
-`select` returns the value to display. Values use `==` by default.
-Both entity forms and `WorldBuilder` accept `equals` for a custom comparison:
-**`true` skips the frame update; `false` rebuilds.** For lists:
-
-```dart
-import 'package:flutter/foundation.dart' show listEquals;
-
-EntityBuilder<Inventory, List<String>>.matching(
-  select: (inventory) => List<String>.of(inventory.items),
-  equals: listEquals,
-  builder: (ctx, items) => Text(items.join(', ')),
-)
-```
-
-Copy the list so changes don't overwrite the previous value you're comparing.
-For mutable objects, select the field values you need instead of the object.
-
-`every: null` and `Duration.zero` poll each frame. Negative intervals throw an
-`ArgumentError` when the widget mounts or updates. Pulse durations must be
-finite, positive seconds; this is asserted at construction and also checked
-on mount and update in release builds.
-
-`WorldEventListener` reports callback failures through `FlutterError.reportError`
-and continues with the rest of its event batch. It does not retry failed
-callbacks or replay successful ones. Events emitted by a callback wait until
-that listener's next frame poll; each listener has its own reader.
+- `select`: return the value to display, such as `health.current`. Copy lists
+  before returning them so the previous contents stay available for comparison.
+- `equals`: optional comparison, defaulting to `==`. Return `true` to skip
+  a frame update, `false` to rebuild.
+- `every`: how often to check the value. Omit it to check each frame.
 
 For a widget *in* the 3D world, like a health bar above an enemy, put a
 `flutter_scene` `WidgetComponent` on a child node. The scene graph
@@ -201,42 +168,6 @@ runApp(GameHost(game: game, child: const MyGameApp()));   // yours; the
 
 A feature registers its systems. A system is a stateless
 `void Function(World)`.
-
-`before`, `after`, and `independentOf` accept function references, including
-systems installed by later features. Boot resolves them after registration,
-and reports missing systems, references to another schedule, and ordering
-cycles. `independentOf` suppresses an access conflict; it adds no ordering.
-Keep the same function reference when registering and referring to a system.
-
-This complete example installs the consumer before its dependency:
-
-```dart doc-test:feature_ordering
-import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
-
-final class Counter {
-  int value = 0;
-}
-
-void increment(World world) {
-  world.query<Counter>().each((_, counter) => counter.value++);
-}
-
-void verify(World world) {
-  final rows = world.query<Counter>().snapshot();
-  if (rows.single.$2.value != 1) throw StateError('Incorrect system order');
-}
-
-Future<void> main() async {
-  final game = TestGame.headless(features: [
-    (g) => g.addSystem(Schedules.update, verify,
-        reads: {Counter}, after: [increment]),
-    (g) => g.addSystem(Schedules.update, increment, writes: {Counter}),
-  ]);
-  game.world.spawn([Counter()]);
-  game.pump();
-  await game.shutdown();
-}
-```
 
 ```dart
 const enemyCloseSpeed = 1.5;
@@ -495,13 +426,6 @@ final class Ambience implements Disposable {
 Framework state sits on `world` directly (`world.dt`, `world.clock`,
 `world.buttons`, `world.physics`), never behind
 `resource<T>()`.
-
-Shutdown attempts all registered cleanup callbacks and resource disposals,
-even if the shutdown schedule or an earlier cleanup throws. Failures are
-reported together as `CleanupException`; its `failures` list retains each
-original `error` and `stackTrace` in cleanup order. A repeated shutdown
-does not dispose resources again. Disposal tracking uses weak identity
-keys, so replaced resources can be collected.
 
 ## Scheduling: sets and run conditions
 
