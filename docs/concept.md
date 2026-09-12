@@ -66,7 +66,10 @@ world.query2<SceneTransform, Velocity>().each((entity, transform, velocity) {
 ```
 
 `.each` is the main form. `for (final (e, t, v) in query.records)`
-allocates one record per row, so keep it off the hot path.
+eagerly allocates a list and one record per row, so keep it off the hot
+path. `query.snapshot()` makes that allocation explicit. Both forms fix
+the membership at the time of the call while sharing component objects;
+copy field values when a UI selector needs a stable value snapshot.
 
 ## Drive from the smallest store
 
@@ -86,7 +89,7 @@ four.
 
 ## Avoid duplicated scene data by default
 
-For visual-only state, store a `SceneNode` and mutate the native node
+For visual-only state, store a `NodeRef` and mutate the native node
 directly. Reach for `SceneTransform` when ECS-owned transforms buy you
 something real: serialization, rollback, networking, renderer
 independence, or headless simulation.
@@ -155,8 +158,8 @@ unordered systems (write/write and read/write) and to validate ordering.
 
 Dart cannot stop you writing to something you declared read-only, and the
 scheduler cannot see through a reference. So when a system changes a
-node or a Rapier body it reached through a `SceneNode`, declare
-`writes: {SceneNode}` anyway. Otherwise the declaration is a lie and the
+node or a Rapier body it reached through a `NodeRef`, declare
+`writes: {NodeRef}` anyway. Otherwise the declaration is a lie and the
 diagnostics go with it.
 
 Declaring is optional. Leave both off and the detector ignores the

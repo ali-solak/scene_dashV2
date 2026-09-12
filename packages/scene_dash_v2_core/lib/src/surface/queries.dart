@@ -78,8 +78,13 @@ final class QueryView1<A extends Object> {
   (Entity, A)? firstWhere(bool Function(Entity entity, A a) test) =>
       _core.firstWhere(test);
 
-  /// Matching records in iteration order.
-  Iterable<(Entity, A)> get records {
+  /// Eager snapshot in iteration order. Allocates a list and records;
+  /// prefer [each] for hot loops. Component objects are shared, not copied.
+  Iterable<(Entity, A)> get records => snapshot();
+
+  /// Copies matching rows into a new list. Later structural changes do not
+  /// change its membership, but the component objects remain live references.
+  List<(Entity, A)> snapshot() {
     final rows = <(Entity, A)>[];
     _core.each((entity, a) => rows.add((entity, a)));
     return rows;
@@ -148,8 +153,12 @@ final class QueryView2<A extends Object, B extends Object> {
   (Entity, A, B)? firstWhere(bool Function(Entity entity, A a, B b) test) =>
       _core.firstWhere(test);
 
-  /// Matching records in iteration order.
-  Iterable<(Entity, A, B)> get records {
+  /// Eager snapshot in iteration order. Allocates a list and records;
+  /// prefer [each] for hot loops. Component objects are shared, not copied.
+  Iterable<(Entity, A, B)> get records => snapshot();
+
+  /// Copies matching rows into a new list with shared component references.
+  List<(Entity, A, B)> snapshot() {
     final rows = <(Entity, A, B)>[];
     _core.each((entity, a, b) => rows.add((entity, a, b)));
     return rows;
@@ -220,8 +229,12 @@ final class QueryView3<A extends Object, B extends Object, C extends Object> {
     bool Function(Entity entity, A a, B b, C c) test,
   ) => _core.firstWhere(test);
 
-  /// Matching records in iteration order.
-  Iterable<(Entity, A, B, C)> get records {
+  /// Eager snapshot in iteration order. Allocates a list and records;
+  /// prefer [each] for hot loops. Component objects are shared, not copied.
+  Iterable<(Entity, A, B, C)> get records => snapshot();
+
+  /// Copies matching rows into a new list with shared component references.
+  List<(Entity, A, B, C)> snapshot() {
     final rows = <(Entity, A, B, C)>[];
     _core.each((entity, a, b, c) => rows.add((entity, a, b, c)));
     return rows;
@@ -299,8 +312,12 @@ final class QueryView4<
     bool Function(Entity entity, A a, B b, C c, D d) test,
   ) => _core.firstWhere(test);
 
-  /// Matching records in iteration order.
-  Iterable<(Entity, A, B, C, D)> get records {
+  /// Eager snapshot in iteration order. Allocates a list and records;
+  /// prefer [each] for hot loops. Component objects are shared, not copied.
+  Iterable<(Entity, A, B, C, D)> get records => snapshot();
+
+  /// Copies matching rows into a new list with shared component references.
+  List<(Entity, A, B, C, D)> snapshot() {
     final rows = <(Entity, A, B, C, D)>[];
     _core.each((entity, a, b, c, d) => rows.add((entity, a, b, c, d)));
     return rows;

@@ -32,6 +32,10 @@ final class SpawnQueue {
   final Map<Entity, List<Object>> _parked = <Entity, List<Object>>{};
   final Map<Entity, int> _parkedAtFrame = <Entity, int>{};
   final Set<Type> _reportedParkedTypes = <Type>{};
+  int _parkedRevision = 0;
+  final Map<Type, int> _claimedAtRevision = <Type, int>{};
+  int _reportedAtRevision = -1;
+  int _lastDiagnosticFrame = -1;
   final ObjectComponentStore<OwnedBy> _owned;
 
   SpawnQueue._(this.world) : _owned = world.ensureObjectStore<OwnedBy>() {
@@ -84,7 +88,11 @@ final class SpawnQueue {
   /// Creates the store for [T] and inserts waiting parts.
   ObjectComponentStore<T> ensureStore<T extends Object>() {
     final store = world.ensureObjectStore<T>();
-    if (_parked.isNotEmpty) _claimParked<T>();
+    if (_parked.isNotEmpty && _claimedAtRevision[T] != _parkedRevision) {
+      final revision = _parkedRevision;
+      _claimParked<T>();
+      _claimedAtRevision[T] = revision;
+    }
     return store;
   }
 
@@ -128,7 +136,6 @@ final class SpawnQueue {
     } finally {
       world.endFlush();
     }
-    _advanceParkedReaders();
     _reportAgedParked();
   }
 
@@ -146,6 +153,7 @@ final class SpawnQueue {
         );
       } else {
         (_parked[entity] ??= <Object>[]).add(part);
+        _parkedRevision++;
         _parkedAtFrame[entity] ??=
             world.resources.tryGet<FrameTime>()?.frame ?? 0;
       }
@@ -171,10 +179,13 @@ final class SpawnQueue {
 
   /// Reports parts that still have no store.
   void _reportAgedParked() {
-    if (_parked.isEmpty) return;
+    if (_parked.isEmpty || _reportedAtRevision == _parkedRevision) return;
     final sink = onDiagnostic;
     if (sink == null) return;
     final frame = world.resources.tryGet<FrameTime>()?.frame ?? 0;
+    if (_lastDiagnosticFrame == frame) return;
+    _lastDiagnosticFrame = frame;
+    var waitingToAge = false;
     List<Entity>? dead;
     for (final entry in _parked.entries) {
       if (!world.isAlive(entry.key)) {
@@ -182,7 +193,10 @@ final class SpawnQueue {
         continue;
       }
       final parkedAt = _parkedAtFrame[entry.key];
-      if (parkedAt == null || frame - parkedAt < 2) continue;
+      if (parkedAt == null || frame - parkedAt < 2) {
+        waitingToAge = true;
+        continue;
+      }
       for (final part in entry.value) {
         final type = part.runtimeType;
         if (!_reportedParkedTypes.add(type)) continue;
@@ -201,39 +215,26 @@ final class SpawnQueue {
         _parkedAtFrame.remove(entity);
       }
     }
+    if (!waitingToAge) _reportedAtRevision = _parkedRevision;
   }
 
-  // Reuses event readers owned by widgets.
-
-  final Map<Type, List<EventReader<Object>>> _parkedReaders =
-      <Type, List<EventReader<Object>>>{};
+  /// Drops unclaimed components when an entity is despawned by the world.
+  void discard(Entity entity) {
+    _parked.remove(entity);
+    _parkedAtFrame.remove(entity);
+  }
 
   /// Leases a reader for [E] (registering the channel on first use),
   /// positioned at the channel end. Return it with [releaseReader].
   EventReader<E> acquireReader<E extends Object>() {
     world.registerEvent<E>();
-    final parked = _parkedReaders[E];
-    if (parked != null && parked.isNotEmpty) {
-      final recycled = parked.removeLast() as EventReader<E>;
-      recycled.consume();
-      return recycled;
-    }
     return world.eventChannel<E>().reader();
   }
 
-  /// Returns a leased [reader] to the pool; see [acquireReader].
+  /// Disposes a leased [reader]; see [acquireReader]. Disposed readers no
+  /// longer participate in channel maintenance or hold back event retention.
   void releaseReader<E extends Object>(EventReader<E> reader) {
-    reader.consume();
-    (_parkedReaders[E] ??= <EventReader<Object>>[]).add(reader);
-  }
-
-  void _advanceParkedReaders() {
-    if (_parkedReaders.isEmpty) return;
-    for (final readers in _parkedReaders.values) {
-      for (var i = 0; i < readers.length; i++) {
-        readers[i].consume();
-      }
-    }
+    reader.dispose();
   }
 
   /// Drops all pending spawns.
@@ -241,5 +242,9 @@ final class SpawnQueue {
     _resetEpoch++;
     _parked.clear();
     _parkedAtFrame.clear();
+    _claimedAtRevision.clear();
+    _parkedRevision++;
+    _reportedAtRevision = -1;
+    _lastDiagnosticFrame = -1;
   }
 }

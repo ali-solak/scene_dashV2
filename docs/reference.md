@@ -36,13 +36,13 @@ The full API surface
 - Tooling
   - [Debugging](#debugging)
     - [Entity debug](#entity-debug)
-    - [Inspector](#inspector)
   - [Testing](#testing)
 
 ## World-reactive widgets
 
-A widget selects one value from the world and rebuilds only when it
-changes:
+A widget polls one selected value from the world each frame. Frame ticks
+request a rebuild only when that value changes; parent rebuilds can also
+invoke the builder:
 
 ```dart
 final player = world.spawn(playerBundle());    // spawn returns the Entity;
@@ -97,6 +97,45 @@ EntityBuilder<Health, double>.matching(
 // resolving by one component while watching another stays the composition:
 // WorldBuilder<Entity?> (resolve) wrapping EntityBuilder (watch)
 ```
+
+Updating an `EntityBuilder` or `WorldBuilder` refreshes its selection during
+the widget rebuild, including changed entities, filters, or selector callbacks.
+This also applies with `every:`: the interval throttles frame polls, not widget
+updates. Changing the game or interval restarts polling with a read on the next
+game tick; an ordinary parent rebuild preserves the polling phase.
+
+For `.pulse`, widget updates establish a fresh selection baseline without
+triggering feedback. Active pulses continue across ordinary parent rebuilds,
+including recreated inline callbacks. Changing the game or switching between
+plain and pulse forms clears the pulse. Use a new key when a different target
+within the same game should start with no feedback.
+
+`select` returns the value to display. Values use `==` by default.
+Both entity forms and `WorldBuilder` accept `equals` for a custom comparison:
+**`true` skips the frame update; `false` rebuilds.** For lists:
+
+```dart
+import 'package:flutter/foundation.dart' show listEquals;
+
+EntityBuilder<Inventory, List<String>>.matching(
+  select: (inventory) => List<String>.of(inventory.items),
+  equals: listEquals,
+  builder: (ctx, items) => Text(items.join(', ')),
+)
+```
+
+Copy the list so changes don't overwrite the previous value you're comparing.
+For mutable objects, select the field values you need instead of the object.
+
+`every: null` and `Duration.zero` poll each frame. Negative intervals throw an
+`ArgumentError` when the widget mounts or updates. Pulse durations must be
+finite, positive seconds; this is asserted at construction and also checked
+on mount and update in release builds.
+
+`WorldEventListener` reports callback failures through `FlutterError.reportError`
+and continues with the rest of its event batch. It does not retry failed
+callbacks or replay successful ones. Events emitted by a callback wait until
+that listener's next frame poll; each listener has its own reader.
 
 For a widget *in* the 3D world, like a health bar above an enemy, put a
 `flutter_scene` `WidgetComponent` on a child node. The scene graph
@@ -162,6 +201,42 @@ runApp(GameHost(game: game, child: const MyGameApp()));   // yours; the
 
 A feature registers its systems. A system is a stateless
 `void Function(World)`.
+
+`before`, `after`, and `independentOf` accept function references, including
+systems installed by later features. Boot resolves them after registration,
+and reports missing systems, references to another schedule, and ordering
+cycles. `independentOf` suppresses an access conflict; it adds no ordering.
+Keep the same function reference when registering and referring to a system.
+
+This complete example installs the consumer before its dependency:
+
+```dart doc-test:feature_ordering
+import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
+
+final class Counter {
+  int value = 0;
+}
+
+void increment(World world) {
+  world.query<Counter>().each((_, counter) => counter.value++);
+}
+
+void verify(World world) {
+  final rows = world.query<Counter>().snapshot();
+  if (rows.single.$2.value != 1) throw StateError('Incorrect system order');
+}
+
+Future<void> main() async {
+  final game = TestGame.headless(features: [
+    (g) => g.addSystem(Schedules.update, verify,
+        reads: {Counter}, after: [increment]),
+    (g) => g.addSystem(Schedules.update, increment, writes: {Counter}),
+  ]);
+  game.world.spawn([Counter()]);
+  game.pump();
+  await game.shutdown();
+}
+```
 
 ```dart
 const enemyCloseSpeed = 1.5;
@@ -293,6 +368,11 @@ void installEnemies(GameBuilder game) {
 
 ## Queries
 
+Use `.each` for frame loops. `snapshot()` eagerly allocates a list of
+records, fixing the matching entities at the time of the call. `.records`
+remains compatible and performs the same allocation. Neither form clones
+the components; their fields can still change or outlive a despawned entity.
+
 `closeIn` already shows all of it. `require:`/`exclude:` shape the match
 set. `.each` hands you the components and allocates nothing (`return`
 continues, `eachUntil` breaks). An `Entity` you stored on a component,
@@ -328,7 +408,8 @@ world.query2<Health, SceneTransform>()
 world.query<Health>()
     .eachUntil((entity, health) => health.current > 0);   // false stops the loop
 
-for (final (entity, health) in world.query<Health>().records) {}
+for (final (entity, health) in world.query<Health>().snapshot()) {}
+// .records remains an alias for the same eager snapshot allocation.
                                                   // for-loop form: allocates per row
 
 final row = world.query<Health>(require: const [Player]).firstOrNull;
@@ -414,6 +495,13 @@ final class Ambience implements Disposable {
 Framework state sits on `world` directly (`world.dt`, `world.clock`,
 `world.buttons`, `world.physics`), never behind
 `resource<T>()`.
+
+Shutdown attempts all registered cleanup callbacks and resource disposals,
+even if the shutdown schedule or an earlier cleanup throws. Failures are
+reported together as `CleanupException`; its `failures` list retains each
+original `error` and `stackTrace` in cleanup order. A repeated shutdown
+does not dispose resources again. Disposal tracking uses weak identity
+keys, so replaced resources can be collected.
 
 ## Scheduling: sets and run conditions
 
@@ -746,10 +834,16 @@ void awardBounty(World world) {
   }
 }
 
-world.consumeAny<AttackPressed>();   // boolean form: any unread? true drains
-                                     //   them. Same cursor as events()
+world.consumeAny<AttackPressed>();   // boolean form: advances the cursor in
+                                     //   constant time without a result list
+                                     // same cursor as events()
                                      // both throw outside a running system
 ```
+
+System readers are released at shutdown, and widget readers are released
+on unmount. If you create an `EventReader` yourself through the advanced
+API, call `dispose()` when finished. Disposed readers stop retaining events
+and participating in channel maintenance; subsequent reads throw `StateError`.
 
 ```dart
 // Skip the system entirely on frames carrying none.
@@ -1228,20 +1322,8 @@ print(world.debugDescribe(grunt));
 // its type; a Machine owner prints e.g. `striking (0.12s)`
 ```
 
-### Inspector
-
-```dart
-Stack(children: [
-  SceneView(game.scene, onTick: game.onTick),
-  InspectorOverlay(visible: showInspector),   // package: scene_dash_inspector
-])                                            //   reads the world it is under
-```
-
-Live entities (filter by `Name`, tap for component values), resources,
-system timings, event channels. Read-only snapshots polled at 4 Hz, and
-nothing at all while hidden. Debug builds also warn once per system when
-a query iterates inside another query's `each`, which is the accidental
-O(N×M) shape. Hoist the inner query.
+Debug builds warn once per system when a query iterates inside another
+query's `each`, which can cause quadratic work. Hoist the inner query.
 
 ## Testing
 

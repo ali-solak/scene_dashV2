@@ -15,6 +15,25 @@ abstract class _FrameTickState<W extends StatefulWidget> extends State<W> {
   WorldGame get game => _game!;
 
   @override
+  void initState() {
+    super.initState();
+    _validateConfiguration();
+  }
+
+  @override
+  void didUpdateWidget(covariant W oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _validateConfiguration();
+  }
+
+  void _validateConfiguration() {
+    final interval = pollInterval;
+    if (interval != null && interval.isNegative) {
+      throw ArgumentError.value(interval, 'every', 'must not be negative');
+    }
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final next = GameScope.of(context);
@@ -22,6 +41,7 @@ abstract class _FrameTickState<W extends StatefulWidget> extends State<W> {
     final previous = _game;
     previous?.frameTick.removeListener(_onFrameTick);
     _game = next;
+    _resetPolling();
     next.frameTick.addListener(_onFrameTick);
     attached(previous);
   }
@@ -40,6 +60,11 @@ abstract class _FrameTickState<W extends StatefulWidget> extends State<W> {
   /// the same wall time the pulse decays on, and it is what tests drive.
   double _sincePoll = 0;
   bool _polled = false;
+
+  void _resetPolling() {
+    _sincePoll = 0;
+    _polled = false;
+  }
 
   void _onFrameTick() {
     if (!mounted) return;
@@ -71,6 +96,7 @@ class EntityBuilder<T extends Object, S> extends StatefulWidget {
     required Entity this.entity,
     required this.select,
     required this.builder,
+    this.equals,
     this.absent,
     this.every,
   }) : require = null,
@@ -83,6 +109,7 @@ class EntityBuilder<T extends Object, S> extends StatefulWidget {
     this.exclude = const <Type>[],
     required this.select,
     required this.builder,
+    this.equals,
     this.absent,
     this.every,
   }) : entity = null;
@@ -95,16 +122,23 @@ class EntityBuilder<T extends Object, S> extends StatefulWidget {
   final List<Type>? require;
   final List<Type>? exclude;
 
-  /// Selects the watched value from the component; compared with `==`.
+  /// Selects an immutable value or snapshot; compared with [equals] or `==`.
+  /// Returning the mutable component itself can hide in-place changes.
   final S Function(T component) select;
 
-  /// Builds from the selected value; runs only when it changed.
+  /// Custom equality check for frame polls. For copied lists, use `listEquals`.
+  final bool Function(S previous, S next)? equals;
+
+  /// Builds from the selected value. Frame ticks rebuild only on changes;
+  /// parent rebuilds can also invoke this callback.
   final Widget Function(BuildContext context, S value) builder;
 
   /// Shown while the entity is dead or lacks [T].
   final Widget? absent;
 
-  /// Poll no more often than this, on wall time. Null reads every frame.
+  /// Minimum wall time between frame polls. Null reads every frame.
+  /// Zero also reads every frame; negative intervals throw on mount or update.
+  /// Widget updates and game changes refresh the selection immediately.
   final Duration? every;
 
   @override
@@ -115,6 +149,7 @@ class _EntityBuilderState<T extends Object, S>
     extends _FrameTickState<EntityBuilder<T, S>> {
   bool _present = false;
   S? _value;
+  bool _needsRead = false;
 
   @override
   Duration? get pollInterval => widget.every;
@@ -124,6 +159,15 @@ class _EntityBuilderState<T extends Object, S>
     // Ensure the component store exists.
     SpawnQueue.of(game.world).ensureStore<T>();
     _read(rebuild: false);
+    _needsRead = false;
+  }
+
+  @override
+  void didUpdateWidget(EntityBuilder<T, S> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.every != widget.every) _resetPolling();
+    // Read in build, after a simultaneous GameScope change has attached.
+    _needsRead = true;
   }
 
   @override
@@ -140,19 +184,29 @@ class _EntityBuilderState<T extends Object, S>
     if (component == null) {
       if (_present && rebuild) setState(() => _present = false);
       _present = false;
+      _value = null;
       return;
     }
     final value = widget.select(component);
-    if (_present && value == _value) return;
+    if (_present && rebuild) {
+      final equals = widget.equals;
+      if (equals != null ? equals(_value as S, value) : value == _value) return;
+    }
     _present = true;
     _value = value;
     if (rebuild) setState(() {});
   }
 
   @override
-  Widget build(BuildContext context) => _present
-      ? widget.builder(context, _value as S)
-      : (widget.absent ?? const SizedBox.shrink());
+  Widget build(BuildContext context) {
+    if (_needsRead) {
+      _read(rebuild: false);
+      _needsRead = false;
+    }
+    return _present
+        ? widget.builder(context, _value as S)
+        : (widget.absent ?? const SizedBox.shrink());
+  }
 }
 
 /// Rebuilds when a selected world value changes.
@@ -171,6 +225,11 @@ class WorldBuilder<S> extends StatefulWidget {
   /// The pulse form: the frame `trigger(previous, next)` passes,
   /// [pulseBuilder] receives 1.0, decaying to 0 over [duration] seconds of
   /// wall time.
+  ///
+  /// Widget updates refresh the selection baseline without firing a pulse.
+  /// An active pulse survives parent rebuilds. Changing the game or switching
+  /// between plain and pulse forms resets it; use a new key to reset it when
+  /// reusing this widget for a different target within the same game.
   const WorldBuilder.pulse({
     super.key,
     required this.select,
@@ -182,9 +241,13 @@ class WorldBuilder<S> extends StatefulWidget {
     this.equals,
   }) : builder = null,
        every = null,
-       assert(duration > 0, 'pulse duration is seconds and must be positive');
+       assert(
+         duration > 0 && duration < double.infinity,
+         'pulse duration is seconds and must be finite and positive',
+       );
 
-  /// Selects the watched value from the world; compared with `==`.
+  /// Selects an immutable value or snapshot; compared with [equals] or `==`.
+  /// Returning a mutable resource or list directly can hide in-place changes.
   final S Function(World world) select;
 
   /// Custom equality check.
@@ -192,11 +255,12 @@ class WorldBuilder<S> extends StatefulWidget {
 
   /// Poll no more often than this, on wall time. Null runs [select] every
   /// frame. The escape hatch for a costly [select]; the value can be up to
-  /// this stale.
+  /// this stale. Widget updates and game changes refresh immediately.
+  /// Zero reads every frame; negative intervals throw on mount or update.
   final Duration? every;
 
-  /// Builds from the selected value; runs only when it changed. (Plain
-  /// form; null in the pulse form.)
+  /// Builds from the selected value. Frame ticks rebuild only on changes;
+  /// parent rebuilds can also invoke this callback. Null in the pulse form.
   final Widget Function(BuildContext context, S value)? builder;
 
   /// Fires the pulse when a changed selection crosses this edge (pulse
@@ -206,8 +270,9 @@ class WorldBuilder<S> extends StatefulWidget {
   /// Seconds the pulse takes to decay 1 → 0, on wall time (pulse form).
   final double duration;
 
-  /// Builds from the live pulse; runs every frame while it is above 0 and
-  /// not at all at rest. Curving is the call site's job (`pulse * pulse`).
+  /// Builds from the live pulse. Frame ticks request rebuilds while it decays;
+  /// parent rebuilds can also invoke this callback, including at rest.
+  /// Curving is the call site's job (`pulse * pulse`).
   final Widget Function(BuildContext context, double pulse, Widget? child)?
   pulseBuilder;
 
@@ -222,12 +287,43 @@ class WorldBuilder<S> extends StatefulWidget {
 class _WorldBuilderState<S> extends _FrameTickState<WorldBuilder<S>> {
   late S _value;
   double _pulse = 0;
+  bool _needsRead = false;
 
   @override
   Duration? get pollInterval => widget.every;
 
   @override
-  void attached(WorldGame? previous) => _value = widget.select(game.world);
+  void _validateConfiguration() {
+    super._validateConfiguration();
+    if (widget.pulseBuilder != null &&
+        (!widget.duration.isFinite || widget.duration <= 0)) {
+      throw ArgumentError.value(
+        widget.duration,
+        'duration',
+        'must be finite and positive',
+      );
+    }
+  }
+
+  @override
+  void attached(WorldGame? previous) {
+    _value = widget.select(game.world);
+    _pulse = 0;
+    _needsRead = false;
+  }
+
+  @override
+  void didUpdateWidget(WorldBuilder<S> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.every != widget.every) _resetPolling();
+    if ((oldWidget.pulseBuilder == null) != (widget.pulseBuilder == null)) {
+      _pulse = 0;
+    }
+    // A new configuration establishes a baseline without firing a pulse.
+    // Preserve an active pulse across ordinary parent rebuilds (including
+    // recreated inline callbacks). A game or mode change resets it above.
+    _needsRead = true;
+  }
 
   @override
   void frameTick() {
@@ -255,6 +351,10 @@ class _WorldBuilderState<S> extends _FrameTickState<WorldBuilder<S>> {
 
   @override
   Widget build(BuildContext context) {
+    if (_needsRead) {
+      _value = widget.select(game.world);
+      _needsRead = false;
+    }
     final pulseBuilder = widget.pulseBuilder;
     if (pulseBuilder != null) {
       return pulseBuilder(context, _pulse, widget.child);
@@ -267,7 +367,8 @@ class _WorldBuilderState<S> extends _FrameTickState<WorldBuilder<S>> {
 class GameStateBuilder<S extends Object> extends StatefulWidget {
   const GameStateBuilder({super.key, required this.builder});
 
-  /// Builds for the active state value; runs on transitions only.
+  /// Builds for the active state value. Frame ticks rebuild on transitions;
+  /// parent rebuilds can also invoke this callback.
   final Widget Function(BuildContext context, S state) builder;
 
   @override
@@ -301,6 +402,10 @@ class WorldEventListener<E extends Object> extends StatefulWidget {
   });
 
   /// Called once per event, after the frame that emitted it resolved.
+  /// Callback failures are reported through [FlutterError.reportError];
+  /// delivery continues with the remaining events and failed events are not
+  /// retried. Events emitted by this callback reach this listener on a later
+  /// frame.
   final void Function(BuildContext context, E event) onEvent;
 
   /// The subtree this listener wraps (rendered untouched).
@@ -335,7 +440,27 @@ class _WorldEventListenerState<E extends Object>
 
   @override
   void frameTick() {
-    _reader?.forEach((event) => widget.onEvent(context, event));
+    final reader = _reader;
+    if (reader == null || !reader.hasUnread) return;
+    // Consume the batch first, so callback failures cannot replay UI effects.
+    // Snapshotting also keeps callback-emitted events for the next frame.
+    for (final event in reader.drain()) {
+      if (!mounted || !identical(_reader, reader)) break;
+      try {
+        widget.onEvent(context, event);
+      } catch (error, stack) {
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: error,
+            stack: stack,
+            library: 'scene_dash_v2',
+            context: ErrorDescription(
+              'while delivering a $E event to WorldEventListener',
+            ),
+          ),
+        );
+      }
+    }
   }
 
   @override

@@ -160,7 +160,6 @@ flutter run --enable-flutter-gpu
 - Tooling
   - [Debugging](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#debugging)
     - [Entity debug](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#entity-debug)
-    - [Inspector](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#inspector)
   - [Testing](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#testing)
 
 [docs/concept.md](https://github.com/ali-solak/scene_dashV2/blob/main/docs/concept.md) for the architecture,
@@ -172,10 +171,8 @@ flutter run --enable-flutter-gpu
 | --- | --- |
 | [`packages/scene_dash_v2_core`](https://github.com/ali-solak/scene_dashV2/blob/main/packages/scene_dash_v2_core) | Pure-Dart ECS runtime, authoring surface, headless `TestGame`. |
 | [`packages/scene_dash_v2`](https://github.com/ali-solak/scene_dashV2/blob/main/packages/scene_dash_v2) | `flutter_scene` integration: `SceneGame.boot`, mounting, transform sync, physics bridge, widget layer. Re-exports core, so one import covers both. |
-| [`packages/scene_dash_inspector`](https://github.com/ali-solak/scene_dashV2/blob/main/packages/scene_dash_inspector) | Optional debug overlay: live entities, resources, system timings, event channels. Read-only, polled at 4 Hz. |
 | [`examples/scene_game`](https://github.com/ali-solak/scene_dashV2/blob/main/examples/scene_game) | Complete game: Rapier physics, one feature per folder. |
 | [`examples/headless_example`](https://github.com/ali-solak/scene_dashV2/blob/main/examples/headless_example) | The core without Flutter. |
-| [`examples/scene_benchmark`](https://github.com/ali-solak/scene_dashV2/blob/main/examples/scene_benchmark) | On-device render benchmark: static vs mount-only vs ECS vs instanced. |
 | [`examples/combat_sample`](https://github.com/ali-solak/scene_dashV2/blob/main/examples/combat_sample) | Combat slice: KayKit knight against waves of barbarians, lock-on, buyable skills, giants, Rapier ragdolls, authored `.fmat` materials. Gameplay pinned headless. |
 | [`benchmarks`](https://github.com/ali-solak/scene_dashV2/blob/main/benchmarks) | Query, structural, and record-overhead benchmarks. |
 

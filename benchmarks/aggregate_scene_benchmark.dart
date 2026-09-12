@@ -1,4 +1,5 @@
-// Aggregates captured examples/scene_benchmark output.
+// Aggregates historical SCENE_BENCHMARK captures. The scene benchmark app
+// is no longer shipped; this parser remains useful for existing result files.
 //
 // Usage:
 //   dart run aggregate_scene_benchmark.dart results/run1.txt results/run2.txt

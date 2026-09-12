@@ -52,7 +52,8 @@ abstract final class ScheduleGraph {
       final index = byLabel[label];
       if (index == null) {
         throw ScheduleGraphError(
-          'System ${owner.id} references unknown label ${label.id}.',
+          'System ${owner.id} references unknown label ${label.id} in '
+          'schedule ${scheduleLabel.id}. Register both systems in this schedule.',
         );
       }
       return index;
@@ -65,6 +66,9 @@ abstract final class ScheduleGraph {
       }
       for (final beforeLabel in reg.before) {
         addEdge(i, resolve(beforeLabel, reg.label));
+      }
+      for (final independentLabel in reg.independentOf) {
+        resolve(independentLabel, reg.label);
       }
     }
 

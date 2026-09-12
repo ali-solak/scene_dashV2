@@ -243,8 +243,7 @@ void main() {
       expect(game.app.accessConflicts, isEmpty);
     });
 
-    test('independentOf referencing an unregistered system throws the '
-        'register-first error', () {
+    test('independentOf referencing an unregistered system fails at boot', () {
       void writerA(World world) {}
       void writerB(World world) {}
       // writerA exists but is never registered.
@@ -259,7 +258,7 @@ void main() {
               independentOf: [writerA],
             ),
           ],
-        ),
+        ).start(),
         throwsA(
           isA<StateError>().having(
             (e) => e.message,

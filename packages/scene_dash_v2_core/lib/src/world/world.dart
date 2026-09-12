@@ -9,6 +9,7 @@ import '../storage/object_store.dart';
 import '../storage/store_registry.dart';
 import '../storage/tag_store.dart';
 import '../surface/observers.dart';
+import '../surface/spawning.dart';
 
 /// Stores entities, components, resources, and events.
 final class World {
@@ -260,6 +261,7 @@ final class World {
       store.removeEntityIndex(index);
     }
     entities.despawn(entity);
+    resources.tryGet<SpawnQueue>()?.discard(entity);
   }
 
   /// Immediately despawns every entity alive when this method is called.
@@ -310,6 +312,7 @@ final class World {
       store.clear();
     }
     entities.despawnAll();
+    resources.tryGet<SpawnQueue>()?.reset();
     for (var i = 0; i < _eventChannelList.length; i++) {
       _eventChannelList[i].clear();
     }

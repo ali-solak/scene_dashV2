@@ -5,17 +5,12 @@ import '../features/player/player.dart';
 import '../features/rocks/rocks.dart';
 
 final class DebugSettings {
-  DebugSettings({
-    this.debugDraw = false,
-    this.stats = false,
-    this.inspector = false,
-  });
+  DebugSettings({this.debugDraw = false, this.stats = false});
 
   bool debugDraw;
   bool stats;
-  bool inspector;
 
-  (bool, bool, bool) get snapshot => (debugDraw, stats, inspector);
+  (bool, bool) get snapshot => (debugDraw, stats);
 }
 
 class DebugPanel extends StatelessWidget {
@@ -25,7 +20,7 @@ class DebugPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final world = GameScope.of(context).world;
     final settings = world.resource<DebugSettings>();
-    return WorldBuilder<(bool, bool, bool)>(
+    return WorldBuilder<(bool, bool)>(
       select: (world) => world.resource<DebugSettings>().snapshot,
       builder: (context, _) {
         return Column(
@@ -46,15 +41,7 @@ class DebugPanel extends StatelessWidget {
                   icon: Icons.grid_3x3,
                   semanticLabel: 'Toggle debug draw',
                   active: settings.debugDraw,
-                  onPressed: () =>
-                      settings.debugDraw = !settings.debugDraw,
-                ),
-                const SizedBox(width: 8),
-                _ToggleChip(
-                  icon: Icons.manage_search,
-                  semanticLabel: 'Toggle inspector',
-                  active: settings.inspector,
-                  onPressed: () => settings.inspector = !settings.inspector,
+                  onPressed: () => settings.debugDraw = !settings.debugDraw,
                 ),
               ],
             ),

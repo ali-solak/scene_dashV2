@@ -367,14 +367,4 @@ void main() {
     drive(game, 3);
     expect(seen, [5, 7], reason: 'released reader: no delivery, no lag');
   });
-
-  testWidgets('WorldInspector lists named entities', (tester) async {
-    final game = await boot();
-    game.world.spawn([const Name('Boss'), Health(500)]);
-    drive(game);
-    await tester.pumpWidget(
-      GameScope(game: game, child: const WorldInspector()),
-    );
-    expect(find.textContaining('"Boss"'), findsOneWidget);
-  });
 }

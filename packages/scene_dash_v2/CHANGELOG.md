@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.5.3
+- Dispose widget event readers on unmount instead of retaining a reader pool.
+- Complete scene-driver and frame-notifier cleanup when app shutdown fails.
+- Send unclaimed-component diagnostics to the default debug diagnostic sink.
+- Update node-binding documentation and compile representative examples in CI.
+- Remove the inspector widgets, snapshot API, package references, documentation,
+  and example overlay controls.
+- Add `equals:` to both `EntityBuilder` forms and document snapshot selections.
+- Prevent event callback failures from replaying UI effects; report failures
+  through Flutter and continue delivering the batch.
+- Reject negative polling intervals and non-finite or non-positive pulse
+  durations, including when widgets update in release builds.
+- Refresh entity and world selections when widgets update, including during
+  polling intervals.
+- Reset pulse feedback on game and builder mode changes while preserving active
+  feedback across parent rebuilds.
+- Restart polling when the game or interval change
+
 ## 0.5.2
 - - a variety of ordering fixes for events and command buffers
 

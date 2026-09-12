@@ -2,6 +2,7 @@
 library;
 
 import '../entity/entity.dart';
+import '../events/event_channel.dart';
 import '../input/axis_input.dart';
 import '../input/button_input.dart';
 import '../input/input_buffer.dart';
@@ -30,6 +31,10 @@ extension WorldSurface on World {
   ///
   /// Throws outside a running system.
   Iterable<E> events<E extends Object>() {
+    return _eventReader<E>().drain();
+  }
+
+  EventReader<E> _eventReader<E extends Object>() {
     final host = runningSystem;
     if (host is! EventCursorHost) {
       if (host is ObserverDispatch) {
@@ -45,17 +50,12 @@ extension WorldSurface on World {
         'addSystem, or hold your own EventReader (advanced.dart).',
       );
     }
-    return host.readerFor<E>(this).drain();
+    return host.readerFor<E>(this);
   }
 
-  /// Consumes unread [E] events and reports whether any existed.
-  bool consumeAny<E extends Object>() {
-    var any = false;
-    for (final _ in events<E>()) {
-      any = true;
-    }
-    return any;
-  }
+  /// Consumes unread [E] events in constant time without allocating a list.
+  /// Like [events], this must be called inside a running system.
+  bool consumeAny<E extends Object>() => _eventReader<E>().consume();
 
   /// Runs the custom schedule [label] inline, to completion.
   ///
@@ -95,9 +95,8 @@ extension WorldSurface on World {
   void add(Entity entity, Object component, {double? removeAfter}) {
     SpawnQueue.of(this).addPart(entity, component);
     if (removeAfter != null) {
-      RemoveAfterTracker.of(
-        this,
-      ).track(entity, component.runtimeType, removeAfter);
+      RemoveAfterTracker.of(this)
+          .track(entity, component.runtimeType, removeAfter);
     } else {
       resources.tryGet<RemoveAfterTracker>()?.cancel(
         entity,
