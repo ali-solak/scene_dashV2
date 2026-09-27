@@ -9,6 +9,7 @@ import '../storage/object_store.dart';
 import '../storage/store_registry.dart';
 import '../storage/tag_store.dart';
 import '../surface/observers.dart';
+import '../surface/remove_after.dart';
 import '../surface/spawning.dart';
 
 /// Stores entities, components, resources, and events.
@@ -101,9 +102,9 @@ final class World {
     final channel = _eventChannels[event.runtimeType];
     if (channel == null) {
       throw StateError(
-        'No event channel registered for ${event.runtimeType}. A system must '
-        'read EventReader<${event.runtimeType}> (or call addEvent<'
-        '${event.runtimeType}>()) before events of that type can be sent.',
+        'No event channel registered for ${event.runtimeType}. Call '
+        'configureEvent<${event.runtimeType}>() at install time, or send it '
+        'with world.emit, before events of that type can be sent.',
       );
     }
     channel.sendDynamic(event);
@@ -114,7 +115,8 @@ final class World {
     final channel = _eventChannels[T];
     if (channel == null) {
       throw StateError(
-        'No event channel registered for $T. Call addEvent<$T>() first.',
+        'No event channel registered for $T. Call configureEvent<$T>() '
+        'first.',
       );
     }
     return channel as EventChannel<T>;
@@ -127,13 +129,6 @@ final class World {
     for (var i = 0; i < _eventChannelList.length; i++) {
       final skipped = _eventChannelList[i].update();
       if (skipped > 0) onEventReaderSkip?.call(_eventTypes[i], skipped);
-    }
-  }
-
-  /// Event channels in registration order.
-  Iterable<(Type, EventChannelMaintenance)> get debugEventChannels sync* {
-    for (var i = 0; i < _eventChannelList.length; i++) {
-      yield (_eventTypes[i], _eventChannelList[i]);
     }
   }
 
@@ -257,8 +252,10 @@ final class World {
     assert(entities.isAlive(entity), 'Cannot despawn stale entity $entity.');
     if (!entities.isAlive(entity)) return;
     final index = entity.index;
-    for (final store in stores.all) {
-      store.removeEntityIndex(index);
+    final all = stores.all;
+    final count = all.length;
+    for (var i = 0; i < count; i++) {
+      all.elementAt(i).removeEntityIndex(index);
     }
     entities.despawn(entity);
     resources.tryGet<SpawnQueue>()?.discard(entity);
@@ -313,6 +310,7 @@ final class World {
     }
     entities.despawnAll();
     resources.tryGet<SpawnQueue>()?.reset();
+    resources.tryGet<RemoveAfterTracker>()?.reset();
     for (var i = 0; i < _eventChannelList.length; i++) {
       _eventChannelList[i].clear();
     }
@@ -381,7 +379,7 @@ final class World {
     sink(
       'Nested query in ${_debugSystemName(system)}: ${query.debugLabel} '
       'iterated inside ${outer.debugLabel}.each — ~$n×$m comparisons per '
-      'run. Hoist the inner query or restructure (see README query rules).',
+      'run. Hoist the inner query or restructure.',
     );
   }
 

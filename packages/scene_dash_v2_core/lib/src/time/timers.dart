@@ -79,6 +79,10 @@ final class GameTimer {
   /// Restarts the timer. Pass [duration] to change its target.
   void reset([double? duration]) {
     if (duration != null) this.duration = duration;
+    assert(
+      !repeating || this.duration > 0,
+      'A repeating GameTimer needs a positive duration.',
+    );
     _elapsed = 0;
     _justFinished = false;
     _completionsThisTick = 0;

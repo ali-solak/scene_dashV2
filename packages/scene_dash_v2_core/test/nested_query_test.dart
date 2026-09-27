@@ -58,7 +58,7 @@ void main() {
       nested.single,
       'Nested query in nestedSystem: query<_Enemy> iterated inside '
       'query2<_PA, _PB>.each — ~2×3 comparisons per run. Hoist the inner '
-      'query or restructure (see README query rules).',
+      'query or restructure.',
     );
   });
 

@@ -212,15 +212,15 @@ and bridged into the ECS:
 
 ```dart
 final game = await SceneGame.boot(
-  physics: RapierWorld(gravity: Vector3(0, -9.81, 0)),
+  physics: PhysicsWorld(RapierWorld(gravity: Vector3(0, -9.81, 0))),
   features: [installGameplay],
 );
 ```
 
-`BasicPhysicsWorld` covers picking, raycasts, overlap checks, triggers
-and kinematic gameplay. It does not simulate dynamic rigid bodies. For
-those, use a backend like `flutter_scene_rapier`. The bridge is the same
-either way.
+`PhysicsWorld` takes a backend. `BasicSimulation()` from `flutter_scene`
+covers picking, raycasts, overlap checks, triggers and kinematic gameplay
+in pure Dart. For dynamic rigid bodies, use `RapierWorld()` from
+`flutter_scene_rapier`. The bridge is the same either way.
 
 Physics objects live on the `flutter_scene` node. The ECS entity stores a
 `NodeRef`, plus `PhysicsDriven` when physics owns the transform:
@@ -230,9 +230,9 @@ List<Object> playerBodyBundle() => [
   const Player(),
   NodeRef(
     Node(mesh: playerMesh)
-      ..addComponent(RapierRigidBody(type: BodyType.dynamic_))
+      ..addComponent(RigidBody(type: BodyType.dynamic_))
       ..addComponent(
-        RapierCollider(
+        Collider(
           shape: SphereShape(radius: 0.5),
           collisionLayer: Layers.player,
           collisionMask: Layers.world | Layers.pickup,
@@ -293,7 +293,7 @@ Worth knowing:
   raw `overlapSphere` when unmanaged geometry matters.
 - `layerMask` goes to the backend and is checked again on the results,
   because some backends take the parameter without actually using it
-  (`flutter_scene_rapier` 0.2.x).
+  (`flutter_scene_rapier` 0.5.x).
 - A node with several colliders on that layer fires once per collider.
   Deduping per entity is your job, like the per-swing set above.
 

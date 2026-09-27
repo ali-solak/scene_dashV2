@@ -118,7 +118,7 @@ final class ObserverRegistry {
         throw StateError(
           'Observers for $type fired $count times for one entity within '
           'one command flush — an observer is re-adding or re-removing '
-          'what it observes, looping the flush (S6). Break the cycle: '
+          'what it observes, looping the flush. Break the cycle: '
           'react to the change, do not undo-and-redo it.',
         );
       }

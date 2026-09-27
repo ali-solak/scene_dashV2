@@ -1,6 +1,6 @@
 /// Per-frame timing, updated at the start of each rendered frame.
 ///
-/// A resource; inject it into systems with `@Resource()`.
+/// A world resource: `world.resource<FrameTime>()`.
 final class FrameTime {
   /// Seconds of *game time* elapsed since the previous frame: the wall-clock
   /// delta multiplied by the `GameClock`'s effective scale. `0` while the

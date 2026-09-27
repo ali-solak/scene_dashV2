@@ -42,7 +42,7 @@ final class App implements AppBuilder {
   final List<AccessConflict> accessConflicts = <AccessConflict>[];
 
   /// The system profiler, or null when profiling is disabled. When enabled it is
-  /// also inserted as a `@Resource()` so overlays/systems can read it.
+  /// also inserted as a world resource so systems can read it.
   final SystemProfiler? profiler;
 
   /// True once schedules have been compiled and frozen.
@@ -97,7 +97,7 @@ final class App implements AppBuilder {
           'went longer than the window without a turn — usually a system '
           'gated by runIf, or a FIXED-step reader at a refresh rate high '
           'enough that render frames carry zero fixed steps. Widen the '
-          'window with addEvent<$type>(retainedUpdates: ...) or pass null '
+          'window with configureEvent<$type>(retainedUpdates: ...) or pass null '
           'to retain events until every reader consumes them. (Reported '
           'once per event type.)',
         );
@@ -388,7 +388,7 @@ final class App implements AppBuilder {
       }
       if (!applied) return;
       passes++;
-      if (passes >= maxStateTransitionPasses) {
+      if (passes > maxStateTransitionPasses) {
         throw StateError(
           'State transitions did not settle after $maxStateTransitionPasses '
           'passes — an OnEnter/OnExit system is queueing transitions in a '

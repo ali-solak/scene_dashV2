@@ -32,9 +32,10 @@ List<ComponentStore> _filterStores(World world, List<Type> types) {
   return stores;
 }
 
-void _noteTypes(World world, List<Type> types) {
+bool _noteTypes(World world, List<Type> types) {
   final host = world.runningSystem;
   if (host is EventCursorHost) host.noteQueriedTypes(types);
+  return true;
 }
 
 Never _noMatch(String surface) =>
@@ -52,7 +53,7 @@ final class QueryView1<A extends Object> {
     List<Type> require = const <Type>[],
     List<Type> exclude = const <Type>[],
   }) {
-    _noteTypes(world, [A, ...require, ...exclude]);
+    assert(_noteTypes(world, [A, ...require, ...exclude]));
     final queue = SpawnQueue.of(world);
     return QueryView1._(
       Query1<A>(
@@ -125,7 +126,7 @@ final class QueryView2<A extends Object, B extends Object> {
     List<Type> require = const <Type>[],
     List<Type> exclude = const <Type>[],
   }) {
-    _noteTypes(world, [A, B, ...require, ...exclude]);
+    assert(_noteTypes(world, [A, B, ...require, ...exclude]));
     final queue = SpawnQueue.of(world);
     return QueryView2._(
       Query2<A, B>(
@@ -199,7 +200,7 @@ final class QueryView3<A extends Object, B extends Object, C extends Object> {
     List<Type> require = const <Type>[],
     List<Type> exclude = const <Type>[],
   }) {
-    _noteTypes(world, [A, B, C, ...require, ...exclude]);
+    assert(_noteTypes(world, [A, B, C, ...require, ...exclude]));
     final queue = SpawnQueue.of(world);
     return QueryView3._(
       Query3<A, B, C>(
@@ -280,7 +281,7 @@ final class QueryView4<
     List<Type> require = const <Type>[],
     List<Type> exclude = const <Type>[],
   }) {
-    _noteTypes(world, [A, B, C, D, ...require, ...exclude]);
+    assert(_noteTypes(world, [A, B, C, D, ...require, ...exclude]));
     final queue = SpawnQueue.of(world);
     return QueryView4._(
       Query4<A, B, C, D>(

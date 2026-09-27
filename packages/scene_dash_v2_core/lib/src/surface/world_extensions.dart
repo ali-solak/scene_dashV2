@@ -31,7 +31,9 @@ extension WorldSurface on World {
   ///
   /// Throws outside a running system.
   Iterable<E> events<E extends Object>() {
-    return _eventReader<E>().drain();
+    final reader = _eventReader<E>();
+    if (!reader.hasUnread) return const [];
+    return reader.drain();
   }
 
   EventReader<E> _eventReader<E extends Object>() {
@@ -61,7 +63,8 @@ extension WorldSurface on World {
   ///
   /// A command boundary: spawns, adds, removals and despawns have settled
   /// when it returns. A queued [setState] has not — transitions stay with the
-  /// frame. Call it between queries, never inside `.each`.
+  /// frame. Call it between queries, never inside `.each`. From a component
+  /// observer, its changes settle when the surrounding flush finishes.
   void runSchedule(ScheduleLabel label) =>
       resources.get<ScheduleRunner>().run(label);
 

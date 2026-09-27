@@ -81,6 +81,31 @@ void main() {
     expect(p.z, 0);
   });
 
+  test('sync replaces an authored decomposition on the node', () {
+    final world = World()
+      ..stores.register<TestTransform>(ObjectComponentStore<TestTransform>())
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>())
+      ..stores.register<PhysicsDriven>(TagStore());
+    final node = Node()..scale = Vector3.all(2);
+    final entity = world.entities.spawn();
+    world
+      ..insertNow<TestTransform>(entity, TestTransform(1, 2, 3))
+      ..insertNow<NodeRef>(entity, NodeRef(node));
+
+    SyncSceneNodesAdapter<TestTransform>((t) => (t.x, t.y, t.z))
+      ..initialize(world)
+      ..run();
+    final position = node.position;
+    expect(position.x, closeTo(1, 1e-9));
+    expect(position.y, closeTo(2, 1e-9));
+    expect(position.z, closeTo(3, 1e-9));
+
+    node.rotation = Quaternion.identity();
+    final moved = node.localTransform.getTranslation();
+    expect(moved.x, closeTo(1, 1e-9));
+    expect(moved.z, closeTo(3, 1e-9));
+  });
+
   test('CustomSceneSyncPlugin syncs a custom translation in renderSync', () {
     final app = App();
     app.world.stores

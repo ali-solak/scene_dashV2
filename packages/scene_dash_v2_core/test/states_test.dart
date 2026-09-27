@@ -284,6 +284,34 @@ void main() {
       expect(log, <String>['enter:dungeon']);
     });
 
+    test('a chain of exactly maxStateTransitionPasses transitions settles', () {
+      var hops = 0;
+      void hop(World world, GamePhase next) {
+        hops++;
+        if (hops < App.maxStateTransitionPasses) {
+          world.resources.get<NextState<GamePhase>>().set(next);
+        }
+      }
+
+      final app = App()..addState<GamePhase>(GamePhase.title);
+      app
+        ..addSystemAdapter(
+          RunAdapter((world) => hop(world, GamePhase.dungeon)),
+          schedule: OnEnter(GamePhase.overworld),
+          label: const SystemLabel('toDungeon'),
+        )
+        ..addSystemAdapter(
+          RunAdapter((world) => hop(world, GamePhase.overworld)),
+          schedule: OnEnter(GamePhase.dungeon),
+          label: const SystemLabel('toOverworld'),
+        );
+      app.start();
+
+      app.world.resources.get<NextState<GamePhase>>().set(GamePhase.overworld);
+      app.applyStateTransitions();
+      expect(hops, App.maxStateTransitionPasses);
+    });
+
     test('a transition cycle throws instead of hanging', () {
       final app = App()..addState<GamePhase>(GamePhase.title);
       app

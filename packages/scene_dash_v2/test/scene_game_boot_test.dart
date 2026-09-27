@@ -104,6 +104,39 @@ void main() {
     game.world.eventChannel<EntityCollision>();
   });
 
+  test('a headless physics game still runs its fixed schedule', () async {
+    var fixedSteps = 0;
+    final game = await WorldGame.boot(
+      physics: PhysicsWorld(BasicSimulation()),
+      features: [
+        (game) => game.addSystem(
+          Schedules.fixedPrePhysics,
+          (world) => fixedSteps++,
+          reads: const {},
+        ),
+      ],
+    );
+    addTearDown(game.shutdown);
+    game.onTick(const Duration(milliseconds: 17), 1 / 60 + 1e-6);
+    expect(fixedSteps, 1);
+  });
+
+  test('ticks after shutdown are ignored', () async {
+    var updates = 0;
+    final game = await WorldGame.boot(
+      features: [
+        (game) => game.addSystem(
+          Schedules.update,
+          (world) => updates++,
+          reads: const {},
+        ),
+      ],
+    );
+    await game.shutdown();
+    game.onTick(const Duration(milliseconds: 16), 1 / 60);
+    expect(updates, 0);
+  });
+
   test('strictAccess is enforced through boot', () async {
     expect(
       () => WorldGame.boot(

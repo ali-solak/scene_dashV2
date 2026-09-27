@@ -73,14 +73,21 @@ final class Commands {
     _push(_opDespawn, entity, null, Object);
   }
 
+  bool _applying = false;
+
+  /// Whether [apply] is running.
+  bool get isApplying => _applying;
+
   /// Applies and clears all pending commands. Must not be called while a query
-  /// is iterating.
+  /// is iterating. A call made while applying returns at once; the running
+  /// apply drains everything queued in the meantime.
   void apply() {
     assert(
       !_world.isQueryActive,
       'Commands.apply() called while a query is iterating.',
     );
-    if (_ops.isEmpty) return;
+    if (_ops.isEmpty || _applying) return;
+    _applying = true;
     _world.beginFlush();
     // Counted before the command runs, and dropped in the `finally`: a
     // command that throws is discarded with the ones before it, so a failed
@@ -122,6 +129,7 @@ final class Commands {
       _entities.removeRange(0, consumed);
       _payloads.removeRange(0, consumed);
       _types.removeRange(0, consumed);
+      _applying = false;
       _world.endFlush();
     }
   }

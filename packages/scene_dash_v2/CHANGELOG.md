@@ -1,11 +1,18 @@
 # Changelog
 
+## 0.5.4
+- Fix transform sync leaving a node's authored decomposition stale, so a
+  later `node.rotation`/`node.scale` write snapped it back.
+- Fix headless games booted with `physics:` never running fixed schedules.
+- Ignore `onTick` after `shutdown` instead of throwing every frame.
+- Remove the unused `Game.dispatch`. use `world.sendEvent` or `world.emit`.
+
 ## 0.5.3
 - Dispose widget event readers on unmount instead of retaining a reader pool.
 - Complete scene-driver and frame-notifier cleanup when app shutdown fails.
 - Send unclaimed-component diagnostics to the default debug diagnostic sink.
 - Update node-binding documentation and compile representative examples in CI.
-- Remove the inspector widgets, snapshot API, package references, documentation,
+- Remove the inspector widgets, inspector snapshot API, package references, documentation,
   and example overlay controls.
 - Add `equals:` to both `EntityBuilder` forms and document snapshot selections.
 - Prevent event callback failures from replaying UI effects; report failures
@@ -16,10 +23,10 @@
   polling intervals.
 - Reset pulse feedback on game and builder mode changes while preserving active
   feedback across parent rebuilds.
-- Restart polling when the game or interval change
+- Restart polling when the game or interval change.
 
 ## 0.5.2
-- - a variety of ordering fixes for events and command buffers
+- A variety of ordering fixes for events and command buffers.
 
 ## 0.5.1
 - breaking: removed debugDraw since flutterscene now provides DebugDraw itself.
@@ -33,7 +40,7 @@
 - upgrade deps
 
 ## 0.3.0
-- adds gameTween, vector3Tween, colorTween, smoothTo adn moveToward
+- adds gameTween, vector3Tween, colorTween, smoothTo and moveToward
 
 ## 0.2.0
 - adds new routine mechanism for better organizing sequenced game logic

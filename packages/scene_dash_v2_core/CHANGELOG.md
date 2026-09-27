@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.5.3
+- Fix a command flush replaying applied commands (or throwing `RangeError`)
+  when an observer runs a schedule mid-flush. A nested `Commands.apply` now
+  returns and the outer flush drains the queue.
+- Fix `world.remove<T>` asserting when the entity was despawned earlier in
+  the same flush.
+- Fix `Routine` settling the whole plan when an empty child `Sequence` or
+  `Select` is entered; it now reports to its parent like any other child.
+- Allow a chain of exactly `App.maxStateTransitionPasses` transitions.
+- `World.reset` now clears pending `removeAfter` deadlines.
+- Store `removeAfter` generations unsigned, matching entity generations.
+- Guard despawn against stores registered by observers mid-despawn.
+- Skip query type bookkeeping in release builds; empty `events<T>()` reads no
+  longer allocate.
+- Assert a positive duration when resetting a repeating `GameTimer`.
+- Remove unused `World.debugEventChannels`,
+  `EventChannelMaintenance.readerLagged` and `StateMachine.stateType`.
+- Point error messages at `configureEvent<T>()` and drop references to the
+  removed `@Resource()` injection.
+
 ## 0.5.2
 - Cache parked-component scans until new parts arrive; explicit component
   registration claims waiting parts, and despawn/reset release unclaimed parts.

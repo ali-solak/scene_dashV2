@@ -45,6 +45,31 @@ void main() {
       expect(log, ['resolve', 'resolve']);
     });
 
+    test('a schedule run from an observer does not replay the outer '
+        'flush', () {
+      final added = <int>[];
+      final game = TestGame.headless(
+        features: [
+          (game) => game
+            ..addSchedule(TurnSchedules.resolve)
+            ..addSystem(TurnSchedules.resolve, (world) {}, reads: const {})
+            ..registerComponent<Turn>()
+            ..observe<Turn>(
+              onAdd: (world, entity, turn) {
+                added.add(turn.number);
+                world.runSchedule(TurnSchedules.resolve);
+              },
+            ),
+        ],
+      )..start();
+
+      game.world
+        ..spawn([Turn()..number = 1])
+        ..spawn([Turn()..number = 2]);
+      game.pump();
+      expect(added, [1, 2]);
+    });
+
     test('ordering, sets and run conditions work as in a built-in '
         'schedule', () {
       final log = <String>[];

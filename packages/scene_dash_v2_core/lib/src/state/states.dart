@@ -80,9 +80,6 @@ final class OnExit extends StateScheduleLabel {
 ///
 /// Not exported: user code interacts through [CurrentState]/[NextState].
 abstract interface class StateMachine {
-  /// The state type [S], for diagnostics.
-  Type get stateType;
-
   /// Whether [value] belongs to this machine's state type.
   bool owns(Object value);
 
@@ -109,9 +106,6 @@ final class StateMachineRuntime<S extends Object> implements StateMachine {
   /// The resource pair inserted into the world at registration.
   final CurrentState<S> current;
   final NextState<S> next;
-
-  @override
-  Type get stateType => S;
 
   @override
   bool owns(Object value) => value is S;

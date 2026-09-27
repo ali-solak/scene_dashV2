@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          channel: master
+          channel: stable
       - run: flutter pub get
       - run: dart analyze
       - run: dart test
@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          channel: master
+          channel: stable
       - run: flutter pub get
       - run: flutter test
         working-directory: packages/scene_dash_v2

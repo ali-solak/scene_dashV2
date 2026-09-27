@@ -81,7 +81,7 @@ final class SpawnQueue {
           _parkedAtFrame.remove(entity);
         }
       }
-      world.removeNow<T>(entity);
+      if (world.isAlive(entity)) world.removeNow<T>(entity);
     });
   }
 
@@ -132,7 +132,8 @@ final class SpawnQueue {
             'Spawns and owned despawns did not settle after 64 passes.',
           );
         }
-      } while (_sweepOwnedOnce() || !world.commands.isEmpty);
+      } while (_sweepOwnedOnce() ||
+          (!world.commands.isEmpty && !world.commands.isApplying));
     } finally {
       world.endFlush();
     }

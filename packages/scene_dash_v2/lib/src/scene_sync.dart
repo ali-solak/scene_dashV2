@@ -6,8 +6,9 @@ import 'node_ref.dart';
 
 /// Extracts a node-local translation `(x, y, z)` from a game transform
 /// component of type [T].
-typedef NodeTranslation<T> =
-    (double x, double y, double z) Function(T transform);
+typedef NodeTranslation<T> = (double x, double y, double z) Function(
+  T transform,
+);
 
 /// Writes a game transform component [source] into [target], the bound node's
 /// mutable local transform matrix.
@@ -28,6 +29,8 @@ final class SyncSceneNodesAdapter<T extends Object>
 
   /// Reused transform matrix.
   final Matrix4 _scratch = Matrix4.zero();
+
+  late final void Function(Matrix4 target) _copyScratch = _scratch.copyInto;
 
   /// Number of nodes actually written (not skipped) by the last [run].
   @visibleForTesting
@@ -55,8 +58,7 @@ final class SyncSceneNodesAdapter<T extends Object>
       _scratch.setFrom(target);
       _writeTransform(transform, _scratch);
       if (_storageEquals(_scratch, target)) return;
-      target.setFrom(_scratch);
-      binding.node.markTransformDirty();
+      binding.node.mutateLocalTransform(_copyScratch);
       lastRunWrites++;
     });
   }

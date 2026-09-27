@@ -5,7 +5,8 @@ import 'package:scene_dash_v2_core/advanced.dart';
 
 /// Runs ECS updates from the scene.
 ///
-/// Uses its own fixed step loop when no [PhysicsWorld] is attached.
+/// Uses its own fixed step loop unless it is mounted in a scene whose root
+/// carries a [PhysicsWorld].
 final class EcsSceneDriver extends Component {
   final EcsFrameLoop _loop;
 
@@ -30,7 +31,7 @@ final class EcsSceneDriver extends Component {
 
   @override
   void update(double deltaSeconds) {
-    if (isAttached && node.getComponent<PhysicsWorld>() != null) {
+    if (isMounted && node.getComponent<PhysicsWorld>() != null) {
       // Scene physics owns the fixed steps.
       _accumulator = 0;
     } else {

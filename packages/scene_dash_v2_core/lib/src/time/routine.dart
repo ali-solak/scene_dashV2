@@ -83,7 +83,7 @@ final class Routine<L extends Step<L>> {
       _loops.add(0);
     }
     _elapsed = elapsed;
-    _settle(_descend());
+    _enter();
   }
 
   /// The plan. Immutable and shared; never mutated.
@@ -163,7 +163,12 @@ final class Routine<L extends Step<L>> {
     _elapsed = 0;
     _finished = false;
     _failed = false;
-    _settle(_descend());
+    _enter();
+  }
+
+  void _enter() {
+    final immediate = _descend();
+    if (immediate != null) _report(immediate);
   }
 
   /// The node reached by following [_path] for [depth] steps.

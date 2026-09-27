@@ -19,7 +19,7 @@ final class AppDiagnostics {
   });
 
   /// When true, the app measures each system's execution time per schedule and
-  /// exposes a [SystemProfiler] (via `App.profiler` and as a `@Resource()`).
+  /// exposes a [SystemProfiler] (via `App.profiler` and as a world resource).
   final bool profileSystems;
 
   /// When set (and [profileSystems] is true), a run exceeding this duration

@@ -6,7 +6,7 @@ final class SystemRef {
   /// `package:scene_game/player/player.dart`.
   final String library;
 
-  /// The declared name of the system (class or function), e.g. `MovePlayerSystem`.
+  /// The declared name of the system e.g. `movePlayer`.
   final String name;
 
   /// Optional name for diagnostics.

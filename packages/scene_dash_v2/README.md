@@ -148,7 +148,7 @@ Hot reload applies edits to system bodies. There is no build step.
 ## Quick start
 
 ```bash
-flutter channel master          # flutter_scene needs Flutter GPU
+flutter channel stable          # flutter_scene needs Flutter 3.47+
 flutter pub get                 # resolve the workspace (repo root)
 cd examples/combat_sample
 flutter run --enable-flutter-gpu

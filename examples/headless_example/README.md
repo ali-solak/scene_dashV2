@@ -1,17 +1,16 @@
 # Headless example
 
-The ECS core running without Flutter: a tiny "race" where a player and two
-boosted runners move down a track, a referee watches the finish line, and
-a run-state machine reports the result. Pure Dart, no scene, no GPU.
+The ECS core running without Flutter: a tiny "race" where one player moves
+down a track, a short-lived boost marker expires, and a referee records the
+winner at the finish line. Pure Dart, no scene, no GPU.
 
 What it demonstrates:
 
-- a feature installing systems across schedules (`startup`, fixed update,
-  `update`) with `reads:`/`writes:` declarations;
-- record queries with `require:`/`exclude:` and the `.each` idiom;
+- a feature installing systems on `startup` and `fixedUpdate` with
+  `reads:`/`writes:`, `after:` ordering and an `every(...)` run condition;
+- tags (`registerTag`) and record queries with `require:` and `.each`;
 - events (`world.emit`/`world.events<T>()`) between systems;
-- a state machine (`addState`, `OnEnter`, `inState`) and run-scoped
-  entities (`DespawnOnExit`);
+- timed despawn with `DespawnAfter`;
 - `TestGame.headless` driving the exact device frame pipeline in plain
   `dart test`, including the determinism check (identical spawns +
   identical inputs ⇒ identical runs).

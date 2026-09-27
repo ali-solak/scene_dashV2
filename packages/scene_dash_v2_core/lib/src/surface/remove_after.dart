@@ -12,7 +12,7 @@ final class RemoveAfterTracker {
   final World world;
 
   Int32List _indices = Int32List(8);
-  Int32List _generations = Int32List(8);
+  Uint32List _generations = Uint32List(8);
   Float64List _deadlines = Float64List(8);
   List<Type?> _types = List<Type?>.filled(8, null, growable: false);
   int _length = 0;
@@ -116,7 +116,7 @@ final class RemoveAfterTracker {
       newCap *= 2;
     }
     _indices = Int32List(newCap)..setRange(0, _length, _indices);
-    _generations = Int32List(newCap)..setRange(0, _length, _generations);
+    _generations = Uint32List(newCap)..setRange(0, _length, _generations);
     _deadlines = Float64List(newCap)..setRange(0, _length, _deadlines);
     final types = List<Type?>.filled(newCap, null, growable: false);
     for (var i = 0; i < _length; i++) {

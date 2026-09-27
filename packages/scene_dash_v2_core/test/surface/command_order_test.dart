@@ -11,6 +11,17 @@ final class Stunned implements Tag {
 }
 
 void main() {
+  test('a removal queued after a despawn in the same flush is inert', () {
+    final world = World()..ensureObjectStore<Health>();
+    final entity = world.spawn([const Health(1)]);
+    SpawnQueue.of(world).flush();
+    world
+      ..despawn(entity)
+      ..remove<Health>(entity);
+    SpawnQueue.of(world).flush();
+    expect(world.isAlive(entity), isFalse);
+  });
+
   test('surface and low-level operations share enqueue order', () {
     final world = World()..ensureObjectStore<Health>();
     final entity = world.spawn([const Health(1)]);

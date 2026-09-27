@@ -25,7 +25,7 @@ final class Game {
   final App app;
 
   /// Deferred scene-graph mutations, flushed once per frame (and after
-  /// startup). Also injectable into systems as an `@Resource()`.
+  /// startup). Also a world resource.
   late final SceneCommands sceneCommands = SceneCommands(root);
 
   /// Live node → entity index, exposed to systems as a [SceneNodeIndex] resource
@@ -124,9 +124,6 @@ final class Game {
     return this;
   }
 
-  /// Sends [event] to its runtime type channel.
-  void dispatch(Object event) => world.sendEvent(event);
-
   /// Registers a state machine for [S], starting at [initial]. Mirrors
   /// [AppBuilder.addState]; transitions apply at the frame-start boundary.
   Game addState<S extends Object>(S initial) {
@@ -195,13 +192,14 @@ final class Game {
 
   /// Advances ECS and scene time by one frame.
   void onTick(Duration elapsed, double deltaSeconds) {
+    final driver = _driver;
+    if (driver == null) return;
     final scaledDelta = _loop.frameStart(elapsed, deltaSeconds);
     final scene = this.scene;
     if (scene != null) {
       scene.update(scaledDelta);
     } else {
-      // Run the headless driver directly.
-      _driver!.update(scaledDelta);
+      driver.update(scaledDelta);
     }
   }
 

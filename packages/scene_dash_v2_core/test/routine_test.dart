@@ -219,6 +219,24 @@ void main() {
     });
   });
 
+  group('Routine empty composites', () {
+    test('an empty child sequence moves on to its sibling', () {
+      final routine = Routine<TestStep>(
+        const Sequence([Sequence<TestStep>([]), Beat('a')]),
+      );
+      expect(routine.finished, isFalse);
+      expect(routine.current, const Beat('a'));
+    });
+
+    test('an empty child select falls through to its sibling', () {
+      final routine = Routine<TestStep>(
+        const Select([Select<TestStep>([]), Beat('a')]),
+      );
+      expect(routine.finished, isFalse);
+      expect(routine.current, const Beat('a'));
+    });
+  });
+
   group('Routine save and resume', () {
     test('path, loops and elapsed round-trip mid-plan', () {
       const plan = Repeat<TestStep>(

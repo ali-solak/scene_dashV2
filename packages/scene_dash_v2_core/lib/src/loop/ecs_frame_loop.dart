@@ -72,9 +72,9 @@ final class EcsFrameLoop {
   /// Per-frame update: [Schedules.postPhysics] (the frame's fixed steps and
   /// physics integration have all run by the time the scene calls this), then
   /// [onCommandBoundary], [onBeforeUpdate], [Schedules.update],
-  /// [onCommandBoundary] again (where [Game] mounts nodes spawned during
-  /// `update`), [Schedules.renderSync], and finally [onFrameEnd] (e.g. flush
-  /// scene-graph mutations) before render.
+  /// [onCommandBoundary] again (where the Flutter `Game` mounts nodes spawned
+  /// during `update`), [Schedules.renderSync], and finally [onFrameEnd] (e.g.
+  /// flush scene-graph mutations) before render.
   ///
   /// [deltaSeconds] arrives already clock-scaled under the standard driver:
   /// it is the value [frameStart] returned, routed through `Scene.update`'s

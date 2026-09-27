@@ -9,9 +9,6 @@ abstract interface class EventChannelMaintenance {
   /// Number of buffered events.
   int get pendingCount;
 
-  /// Whether a reader lost events during the last [update].
-  bool get readerLagged;
-
   /// Adds [event] using its runtime type.
   void sendDynamic(Object event);
 
@@ -51,13 +48,8 @@ final class EventChannel<T> implements EventChannelMaintenance {
   /// Absolute index just past the last event (one more than the newest).
   int get _end => _base + _events.length;
 
-  bool _readerLagged = false;
-
   @override
   int get pendingCount => _events.length;
-
-  @override
-  bool get readerLagged => _readerLagged;
 
   /// Whether the channel contains events.
   bool get isNotEmpty => _events.isNotEmpty;
@@ -112,7 +104,6 @@ final class EventChannel<T> implements EventChannelMaintenance {
   /// Returns the largest number of events missed by one reader.
   @override
   int update() {
-    _readerLagged = false;
     if (_readers.isEmpty) {
       // Apply retention before the first reader exists.
       final maxPasses = retainedUpdates;
@@ -171,7 +162,6 @@ final class EventChannel<T> implements EventChannelMaintenance {
       _events.removeRange(0, drop);
       _base += drop;
     }
-    _readerLagged = maxSkipped > 0;
     return maxSkipped;
   }
 }

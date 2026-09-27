@@ -1,5 +1,5 @@
 name: basic_example_tower_defense
-description: 
+description: A minimal Scene-Dash v2 tower defense built on flutter_scene.
 publish_to: none
 resolution: workspace
 

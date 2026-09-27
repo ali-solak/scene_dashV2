@@ -6,7 +6,7 @@ part of 'system_profiler.dart';
 /// Timing data for one system and schedule.
 ///
 /// The counters are read-only to outside code: the profiler is exposed as a
-/// `@Resource()`, so only it (in this library) may mutate the record.
+/// world resource, so only it (in this library) may mutate the record.
 final class SystemTiming {
   SystemTiming({
     required this.label,
