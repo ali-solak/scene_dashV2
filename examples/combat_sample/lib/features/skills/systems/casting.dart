@@ -3,23 +3,37 @@ part of '../skills.dart';
 void installSkillCasting(GameBuilder game) {
   game
     ..configureEvent<CastLeap>(retainedUpdates: null)
-    ..registerComponent<PendingWindBlast>()
+    ..registerComponent<PendingCast>()
     ..world.insert(SkillBook())
     ..addSystem(Schedules.frameStart, buyUpgrades, writes: const {Health})
     ..addSystem(
       Schedules.fixedUpdate,
       castSkills,
       inSet: GameSets.actions,
-      reads: const {Player, Enemy, Health, PlayerMotion, SceneTransform},
-      writes: const {Knockback, PlayerAnimator},
+      reads: const {Player},
+      writes: const {Fighter, PendingCast},
+      after: const [fighterDriver, lockOnSystem],
+      independentOf: const [
+        announceWindup,
+        updateBladeTrail,
+        updateDashTrail,
+        announceShockwave,
+      ],
       runIf: inState(GameStatus.fighting),
     )
     ..addSystem(
       Schedules.fixedUpdate,
-      firePendingWindBlast,
+      releaseCasts,
       inSet: GameSets.actions,
-      reads: const {Player, Enemy, Health, SceneTransform},
-      writes: const {PendingWindBlast},
+      reads: const {Player, Enemy, Health, PlayerMotion, SceneTransform},
+      writes: const {Fighter, Knockback},
+      after: const [castSkills],
+      independentOf: const [
+        announceWindup,
+        updateBladeTrail,
+        updateDashTrail,
+        announceShockwave,
+      ],
       runIf: inState(GameStatus.fighting),
     )
     ..addSystem(
@@ -54,52 +68,63 @@ void buyUpgrades(World world) {
 
 void castSkills(World world) {
   final book = world.resource<SkillBook>()..tick(world.dt);
-  final row = world
-      .query2<PlayerMotion, SceneTransform>(require: const [Player])
-      .firstOrNull;
+  final row = world.query<Fighter>(require: const [Player]).firstOrNull;
   if (row == null) return;
-  final (player, motion, transform) = row;
+  final (player, fighter) = row;
 
+  Skill? fresh;
   for (final cast in world.events<SkillCast>()) {
-    if (!book.isReady(cast.skill)) continue;
-    book.trigger(cast.skill);
-    final power = book.powerOf(cast.skill);
-    switch (cast.skill) {
-      case Skill.fireGush:
-        _castFireGush(world, motion, transform, power);
-        world.tryGet<PlayerAnimator>(player)?.playBackwardDash();
-        world
-            .tryGet<Knockback>(player)
-            ?.shove(
-              Vector3(
-                -math.sin(motion.facing) * fireGushRecoil,
-                0,
-                -math.cos(motion.facing) * fireGushRecoil,
-              ),
-            );
-      case Skill.lavaPit:
-        _openLavaPit(world, motion, transform, power);
-      case Skill.windBlast:
-        // Fire after landing.
-        world.add(player, PendingWindBlast(power));
-        world.emit(const CastLeap());
-
-      case Skill.shield:
-        world.add(player, Barrier(shieldChargesFor(book.levelOf(cast.skill))));
-    }
+    if (book.isReady(cast.skill)) fresh = cast.skill;
   }
+  final queued = world.tryGet<PendingCast>(player)?.skill;
+  final wanted = fresh ?? queued;
+  if (wanted == null) return;
+  if (!fighter.canAct || !book.isReady(wanted)) {
+    if (fresh != null) {
+      world.add(player, PendingCast(fresh), removeAfter: skillBufferWindow);
+    }
+    return;
+  }
+  if (queued != null) world.remove<PendingCast>(player);
+  book.trigger(wanted);
+  fighter.beginCast(wanted, castMotionFor(wanted));
+  if (wanted == Skill.windBlast) world.emit(const CastLeap());
 }
 
-void firePendingWindBlast(World world) {
+void releaseCasts(World world) {
+  final book = world.resource<SkillBook>();
   final row = world
-      .query2<PendingWindBlast, SceneTransform>(require: const [Player])
+      .query3<Fighter, PlayerMotion, SceneTransform>(require: const [Player])
       .firstOrNull;
   if (row == null) return;
-  final (player, pending, transform) = row;
-  pending.elapsed += world.dt;
-  if (pending.elapsed >= windCastSeconds) {
-    _castWindBlast(world, transform, pending.power);
-    world.remove<PendingWindBlast>(player);
+  final (player, fighter, motion, transform) = row;
+  final skill = fighter.cast;
+  if (fighter.phase.state != CombatPhase.casting ||
+      fighter.castReleased ||
+      skill is! Skill ||
+      fighter.phase.elapsed < fighter.castMotion!.release) {
+    return;
+  }
+  fighter.castReleased = true;
+  final power = book.powerOf(skill);
+  switch (skill) {
+    case Skill.fireGush:
+      _castFireGush(world, motion, transform, power);
+      world
+          .tryGet<Knockback>(player)
+          ?.shove(
+            Vector3(
+              -math.sin(motion.facing) * fireGushRecoil,
+              0,
+              -math.cos(motion.facing) * fireGushRecoil,
+            ),
+          );
+    case Skill.lavaPit:
+      _openLavaPit(world, motion, transform, power);
+    case Skill.windBlast:
+      _castWindBlast(world, transform, power);
+    case Skill.shield:
+      world.add(player, Barrier(shieldChargesFor(book.levelOf(skill))));
   }
 }
 

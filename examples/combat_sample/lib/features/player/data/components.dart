@@ -11,6 +11,9 @@ final class PlayerMotion {
   /// Yaw the model faces: forward is `(sin facing, 0, cos facing)`.
   double facing = 0;
 
+  double aimFacing = 0;
+  double lunge = 0;
+
   double tumble = 0;
   bool downed = false;
   bool airborne = false;
@@ -19,6 +22,12 @@ final class PlayerMotion {
 final class Target {
   final Entity entity;
   const Target(this.entity);
+}
+
+final class DashTrail {
+  DashTrail(this.trail);
+
+  final TrailComponent trail;
 }
 
 final class BladeTrail {

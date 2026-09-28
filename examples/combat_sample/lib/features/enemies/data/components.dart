@@ -123,15 +123,42 @@ final class BrawlerVisuals {
   final Matrix4 _baseTransform;
   final PhysicallyBasedMaterial? capsuleMaterial;
 
+  double _sink = 0;
+  double _growth = 1;
+  final Matrix4 _lean = Matrix4.identity();
+
   void applyDeath(double progress, double sink) {
-    final eased = progress * progress;
-    bodyRoot.localTransform =
-        Matrix4.translation(Vector3(0, -sink * eased, 0)) * _baseTransform;
+    _sink = sink * progress * progress;
+    _compose();
   }
 
   void applyGrowth(double factor) {
+    _growth = factor;
+    _compose();
+  }
+
+  void applyLean(Vector3 localDirection, double amount) {
+    if (amount == 0 || localDirection.length2 < 1e-9) {
+      if (_lean.isIdentity()) return;
+      _lean.setIdentity();
+    } else {
+      _lean
+        ..setIdentity()
+        ..translateByVector3(localDirection * (amount * recoilDistance))
+        ..rotate(
+          Vector3(localDirection.z, 0, -localDirection.x),
+          amount * recoilTilt,
+        );
+    }
+    _compose();
+  }
+
+  void _compose() {
     bodyRoot.localTransform =
-        _baseTransform * Matrix4.diagonal3(Vector3.all(factor));
+        Matrix4.translation(Vector3(0, -_sink, 0)) *
+        _lean *
+        _baseTransform *
+        Matrix4.diagonal3(Vector3.all(_growth));
   }
 
   void hide() => bodyRoot.visible = false;

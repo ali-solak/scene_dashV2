@@ -19,9 +19,23 @@ void installPlayerActions(GameBuilder game) {
     )
     ..addSystem(
       Schedules.fixedUpdate,
-      spawnPlayerFx,
+      announceShockwave,
       inSet: GameSets.actions,
+      reads: const {Player, Fighter, SceneTransform},
+      after: const [fighterDriver],
+    )
+    ..addSystem(
+      Schedules.fixedUpdate,
+      announceDash,
+      inSet: GameSets.movement,
       reads: const {Player, Fighter, PlayerMotion, SceneTransform},
+      after: const [movePlayer],
+    )
+    ..addSystem(
+      Schedules.fixedUpdate,
+      updateDashTrail,
+      inSet: GameSets.actions,
+      reads: const {Player, Fighter, DashTrail},
       after: const [fighterDriver],
       runIf: hasResource<Scene>(),
     )
@@ -46,20 +60,41 @@ void announceWindup(World world) {
   }
 }
 
-void spawnPlayerFx(World world) {
-  final row = world
-      .query3<Fighter, PlayerMotion, SceneTransform>(require: const [Player])
-      .firstOrNull;
-  if (row == null) return;
-  final (_, fighter, motion, transform) = row;
+void announceShockwave(World world) {
+  world.query2<Fighter, SceneTransform>(require: const [Player]).each((
+    _,
+    fighter,
+    transform,
+  ) {
+    if (!fighter.phase.justEntered(CombatPhase.active)) return;
+    if (!fighter.swing.shockwave) return;
+    world.emit(Shockwave(transform.translation.clone()..y = 0));
+  });
+}
 
-  if (fighter.phase.justEntered(CombatPhase.rolling)) {
-    spawnDashDust(
-      world,
-      transform.translation.clone(),
-      motion.rollDirection.clone(),
-    );
-  }
+void announceDash(World world) {
+  world
+      .query3<Fighter, PlayerMotion, SceneTransform>(require: const [Player])
+      .each((entity, fighter, motion, transform) {
+        if (!fighter.phase.justEntered(CombatPhase.rolling)) return;
+        world.emit(
+          Dashed(
+            entity,
+            transform.translation.clone(),
+            motion.rollDirection.clone(),
+          ),
+        );
+      });
+}
+
+void updateDashTrail(World world) {
+  world.query2<Fighter, DashTrail>(require: const [Player]).each((
+    _,
+    fighter,
+    dash,
+  ) {
+    dash.trail.emitting = fighter.phase.state == CombatPhase.rolling;
+  });
 }
 
 void updateBladeTrail(World world) {

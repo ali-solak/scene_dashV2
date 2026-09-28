@@ -99,17 +99,20 @@ const double autoExposureStrength = 0.45;
 const double autoExposureCompensation = 0.1;
 
 final Vector3 skyGroundColor = Vector3(0.05, 0.13, 0.17);
+final Vector3 backdropZenithColor = Vector3(0.04, 0.16, 0.6);
+final Vector3 backdropHorizonColor = Vector3(0.2, 0.44, 0.82);
 
-const double fogVisibilityDistance = 800;
-const double fogHeightFalloff = 0.07;
+const double fogStartDistance = 120;
+const double fogVisibilityDistance = 520;
+const double fogHeightFalloff = 0;
 
-const double fogSkyColorInfluence = 0.35;
+const double fogSkyColorInfluence = 0.5;
 
-const double fogMaxOpacity = 0.42;
+const double fogMaxOpacity = 0.85;
 
-const double fogCutoffDistance = 150;
+const double fogCutoffDistance = 0;
 
-final Vector3 fogColor = Vector3(0.42, 0.47, 0.5);
+final Vector3 fogColor = backdropHorizonColor;
 
 const double godRaysIntensity = 0.45;
 const double godRaysDensity = 0.4;

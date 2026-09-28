@@ -1,10 +1,9 @@
 part of '../skills.dart';
 
-final class PendingWindBlast {
-  PendingWindBlast(this.power);
+final class PendingCast {
+  const PendingCast(this.skill);
 
-  final double power;
-  double elapsed = 0;
+  final Skill skill;
 }
 
 final class Burning {

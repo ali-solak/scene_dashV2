@@ -19,8 +19,18 @@ const double lockBreakRange = 15;
 
 const double cameraDistance = 10;
 
-const double lightHitTrauma = 0.28;
-const double heavyHitTrauma = 0.55;
+const double lightHitTrauma = 0.22;
+const double finisherHitTrauma = 0.45;
+const double heavyHitTrauma = 0.38;
+const double killTrauma = 0.15;
+
+double hitTrauma(DamageDealt hit) =>
+    (hit.killed ? killTrauma : 0) +
+    switch (hit.weight) {
+      HitWeight.light => lightHitTrauma,
+      HitWeight.finisher => finisherHitTrauma,
+      HitWeight.heavy => heavyHitTrauma,
+    };
 const double cameraFocusHeight = 2.0;
 
 const double cameraPitchMin = -0.1;
@@ -41,6 +51,15 @@ const double lookPitchSensitivity = 0.0045;
 const double flinchSeconds = 0.28;
 
 const double lockedCameraBias = 0.5;
+
+const double occlusionLift = 0.38;
+const double occluderHeight = 1.3;
+const double occluderRadius = 0.95;
+const double occluderNearT = 0.05;
+const double occluderFarT = 0.88;
+const double occlusionHoldSeconds = 0.45;
+final double occlusionRiseHalfLife = math.ln2 / 6;
+final double occlusionSettleHalfLife = math.ln2 / 2.2;
 
 /// Boom collision. The camera pulls in the instant the ground crosses the
 /// boom and eases back out, so a clip is never visible but the recovery is
@@ -81,8 +100,6 @@ const double backpedalStrideSpeed = 2.2;
 
 const double runBlendSpeed = 4.8;
 
-const double strikeClipSeconds = 1.10;
-const double heavyClipSeconds = 2.40;
 const double rollClipSeconds = 0.40;
 const double hitClipSeconds = 0.67;
 const double windCastClipSeconds = 1.167;
@@ -117,4 +134,24 @@ const double swordBladeLength = 1.35;
 const double bladeTrailWidth = 0.5;
 const double bladeTrailSeconds = 0.18;
 
+final Vector4 hitFlashHighlight = Vector4(1.0, 1.0, 1.0, 1.0);
+final Vector4 hurtFlashHighlight = Vector4(1.0, 0.3, 0.25, 1.0);
+final Vector4 iFrameHighlight = Vector4(0.45, 0.9, 1.0, 0.9);
+
+final ColorGradient dashTrailFade = ColorGradient([
+  ColorStop(0, Vector4(0.45, 0.9, 1.0, 0.55)),
+  ColorStop(1, Vector4(0.45, 0.9, 1.0, 0)),
+]);
+const double dashTrailHeight = 1.0;
+const double dashTrailWidth = 1.1;
+const double dashTrailSeconds = 0.22;
+
 const double attackMoveFactor = 0.35;
+const double spinMoveFactor = 0.45;
+
+const double aimAssistRange = 5.5;
+const double aimAssistHalfArc = 1.0;
+const double aimAssistAnglePenalty = 2.0;
+const double swingTurnRate = 30;
+const double swingStandoff = 1.5;
+const double swingStepDistance = 0.3;

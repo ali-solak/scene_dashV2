@@ -13,6 +13,7 @@ void main(List<String> args) async {
         'assets/animation/Rig_Medium_MovementBasic.glb',
         'assets/animation/Rig_Medium_MovementAdvanced.glb',
         'assets/animation/Rig_Medium_CombatMelee.glb',
+        'assets/animation/Rig_Medium_CombatRanged.glb',
         'assets/animation/Rig_Medium_Special.glb',
       ],
     );

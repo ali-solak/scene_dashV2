@@ -11,6 +11,7 @@ import 'package:combat_sample/common/inputs.dart';
 import 'package:combat_sample/common/sets.dart';
 import 'package:combat_sample/features/enemies/enemies.dart';
 import 'package:combat_sample/features/player/player.dart';
+import 'package:combat_sample/features/feedback/feedback.dart';
 import 'package:combat_sample/features/rules/rules.dart';
 import 'package:combat_sample/features/skills/skills.dart';
 import 'package:combat_sample/features/waves/waves.dart';
@@ -31,7 +32,10 @@ int ticksFor(double seconds) {
 /// Boots the same cascade `main` does, minus the assets. Defaults to
 /// [GameStatus.fighting] so suites skip pressing START; pass [initial]
 /// to exercise the shell instead.
-TestGame boot({GameStatus initial = GameStatus.fighting}) {
+TestGame boot({
+  GameStatus initial = GameStatus.fighting,
+  List<Feature> extra = const [],
+}) {
   final game = TestGame.headless(
     fixedDt: combatFixedDt,
     strictAccess: true,
@@ -59,6 +63,8 @@ TestGame boot({GameStatus initial = GameStatus.fighting}) {
       installWaves,
       installSkills,
       installRules,
+      installFeedback,
+      ...extra,
     ],
   );
   game.start();
@@ -78,10 +84,9 @@ void landPlayerStrike(TestGame game, Entity enemy, {bool heavy = false}) {
   final facing = world.get<PlayerMotion>(player).facing;
   final windup = heavy ? heavyStartupSeconds : startupSeconds;
 
-  if (heavy) {
-    world.buttons<CombatAction>().setPressed(CombatAction.attack, true);
-  }
-  world.buffer<CombatAction>().record(CombatAction.attack);
+  world.buffer<CombatAction>().record(
+    heavy ? CombatAction.heavy : CombatAction.attack,
+  );
   game.pumpFixed(steps: 1); // startup entered
   game.pumpFixed(steps: ticksFor(windup) - 2);
 
@@ -92,9 +97,6 @@ void landPlayerStrike(TestGame game, Entity enemy, {bool heavy = false}) {
     playerTransform.translation.z + math.cos(facing) * 1.2,
   );
   game.pumpFixed(steps: 3); // crosses the active edge
-  if (heavy) {
-    world.buttons<CombatAction>().setPressed(CombatAction.attack, false);
-  }
 }
 
 /// Clears the field and drops one barbarian [distance] straight in front
@@ -128,4 +130,26 @@ void pumpHolding(TestGame game, Entity enemy, {required int steps}) {
     game.world.get<SceneTransform>(enemy).translation.setFrom(spot);
     game.pumpFixed(steps: 1);
   }
+}
+
+void cast(TestGame game, Skill skill, {int settle = 2}) {
+  final world = game.world;
+  final player = playerOf(world);
+  final fighter = world.get<Fighter>(player);
+  final health = world.get<Health>(player);
+  for (var i = 0; i < 120 && !fighter.canAct; i++) {
+    health.current = health.max;
+    game.pumpFixed(steps: 1);
+  }
+  game.emit(SkillCast(skill));
+  game.pumpFixed(steps: 1);
+  final bound = ticksFor(castMotionFor(skill).release) + 4;
+  for (var i = 0; i < bound; i++) {
+    if (fighter.phase.state != CombatPhase.casting || fighter.castReleased) {
+      break;
+    }
+    health.current = health.max;
+    game.pumpFixed(steps: 1);
+  }
+  game.pumpFixed(steps: settle);
 }

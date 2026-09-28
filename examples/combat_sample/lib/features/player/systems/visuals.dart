@@ -49,7 +49,20 @@ void attachPlayerVisuals(World world) {
         Vector3.all(characterScale),
       ),
     )..add(model);
-    final playerRoot = Node(name: 'player')..add(wrapper);
+    final dashTrail = TrailComponent(
+      width: dashTrailWidth,
+      lifetime: dashTrailSeconds,
+      colorOverTrail: dashTrailFade,
+    )..emitting = false;
+    final playerRoot = Node(name: 'player')
+      ..add(wrapper)
+      ..add(
+        Node(
+          name: 'dash-trail',
+          localTransform: Matrix4.translation(Vector3(0, dashTrailHeight, 0)),
+        )..addComponent(dashTrail),
+      );
+    world.add(player, DashTrail(dashTrail));
     setLightChannels(playerRoot, defaultLightChannels);
     world.add(player, NodeRef(playerRoot));
     world.add(player, buildPlayerAnimator(assets, model));
@@ -107,6 +120,7 @@ void updatePlayerAnimation(World world) {
   world
       .query3<Fighter, PlayerMotion, PlayerAnimator>(require: const [Player])
       .each((entity, fighter, motion, animator) {
+        if (animator.hold(world.has<HitPause>(entity))) return;
         animator.update(fighter, motion, dt);
       });
 }
@@ -121,6 +135,10 @@ void updatePlayerGhost(World world) {
   final launched = world.tryGet<Knockback>(entity)?.incapacitated ?? false;
   _setHighlight(
     ref.node,
-    fighter.iFramed || launched ? Vector4(0.45, 0.9, 1.0, 0.9) : null,
+    fighter.iFramed || launched
+        ? iFrameHighlight
+        : world.has<HitFlash>(entity)
+        ? hurtFlashHighlight
+        : null,
   );
 }

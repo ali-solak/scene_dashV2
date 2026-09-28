@@ -27,5 +27,9 @@ class CameraRig {
 
   double intro = 0;
 
+  double lift = 0;
+
+  double sinceBlocked = double.infinity;
+
   double boom = double.infinity;
 }

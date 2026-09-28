@@ -5,7 +5,7 @@ void installPlayerMotion(GameBuilder game) {
     Schedules.fixedUpdate,
     movePlayer,
     inSet: GameSets.movement,
-    reads: const {Player, Fighter, Target},
+    reads: const {Player, Fighter, Target, Enemy, Health},
     writes: const {PlayerMotion, SceneTransform, Knockback},
     runIf: inState(GameStatus.fighting),
   );
@@ -28,6 +28,12 @@ void movePlayer(World world) {
         }
         if (fighter.phase.justEntered(CombatPhase.rolling)) {
           _commitRollDirection(motion, moveX, moveZ, moving: moving);
+        }
+        if (fighter.phase.justEntered(CombatPhase.startup)) {
+          _aimSwing(world, entity, fighter, motion, transform, moveX, moveZ);
+        } else if (fighter.phase.justEntered(CombatPhase.casting)) {
+          _aimSwing(world, entity, fighter, motion, transform, moveX, moveZ);
+          motion.lunge = 0;
         }
 
         _planarVelocity(
@@ -80,6 +86,62 @@ void _commitRollDirection(
   }
 }
 
+void _aimSwing(
+  World world,
+  Entity player,
+  Fighter fighter,
+  PlayerMotion motion,
+  SceneTransform transform,
+  double moveX,
+  double moveZ,
+) {
+  final moving = moveX * moveX + moveZ * moveZ > 1e-6;
+  final intended = moving ? math.atan2(moveX, moveZ) : motion.facing;
+  final aimed =
+      _targetTransform(world, player) ??
+      _assistTarget(world, transform, intended);
+  final lungeSeconds = fighter.swing.lungeSeconds;
+  if (aimed == null) {
+    motion
+      ..aimFacing = intended
+      ..lunge = swingStepDistance / lungeSeconds;
+    return;
+  }
+  final dx = aimed.translation.x - transform.translation.x;
+  final dz = aimed.translation.z - transform.translation.z;
+  final gap = math.sqrt(dx * dx + dz * dz) - swingStandoff;
+  motion
+    ..aimFacing = math.atan2(dx, dz)
+    ..lunge = gap.clamp(0.0, fighter.swing.lunge) / lungeSeconds;
+}
+
+SceneTransform? _assistTarget(
+  World world,
+  SceneTransform from,
+  double intended,
+) {
+  SceneTransform? best;
+  var bestScore = double.infinity;
+  world.query2<Health, SceneTransform>(require: const [Enemy]).each((
+    _,
+    health,
+    transform,
+  ) {
+    if (!health.alive) return;
+    final dx = transform.translation.x - from.translation.x;
+    final dz = transform.translation.z - from.translation.z;
+    final distance = math.sqrt(dx * dx + dz * dz);
+    if (distance > aimAssistRange) return;
+    final offAim = angleDifference(math.atan2(dx, dz), intended).abs();
+    if (offAim > aimAssistHalfArc) return;
+    final score = distance + offAim * aimAssistAnglePenalty;
+    if (score >= bestScore) return;
+    best = transform;
+    bestScore = score;
+  });
+  return best;
+}
+
 void _planarVelocity(
   World world,
   Entity entity,
@@ -116,15 +178,40 @@ void _planarVelocity(
       velocity
         ..setFrom(motion.rollDirection)
         ..scale(rollSpeed);
-    case CombatPhase.startup || CombatPhase.recovery:
+    case CombatPhase.startup:
+      _lunge(motion, dt);
+    case CombatPhase.active when fighter.swing.hitInterval != null:
+      velocity
+        ..setValues(moveX, 0, moveZ)
+        ..scale(freeMoveSpeed * spinMoveFactor);
+    case CombatPhase.active:
+      _lunge(motion, dt);
+    case CombatPhase.recovery:
       velocity.setValues(moveX, 0, moveZ);
       velocity.scale(
         (fighter.stance == Stance.locked ? lockedMoveSpeed : freeMoveSpeed) *
             attackMoveFactor,
       );
-    case CombatPhase.active || CombatPhase.staggered:
+    case CombatPhase.casting when !fighter.castReleased:
+      motion.facing = turnToward(
+        motion.facing,
+        motion.aimFacing,
+        swingTurnRate * dt,
+      );
+    case CombatPhase.casting || CombatPhase.staggered:
       break;
   }
+}
+
+void _lunge(PlayerMotion motion, double dt) {
+  motion.facing = turnToward(
+    motion.facing,
+    motion.aimFacing,
+    swingTurnRate * dt,
+  );
+  motion.velocity
+    ..setValues(math.sin(motion.facing), 0, math.cos(motion.facing))
+    ..scale(motion.lunge);
 }
 
 void _integrateMotion(

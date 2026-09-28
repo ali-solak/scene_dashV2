@@ -87,10 +87,7 @@ void main() {
     final health = world.get<Health>(enemy);
     final before = health.current;
 
-    // Commit a heavy (hold past the threshold) and pin the enemy in the arc
-    // for the length of the sweep.
-    world.buttons<CombatAction>().setPressed(CombatAction.attack, true);
-    world.buffer<CombatAction>().record(CombatAction.attack);
+    world.buffer<CombatAction>().record(CombatAction.heavy);
     pumpHolding(
       game,
       enemy,

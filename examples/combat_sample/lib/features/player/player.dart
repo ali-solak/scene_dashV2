@@ -8,12 +8,13 @@ import 'package:vector_math/vector_math.dart'
 
 import '../enemies/enemies.dart'
     show Enemy, Brawler, BrawlPhase, telegraphSeconds;
-import '../../fx/dash_dust.dart';
 import '../../common/actors.dart';
 import '../../common/camera.dart';
 import '../../common/light_channels.dart';
 import '../../common/physics_layers.dart';
 import '../../common/camera_rig.dart';
+import '../../common/clip_hold.dart';
+import '../../common/reactions.dart';
 import '../../common/combat_math.dart';
 import '../../assets/character_assets.dart';
 import '../../common/game_state.dart';
@@ -45,7 +46,8 @@ void installPlayer(GameBuilder game) {
     ..registerComponent<PlayerMotion>()
     ..registerComponent<Knockback>()
     ..registerComponent<Target>()
-    ..registerComponent<BladeTrail>();
+    ..registerComponent<BladeTrail>()
+    ..registerComponent<DashTrail>();
   installPlayerLifecycle(game);
   installPlayerMotion(game);
   installPlayerActions(game);

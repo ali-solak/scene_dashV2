@@ -139,6 +139,8 @@ class _GameControlsState extends State<GameControls>
       key == LogicalKeyboardKey.keyD ||
       key == LogicalKeyboardKey.space ||
       key == LogicalKeyboardKey.keyJ ||
+      key == LogicalKeyboardKey.keyK ||
+      key == LogicalKeyboardKey.keyF ||
       key == LogicalKeyboardKey.tab ||
       key == LogicalKeyboardKey.keyQ ||
       key == LogicalKeyboardKey.escape;
@@ -157,6 +159,8 @@ class _GameControlsState extends State<GameControls>
         case LogicalKeyboardKey.keyJ:
           _keyAttack = true;
           _syncAttack();
+        case LogicalKeyboardKey.keyK || LogicalKeyboardKey.keyF when _fighting:
+          _buffer.record(CombatAction.heavy);
         case LogicalKeyboardKey.tab when _fighting:
           _game.emit(const LockPressed());
         case LogicalKeyboardKey.keyQ when _fighting:
@@ -205,8 +209,12 @@ class _GameControlsState extends State<GameControls>
       if (event.buttons & kMiddleMouseButton != 0) {
         if (_fighting) _game.emit(const LockPressed());
       } else if (event.buttons & kPrimaryButton != 0) {
-        _pointerAttack = true;
-        _syncAttack();
+        if (HardwareKeyboard.instance.isShiftPressed) {
+          if (_fighting) _buffer.record(CombatAction.heavy);
+        } else {
+          _pointerAttack = true;
+          _syncAttack();
+        }
       }
     } else {
       _touchDownPosition = event.position;
@@ -273,6 +281,7 @@ class _GameControlsState extends State<GameControls>
                           _syncAttack();
                         },
                         onRoll: () => _buffer.record(CombatAction.roll),
+                        onHeavy: () => _buffer.record(CombatAction.heavy),
                       )
                     : const SizedBox.shrink(),
               ),

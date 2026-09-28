@@ -13,6 +13,7 @@ import 'package:vector_math/vector_math.dart' show Vector3;
 import 'features/decor/decor.dart';
 import 'features/enemies/enemies.dart';
 import 'features/player/player.dart';
+import 'features/feedback/feedback.dart';
 import 'features/rules/rules.dart';
 import 'features/skills/skills.dart';
 import 'features/waves/waves.dart';
@@ -24,6 +25,7 @@ import 'assets/character_assets.dart';
 import 'common/game_state.dart';
 import 'common/inputs.dart';
 import 'common/sets.dart';
+
 import 'package:flutter_scene/physics.dart';
 
 Future<SceneGame> bootCombatGame(
@@ -59,6 +61,7 @@ Future<SceneGame> bootCombatGame(
       installWaves,
       installSkills,
       installRules,
+      installFeedback,
     ],
   );
   stage.value = 'first frame';

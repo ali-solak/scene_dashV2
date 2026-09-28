@@ -107,8 +107,7 @@ void main() {
     expect(book.powerOf(Skill.fireGush), 1);
     final one = dummyInFront(game, distance: 5);
     final fullOne = world.get<Health>(one).current;
-    game.emit(const SkillCast(Skill.fireGush));
-    game.pumpFixed(steps: 3);
+    cast(game, Skill.fireGush);
     final atLevelOne = fullOne - world.get<Health>(one).current;
     expect(atLevelOne, closeTo(fireGushDamage, 1e-6));
 
@@ -123,8 +122,7 @@ void main() {
     game.pumpFixed(steps: ticksFor(Skill.fireGush.cooldownSeconds) + 8);
     final two = dummyInFront(game, distance: 5);
     final fullTwo = world.get<Health>(two).current;
-    game.emit(const SkillCast(Skill.fireGush));
-    game.pumpFixed(steps: 3);
+    cast(game, Skill.fireGush);
     final atMax = fullTwo - world.get<Health>(two).current;
     expect(atMax, greaterThan(atLevelOne));
 
@@ -142,8 +140,7 @@ void main() {
     grant(game, Skill.fireGush);
     final enemy = dummyInFront(game, distance: 5);
 
-    game.emit(const SkillCast(Skill.fireGush));
-    game.pumpFixed(steps: 3);
+    cast(game, Skill.fireGush);
     expect(world.get<Burning>(enemy).damage, closeTo(burnTickDamage, 1e-6));
 
     // Upgrading mid-burn must not retroactively change the fire already
@@ -157,8 +154,7 @@ void main() {
     final enemy = dummyInFront(game);
     final health = game.world.get<Health>(enemy).current;
 
-    game.emit(const SkillCast(Skill.fireGush));
-    game.pumpFixed(steps: 4);
+    cast(game, Skill.fireGush);
 
     expect(game.world.get<Health>(enemy).current, health);
   });
@@ -171,8 +167,7 @@ void main() {
     final health = world.get<Health>(enemy);
     final full = health.current;
 
-    game.emit(const SkillCast(Skill.fireGush));
-    game.pumpFixed(steps: 3);
+    cast(game, Skill.fireGush);
 
     expect(health.current, closeTo(full - fireGushDamage, 1e-6));
     expect(world.expiryOf<Burning>(enemy), isNotNull, reason: 'set alight');
@@ -199,8 +194,7 @@ void main() {
     grant(game, Skill.fireGush);
     final enemy = dummyInFront(game, distance: 5);
 
-    game.emit(const SkillCast(Skill.fireGush));
-    game.pumpFixed(steps: 3);
+    cast(game, Skill.fireGush);
     expect(world.expiryOf<Burning>(enemy), isNotNull, reason: 'set alight');
 
     var sawStagger = false;
@@ -221,8 +215,7 @@ void main() {
     grant(game, Skill.lavaPit);
     final enemy = dummyInFront(game, distance: lavaPitDistance);
 
-    game.emit(const SkillCast(Skill.lavaPit));
-    game.pumpFixed(steps: 2);
+    cast(game, Skill.lavaPit);
     expect(world.expiryOf<Burning>(enemy), isNull, reason: 'not yet ticked');
 
     // One lava tick in the pit is enough to light them.
@@ -249,11 +242,10 @@ void main() {
     grant(game, Skill.lavaPit);
     final enemy = dummyInFront(game, distance: lavaPitDistance);
 
-    game.emit(const SkillCast(Skill.fireGush));
-    game.pumpFixed(steps: 3);
+    cast(game, Skill.fireGush);
     expect(world.get<Burning>(enemy).damage, closeTo(burnTickDamage, 1e-6));
 
-    game.emit(const SkillCast(Skill.lavaPit));
+    cast(game, Skill.lavaPit, settle: 0);
     pumpUnkillable(game, enemy, steps: ticksFor(lavaTickSeconds) + 2);
 
     expect(
@@ -269,8 +261,7 @@ void main() {
     grant(game, Skill.lavaPit);
     final enemy = dummyInFront(game, distance: lavaPitDistance);
 
-    game.emit(const SkillCast(Skill.lavaPit));
-    game.pumpFixed(steps: 2);
+    cast(game, Skill.lavaPit);
 
     var sawStagger = false;
     for (var i = 0; i < ticksFor(lavaTickSeconds * 4); i++) {
@@ -290,8 +281,7 @@ void main() {
     final enemy = dummyInFront(game, distance: -4); // straight behind
     final health = world.get<Health>(enemy).current;
 
-    game.emit(const SkillCast(Skill.fireGush));
-    game.pumpFixed(steps: 3);
+    cast(game, Skill.fireGush);
 
     expect(world.get<Health>(enemy).current, health);
     expect(world.expiryOf<Burning>(enemy), isNull);
@@ -304,15 +294,13 @@ void main() {
     grant(game, Skill.fireGush);
     final enemy = dummyInFront(game, distance: 5);
 
-    game.emit(const SkillCast(Skill.fireGush));
-    game.pumpFixed(steps: 2);
+    cast(game, Skill.fireGush);
     expect(book.isReady(Skill.fireGush), isFalse);
     expect(book.readinessOf(Skill.fireGush), lessThan(1));
 
     // A second cast inside the cooldown does not land its damage.
     final health = world.get<Health>(enemy).current;
-    game.emit(const SkillCast(Skill.fireGush));
-    game.pumpFixed(steps: 2);
+    cast(game, Skill.fireGush);
     expect(
       world.get<Health>(enemy).current,
       closeTo(health, burnTickDamage * 2),
@@ -339,8 +327,7 @@ void main() {
     final health = world.get<Health>(enemy);
     final full = health.current;
 
-    game.emit(const SkillCast(Skill.lavaPit));
-    game.pumpFixed(steps: 2);
+    cast(game, Skill.lavaPit);
     expect(world.entitiesWith(require: const [LavaPit]).count(), 1);
 
     // No burst: the pit does its work over time.
@@ -370,7 +357,7 @@ void main() {
     );
     final health = world.get<Health>(enemy).current;
 
-    game.emit(const SkillCast(Skill.lavaPit));
+    cast(game, Skill.lavaPit, settle: 0);
     pumpHolding(game, enemy, steps: ticksFor(lavaTickSeconds) * 3);
 
     expect(world.get<Health>(enemy).current, health);
@@ -402,9 +389,7 @@ void main() {
       start[entity] = _distance(t.translation, at);
     });
 
-    game.emit(const SkillCast(Skill.windBlast));
-    // The gust fires when the leap lands.
-    game.pumpFixed(steps: ticksFor(windCastSeconds) + 4);
+    cast(game, Skill.windBlast, settle: 4);
 
     var launched = 0;
     world.query2<Knockback, SceneTransform>(require: const [Enemy]).each((
@@ -446,8 +431,7 @@ void main() {
     grant(game, Skill.windBlast);
     final enemy = dummyInFront(game, distance: 3);
 
-    game.emit(const SkillCast(Skill.windBlast));
-    game.pumpFixed(steps: ticksFor(windCastSeconds) + 4); // waits for the leap
+    cast(game, Skill.windBlast, settle: 4);
     final knockback = world.get<Knockback>(enemy);
     expect(knockback.airborne, isTrue);
 
@@ -473,8 +457,7 @@ void main() {
     grant(game, Skill.windBlast);
     final enemy = dummyInFront(game, distance: windBlastRadius + 3);
 
-    game.emit(const SkillCast(Skill.windBlast));
-    game.pumpFixed(steps: ticksFor(windCastSeconds) + 4); // waits for the leap
+    cast(game, Skill.windBlast, settle: 4);
 
     expect(world.get<Knockback>(enemy).airborne, isFalse);
   });
@@ -491,7 +474,12 @@ void main() {
     bool impact = true,
   }) {
     game.emit(
-      HitLanded(playerOf(game.world), damage, heavy: heavy, impact: impact),
+      HitLanded(
+        playerOf(game.world),
+        damage,
+        weight: heavy ? HitWeight.heavy : HitWeight.light,
+        impact: impact,
+      ),
     );
     // A few steps for resolution to settle. Blows no longer freeze the
     // clock (the hitstop read as lag), so there is no frozen window to
@@ -527,8 +515,7 @@ void main() {
     expect(world.tryGet<Barrier>(player), isNull, reason: 'down to start');
 
     grant(game, Skill.shield);
-    game.emit(const SkillCast(Skill.shield));
-    game.pumpFixed(steps: 2);
+    cast(game, Skill.shield);
 
     final barrier = world.get<Barrier>(player);
     expect(barrier.charges, shieldBaseCharges);
@@ -540,8 +527,7 @@ void main() {
     final world = game.world;
     final player = playerOf(world);
     grant(game, Skill.shield);
-    game.emit(const SkillCast(Skill.shield));
-    game.pumpFixed(steps: 2);
+    cast(game, Skill.shield);
 
     final health = world.get<Health>(player);
     final full = health.current;
@@ -562,8 +548,7 @@ void main() {
     final world = game.world;
     final player = playerOf(world);
     grant(game, Skill.shield);
-    game.emit(const SkillCast(Skill.shield));
-    game.pumpFixed(steps: 2);
+    cast(game, Skill.shield);
     final full = world.get<Health>(player).current;
 
     // Every charge, spent. A heavy costs exactly what a light costs.
@@ -589,8 +574,7 @@ void main() {
     final world = game.world;
     final player = playerOf(world);
     grant(game, Skill.shield, level: 3);
-    game.emit(const SkillCast(Skill.shield));
-    game.pumpFixed(steps: 2);
+    cast(game, Skill.shield);
 
     expect(
       world.get<Barrier>(player).charges,
@@ -604,8 +588,7 @@ void main() {
     final world = game.world;
     final player = playerOf(world);
     grant(game, Skill.shield);
-    game.emit(const SkillCast(Skill.shield));
-    game.pumpFixed(steps: 2);
+    cast(game, Skill.shield);
     final full = world.get<Health>(player).current;
 
     // A damage-over-time tick: no charge spent, and it lands.
@@ -624,8 +607,7 @@ void main() {
     final world = game.world;
     final player = playerOf(world);
     grant(game, Skill.shield);
-    game.emit(const SkillCast(Skill.shield));
-    game.pumpFixed(steps: 2);
+    cast(game, Skill.shield);
     expect(world.tryGet<Barrier>(player), isNotNull);
 
     world.get<Health>(player).current = 0;
@@ -653,8 +635,7 @@ void main() {
     final enemy = dummyInFront(game, distance: 4);
     world.get<Health>(enemy).current = 5; // the gush kills outright
 
-    game.emit(const SkillCast(Skill.fireGush));
-    game.pumpFixed(steps: 4);
+    cast(game, Skill.fireGush);
 
     expect(world.get<Brawler>(enemy).phase.state, BrawlPhase.dying);
     expect(score.kills, kills + 1);
@@ -709,8 +690,7 @@ void main() {
     final game = boot();
     final world = game.world;
     grant(game, Skill.lavaPit);
-    game.emit(const SkillCast(Skill.lavaPit));
-    game.pumpFixed(steps: 2);
+    cast(game, Skill.lavaPit);
     expect(world.entitiesWith(require: const [LavaPit]).count(), 1);
 
     world.get<Health>(playerOf(world)).current = 0;

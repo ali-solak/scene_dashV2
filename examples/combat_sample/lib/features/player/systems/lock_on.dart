@@ -18,14 +18,19 @@ void installLockOn(GameBuilder game) {
       },
       writes: const {Fighter},
       after: const [fighterDriver],
-      independentOf: const [spawnPlayerFx, updateBladeTrail, announceWindup],
+      independentOf: const [
+        updateBladeTrail,
+        updateDashTrail,
+        announceWindup,
+        announceShockwave,
+      ],
       runIf: inState(GameStatus.fighting),
     )
     ..addSystem(
       Schedules.update,
       updateEnemyHighlights,
       inSet: GameSets.logic,
-      reads: const {Player, Enemy, Target, Brawler, NodeRef},
+      reads: const {Player, Enemy, Target, Brawler, NodeRef, HitFlash},
       runIf: hasResource<Scene>(),
     )
     ..addSystem(
@@ -160,6 +165,12 @@ void updateEnemyHighlights(World world) {
     brawler,
     ref,
   ) {
+    if (world.has<HitFlash>(enemy)) {
+      if (applied[enemy.index] == EnemyHighlights.flash) return;
+      applied[enemy.index] = EnemyHighlights.flash;
+      _setHighlight(ref.node, hitFlashHighlight);
+      return;
+    }
     if (brawler.phase.state == BrawlPhase.telegraph) {
       final tell = (brawler.phase.elapsed / telegraphSeconds).clamp(0.0, 1.0);
       applied[enemy.index] = EnemyHighlights.telegraph;
@@ -235,6 +246,7 @@ final class EnemyHighlights {
   static const int none = 0;
   static const int locked = 1;
   static const int telegraph = 2;
+  static const int flash = 3;
 
   final Map<int, int> applied = <int, int>{};
 }

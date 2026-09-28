@@ -16,7 +16,13 @@ void installPlayerCamera(GameBuilder game) {
       Schedules.fixedUpdate,
       updateCameraRig,
       inSet: GameSets.resolution,
-      reads: const {Player, PlayerMotion, SceneTransform, Target},
+      reads: const {
+        Player,
+        PlayerMotion,
+        SceneTransform,
+        Target,
+        Enemy,
+      },
     );
 }
 
@@ -38,16 +44,18 @@ void updateCameraRig(World world) {
     return;
   }
 
-  for (final hit in world.events<HitLanded>()) {
+  for (final hit in world.events<DamageDealt>()) {
     if (!hit.impact) continue;
-    rig.shake.addTrauma(hit.heavy ? heavyHitTrauma : lightHitTrauma);
+    rig.shake.addTrauma(hitTrauma(hit));
   }
 
   final position = transform.translation;
   final target = _targetTransform(world, player);
   _aim(rig, world.resource<LookInput>(), position, target, dt);
   _focus(rig, position, target);
-  _ease(rig, _framingDistance(position, target), dt);
+  final distance = _framingDistance(position, target);
+  _liftOverOccluders(world, rig, distance, dt);
+  _ease(rig, distance, dt);
   _retract(world, rig, dt);
   _applyShake(rig, dt);
   aimCombatCamera(rig);
@@ -129,8 +137,7 @@ void _aim(
   // Yaw wraps, so it needs the blend factor rather than smoothTo: the gap is
   // the shortest arc, not plain subtraction.
   rig.yaw +=
-      angleDifference(desiredYaw, rig.yaw) *
-      smoothBlend(dt, cameraYawHalfLife);
+      angleDifference(desiredYaw, rig.yaw) * smoothBlend(dt, cameraYawHalfLife);
   rig.pitch = smoothTo(rig.pitch, cameraLockedPitch, dt, cameraPitchHalfLife);
 }
 
@@ -161,10 +168,48 @@ double _framingDistance(Vector3 position, SceneTransform? target) {
   );
 }
 
-void _ease(CameraRig rig, double distance, double dt) {
+void _liftOverOccluders(
+  World world,
+  CameraRig rig,
+  double distance,
+  double dt,
+) {
   final horizontal = distance * math.cos(rig.pitch);
+  final eyeX = rig.target.x - math.sin(rig.yaw) * horizontal;
+  final eyeY = rig.target.y + distance * math.sin(rig.pitch);
+  final eyeZ = rig.target.z - math.cos(rig.yaw) * horizontal;
+  final segX = rig.target.x - eyeX;
+  final segY = rig.target.y - eyeY;
+  final segZ = rig.target.z - eyeZ;
+  final length2 = segX * segX + segY * segY + segZ * segZ;
+  var blocked = false;
+  world.query<SceneTransform>(require: const [Enemy]).each((_, transform) {
+    if (blocked) return;
+    final px = transform.translation.x - eyeX;
+    final py = transform.translation.y + occluderHeight - eyeY;
+    final pz = transform.translation.z - eyeZ;
+    final t = (px * segX + py * segY + pz * segZ) / length2;
+    if (t < occluderNearT || t > occluderFarT) return;
+    final dx = px - segX * t;
+    final dy = py - segY * t;
+    final dz = pz - segZ * t;
+    blocked = dx * dx + dy * dy + dz * dz < occluderRadius * occluderRadius;
+  });
+  rig.sinceBlocked = blocked ? 0 : rig.sinceBlocked + dt;
+  final lifting = rig.sinceBlocked < occlusionHoldSeconds;
+  rig.lift = smoothTo(
+    rig.lift,
+    lifting ? occlusionLift : 0,
+    dt,
+    lifting ? occlusionRiseHalfLife : occlusionSettleHalfLife,
+  );
+}
+
+void _ease(CameraRig rig, double distance, double dt) {
+  final pitch = math.min(rig.pitch + rig.lift, cameraPitchMax);
+  final horizontal = distance * math.cos(pitch);
   final desiredX = rig.target.x - math.sin(rig.yaw) * horizontal;
-  final desiredY = rig.target.y + distance * math.sin(rig.pitch);
+  final desiredY = rig.target.y + distance * math.sin(pitch);
   final desiredZ = rig.target.z - math.cos(rig.yaw) * horizontal;
 
   var halfLife = cameraPositionHalfLife;

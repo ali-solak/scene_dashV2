@@ -58,6 +58,9 @@ const double recoverSeconds = 0.75;
 
 const double brawlStaggerSeconds = 0.8;
 
+const double recoilDistance = 0.28;
+const double recoilTilt = 0.32;
+
 /// Two hit combo timing.
 const double comboChance = 0.35;
 const double giantComboChance = 0.6;

@@ -102,8 +102,7 @@ void main() {
     final enemy = dummyInFront(game, distance: 4);
     final full = world.get<Health>(enemy).current;
 
-    game.emit(const SkillCast(Skill.fireGush));
-    game.pumpFixed(steps: 3);
+    cast(game, Skill.fireGush);
 
     expect(world.get<Health>(enemy).current, lessThan(full));
   });
@@ -119,7 +118,7 @@ void main() {
     final full = world.get<Health>(enemy).current;
 
     openMenu(game);
-    game.emit(const SkillCast(Skill.fireGush));
+    cast(game, Skill.fireGush, settle: 0);
     for (var i = 0; i < 10; i++) {
       game.pump();
     }

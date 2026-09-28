@@ -61,9 +61,8 @@ void _resolvePlayerStrikes(
   final phase = fighter.phase;
   if (phase.justEntered(CombatPhase.active)) fighter.strikeHits = 0;
   if (phase.state != CombatPhase.active) return;
-  final due = fighter.heavy
-      ? (phase.elapsed / heavyHitInterval).floor() + 1
-      : 1;
+  final interval = fighter.swing.hitInterval;
+  final due = interval == null ? 1 : (phase.elapsed / interval).floor() + 1;
   while (fighter.strikeHits < due) {
     fighter.strikeHits++;
     _strikeEnemies(world, fighter, motion, transform);
@@ -114,8 +113,7 @@ void _strikeEnemies(
   PlayerMotion motion,
   SceneTransform playerTransform,
 ) {
-  final damage = fighter.heavy ? heavyDamage : lightDamage;
-  final push = fighter.heavy ? heavyKnockback : lightKnockback;
+  final swing = fighter.swing;
   world.query2<Health, SceneTransform>(require: const [Enemy]).each((
     enemy,
     health,
@@ -127,14 +125,18 @@ void _strikeEnemies(
       facing: motion.facing,
       to: enemyTransform,
       reach: playerReach,
-      halfArc: playerStrikeHalfArc,
+      halfArc: swing.sweepsAround ? math.pi : playerStrikeHalfArc,
     )) {
       world.emit(
         HitLanded(
           enemy,
-          damage,
-          heavy: fighter.heavy,
-          knockback: awayFrom(playerTransform, enemyTransform, push),
+          swing.damage,
+          weight: fighter.heavy
+              ? HitWeight.heavy
+              : swing.sweepsAround
+              ? HitWeight.finisher
+              : HitWeight.light,
+          knockback: awayFrom(playerTransform, enemyTransform, swing.knockback),
         ),
       );
     }
@@ -175,6 +177,19 @@ void _applyHit(World world, HitLanded hit) {
   }
   if (hit.impact) _spawnImpact(world, hit);
 
+  if (health != null && hit.damage > 0) {
+    world.emit(
+      DamageDealt(
+        hit.target,
+        hit.damage,
+        weight: hit.weight,
+        direction: _planarDirection(hit.knockback),
+        impact: hit.impact,
+        killed: wasAlive && !health.alive,
+      ),
+    );
+  }
+
   final fighter = world.tryGet<Fighter>(hit.target);
   if (hit.stagger) fighter?.phase.go(CombatPhase.staggered);
   if (fighter != null && hit.damage > 0) fighter.sinceHurt = 0;
@@ -186,6 +201,12 @@ void _applyHit(World world, HitLanded hit) {
   } else if (hit.stagger) {
     brawler.phase.go(BrawlPhase.staggered);
   }
+}
+
+Vector3 _planarDirection(Vector3? push) {
+  if (push == null) return Vector3.zero();
+  final planar = Vector3(push.x, 0, push.z);
+  return planar.length2 < 1e-9 ? Vector3.zero() : (planar..normalize());
 }
 
 void _spawnImpact(World world, HitLanded hit) {

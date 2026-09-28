@@ -14,6 +14,10 @@ final class EnemyAnimator {
 
   int _lastChop = -1;
   bool frozen = false;
+  final ClipHold _pause = ClipHold();
+
+  bool hold(bool paused) =>
+      _pause.hold(paused, shots.values.followedBy(locomotion.values));
 
   void update(Brawler brawler, double dt, {bool transforming = false}) {
     if (frozen) return;

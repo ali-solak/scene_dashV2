@@ -3,7 +3,9 @@ part of '../player.dart';
 enum PlayerLoco { idle, walk, run, strafeLeft, strafeRight, backpedal }
 
 enum PlayerShot {
-  strike,
+  slash,
+  chop,
+  sweepFinisher,
   heavy,
   rollForward,
   rollBack,
@@ -12,37 +14,101 @@ enum PlayerShot {
   hit,
   fall,
   windCast,
+  castShoot,
+  castRaise,
+  castBlock,
 }
 
+const List<PlayerShot> comboShots = [
+  PlayerShot.slash,
+  PlayerShot.chop,
+  PlayerShot.sweepFinisher,
+];
+
+const Map<CastPose, PlayerShot> castShots = {
+  CastPose.shoot: PlayerShot.castShoot,
+  CastPose.raise: PlayerShot.castRaise,
+  CastPose.block: PlayerShot.castBlock,
+  CastPose.leap: PlayerShot.windCast,
+};
+
+final class CastClip {
+  const CastClip(this.name, {required this.release});
+
+  final String name;
+  final double release;
+
+  double scaleFor(CastMotion motion) => release / motion.release;
+}
+
+const Map<PlayerShot, CastClip> castClips = {
+  PlayerShot.castShoot: CastClip('Ranged_Magic_Shoot', release: 0.09),
+  PlayerShot.castRaise: CastClip('Ranged_Magic_Raise', release: 0.3),
+  PlayerShot.castBlock: CastClip('Melee_Block', release: 0.18),
+  PlayerShot.windCast: CastClip(
+    'Jump_Full_Short',
+    release: windCastClipSeconds,
+  ),
+};
+
+final class SwingClip {
+  const SwingClip(this.name, {required this.impact, this.from = 0});
+
+  final String name;
+  final double impact;
+  final double from;
+
+  double scaleFor(Swing swing) =>
+      (impact - from) / (swing.startup + swing.active / 2);
+}
+
+const SwingClip slashClip = SwingClip('Melee_2H_Attack_Slice', impact: 0.4);
+const SwingClip chopClip = SwingClip(
+  'Melee_2H_Attack_Chop',
+  impact: 0.81,
+  from: 0.35,
+);
+const SwingClip sweepFinisherClip = SwingClip(
+  'Melee_1H_Attack_Slice_Horizontal',
+  impact: 0.26,
+);
+const SwingClip heavyClip = SwingClip(
+  'Melee_2H_Attack_Spin',
+  impact: 0.94,
+  from: 0.12,
+);
+
 final class PlayerAnimator {
-  PlayerAnimator({required this.locomotion, required this.shots});
+  PlayerAnimator({
+    required this.locomotion,
+    required this.shots,
+    this.shotStarts = const {},
+  });
 
   final Map<PlayerLoco, AnimationClip> locomotion;
   final Map<PlayerShot, AnimationClip> shots;
+  final Map<PlayerShot, double> shotStarts;
 
   PlayerShot? active;
-  double _backwardDashRemaining = 0;
+  int _swing = 0;
+  final ClipHold _pause = ClipHold();
 
-  /// Plays a visual recoil without changing combat state.
-  void playBackwardDash() {
-    _backwardDashRemaining = rollClipSeconds / rollPlaybackScale;
-  }
+  bool hold(bool paused) =>
+      _pause.hold(paused, shots.values.followedBy(locomotion.values));
 
   void update(Fighter fighter, PlayerMotion motion, double dt) {
-    final recoiling = _backwardDashRemaining > 0;
-    _backwardDashRemaining = math.max(0.0, _backwardDashRemaining - dt);
-
     var desired = _desiredShot(fighter, motion);
-    if (recoiling && fighter.phase.state != CombatPhase.rolling) {
-      desired = PlayerShot.rollBack;
-    }
     if (motion.downed) {
       desired = motion.airborne ? PlayerShot.fall : PlayerShot.hit;
     }
-    if (desired != active) _enterShot(desired, fighter);
+    final acting =
+        fighter.swinging || fighter.phase.state == CombatPhase.casting;
+    final freshSwing = fighter.swings != _swing && acting;
+    _swing = fighter.swings;
+    if (desired != active || freshSwing) _enterShot(desired, fighter);
 
     if (active != null) {
-      _playShot(fighter, dt);
+      _playShot(dt);
       return;
     }
     _playLocomotion(fighter, motion, dt);
@@ -51,31 +117,25 @@ final class PlayerAnimator {
   PlayerShot? _desiredShot(Fighter fighter, PlayerMotion motion) {
     return switch (fighter.phase.state) {
       CombatPhase.startup || CombatPhase.active || CombatPhase.recovery =>
-        fighter.heavy ? PlayerShot.heavy : PlayerShot.strike,
+        fighter.heavy ? PlayerShot.heavy : comboShots[fighter.combo],
       CombatPhase.rolling => _isRoll(active) ? active : _rollShot(motion),
       CombatPhase.staggered => PlayerShot.hit,
+      CombatPhase.casting => castShots[fighter.castMotion!.pose],
       CombatPhase.idle =>
-        fighter.sinceCast < windCastSeconds
-            ? PlayerShot.windCast
-            : fighter.sinceHurt < flinchSeconds
-            ? PlayerShot.hit
-            : null,
+        fighter.sinceHurt < flinchSeconds ? PlayerShot.hit : null,
     };
   }
 
   void _enterShot(PlayerShot? desired, Fighter fighter) {
-    final promoted =
-        active == PlayerShot.strike &&
-        desired == PlayerShot.heavy &&
-        fighter.phase.state == CombatPhase.startup;
     active = desired;
     final clip = desired == null ? null : shots[desired];
     if (clip == null) return;
-    if (promoted) {
-      clip.gotoAndPlay(fighter.phase.elapsed * clip.playbackTimeScale);
-    } else {
-      clip.replay();
+    final castClip = castClips[desired];
+    final castMotion = fighter.castMotion;
+    if (castClip != null && castMotion != null) {
+      clip.playbackTimeScale = castClip.scaleFor(castMotion);
     }
+    clip.gotoAndPlay(shotStarts[desired] ?? 0);
     if (desired != PlayerShot.hit) return;
     clip.weight = 1;
     for (final other in shots.values) {
@@ -86,13 +146,8 @@ final class PlayerAnimator {
     }
   }
 
-  void _playShot(Fighter fighter, double dt) {
+  void _playShot(double dt) {
     final activeClip = shots[active]!;
-    if (fighter.phase.state == CombatPhase.startup) {
-      final startup = fighter.heavy ? heavyStartupSeconds : startupSeconds;
-      final windupEnd = startup * activeClip.playbackTimeScale;
-      if (activeClip.playbackTime > windupEnd) activeClip.seek(windupEnd);
-    }
     final fade = dt / oneShotFadeSeconds;
     for (final clip in shots.values) {
       final weight = identical(clip, activeClip) ? 1.0 : 0.0;
@@ -167,8 +222,9 @@ final class PlayerAnimator {
   }
 
   void reset() {
+    hold(false);
     active = null;
-    _backwardDashRemaining = 0;
+    _swing = 0;
     for (final clip in shots.values) {
       clip.stop();
       clip.weight = 0;
@@ -227,20 +283,17 @@ PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
     PlayerLoco.strafeRight: loop('Running_Strafe_Right'),
     PlayerLoco.backpedal: loop('Walking_Backwards'),
   };
-  const lightWindow = startupSeconds + activeSeconds + recoverySeconds;
-  const heavyWindow =
-      heavyStartupSeconds + heavyActiveSeconds + heavyRecoverySeconds;
+  AnimationClip swing(SwingClip source, Swing swing) =>
+      model.createAnimationClip(assets.clip(source.name))
+        ..loop = false
+        ..weight = 0
+        ..playbackTimeScale = source.scaleFor(swing);
+
   final shots = <PlayerShot, AnimationClip>{
-    PlayerShot.strike: shot(
-      'Melee_2H_Attack_Slice',
-      strikeClipSeconds,
-      lightWindow,
-    ),
-    PlayerShot.heavy: shot(
-      'Melee_2H_Attack_Spin',
-      heavyClipSeconds,
-      heavyWindow,
-    ),
+    PlayerShot.slash: swing(slashClip, lightCombo[0]),
+    PlayerShot.chop: swing(chopClip, lightCombo[1]),
+    PlayerShot.sweepFinisher: swing(sweepFinisherClip, lightCombo[2]),
+    PlayerShot.heavy: swing(heavyClip, heavySwing),
     // The asset pack has dodge clips but no roll.
     PlayerShot.rollForward: shot(
       'Dodge_Forward',
@@ -265,11 +318,22 @@ PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
     PlayerShot.hit: shot('Hit_A', hitClipSeconds, staggerSeconds),
     // Loop the airborne pose to avoid returning to the bind pose.
     PlayerShot.fall: loop('Jump_Idle'),
-    PlayerShot.windCast: shot(
-      'Jump_Full_Short',
-      windCastClipSeconds,
-      windCastSeconds,
-    ),
+    for (final MapEntry(key: shot, value: source) in castClips.entries)
+      shot: model.createAnimationClip(assets.clip(source.name))
+        ..loop = false
+        ..weight = 0,
   };
-  return PlayerAnimator(locomotion: locomotion, shots: shots);
+  return PlayerAnimator(
+    locomotion: locomotion,
+    shots: shots,
+    shotStarts: {
+      for (final (shot, source) in [
+        (PlayerShot.slash, slashClip),
+        (PlayerShot.chop, chopClip),
+        (PlayerShot.sweepFinisher, sweepFinisherClip),
+        (PlayerShot.heavy, heavyClip),
+      ])
+        shot: source.from,
+    },
+  );
 }

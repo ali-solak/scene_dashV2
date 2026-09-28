@@ -25,8 +25,14 @@ void setupWorld(World world) {
     sunDirection: sunDirection,
     groundColor: skyGroundColor,
   );
+  final backdrop = GradientSkySource(
+    zenithColor: backdropZenithColor,
+    horizonColor: backdropHorizonColor,
+    sunDirection: sunDirection,
+    groundColor: skyGroundColor,
+  );
   scene
-    ..skybox = Skybox(sky)
+    ..skybox = Skybox(backdrop)
     ..skyEnvironment = SkyEnvironment(sky)
     ..sunLight = SunLight(
       sky,
@@ -57,8 +63,9 @@ void setupWorld(World world) {
     ..compensation = autoExposureCompensation;
   scene.renderScale = boot.renderScale;
   scene.fog
-    ..enabled = false
+    ..enabled = true
     ..mode = FogMode.exponential
+    ..start = fogStartDistance
     ..density = Fog.visibilityDensity(fogVisibilityDistance)
     ..heightFalloff = fogHeightFalloff
     ..color = fogColor

@@ -14,16 +14,16 @@ class TouchControls extends StatelessWidget {
     required this.onMove,
     required this.onAttackChanged,
     required this.onRoll,
+    required this.onHeavy,
   });
 
   /// Normalized stick position: x right, y forward (up on screen).
   final void Function(double x, double y) onMove;
 
-  /// Held state; press and hold charges the heavy, exactly like the
-  /// mouse button.
   final ValueChanged<bool> onAttackChanged;
 
   final VoidCallback onRoll;
+  final VoidCallback onHeavy;
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +40,8 @@ class TouchControls extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 _ActionButton(label: 'ROLL', size: 64, onPressed: onRoll),
+                const SizedBox(height: 16),
+                _ActionButton(label: 'HVY', size: 64, onPressed: onHeavy),
                 const SizedBox(height: 16),
                 _HoldButton(label: 'ATK', size: 90, onChanged: onAttackChanged),
               ],

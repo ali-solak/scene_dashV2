@@ -1,7 +1,6 @@
 part of '../enemies.dart';
 
-/// Spawns enemy dodge effects.
-void spawnBrawlerFx(World world) {
+void announceBrawlerDodge(World world) {
   final playerRow = world
       .query<SceneTransform>(require: const [Player])
       .firstOrNull;
@@ -19,15 +18,17 @@ void spawnBrawlerFx(World world) {
     final distance = math.sqrt(dx * dx + dz * dz).clamp(1e-6, double.infinity);
     final towardX = dx / distance;
     final towardZ = dz / distance;
-    spawnDashDust(
-      world,
-      transform.translation.clone(),
-      Vector3(
-        -towardX * dodgeBackWeight -
-            towardZ * brawler.dodgeSign * dodgeSideWeight,
-        0,
-        -towardZ * dodgeBackWeight +
-            towardX * brawler.dodgeSign * dodgeSideWeight,
+    world.emit(
+      Dashed(
+        entity,
+        transform.translation.clone(),
+        Vector3(
+          -towardX * dodgeBackWeight -
+              towardZ * brawler.dodgeSign * dodgeSideWeight,
+          0,
+          -towardZ * dodgeBackWeight +
+              towardX * brawler.dodgeSign * dodgeSideWeight,
+        ),
       ),
     );
   });
@@ -61,9 +62,18 @@ void installEnemyVisuals(GameBuilder game) {
     )
     ..addSystem(
       Schedules.update,
+      applyEnemyRecoil,
+      inSet: GameSets.logic,
+      reads: const {Enemy, Brawler, Recoil},
+      writes: const {BrawlerVisuals},
+      after: const [updateBrawlerMaterials, updateGiantGrowth],
+      runIf: hasResource<Scene>(),
+    )
+    ..addSystem(
+      Schedules.update,
       updateEnemyAnimation,
       inSet: GameSets.logic,
-      reads: const {Enemy, Brawler},
+      reads: const {Enemy, Brawler, HitPause},
       writes: const {EnemyAnimator},
       runIf: hasResource<Scene>(),
     )
@@ -80,12 +90,11 @@ void installEnemyVisuals(GameBuilder game) {
     // machine's entry edge, which is one fixed tick wide.
     ..addSystem(
       Schedules.fixedUpdate,
-      spawnBrawlerFx,
+      announceBrawlerDodge,
       inSet: GameSets.actions,
       reads: const {Player, Enemy, Brawler, SceneTransform},
       // Run after enemy decisions.
       after: const [brawlerDriver, coordinateAggro],
-      runIf: hasResource<Scene>(),
     )
     ..addSystem(
       Schedules.update,
@@ -252,6 +261,7 @@ void updateEnemyAnimation(World world) {
     brawler,
     animator,
   ) {
+    if (animator.hold(world.has<HitPause>(enemy))) return;
     animator.update(
       brawler,
       dt,
@@ -259,6 +269,33 @@ void updateEnemyAnimation(World world) {
     );
   });
 }
+
+void applyEnemyRecoil(World world) {
+  world.query2<Brawler, BrawlerVisuals>(require: const [Enemy]).each((
+    enemy,
+    brawler,
+    visuals,
+  ) {
+    final recoil = world.tryGet<Recoil>(enemy);
+    if (recoil == null) {
+      visuals.applyLean(_noLean, 0);
+      return;
+    }
+    final sinFacing = math.sin(brawler.facing);
+    final cosFacing = math.cos(brawler.facing);
+    final direction = recoil.direction;
+    visuals.applyLean(
+      Vector3(
+        direction.x * cosFacing - direction.z * sinFacing,
+        0,
+        direction.x * sinFacing + direction.z * cosFacing,
+      ),
+      recoil.offset,
+    );
+  });
+}
+
+final Vector3 _noLean = Vector3.zero();
 
 /// The giant's growth: while the `Transforming` clock runs, the body
 /// swells from normal size to its giant base scale. The clip and the

@@ -1,5 +1,4 @@
-/// The in-fight overlay: the run banner, the health and heavy-charge
-/// readouts, the skill bar, the skills button, and the red hurt vignette.
+/// The in-fight overlay: the run banner, the health readout, the skill bar, the skills button, and the red hurt vignette.
 /// Everything here reads the world reactively (`WorldBuilder` re-selects
 /// each frame, rebuilds only on change).
 library;
@@ -12,6 +11,7 @@ import '../common/score.dart';
 import '../features/player/player.dart';
 import '../features/waves/waves.dart';
 import 'ink.dart';
+import 'combo_counter.dart';
 import 'skill_bar.dart';
 
 class FightHud extends StatelessWidget {
@@ -26,36 +26,29 @@ class FightHud extends StatelessWidget {
             alignment: Alignment.topLeft,
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: WorldBuilder<_HudState>(
-                select: _selectHud,
-                builder: (context, state) {
-                  final (hp, charge, heavy) = state;
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const _RunBanner(),
-                      _Bar(
-                        value: hp,
-                        width: 220,
-                        color: const Color(0xFFE0483C),
-                        background: const Color(0x66401010),
-                      ),
-                      const SizedBox(height: 8),
-                      if (charge > 0)
-                        _Bar(
-                          value: charge,
-                          width: 160,
-                          height: 8,
-                          color: heavy
-                              ? const Color(0xFFE07A2B)
-                              : const Color(0xFF9C6A3C),
-                          background: const Color(0x66302010),
-                        ),
-                    ],
-                  );
-                },
+              child: WorldBuilder<double>(
+                select: _playerHealth,
+                builder: (context, hp) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const _RunBanner(),
+                    _Bar(
+                      value: hp,
+                      width: 220,
+                      color: const Color(0xFFE0483C),
+                      background: const Color(0x66401010),
+                    ),
+                  ],
+                ),
               ),
+            ),
+          ),
+          const Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: EdgeInsets.only(right: 28),
+              child: ComboCounter(),
             ),
           ),
           const Align(
@@ -108,26 +101,6 @@ class _PauseButton extends StatelessWidget {
       ),
     );
   }
-}
-
-/// (health fraction, heavy charge 0..1, heavy committed): a record, so
-/// `WorldBuilder`'s `==` compare rebuilds only on real change.
-typedef _HudState = (double hp, double charge, bool heavy);
-
-_HudState _selectHud(World world) {
-  final row = world
-      .query2<Fighter, Health>(require: const [Player])
-      .firstOrNull;
-  if (row == null) return (1, 0, false);
-  final (_, fighter, health) = row;
-  final hp = (health.current / health.max).clamp(0.0, 1.0);
-  var charge = 0.0;
-  if (fighter.phase.state == CombatPhase.startup) {
-    charge = (fighter.phase.elapsed / heavyThresholdSeconds).clamp(0.0, 1.0);
-  } else if (fighter.heavy) {
-    charge = 1;
-  }
-  return (hp, charge, fighter.heavy);
 }
 
 /// (wave, spendable points, seconds left of the breather): the run
@@ -185,12 +158,11 @@ class _Bar extends StatelessWidget {
     required this.width,
     required this.color,
     required this.background,
-    this.height = 16,
   });
 
   final double value;
   final double width;
-  final double height;
+  static const double height = 16;
   final Color color;
   final Color background;
 

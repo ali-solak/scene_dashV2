@@ -73,6 +73,31 @@ const int shieldMaxCharges =
 int shieldChargesFor(int level) =>
     level <= 0 ? 0 : shieldBaseCharges + shieldChargesPerLevel * (level - 1);
 
+const double skillBufferWindow = 0.45;
+
+CastMotion castMotionFor(Skill skill) => switch (skill) {
+  Skill.fireGush => const CastMotion(
+    pose: CastPose.shoot,
+    release: 0.14,
+    recovery: 0.45,
+  ),
+  Skill.lavaPit => const CastMotion(
+    pose: CastPose.raise,
+    release: 0.32,
+    recovery: 0.4,
+  ),
+  Skill.windBlast => CastMotion(
+    pose: CastPose.leap,
+    release: windCastSeconds,
+    recovery: 0.22,
+  ),
+  Skill.shield => const CastMotion(
+    pose: CastPose.block,
+    release: 0.14,
+    recovery: 0.25,
+  ),
+};
+
 const double vitalityHealthPerLevel = 30;
 const int vitalityBaseCost = 25;
 const int vitalityCostStep = 20;

@@ -15,11 +15,13 @@ final class PlayerWindup {
   final double facing;
 }
 
+enum HitWeight { light, finisher, heavy }
+
 final class HitLanded {
   const HitLanded(
     this.target,
     this.damage, {
-    this.heavy = false,
+    this.weight = HitWeight.light,
     this.knockback,
     this.stagger = true,
     this.impact = true,
@@ -27,10 +29,44 @@ final class HitLanded {
 
   final Entity target;
   final double damage;
-  final bool heavy;
+  final HitWeight weight;
   final Vector3? knockback;
   final bool stagger;
   final bool impact;
+
+  bool get heavy => weight != HitWeight.light;
+}
+
+final class DamageDealt {
+  const DamageDealt(
+    this.target,
+    this.amount, {
+    required this.weight,
+    required this.direction,
+    required this.impact,
+    required this.killed,
+  });
+
+  final Entity target;
+  final double amount;
+  final HitWeight weight;
+  final Vector3 direction;
+  final bool impact;
+  final bool killed;
+}
+
+final class Shockwave {
+  const Shockwave(this.position);
+
+  final Vector3 position;
+}
+
+final class Dashed {
+  const Dashed(this.entity, this.position, this.heading);
+
+  final Entity entity;
+  final Vector3 position;
+  final Vector3 heading;
 }
 
 final class CastLeap {

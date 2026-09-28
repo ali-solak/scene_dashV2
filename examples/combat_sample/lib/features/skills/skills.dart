@@ -19,7 +19,19 @@ import '../../common/game_state.dart';
 import '../../common/score.dart';
 import '../../common/sets.dart';
 import '../player/player.dart'
-    show PlayerAnimator, PlayerMotion, windCastSeconds;
+    show
+        CastMotion,
+        CastPose,
+        CombatPhase,
+        Fighter,
+        PlayerMotion,
+        announceShockwave,
+        announceWindup,
+        updateBladeTrail,
+        updateDashTrail,
+        fighterDriver,
+        lockOnSystem,
+        windCastSeconds;
 import '../world/data/assets.dart';
 
 part 'data/components.dart';
