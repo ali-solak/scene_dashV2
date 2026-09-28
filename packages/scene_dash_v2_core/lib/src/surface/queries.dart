@@ -97,6 +97,8 @@ final class QueryView1<A extends Object> {
   /// The first match; throws when nothing matches.
   (Entity, A) get first => firstOrNull ?? _noMatch('query().first');
 
+  A? get(Entity entity) => _core.get(entity);
+
   /// The single match, or `null` when nothing matches; throws when more
   /// than one entity matches.
   (Entity, A)? get singleOrNull => _core.singleOrNull();

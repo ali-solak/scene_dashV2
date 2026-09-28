@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.5
+- breaking: removed `equals` from `EntityBuilder`, `WorldBuilder`, and
+  `WorldBuilder.pulse`. `select` now compares lists, sets, maps, and iterables
+  by contents, one level deep, against a kept copy, so returning a live list
+  works without copying it.
+- `WorldBuilder.pulse` passes that kept copy to `trigger` as `previous`, so
+  in-place changes are visible to it.
+- `EntityBuilder.matching` keeps its entity while it matches and skips rescans
+  until a watched store changes. Per-frame cost no longer grows with world size.
+- Split the combat sample's skill bar into one builder per slot.
+- Requires scene_dash_v2_core 0.5.4.
+
 ## 0.5.4
 - Fix transform sync leaving a node's authored decomposition stale, so a
   later `node.rotation`/`node.scale` write snapped it back.

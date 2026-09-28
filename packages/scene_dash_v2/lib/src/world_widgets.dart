@@ -1,8 +1,10 @@
 /// Widgets that read world state.
 library;
 
+import 'package:flutter/foundation.dart' show mapEquals, setEquals;
 import 'package:flutter/widgets.dart';
-import 'package:scene_dash_v2_core/advanced.dart' show EventReader;
+import 'package:scene_dash_v2_core/advanced.dart'
+    show ComponentStore, EventReader;
 import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
 
 import 'game_scope.dart';
@@ -89,6 +91,44 @@ abstract class _FrameTickState<W extends StatefulWidget> extends State<W> {
   void frameTick();
 }
 
+final class _Selection<S> {
+  _Selection(this.value) : _baseline = _baselineOf(value);
+
+  final S value;
+  final Object? _baseline;
+
+  S get snapshot => _baseline is S ? _baseline : value;
+
+  bool matches(S next) => _sameSelection(_baseline, next);
+
+  static Object? _baselineOf(Object? value) => switch (value) {
+    Set() => value.toSet(),
+    Map() => Map.of(value),
+    Iterable() => value.toList(growable: false),
+    _ => value,
+  };
+
+  static bool _sameSelection(Object? baseline, Object? next) =>
+      switch ((baseline, next)) {
+        (Set baseline, Set next) => setEquals(baseline, next),
+        (Map baseline, Map next) => mapEquals(baseline, next),
+        (List baseline, Iterable next) when next is! Set => _sameElements(
+          baseline,
+          next,
+        ),
+        _ => baseline == next,
+      };
+
+  static bool _sameElements(List<Object?> baseline, Iterable<Object?> next) {
+    var index = 0;
+    for (final element in next) {
+      if (index >= baseline.length || baseline[index] != element) return false;
+      index++;
+    }
+    return index == baseline.length;
+  }
+}
+
 /// Rebuilds when a selected component value changes.
 class EntityBuilder<T extends Object, S> extends StatefulWidget {
   const EntityBuilder({
@@ -96,20 +136,18 @@ class EntityBuilder<T extends Object, S> extends StatefulWidget {
     required Entity this.entity,
     required this.select,
     required this.builder,
-    this.equals,
     this.absent,
     this.every,
   }) : require = null,
        exclude = null;
 
-  /// Watches the first entity matching the filters.
+  /// Watches an entity matching the filters until it stops matching.
   const EntityBuilder.matching({
     super.key,
     this.require = const <Type>[],
     this.exclude = const <Type>[],
     required this.select,
     required this.builder,
-    this.equals,
     this.absent,
     this.every,
   }) : entity = null;
@@ -122,12 +160,9 @@ class EntityBuilder<T extends Object, S> extends StatefulWidget {
   final List<Type>? require;
   final List<Type>? exclude;
 
-  /// Selects an immutable value or snapshot; compared with [equals] or `==`.
-  /// Returning the mutable component itself can hide in-place changes.
+  /// Rebuilds when the selection changes: `==`, with lists, sets, maps, and
+  /// iterables compared by contents, one level deep.
   final S Function(T component) select;
-
-  /// Custom equality check for frame polls. For copied lists, use `listEquals`.
-  final bool Function(S previous, S next)? equals;
 
   /// Builds from the selected value. Frame ticks rebuild only on changes;
   /// parent rebuilds can also invoke this callback.
@@ -147,9 +182,13 @@ class EntityBuilder<T extends Object, S> extends StatefulWidget {
 
 class _EntityBuilderState<T extends Object, S>
     extends _FrameTickState<EntityBuilder<T, S>> {
-  bool _present = false;
-  S? _value;
+  _Selection<S>? _selection;
   bool _needsRead = false;
+
+  QueryView1<T>? _matchQuery;
+  List<ComponentStore> _matchStores = const [];
+  Entity? _matched;
+  int _missRevision = -1;
 
   @override
   Duration? get pollInterval => widget.every;
@@ -158,6 +197,7 @@ class _EntityBuilderState<T extends Object, S>
   void attached(WorldGame? previous) {
     // Ensure the component store exists.
     SpawnQueue.of(game.world).ensureStore<T>();
+    _dropMatch();
     _read(rebuild: false);
     _needsRead = false;
   }
@@ -166,6 +206,7 @@ class _EntityBuilderState<T extends Object, S>
   void didUpdateWidget(EntityBuilder<T, S> oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.every != widget.every) _resetPolling();
+    _dropMatch();
     // Read in build, after a simultaneous GameScope change has attached.
     _needsRead = true;
   }
@@ -173,27 +214,64 @@ class _EntityBuilderState<T extends Object, S>
   @override
   void frameTick() => _read(rebuild: true);
 
-  void _read({required bool rebuild}) {
+  void _dropMatch() {
+    _matchQuery = null;
+    _matchStores = const [];
+    _matched = null;
+    _missRevision = -1;
+  }
+
+  T? _resolve() {
     final require = widget.require;
-    final component = require == null
-        ? game.world.tryGet<T>(widget.entity!)
-        : game.world
-              .query<T>(require: require, exclude: widget.exclude!)
-              .firstOrNull
-              ?.$2;
+    if (require == null) return game.world.tryGet<T>(widget.entity!);
+    final query = _matchQuery ??= _buildMatchQuery(require, widget.exclude!);
+    final matched = _matched;
+    if (matched != null) {
+      final component = query.get(matched);
+      if (component != null) return component;
+      _matched = null;
+    }
+    final revision = _matchStoresRevision();
+    if (revision == _missRevision) return null;
+    final hit = query.firstOrNull;
+    if (hit == null) {
+      _missRevision = revision;
+      return null;
+    }
+    _matched = hit.$1;
+    _missRevision = -1;
+    return hit.$2;
+  }
+
+  QueryView1<T> _buildMatchQuery(List<Type> require, List<Type> exclude) {
+    final world = game.world;
+    final query = world.query<T>(require: require, exclude: exclude);
+    _matchStores = [
+      for (final type in [T, ...require, ...exclude])
+        world.stores.require(type),
+    ];
+    return query;
+  }
+
+  int _matchStoresRevision() {
+    var revision = 0;
+    for (final store in _matchStores) {
+      revision += store.revision;
+    }
+    return revision;
+  }
+
+  void _read({required bool rebuild}) {
+    final component = _resolve();
     if (component == null) {
-      if (_present && rebuild) setState(() => _present = false);
-      _present = false;
-      _value = null;
+      final wasPresent = _selection != null;
+      _selection = null;
+      if (wasPresent && rebuild) setState(() {});
       return;
     }
     final value = widget.select(component);
-    if (_present && rebuild) {
-      final equals = widget.equals;
-      if (equals != null ? equals(_value as S, value) : value == _value) return;
-    }
-    _present = true;
-    _value = value;
+    if (rebuild && (_selection?.matches(value) ?? false)) return;
+    _selection = _Selection(value);
     if (rebuild) setState(() {});
   }
 
@@ -203,8 +281,9 @@ class _EntityBuilderState<T extends Object, S>
       _read(rebuild: false);
       _needsRead = false;
     }
-    return _present
-        ? widget.builder(context, _value as S)
+    final selection = _selection;
+    return selection != null
+        ? widget.builder(context, selection.value)
         : (widget.absent ?? const SizedBox.shrink());
   }
 }
@@ -215,7 +294,6 @@ class WorldBuilder<S> extends StatefulWidget {
     super.key,
     required this.select,
     required this.builder,
-    this.equals,
     this.every,
   }) : trigger = null,
        duration = 0,
@@ -238,7 +316,6 @@ class WorldBuilder<S> extends StatefulWidget {
     required Widget Function(BuildContext context, double pulse, Widget? child)
     this.pulseBuilder,
     this.child,
-    this.equals,
   }) : builder = null,
        every = null,
        assert(
@@ -246,12 +323,9 @@ class WorldBuilder<S> extends StatefulWidget {
          'pulse duration is seconds and must be finite and positive',
        );
 
-  /// Selects an immutable value or snapshot; compared with [equals] or `==`.
-  /// Returning a mutable resource or list directly can hide in-place changes.
+  /// Rebuilds when the selection changes: `==`, with lists, sets, maps, and
+  /// iterables compared by contents, one level deep.
   final S Function(World world) select;
-
-  /// Custom equality check.
-  final bool Function(S previous, S next)? equals;
 
   /// Poll no more often than this, on wall time. Null runs [select] every
   /// frame. The escape hatch for a costly [select]; the value can be up to
@@ -264,7 +338,7 @@ class WorldBuilder<S> extends StatefulWidget {
   final Widget Function(BuildContext context, S value)? builder;
 
   /// Fires the pulse when a changed selection crosses this edge (pulse
-  /// form; null in the plain form). Evaluated only when `next != previous`.
+  /// form; null in the plain form). Evaluated only when the selection changed.
   final bool Function(S previous, S next)? trigger;
 
   /// Seconds the pulse takes to decay 1 → 0, on wall time (pulse form).
@@ -285,7 +359,7 @@ class WorldBuilder<S> extends StatefulWidget {
 }
 
 class _WorldBuilderState<S> extends _FrameTickState<WorldBuilder<S>> {
-  late S _value;
+  late _Selection<S> _selection;
   double _pulse = 0;
   bool _needsRead = false;
 
@@ -307,7 +381,7 @@ class _WorldBuilderState<S> extends _FrameTickState<WorldBuilder<S>> {
 
   @override
   void attached(WorldGame? previous) {
-    _value = widget.select(game.world);
+    _selection = _Selection(widget.select(game.world));
     _pulse = 0;
     _needsRead = false;
   }
@@ -328,16 +402,16 @@ class _WorldBuilderState<S> extends _FrameTickState<WorldBuilder<S>> {
   @override
   void frameTick() {
     final value = widget.select(game.world);
-    final equals = widget.equals;
-    final same = equals != null ? equals(_value, value) : value == _value;
+    final previous = _selection;
+    final same = previous.matches(value);
     final trigger = widget.trigger;
     if (trigger == null) {
       if (same) return;
-      setState(() => _value = value);
+      setState(() => _selection = _Selection(value));
       return;
     }
-    final fired = !same && trigger(_value, value);
-    _value = value;
+    final fired = !same && trigger(previous.snapshot, value);
+    if (!same) _selection = _Selection(value);
     var pulse = _pulse;
     if (fired) {
       pulse = 1;
@@ -352,14 +426,14 @@ class _WorldBuilderState<S> extends _FrameTickState<WorldBuilder<S>> {
   @override
   Widget build(BuildContext context) {
     if (_needsRead) {
-      _value = widget.select(game.world);
+      _selection = _Selection(widget.select(game.world));
       _needsRead = false;
     }
     final pulseBuilder = widget.pulseBuilder;
     if (pulseBuilder != null) {
       return pulseBuilder(context, _pulse, widget.child);
     }
-    return widget.builder!(context, _value);
+    return widget.builder!(context, _selection.value);
   }
 }
 

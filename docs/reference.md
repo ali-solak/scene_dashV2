@@ -88,8 +88,8 @@ When a feature spawned the entity and nothing in `main` holds it,
 
 ```dart
 EntityBuilder<Health, double>.matching(
-  require: const [Player],            // the first entity with Health + Player,
-  select: (h) => h.current,           //   re-resolved each frame; a respawned
+  require: const [Player],            // an entity with Health + Player, kept
+  select: (h) => h.current,           //   while it matches; a respawned
   builder: (context, hp) =>           //   player is picked up automatically
       HealthBar(hp),
   absent: const RespawnCountdown(),   // no match, dead, or Health gone
@@ -98,10 +98,9 @@ EntityBuilder<Health, double>.matching(
 // WorldBuilder<Entity?> (resolve) wrapping EntityBuilder (watch)
 ```
 
-- `select`: return the value to display, such as `health.current`. Copy lists
-  before returning them so the previous contents stay available for comparison.
-- `equals`: optional comparison, defaulting to `==`. Return `true` to skip
-  a frame update, `false` to rebuild.
+- `select`: return the value to display, such as `health.current`. It rebuilds
+  when that value changes: `==`, with lists, sets, maps and iterables compared
+  by contents one level deep. Live lists need no copy.
 - `every`: how often to check the value. Omit it to check each frame.
 
 For a widget *in* the 3D world, like a health bar above an enemy, put a

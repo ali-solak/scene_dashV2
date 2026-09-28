@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.4
+- Add `QueryView1.get(entity)`: the component when the entity matches the
+  query, or `null`.
+
 ## 0.5.3
 - Fix a command flush replaying applied commands (or throwing `RangeError`)
   when an observer runs a schedule mid-flush. A nested `Commands.apply` now

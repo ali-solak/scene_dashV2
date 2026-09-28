@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
@@ -167,6 +166,50 @@ void main() {
     );
   });
 
+  testWidgets('EntityBuilder.matching stays on its match, falls over when it '
+      'stops matching, and picks up exclude changes after a miss', (
+    tester,
+  ) async {
+    final game = await boot(features: [(game) => game.registerTag<Marked>()]);
+    final first = game.world.spawn([Health(1)]);
+    final second = game.world.spawn([Health(2)]);
+    drive(game);
+    await tester.pumpWidget(
+      GameScope(
+        game: game,
+        child: EntityBuilder<Health, double>.matching(
+          exclude: const [Marked],
+          select: (h) => h.current,
+          builder: (context, hp) =>
+              Text('$hp', textDirection: TextDirection.ltr),
+          absent: const Text('none', textDirection: TextDirection.ltr),
+        ),
+      ),
+    );
+    expect(find.text('1.0'), findsOneWidget);
+
+    game.world.remove<Health>(first);
+    game.world.add(first, Health(3));
+    drive(game);
+    await tester.pump();
+    expect(find.text('3.0'), findsOneWidget);
+
+    game.world.add(first, const Marked());
+    drive(game);
+    await tester.pump();
+    expect(find.text('2.0'), findsOneWidget);
+
+    game.world.add(second, const Marked());
+    drive(game, 3);
+    await tester.pump();
+    expect(find.text('none'), findsOneWidget);
+
+    game.world.remove<Marked>(second);
+    drive(game);
+    await tester.pump();
+    expect(find.text('2.0'), findsOneWidget);
+  });
+
   testWidgets('WorldBuilder watches world-derived values (query counts)', (
     tester,
   ) async {
@@ -232,8 +275,9 @@ void main() {
     expect(find.text('2'), findsOneWidget);
   });
 
-  testWidgets('WorldBuilder equals: gives list selections a content '
-      'compare', (tester) async {
+  testWidgets('WorldBuilder compares list selections by contents', (
+    tester,
+  ) async {
     final game = await boot();
     game.world.spawn([Health(1)]);
     drive(game);
@@ -245,7 +289,6 @@ void main() {
           select: (world) => [
             for (final (_, h) in world.query<Health>().records) h.current,
           ],
-          equals: listEquals,
           builder: (context, values) {
             builds++;
             return Text('${values.length}', textDirection: TextDirection.ltr);
@@ -262,6 +305,80 @@ void main() {
     await tester.pump();
     expect(builds, 2);
     expect(find.text('2'), findsOneWidget);
+  });
+
+  for (final (kind, select) in <(String, Object Function(World))>[
+    (
+      'set',
+      (world) => {for (final (_, h) in world.query<Health>().records) h.max},
+    ),
+    (
+      'map',
+      (world) => {
+        for (final (e, h) in world.query<Health>().records) e.index: h.max,
+      },
+    ),
+    (
+      'lazy iterable',
+      (world) => world.query<Health>().records.map((r) => r.$2.max),
+    ),
+  ]) {
+    testWidgets('WorldBuilder compares $kind selections by contents', (
+      tester,
+    ) async {
+      final game = await boot();
+      game.world.spawn([Health(1)]);
+      drive(game);
+      var builds = 0;
+      await tester.pumpWidget(
+        GameScope(
+          game: game,
+          child: WorldBuilder<Object>(
+            select: select,
+            builder: (context, value) {
+              builds++;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+      drive(game, 3);
+      await tester.pump();
+      expect(builds, 1);
+      game.world.spawn([Health(2)]);
+      drive(game);
+      await tester.pump();
+      expect(builds, 2);
+    });
+  }
+
+  testWidgets('WorldBuilder.pulse triggers on in-place list growth', (
+    tester,
+  ) async {
+    final game = await boot();
+    final log = <String>[];
+    drive(game);
+    final lengths = <(int, int)>[];
+    await tester.pumpWidget(
+      GameScope(
+        game: game,
+        child: WorldBuilder<List<String>>.pulse(
+          select: (world) => log,
+          trigger: (previous, next) {
+            lengths.add((previous.length, next.length));
+            return next.length > previous.length;
+          },
+          duration: 0.5,
+          pulseBuilder: (context, pulse, child) =>
+              Text('$pulse', textDirection: TextDirection.ltr),
+        ),
+      ),
+    );
+    log.add('hit');
+    drive(game);
+    await tester.pump();
+    expect(lengths, [(0, 1)]);
+    expect(find.text('1.0'), findsOneWidget);
   });
 
   testWidgets('WorldBuilder.pulse fires on its transition, decays on wall '

@@ -61,24 +61,27 @@ WorldEventListener<EnemyKilled>(onEvent: (ctx, e) => shakeScore(ctx),
 feedback, `every:` throttles a heavy select, `GameScope` reaches the game
 from any `context`.
 
-### Comparing values with `equals`
+### What counts as a change
 
-Values use `==` by default. Use `equals` for a custom comparison:
-**`true` skips the update; `false` rebuilds.** For lists, compare their contents:
+`select` is the rebuild rule. Values compare with `==`; lists, sets, maps and
+iterables compare by contents, one level deep, so returning a live list works:
 
 ```dart
-import 'package:flutter/foundation.dart' show listEquals;
-
 EntityBuilder<Inventory, List<String>>(
   entity: player,
-  select: (inventory) => List<String>.of(inventory.items),
-  equals: listEquals,
+  select: (inventory) => inventory.items,   // no copy needed
   builder: (context, items) => Text(items.join(', ')),
+)
+
+WorldBuilder<(int, int)>(                   // a record of values compares with ==
+  select: (w) => (w.resource<Score>().points, w.resource<Score>().combo),
+  builder: (context, score) => ScoreLine(points: score.$1, combo: score.$2),
 )
 ```
 
-Copy the list so changes don't overwrite the previous value you're comparing.
-This controls frame updates; parent rebuilds can still call the builder.
+A record holding a list, or a list of mutable objects, still compares by
+identity inside. Select smaller pieces (one builder per slot) or return a
+class with its own `==`. Parent rebuilds can still call the builder.
 
 ## A complete game in one file
 

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
@@ -49,7 +48,7 @@ void main() {
 
   for (final matching in [false, true]) {
     testWidgets('EntityBuilder ${matching ? 'matching' : 'handle'} compares '
-        'copied lists and handles absence', (tester) async {
+        'live lists by contents and handles absence', (tester) async {
       final game = await boot(tester);
       final inventory = Inventory();
       final entity = game.world.spawn([inventory]);
@@ -62,22 +61,20 @@ void main() {
 
       final child = matching
           ? EntityBuilder<Inventory, List<String>>.matching(
-              select: (i) => List.of(i.items),
-              equals: listEquals,
+              select: (i) => i.items,
               builder: builder,
               absent: label('absent'),
             )
           : EntityBuilder<Inventory, List<String>>(
               entity: entity,
-              select: (i) => List.of(i.items),
-              equals: listEquals,
+              select: (i) => i.items,
               builder: builder,
               absent: label('absent'),
             );
       await tester.pumpWidget(GameScope(game: game, child: child));
       tick(game);
       await tester.pump();
-      expect(builds, 1, reason: 'equal copies do not trigger frame rebuilds');
+      expect(builds, 1, reason: 'unchanged contents do not rebuild');
       inventory.items.add('shield');
       tick(game);
       await tester.pump();
@@ -101,49 +98,40 @@ void main() {
   }
 
   testWidgets(
-    'EntityBuilder accepts nullable selections and updated equality',
+    'EntityBuilder accepts nullable selections and refreshes on widget updates',
     (tester) async {
       final game = await boot(tester);
       final inventory = Inventory();
       final entity = game.world.spawn([inventory]);
       tick(game);
       var builds = 0;
-      var compares = 0;
-      Widget tree(bool suppress) => GameScope(
+      Widget tree(String? Function(Inventory inventory) select) => GameScope(
         game: game,
         child: EntityBuilder<Inventory, String?>(
           entity: entity,
-          select: (i) => i.items.firstOrNull,
-          equals: (a, b) {
-            compares++;
-            return suppress || a == b;
-          },
+          select: select,
           builder: (_, item) {
             builds++;
             return label(item);
           },
         ),
       );
-      await tester.pumpWidget(tree(true));
+      await tester.pumpWidget(tree((i) => i.items.firstOrNull));
+      inventory.items.add('shield');
+      await tester.pumpWidget(tree((i) => i.items.lastOrNull));
+      expect(find.text('shield'), findsOneWidget);
       inventory.items.clear();
       tick(game);
       await tester.pump();
-      expect(builds, 1);
-      expect(compares, 1);
-      await tester.pumpWidget(tree(false));
-      expect(
-        find.text('null'),
-        findsOneWidget,
-        reason: 'widget updates refresh regardless of equality',
-      );
+      expect(find.text('null'), findsOneWidget);
+      final afterNull = builds;
       tick(game);
       await tester.pump();
-      expect(builds, 2, reason: 'equal nulls suppress frame rebuilds');
+      expect(builds, afterNull, reason: 'equal nulls suppress frame rebuilds');
       inventory.items.add('bow');
       tick(game);
       await tester.pump();
       expect(find.text('bow'), findsOneWidget);
-      expect(builds, 3);
     },
   );
 
