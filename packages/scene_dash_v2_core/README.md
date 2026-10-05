@@ -2,11 +2,12 @@
 
 ![Scene-Dash v2: the combat sample](https://raw.githubusercontent.com/ali-solak/scene_dashV2/main/combat_sample_game.gif)
 
-Scene-Dash is an ECS-driven gameplay architecture for [flutter_scene](https://pub.dev/packages/flutter_scene). It gives Flutter games a structured runtime for gameplay state, system orchestration, custom and frame-driven schedules, resources/DI, events and observers, state machines, entity lifecycles, and headless testing.
+Scene-Dash is an ECS-driven gameplay architecture for [flutter_scene](https://pub.dev/packages/flutter_scene). It gives Flutter games a runtime for gameplay state, and a way to test that state with nothing rendering.
 
-This is the pure-Dart core: the ECS runtime and `TestGame`, no Flutter
-dependency. The scene binding, widgets and `SceneGame.boot` shown below
-live in [`scene_dash_v2`](https://pub.dev/packages/scene_dash_v2), which
+This package is the pure-Dart core: the ECS runtime and `TestGame`, with
+no Flutter dependency. The scene binding, widgets and `SceneGame.boot`
+shown below live in
+[`scene_dash_v2`](https://pub.dev/packages/scene_dash_v2), which
 re-exports this package.
 
 * **Entities and components** sparse sets, queries, deferred structural changes, lifecycle hooks
@@ -14,7 +15,7 @@ re-exports this package.
 * **Schedules** startup, update, fixed step, custom run conditions, plus custom schedules you run yourself
 * **Resources** shared services and state in the world, injected into systems
 * **Events and observers** decoupled communication between systems
-* **States and machines** game states with enter/exit behavior and scoped entities and state machines
+* **States and machines** game states with enter/exit systems and state-scoped entities, plus per-entity state machines
 * **Routines** a reusable sequencer for gameplay with an ordered flow: wave directors, objectives, encounters, tutorials
 * **Input** buttons, axes, and buffered presses as resources; your app writes, systems read
 * **Time** frame and fixed clocks, timers, schedule-aware `dt`
@@ -23,7 +24,7 @@ re-exports this package.
 
 ## World-reactive widgets
 
-A widget selects one value out of the world and rebuilds only when that
+A widget picks one value out of the world and rebuilds only when that
 value changes:
 
 ```dart
@@ -35,7 +36,8 @@ EntityBuilder<Health, double>(
 )
 ```
 
-Same frame tick, same select-and-compare:
+The other builders work the same way: pick a value, rebuild when it
+changes.
 
 ```dart
 WorldBuilder<int>(select: (w) => w.query<Health>(require: const [Enemy]).count(),
@@ -49,9 +51,9 @@ WorldEventListener<EnemyKilled>(onEvent: (ctx, e) => shakeScore(ctx),
 ```
 
 [The rest of the widget layer](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#world-reactive-widgets):
-`.matching` resolves the entity through the world, `.pulse` drives transient
-feedback, `every:` throttles a heavy select, `GameScope` reaches the game
-from any `context`.
+`.matching` finds the entity by its components, `.pulse` drives short-lived
+feedback, `every:` checks a heavy select less often, and `GameScope`
+reaches the game from any `context`.
 
 ## A complete game in one file
 
@@ -116,12 +118,13 @@ List<Object> cubeBundle() => [       // a bundle: a function → the spawn list
 ];
 ```
 
-Hot reload applies edits to system bodies; there is no build step.
+Hot reload applies edits to system bodies. There is no build step.
 
 ## Quick start
 
 ```bash
-flutter channel master          # flutter_scene needs Flutter GPU
+flutter channel stable          # flutter_scene needs Flutter 3.47+
+flutter config --enable-dart-data-assets
 flutter pub get                 # resolve the workspace (repo root)
 cd examples/combat_sample
 flutter run --enable-flutter-gpu
@@ -146,6 +149,9 @@ flutter run --enable-flutter-gpu
   - [Scheduling: sets and run conditions](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#scheduling-sets-and-run-conditions)
   - [Custom schedules](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#custom-schedules-game-driven-systems)
   - [Time](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#time)
+  - [GameTween](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#gametween)
+    - [With Routine](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#with-routine)
+  - [Smoothing](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#smoothing)
 - Coordination
   - [Observers](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#observers)
   - [Events](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#events)
@@ -173,6 +179,7 @@ flutter run --enable-flutter-gpu
 | [`packages/scene_dash_v2`](https://github.com/ali-solak/scene_dashV2/blob/main/packages/scene_dash_v2) | `flutter_scene` integration: `SceneGame.boot`, mounting, transform sync, physics bridge, widget layer. Re-exports core, so one import covers both. |
 | [`examples/scene_game`](https://github.com/ali-solak/scene_dashV2/blob/main/examples/scene_game) | Complete game: Rapier physics, one feature per folder. |
 | [`examples/headless_example`](https://github.com/ali-solak/scene_dashV2/blob/main/examples/headless_example) | The core without Flutter. |
+| [`examples/basic_example_tower_defense`](https://github.com/ali-solak/scene_dashV2/blob/main/examples/basic_example_tower_defense) | The middle example: a small complete game, no assets. Three features that never call each other, talking through events and queries. Gameplay pinned headless. |
 | [`examples/combat_sample`](https://github.com/ali-solak/scene_dashV2/blob/main/examples/combat_sample) | Combat slice: KayKit knight against waves of barbarians, lock-on, buyable skills, giants, Rapier ragdolls, authored `.fmat` materials. Gameplay pinned headless. |
 | [`benchmarks`](https://github.com/ali-solak/scene_dashV2/blob/main/benchmarks) | Query, structural, and record-overhead benchmarks. |
 

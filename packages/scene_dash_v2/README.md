@@ -15,7 +15,7 @@ Scene-Dash is an ECS-driven gameplay architecture for [flutter_scene](https://pu
 * **Schedules** startup, update, fixed step, custom run conditions, plus custom schedules you run yourself
 * **Resources** shared services and state in the world, injected into systems
 * **Events and observers** decoupled communication between systems
-* **States and machines** game states with enter/exit behavior and scoped entities and state machines
+* **States and machines** game states with enter/exit systems and state-scoped entities, plus per-entity state machines
 * **Routines** a reusable sequencer for gameplay with an ordered flow: wave directors, objectives, encounters, tutorials
 * **Tweens and smoothing** `GameTween` for a value over a duration, `smoothTo` for a target that keeps moving, both on game time so they pause with it
 * **Input** buttons, axes, and buffered presses as resources. Widgets write, systems read
@@ -57,14 +57,15 @@ WorldEventListener<EnemyKilled>(onEvent: (ctx, e) => shakeScore(ctx),
 ```
 
 [The rest of the widget layer](https://github.com/ali-solak/scene_dashV2/blob/main/docs/reference.md#world-reactive-widgets):
-`.matching` resolves the entity through the world, `.pulse` drives transient
-feedback, `every:` throttles a heavy select, `GameScope` reaches the game
-from any `context`.
+`.matching` finds the entity by its components, `.pulse` drives short-lived
+feedback, `every:` checks a heavy select less often, and `GameScope`
+reaches the game from any `context`.
 
 ### What counts as a change
 
-`select` is the rebuild rule. Values compare with `==`; lists, sets, maps and
-iterables compare by contents, one level deep, so returning a live list works:
+`select` decides when to rebuild. Values compare with `==`. Lists, sets, maps
+and iterables compare by contents, one level deep, so you can return a live
+list:
 
 ```dart
 EntityBuilder<Inventory, List<String>>(
@@ -79,9 +80,10 @@ WorldBuilder<(int, int)>(                   // a record of values compares with 
 )
 ```
 
-A record holding a list, or a list of mutable objects, still compares by
-identity inside. Select smaller pieces (one builder per slot) or return a
-class with its own `==`. Parent rebuilds can still call the builder.
+Only one level is compared. A list inside a record, or mutable objects
+inside a list, still compare by identity. Select smaller pieces (one
+builder per slot), or return a class with its own `==`. A parent rebuild
+can still run the builder.
 
 ## A complete game in one file
 
@@ -152,6 +154,7 @@ Hot reload applies edits to system bodies. There is no build step.
 
 ```bash
 flutter channel stable          # flutter_scene needs Flutter 3.47+
+flutter config --enable-dart-data-assets
 flutter pub get                 # resolve the workspace (repo root)
 cd examples/combat_sample
 flutter run --enable-flutter-gpu

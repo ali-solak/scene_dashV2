@@ -1,6 +1,7 @@
 # Basic tower defense
 
-A minimal game showing how Scene-Dash keeps gameplay in features and reads the same world from Flutter widgets.
+A small game that shows how Scene-Dash keeps gameplay in features, while
+Flutter widgets read the same world.
 
 ```text
 lib/
@@ -45,7 +46,8 @@ void installTowers(GameBuilder game) {
 }
 ```
 
-The placement system resolves the tap and changes the world:
+The placement system turns the tap into a ground position and changes the
+world:
 
 `lib/features/towers/systems/systems.dart`
 
@@ -58,10 +60,10 @@ void placeTowers(World world) {
 }
 ```
 
-`groundFromTap` contains the camera/raycast details; `placeTowerAt` validates
-the cost and location, then spawns the tower bundle.
+`groundFromTap` holds the camera and raycast details. `placeTowerAt` checks
+the cost and the spot, then spawns the tower bundle.
 
-The Flutter shell only emits the request:
+The Flutter side only sends the request:
 
 `lib/main.dart`
 
@@ -78,7 +80,7 @@ GestureDetector(
 )
 ```
 
-The HUD reads the world reactively:
+The HUD reads the world and rebuilds when the value changes:
 
 `lib/hud/stats.dart`
 

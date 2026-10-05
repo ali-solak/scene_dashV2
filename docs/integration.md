@@ -1,9 +1,9 @@
 # `flutter_scene` Integration Guide
 
-Node mounting, transform authority, scene commands, reaching native
-engine features, and the physics bridge. The [README](../README.md)
-covers the core ECS. Rendering, cameras, physics and widgets stay native
-`flutter_scene` APIs.
+How entities get into the scene, who owns a transform, scene commands,
+using native engine features, and the physics bridge. The
+[reference](reference.md) covers the core ECS. Rendering, cameras, physics
+and widgets stay plain `flutter_scene` APIs.
 
 ## Lifecycle
 
@@ -20,25 +20,26 @@ boot, it:
 - exposes `game.onTick` for **your** `SceneView`, which the framework
   never constructs
 
-The scene tick runs on `GameClock` time, so `timeScale`, `paused` and
-`freezeFor` slow or stop physics, animation and gameplay together. HUD
-and camera shake, which should keep moving anyway, read
+The scene ticks on `GameClock` time, so `timeScale`, `paused` and
+`freezeFor` slow or stop physics, animation and gameplay together. The
+HUD and camera shake should keep moving anyway, so they read
 `FrameTime.unscaledDelta`.
 
-A mounted entity also gets a `Mounted` tag, which goes away on unmount or
-despawn. It is there if you ever want to query for what is in the scene.
-Your bundles never add it.
+A mounted entity also gets a `Mounted` tag. It goes away on unmount or
+despawn. Use it if you want to query for what is in the scene. Your
+bundles never add it.
 
 A `SceneGame` always owns a scene, so `SceneGame.scene` is never null. A
-real `Scene` needs a Flutter GPU context, so boot fails fast without one.
-For a widget tree over a world with no scene, editor panels or widget
-tests, use `WorldGame.boot(...)` instead. Same physics and gameplay
-wiring, same `onTick`-driven frames, no scene. For pure logic with no
-widget tree, use the core package's `TestGame.headless`.
+real `Scene` needs a Flutter GPU context, so boot fails right away without
+one. For a widget tree over a world with no scene, like editor panels or
+widget tests, use `WorldGame.boot(...)` instead. It has the same physics
+and gameplay wiring and the same `onTick`-driven frames, just no scene.
+For pure logic with no widget tree, use the core package's
+`TestGame.headless`.
 
-## Direct node path: mutate nodes yourself
+## Direct node path: change nodes yourself
 
-To avoid duplicated transform state, store a `NodeRef` and mutate the
+To avoid keeping transform state twice, store a `NodeRef` and change the
 native `flutter_scene` node directly:
 
 ```dart doc-test:node_binding
@@ -89,10 +90,10 @@ Future<void> main() async {
 > as writing that component. Register with `writes: {NodeRef}` whenever
 > a system touches the node or its native components.
 
-Two traps on this path. A node matrix must be reassigned, or marked,
-after an in-place edit, or the dirty flag never trips. And
-`getTranslation()` allocates a fresh vector per call. `NodeTransformOps`
-handles both:
+This path has two traps. After editing a node's matrix in place, you must
+reassign it or mark it dirty, or the change never shows. And
+`getTranslation()` allocates a new vector on every call.
+`NodeTransformOps` handles both:
 
 ```dart
 node.setLocalTRS(x, y, z, sx, sy, sz);   // rebuild translate+scale in place
@@ -117,22 +118,22 @@ final transform = SceneTransform.zero()
   ..setUniformScale(1.5);
 ```
 
-`SceneTransform` holds a local position, rotation and scale, with the
-usual move, rotate, scale and `lookAt` helpers and a way in and out of a
-raw matrix. Angles are radians, forward is +Z, up is +Y. The fields are
-plain and mutable, so writing one directly is the same as calling a
+`SceneTransform` holds a local position, rotation and scale. It has the
+usual move, rotate, scale and `lookAt` helpers, and converts to and from a
+raw matrix. Angles are in radians, forward is +Z, up is +Y. The fields are
+plain and mutable, so writing one directly does the same as calling a
 helper.
 
-It gets written onto the bound node during `Schedules.renderSync`. Add
-`PhysicsDriven` when physics or something else owns the transform
-instead, and the sync skips that entity.
+It is copied onto the bound node during `Schedules.renderSync`. If physics
+or something else owns the transform instead, add `PhysicsDriven` and the
+sync skips that entity.
 
-Got your own transform type? `CustomSceneSyncPlugin<T>` takes either a
+Have your own transform type? `CustomSceneSyncPlugin<T>` takes either a
 translation callback or a full matrix writer.
 
 ## Scene commands
 
-Use `SceneCommands` for deferred scene-graph mutations from systems:
+Use `SceneCommands` to queue scene-graph changes from systems:
 
 ```dart
 void addDecoration(World world) {
@@ -142,11 +143,11 @@ void addDecoration(World world) {
 
 ## Using flutter_scene directly
 
-Scene-Dash does **not** wrap `flutter_scene`. New engine features reach
-you through two access points:
+Scene-Dash does **not** wrap `flutter_scene`. You reach new engine
+features in one of two places:
 
 - **Scene-wide features → the `Scene` resource.** A startup system
-  mutates the live scene directly.
+  changes the live scene directly.
 - **Per-entity features → the `Node` your bundle builds.** Add components
   and configure materials on that node like any `flutter_scene` app.
 
@@ -180,15 +181,15 @@ void setupScene(World world) {
 }
 ```
 
-`runIf: hasResource<Scene>()` is the standard shape for systems that
-build visuals. Headless boots skip them, so the body can read the scene
-without a guard.
+Use `runIf: hasResource<Scene>()` on every system that builds visuals.
+Boots without a scene skip those systems, so the body can read the scene
+without a null check.
 
 ### Picking: `SceneNodeIndex` (node → entity)
 
-`NodeRef` gets you entity → node. `Scene.raycast` and `ScenePointer`
-hand back a `Node`, so go the other way through the `SceneNodeIndex`
-resource. `entityOf` walks up parents, so hitting a child mesh still
+`NodeRef` goes from entity to node. `Scene.raycast` and `ScenePointer`
+give you a `Node`, so go back the other way through the `SceneNodeIndex`
+resource. `entityOf` walks up the parents, so a hit on a child mesh still
 finds the entity that owns it:
 
 ```dart
@@ -206,9 +207,9 @@ void pick(World world) {
 
 ## Physics and collisions
 
-Scene-Dash does not implement physics. Hand `SceneGame.boot` the native
-`flutter_scene` `PhysicsWorld` you want. It is attached to the scene graph
-and bridged into the ECS:
+Scene-Dash has no physics of its own. Pass `SceneGame.boot` the native
+`flutter_scene` `PhysicsWorld` you want. It gets attached to the scene
+graph and connected to the ECS:
 
 ```dart
 final game = await SceneGame.boot(
@@ -244,8 +245,8 @@ List<Object> playerBodyBundle() => [
 ];
 ```
 
-Systems reach the native world as `world.physics` for immediate scene
-queries:
+Systems reach the native physics world through `world.physics` for scene
+queries that answer right away:
 
 ```dart
 // Reused scratch so the per-step probe allocates nothing.
@@ -271,8 +272,8 @@ void probeGround(World world) {
 ### Entity-carrying overlap queries
 
 Overlap results name scene nodes. `overlapSphereEntities` and
-`overlapBoxEntities` resolve them and hand each hit's *entity*, plus the
-raw `OverlapHit`, to a callback:
+`overlapBoxEntities` look those nodes up and pass each hit's *entity*,
+plus the raw `OverlapHit`, to a callback:
 
 ```dart
 void meleeSwing(World world) {
@@ -289,23 +290,25 @@ void meleeSwing(World world) {
 
 Worth knowing:
 
-- Hits whose node and ancestors are not entity-bound are skipped. Use the
-  raw `overlapSphere` when unmanaged geometry matters.
-- `layerMask` goes to the backend and is checked again on the results,
-  because some backends take the parameter without actually using it
+- A hit is skipped if neither its node nor any parent is bound to an
+  entity. Use the raw `overlapSphere` when geometry without entities
+  matters.
+- `layerMask` is passed to the backend and checked again on the results,
+  because some backends accept it without using it
   (`flutter_scene_rapier` 0.5.x).
 - A node with several colliders on that layer fires once per collider.
-  Deduping per entity is your job, like the per-swing set above.
+  Removing duplicates per entity is up to you, like the per-swing set
+  above.
 
-This is the immediate version of the collision *events* below. An overlap
-query answers inside the system that ran it, which is what a melee swing
-or a blast radius needs. Collision events land the following frame.
+This is the instant version of the collision *events* below. An overlap
+query answers inside the system that asked, which is what a melee swing
+or a blast radius needs. Collision events arrive on the next frame.
 
 ### Collision events
 
-The bridge drains the native collision stream at `Schedules.frameStart`
-and publishes it as `CollisionEvent`. It also looks each collision's
-nodes back up to entities once and republishes that as
+At `Schedules.frameStart` the bridge reads everything waiting on the
+native collision stream and emits it as `CollisionEvent`. It also looks
+up the entity for each collision's nodes once and emits that as
 `EntityCollision`, so your systems never do the lookup themselves:
 
 ```dart
@@ -326,10 +329,11 @@ void _hurt(World world, Entity? entity) {
 }
 ```
 
-Collision events arrive a frame late: the native streams are async.
+Collision events arrive one frame late, because the native streams are
+async.
 
-In a bigger game, stop at the bridge. Keep the gameplay meaning in your
-own components and resources, things like layers, teams, sensors,
-hitboxes and damage, and turn physics events into your own events with
+In a bigger game, keep physics at the edge. Put the gameplay meaning
+(layers, teams, sensors, hitboxes, damage) in your own components and
+resources, and turn physics events into your own events with
 `world.emit(HitLanded(...))`. Then swapping the physics backend stays a
 small job.

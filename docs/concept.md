@@ -1,14 +1,13 @@
 # Scene-Dash v2: Concept and Architecture
 
-Scene-Dash is an object-based ECS and feature layer for `flutter_scene`.
-Its job is to organize, coordinate, and headlessly test gameplay code as a
-game grows; ECS is the implementation model, not a replacement renderer or
-scene framework.
+Scene-Dash is an ECS and feature layer for `flutter_scene`, built on plain
+Dart objects. Its job is to keep gameplay code organized, coordinated and
+testable without rendering as a game grows. ECS is how it is built inside.
+It does not replace the renderer or the scene framework.
 
-It is primarily an ergonomics and architecture project. It does not assume
-an ECS or typed-array storage is automatically faster than straightforward
-object-oriented Dart; the [benchmarks](../benchmarks) exist to keep that
-claim honest.
+It is mainly about ergonomics and architecture. It does not assume an ECS,
+or typed-array storage, is automatically faster than plain object-oriented
+Dart. The [benchmarks](../benchmarks) are there to keep that claim honest.
 
 
 ## Object components
@@ -41,7 +40,7 @@ a query slot.
 
 ## Cache everything stable
 
-Registration resolves stable handles once:
+Anything that does not change is looked up once and kept:
 
 - a component store is built the first time you insert that type, and
   then it stays
@@ -50,8 +49,8 @@ Registration resolves stable handles once:
 - a query registers its stores where you write the types, and the loop
   reuses them
 
-One exception. Every `world.query…()` call builds a small view object.
-The [benchmarks](../benchmarks) measure it.
+One exception: every `world.query…()` call builds a small view object.
+The [benchmarks](../benchmarks) measure what that costs.
 
 ## Allocate nothing per matching entity
 
@@ -66,10 +65,11 @@ world.query2<SceneTransform, Velocity>().each((entity, transform, velocity) {
 ```
 
 `.each` is the main form. `for (final (e, t, v) in query.records)`
-eagerly allocates a list and one record per row, so keep it off the hot
-path. `query.snapshot()` makes that allocation explicit. Both forms fix
-the membership at the time of the call while sharing component objects;
-copy field values when a UI selector needs a stable value snapshot.
+allocates a list and one record per row up front, so keep it out of hot
+loops. `query.snapshot()` is the same thing under a clearer name. Both fix
+which entities match at the moment you call them, but they still hand out
+the live component objects. If a UI selector needs values that will not
+change under it, copy the fields.
 
 ## Drive from the smallest store
 
@@ -80,8 +80,8 @@ world.query2<SceneTransform, Velocity>(require: const [Player])
 ```
 
 Scene-Dash walks whichever store holds the fewest entities, then checks
-the others by lookup. That helps picky gameplay queries. It is not built
-for sweeping one big uniform table.
+the others by lookup. That suits narrow gameplay queries. It is not built
+for sweeping one big table where every entity looks the same.
 
 Every extra component in a query is another lookup per entity, so state
 that always travels together belongs in one component. Queries stop at
@@ -89,30 +89,30 @@ four.
 
 ## Avoid duplicated scene data by default
 
-For visual-only state, store a `NodeRef` and mutate the native node
-directly. Reach for `SceneTransform` when ECS-owned transforms buy you
-something real: serialization, rollback, networking, renderer
-independence, or headless simulation.
+For state that is only visual, store a `NodeRef` and change the native
+node directly. Use `SceneTransform` only when having the ECS own the
+transform gives you something real: serialization, rollback, networking,
+renderer independence, or simulation without rendering.
 
 ## Deferred by construction
 
 `spawn`, `despawn`, `add`, `remove` and `ownedBy:` are queued and applied
 at the frame boundary, so despawning inside `.each` is safe. If an owned
-entity spawns more owned entities, all of it settles in the same
-boundary, and `DespawnOnExit`/`DespawnAfter` go the same way. The `*Now`
-versions happen immediately. They are for setup code, they live in
+entity spawns more owned entities, all of it settles at the same
+boundary. `DespawnOnExit` and `DespawnAfter` work the same way. The `*Now`
+versions happen immediately. They are meant for setup code, they live in
 `advanced.dart`, and they assert if a query is running.
 
 ## Logic on components
 
-A component may carry logic. The boundary: the object computes, the
-system performs world effects. A component method never holds or touches
-`World`. Holding an `Entity` as data is fine. Machines expose edges.
-Systems spawn, emit and mutate on them.
+A component may carry logic. The rule: the object computes, and the system
+changes the world. A component method never holds or touches `World`.
+Holding an `Entity` as data is fine. Machines report edges (a state just
+entered or exited), and systems spawn, emit and change things in response.
 
-### State at four scales
+### State at five scales
 
-The same edge vocabulary at every scale:
+Every scale uses the same edge words:
 
 - **`GameTimer`**: a duration. Cooldowns, windups, cadences.
   `tick(world.dt)`, `finished`, `justFinished` true for exactly one tick.
@@ -130,31 +130,32 @@ The same edge vocabulary at every scale:
   Transitions apply at frame boundaries, `OnEnter`/`OnExit` are
   schedules, `inState(...)` is the run condition.
 
-The first four are plain values ticked by their owner system, so they
-pause, slow and freeze with the game and never touch the schedule.
+The first four are plain values that their owning system ticks, so they
+pause, slow down and freeze with the game and never touch the schedule.
 Whole-game state is a framework machine because separate features have to
 agree on it.
 
-A machine is a mode other systems read. A routine is a plan only its
-driver reads. If anything outside the driver branches on where you are,
-it is a machine.
+A machine is a mode that other systems read. A routine is a plan that only
+its driver reads. If anything outside the driver makes decisions based on
+where you are, it should be a machine.
 
 ### Where state lives
 
 An entity's condition is a component on that entity. An ongoing process
-is a component on its own entity, scoped with `DespawnOnExit` like
+is a component on its own entity, cleaned up with `DespawnOnExit` like
 anything else. A resource is a service you register once, for state where
-"two of them" is meaningless: score, indexes, input, shared pools. The
-test is "could there ever be two?"
+"two of them" makes no sense: score, indexes, input, shared pools. Ask
+"could there ever be two?" If not, it is a resource.
 
 `world.single<T>()` and `singleOrNull<T>()` read a one-of-a-kind
 component without a query.
 
-## Access metadata is diagnostic, not enforced
+## Access metadata is checked, not enforced
 
-`reads:`/`writes:` on `addSystem` declare which components a system
-touches. The scheduler uses this to detect access conflicts between
-unordered systems (write/write and read/write) and to validate ordering.
+`reads:` and `writes:` on `addSystem` declare which components a system
+touches. The scheduler uses them to find conflicts between systems that
+have no set order (two writers, or a reader and a writer) and to check
+ordering.
 
 Dart cannot stop you writing to something you declared read-only, and the
 scheduler cannot see through a reference. So when a system changes a
@@ -175,6 +176,6 @@ like a conflict to it. When you know a pair is fine,
 ## Optional system profiling
 
 `AppDiagnostics(profileSystems: true)` times every system, per schedule.
-It is off by default and costs nothing off. Turn it on and the
+It is off by default and costs nothing while off. Turn it on and the
 `SystemProfiler` resource keeps a `SystemTiming` record for each one, and
 can warn you when a system runs longer than `slowSystemThreshold`.
