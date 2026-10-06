@@ -11,6 +11,11 @@ final class const PlaceTowerRequested(
   final Size viewSize,
 );
 
+final class BoardPointer {
+  Offset? position;
+  Size viewSize = Size.zero;
+}
+
 final class const CreepReachedEnd();
 
-final class const CreepKilled(final int bounty);
+final class const WaveCleared(final int wave, final int bonus);

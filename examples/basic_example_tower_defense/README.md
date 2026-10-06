@@ -1,16 +1,16 @@
 # Basic tower defense
 
-A small game that shows how Scene-Dash keeps gameplay in features, while
-Flutter widgets read the same world.
+A small isometric tower defense that shows how Scene-Dash keeps gameplay in
+features, while Flutter widgets read the same world.
 
 ```text
 lib/
   main.dart
   features/
-    towers/
-      towers.dart
-      data/
-      systems/
+    arena/  creeps/  damage/  towers/  waves/  rules/
+      <feature>.dart   installs it
+      data/            components, config, bundles
+      systems/         plain functions over the world
   hud/
 ```
 
@@ -18,12 +18,19 @@ lib/
 
 ```dart
 final game = await SceneGame.boot(
-  features: [installArena, installCreeps, installTowers, installRules],
+  features: [
+    installArena,
+    installDamage,
+    installCreeps,
+    installWaves,
+    installTowers,
+    installRules,
+  ],
 );
 runApp(GameHost(game: game, child: TowerDefenseApp(game)));
 ```
 
-The feature declares its components, events, schedules, and run conditions in
+A feature declares its components, events, schedules, and run conditions in
 one place:
 
 `lib/features/towers/towers.dart`
@@ -40,42 +47,45 @@ void installTowers(GameBuilder game) {
     )
     ..addSystem(
       Schedules.fixedUpdate,
-      fireTowers,
+      fireGuns,
       runIf: inState(GameStatus.playing),
     );
 }
 ```
 
-The placement system turns the tap into a ground position and changes the
-world:
+A kind of tower is a set of components. Systems pick up whatever matches:
 
-`lib/features/towers/systems/systems.dart`
+`lib/features/towers/data/bundles.dart`
 
 ```dart
-void placeTowers(World world) {
-  for (final request in world.events<PlaceTowerRequested>()) {
-    final ground = groundFromTap(world, request);
-    if (ground != null) placeTowerAt(world, ground);
-  }
-}
+List<Object> towerBundle(World world, TowerKind kind, Vector3 at) => [
+  Tower(kind),
+  Health(kind.health),
+  SceneTransform.fromVector(at),
+  ...switch (kind) {
+    TowerKind.bolt => [Gun()],
+    TowerKind.pulse => [Pulser()],
+    TowerKind.shield => [const ShieldEmitter()],
+  },
+];
 ```
 
-`groundFromTap` holds the camera and raycast details. `placeTowerAt` checks
-the cost and the spot, then spawns the tower bundle.
+Towers and creeps never touch each other's health. They send an event, and
+the damage feature resolves it the same way for both:
+
+```dart
+world.emit(DamageDealt(victim, boltDamage));
+```
 
 The Flutter side only sends the request:
 
 `lib/main.dart`
 
 ```dart
-GestureDetector(
-  onTapDown: (details) {
-    final viewSize = context.size;
-    if (viewSize == null) return;
-    GameScope.of(context).emit(
-      PlaceTowerRequested(details.localPosition, viewSize),
-    );
-  },
+Listener(
+  onPointerDown: (event) => GameScope.of(context).emit(
+    PlaceTowerRequested(event.localPosition, viewSize),
+  ),
   child: child,
 )
 ```
@@ -91,6 +101,9 @@ WorldBuilder<int>(
 )
 ```
 
+Every rule runs headless, without a GPU:
+
 ```sh
 flutter run --enable-flutter-gpu
+flutter test
 ```

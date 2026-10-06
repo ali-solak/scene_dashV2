@@ -7,8 +7,11 @@ import '../common/game_state.dart';
 import '../features/creeps/creeps.dart';
 import '../features/rules/rules.dart';
 import '../features/towers/data/config.dart';
+import '../features/towers/towers.dart' show BuildChoice;
+import '../features/waves/waves.dart';
 
 part 'stats.dart';
+part 'picker.dart';
 part 'lost_overlay.dart';
 
 class Hud extends StatelessWidget {
@@ -28,6 +31,12 @@ class Hud extends StatelessWidget {
               children: [_StatBar(), _Hint()],
             ),
           ),
+        ),
+      ),
+      const SafeArea(
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(padding: EdgeInsets.all(16), child: _Picker()),
         ),
       ),
       GameStateBuilder<GameStatus>(

@@ -28,8 +28,14 @@ class _StatBar extends StatelessWidget {
           ),
           const _Divider(),
           WorldBuilder<int>(
+            select: (world) => world.resource<Wave>().number,
+            builder: (context, wave) =>
+                _Stat('wave', '$wave', const Color(0xFFB59BF2)),
+          ),
+          const _Divider(),
+          WorldBuilder<int>(
             select: (world) =>
-                world.query<Health>(require: const [Creep]).count(),
+                world.query<SceneTransform>(require: const [Creep]).count(),
             builder: (context, alive) =>
                 _Stat('creeps', '$alive', const Color(0xFF7FC6F2)),
           ),
@@ -82,8 +88,24 @@ class _Hint extends StatelessWidget {
   const _Hint();
 
   @override
-  Widget build(BuildContext context) => Text(
-    'tap the ground beside the lane to build a tower  ·  $towerCost gold',
-    style: TextStyle(color: Colors.white.withValues(alpha: 0.45), fontSize: 13),
+  Widget build(BuildContext context) => WorldBuilder<(int?, Refusal?)>(
+    select: (world) {
+      final wave = world.resource<Wave>();
+      final breather = wave.phase.state == WavePhase.breather;
+      return (
+        breather ? wave.nextWaveIn.ceil().clamp(0, 99) : null,
+        world.resource<BuildChoice>().refusal,
+      );
+    },
+    builder: (context, state) => Text(
+      [
+        if (state.$1 case final countdown?) 'next wave in ${countdown}s',
+        state.$2?.reason ?? 'tap beside the road to build',
+      ].join('  ·  '),
+      style: TextStyle(
+        color: Colors.white.withValues(alpha: 0.55),
+        fontSize: 13,
+      ),
+    ),
   );
 }

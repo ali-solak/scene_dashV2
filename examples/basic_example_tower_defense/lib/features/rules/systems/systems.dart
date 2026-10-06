@@ -11,12 +11,19 @@ void loseLife(World world) {
 
 void collectBounty(World world) {
   final gold = world.resource<Gold>();
-  for (final kill in world.events<CreepKilled>()) {
-    gold.value += kill.bounty;
+  for (final destroyed in world.events<Destroyed>()) {
+    gold.value += destroyed.bounty;
   }
 }
 
 void startRun(World world) {
   world.resource<Lives>().value = startingLives;
   world.resource<Gold>().value = startingGold;
+}
+
+void collectWaveBonus(World world) {
+  final gold = world.resource<Gold>();
+  for (final cleared in world.events<WaveCleared>()) {
+    gold.value += cleared.bonus;
+  }
 }

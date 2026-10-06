@@ -1,14 +1,18 @@
 library;
 
+import 'dart:ui' show Offset, Size;
+
 import 'package:flutter_scene/scene.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
-import 'package:vector_math/vector_math.dart' show Vector3;
+import 'package:vector_math/vector_math.dart'
+    show Matrix4, Vector2, Vector3, Vector4;
 
 import '../../common/game_state.dart';
-import '../arena/arena.dart';
+import '../arena/arena.dart' show onDecor, onTowerPath;
 import '../arena/data/config.dart' show groundNodeName;
-import '../creeps/creeps.dart';
-import '../rules/rules.dart';
+import '../creeps/creeps.dart' show Creep;
+import '../damage/damage.dart';
+import '../rules/rules.dart' show Gold;
 import 'data/config.dart';
 
 part 'data/components.dart';
@@ -18,8 +22,16 @@ part 'systems/systems.dart';
 void installTowers(GameBuilder game) {
   game
     ..registerComponent<Tower>()
+    ..registerComponent<Gun>()
+    ..registerComponent<Pulser>()
+    ..registerTag<ShieldEmitter>()
     ..registerComponent<TowerBeam>()
+    ..registerComponent<PulseRing>()
+    ..registerComponent<TowerGhost>()
     ..configureEvent<PlaceTowerRequested>()
+    ..world.insert(BoardPointer())
+    ..world.insert(BuildChoice())
+    ..addSystem(Schedules.startup, spawnGhost, runIf: hasResource<Scene>())
     ..addSystem(
       Schedules.fixedUpdate,
       placeTowers,
@@ -27,8 +39,20 @@ void installTowers(GameBuilder game) {
     )
     ..addSystem(
       Schedules.fixedUpdate,
-      fireTowers,
+      fireGuns,
       runIf: inState(GameStatus.playing),
     )
-    ..addSystem(Schedules.update, animateBeams, runIf: hasResource<Scene>());
+    ..addSystem(
+      Schedules.fixedUpdate,
+      firePulses,
+      runIf: inState(GameStatus.playing),
+    )
+    ..addSystem(Schedules.fixedUpdate, projectShields)
+    ..addSystem(Schedules.update, animateBeams, runIf: hasResource<Scene>())
+    ..addSystem(Schedules.update, animateRings, runIf: hasResource<Scene>())
+    ..addSystem(
+      Schedules.update,
+      previewPlacement,
+      runIf: hasResource<Scene>(),
+    );
 }
