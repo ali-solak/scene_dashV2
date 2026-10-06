@@ -1,6 +1,6 @@
 name: scene_dash_v2
 description: "ECS gameplay architecture for flutter_scene 3D games: entities, systems, schedules, events, state machines, input, physics, reactive widgets, headless tests."
-version: 0.5.5
+version: 0.5.6
 repository: https://github.com/ali-solak/scene_dashV2/tree/main/packages/scene_dash_v2
 resolution: workspace
 
@@ -12,8 +12,8 @@ dependencies:
   flutter:
     sdk: flutter
   scene_dash_v2_core: ^0.5.4
-  flutter_scene: ^0.23.0
-  vector_math: ^2.4.2
+  flutter_scene: ^0.24.0
+  vector_math: ^2.4.3
 
 dev_dependencies:
   flutter_test:

@@ -38,6 +38,7 @@ vertex {
 }
 fragment {
   #include <noise.glsl>
+  precision highp float;
 
   void Surface(inout MaterialInputs material) {
     vec2 p = GetWorldPosition().xz * (material_params.wave_scale * 2.2);

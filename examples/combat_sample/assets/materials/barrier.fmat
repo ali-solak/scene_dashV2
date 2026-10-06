@@ -15,6 +15,7 @@ material {
 }
 fragment {
   #include <noise.glsl>
+  precision highp float;
 
   void Surface(inout MaterialInputs material) {
     vec3 n = normalize(GetWorldNormal());

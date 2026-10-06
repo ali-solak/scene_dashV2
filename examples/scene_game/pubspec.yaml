@@ -13,8 +13,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_scene: ^0.23.0
-  flutter_scene_rapier: ^0.5.1
+  flutter_scene: ^0.24.0
+  flutter_scene_rapier: ^0.5.2
   material_ui: ^1.0.0
   scene_dash_v2:
     path: ../../packages/scene_dash_v2

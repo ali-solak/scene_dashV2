@@ -194,7 +194,8 @@ Node buildCliffRocks() {
     );
   }
   // Below the rim: nothing downhill of them receives a shadow.
-  return mesher.toNode('cliff-rocks')..castsShadows = false;
+  return mesher.toNode('cliff-rocks')
+    ..shadowCastingMode = ShadowCastingMode.off;
 }
 
 Vector3 _mix(Vector3 a, Vector3 b, double t) => a + (b - a) * t;

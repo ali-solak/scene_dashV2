@@ -11,8 +11,8 @@ dependencies:
   data_assets: ^0.20.0
   flutter:
     sdk: flutter
-  flutter_scene: ^0.23.0
-  flutter_scene_rapier: ^0.5.1
+  flutter_scene: ^0.24.0
+  flutter_scene_rapier: ^0.5.2
   # hook/build.dart compiles the .fmat materials into a shader bundle.
   hooks: ^2.0.0
   material_ui: ^1.0.0
@@ -32,3 +32,17 @@ flutter:
     # DataAssets. Weapons remain multi-file runtime glTFs.
     - assets/character_assets/
     - flutter_scene_generated/
+    - path: flutter_scene_generated/metal_ios/
+      platforms:
+        - ios
+    - path: flutter_scene_generated/metal_desktop/
+      platforms:
+        - macos
+    - path: flutter_scene_generated/opengl_es_vulkan/
+      platforms:
+        - android
+        - linux
+        - windows
+    - path: flutter_scene_generated/opengl_es/
+      platforms:
+        - web

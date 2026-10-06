@@ -1,17 +1,13 @@
 part of '../towers.dart';
 
-List<Object> towerBundle(Vector3 at) {
-  final (body, beam) = towerVisuals();
-  return [
-    Tower(),
-    SceneTransform.fromVector(at),
-    const DespawnOnExit(GameStatus.playing),
-    body,
-    beam,
-  ];
-}
+List<Object> towerBundle(World world, Vector3 at) => [
+  Tower(),
+  SceneTransform.fromVector(at),
+  const DespawnOnExit(GameStatus.playing),
+  if (world.hasResource<Scene>()) ...towerVisuals(),
+];
 
-(NodeRef, TowerBeam) towerVisuals() {
+List<Object> towerVisuals() {
   final node = Node(
     mesh: Mesh(
       CuboidGeometry(Vector3.all(towerRadius * 2)),
@@ -28,5 +24,5 @@ List<Object> towerBundle(Vector3 at) {
     ),
   )..visible = false;
   node.add(beam);
-  return (NodeRef(node), TowerBeam(beam, beamMaterial));
+  return [NodeRef(node), TowerBeam(beam, beamMaterial)];
 }

@@ -24,7 +24,7 @@ bool placeTowerAt(World world, Vector3 ground) {
   if (onTowerPath(ground.x, ground.z)) return false;
   if (_occupied(world, spot)) return false;
   gold.value -= towerCost;
-  world.spawn(towerBundle(spot));
+  world.spawn(towerBundle(world, spot));
   return true;
 }
 

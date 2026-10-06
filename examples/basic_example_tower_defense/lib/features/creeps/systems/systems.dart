@@ -1,6 +1,6 @@
 part of '../creeps.dart';
 
-void spawnCreep(World world) => world.spawn(creepBundle());
+void spawnCreep(World world) => world.spawn(creepBundle(world));
 
 void walkPath(World world) {
   final creeps = world.query2<SceneTransform, PathProgress>(

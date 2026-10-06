@@ -13,6 +13,7 @@ material {
 }
 fragment {
   #include <noise.glsl>
+  precision highp float;
 
   void Surface(inout MaterialInputs material) {
     float n = NoiseSimplex3(

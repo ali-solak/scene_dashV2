@@ -1,4 +1,6 @@
 # Changelog
+## 0.5.6
+- upgrade to flutter scene 0.24
 
 ## 0.5.5
 - breaking: removed `equals` from `EntityBuilder`, `WorldBuilder`, and

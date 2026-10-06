@@ -34,34 +34,35 @@ Feature installDebugDraw() {
 }
 
 Node? _node;
-Mesh? _mesh;
+MeshGeometry? _geometry;
 
 void flushDebugDraw(World world) {
-  final geometry = DebugDraw.flushMesh();
   final scene = world.resources.tryGet<Scene>();
-  if (scene == null) return;
+  if (scene == null) {
+    DebugDraw.clear();
+    return;
+  }
   var node = _node;
   if (node == null) {
     // World space every frame, so culling bounds upkeep is wasted work.
     node = _node = Node(name: 'debug-draw')..frustumCulled = false;
     scene.root.add(node);
   }
-  if (geometry == null) {
+  if (DebugDraw.vertexCount == 0) {
     node.visible = false;
     return;
   }
-  final mesh = _mesh;
-  if (mesh == null) {
-    _mesh = Mesh(
+  var geometry = _geometry;
+  if (geometry == null) {
+    geometry = _geometry = DebugDraw.createGeometry();
+    node.mesh = Mesh(
       geometry,
       UnlitMaterial()
         ..baseColorFactor = Vector4(1, 1, 1, 1)
         ..alphaMode = AlphaMode.blend,
     )..primitives.first.castsShadow = false;
-    node.mesh = _mesh;
-  } else {
-    mesh.primitives.first.geometry = geometry;
   }
+  DebugDraw.flushInto(geometry);
   node.visible = true;
 }
 

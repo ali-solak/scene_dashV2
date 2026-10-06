@@ -83,7 +83,9 @@ void main() {
   test('a second tower cannot stack on the first', () {
     final game = boot();
     placeTowerAt(game.world, Vector3(0, 0, -2));
+    game.pump();
     placeTowerAt(game.world, Vector3(0.4, 0, -2));
+    game.pump();
 
     expect(game.world.query<Tower>().count(), 1);
     expect(game.world.resource<Gold>().value, startingGold - towerCost);

@@ -16,6 +16,7 @@ material {
 }
 fragment {
   #include <noise.glsl>
+  precision highp float;
 
   void Surface(inout MaterialInputs material) {
     vec2 world = GetWorldPosition().xz;

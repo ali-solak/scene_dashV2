@@ -275,7 +275,7 @@ void _bakeGrass(
     ..visible = true
     ..add(
       Node(name: _grassBladesNode)
-        ..castsShadows = false
+        ..shadowCastingMode = ShadowCastingMode.off
         ..addComponent(InstancedMeshComponent(mesh)),
     );
 }

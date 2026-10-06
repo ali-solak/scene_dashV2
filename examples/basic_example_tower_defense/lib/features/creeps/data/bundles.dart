@@ -1,6 +1,6 @@
 part of '../creeps.dart';
 
-List<Object> creepBundle() {
+List<Object> creepBundle(World world) {
   final start = towerPath.first;
   return [
     const Creep(),
@@ -8,7 +8,7 @@ List<Object> creepBundle() {
     PathProgress(),
     SceneTransform(start.x, creepRadius, start.z),
     const DespawnOnExit(GameStatus.playing),
-    NodeRef(creepNode()),
+    if (world.hasResource<Scene>()) NodeRef(creepNode()),
   ];
 }
 
