@@ -45,7 +45,7 @@ void popOnDestroyed(World world) {
 }
 
 void animatePops(World world) {
-  world.query2<SceneTransform, DespawnAfter>(require: const [Pop]).each((
+  world.query2<SceneTransform, DespawnAfter>().having<Pop>().each((
     _,
     at,
     life,

@@ -2,7 +2,6 @@ part of '../feedback.dart';
 
 void installDamageNumbers(GameBuilder game) {
   game
-    ..registerComponent<DamageNumber>()
     ..addSystem(
       Schedules.update,
       spawnDamageNumbers,

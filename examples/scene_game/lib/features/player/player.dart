@@ -10,6 +10,7 @@ import '../world/data/config.dart';
 import '../world/data/ramp.dart';
 import 'animation/gait.dart';
 import 'data/config.dart';
+
 import 'package:flutter_scene/physics.dart';
 
 part 'data/components.dart';
@@ -19,8 +20,6 @@ part 'systems/systems.dart';
 
 void installPlayer(GameBuilder game) {
   game
-    ..registerTag<Player>()
-    ..registerComponent<PlayerKnockback>()
     ..addSystem(
       Schedules.startup,
       spawnPlayer,

@@ -225,7 +225,7 @@ class _HurtFlash extends StatelessWidget {
 }
 
 double _playerHealth(World world) {
-  final health = world.query<Health>(require: const [Player]).firstOrNull?.$2;
+  final health = world.query<Health>().having<Player>().firstOrNull?.$2;
   if (health == null) return 1;
   return (health.current / health.max).clamp(0.0, 1.0);
 }

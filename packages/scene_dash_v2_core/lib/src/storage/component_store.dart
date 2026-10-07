@@ -2,6 +2,14 @@ import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
 
+import 'store_membership.dart';
+
+abstract interface class StoreChangeListener {
+  void rowChanged(int entityIndex);
+
+  void cleared();
+}
+
 abstract base class ComponentStore {
   Uint32List _denseEntities;
   Uint32List _sparse;
@@ -12,11 +20,50 @@ abstract base class ComponentStore {
 
   void Function(int entityIndex, Object? payload)? onRemoved;
 
+  StoreChangeListener? _changeListener;
+
+  StoreMembership? _membership;
+  int _membershipId = 0;
+
   ComponentStore({int denseCapacity = 8, int sparseCapacity = 16})
     : _denseEntities = Uint32List(denseCapacity),
       _sparse = Uint32List(sparseCapacity);
 
   int get length => _length;
+
+  void addChangeListener(StoreChangeListener listener) {
+    final current = _changeListener;
+    _changeListener = switch (current) {
+      null => listener,
+      _ChangeFanOut(:final listeners) => _ChangeFanOut([
+        ...listeners,
+        listener,
+      ]),
+      _ => _ChangeFanOut([current, listener]),
+    };
+  }
+
+  void removeChangeListener(StoreChangeListener listener) {
+    final current = _changeListener;
+    if (identical(current, listener)) {
+      _changeListener = null;
+    } else if (current is _ChangeFanOut) {
+      final rest = [
+        for (final l in current.listeners)
+          if (!identical(l, listener)) l,
+      ];
+      _changeListener = rest.length == 1 ? rest.single : _ChangeFanOut(rest);
+    }
+  }
+
+  void attachMembership(StoreMembership membership, int id) {
+    assert(_membership == null, 'A store can belong to one registry only.');
+    _membership = membership;
+    _membershipId = id;
+    for (var dense = 0; dense < _length; dense++) {
+      membership.add(_denseEntities[dense], id);
+    }
+  }
 
   int get revision => _revision;
 
@@ -35,6 +82,15 @@ abstract base class ComponentStore {
 
   void insertDynamic(int entityIndex, Object? value);
 
+  bool accepts(Object? value) => false;
+
+  bool holdsSubtype<U>() => false;
+
+  Object? payloadOf(int entityIndex) {
+    final dense = denseIndexOf(entityIndex);
+    return dense < 0 ? null : payloadAt(dense);
+  }
+
   void removeEntityIndex(int entityIndex) {
     final removed = onRemoved;
     if (removed == null) {
@@ -50,12 +106,16 @@ abstract base class ComponentStore {
 
   void clear() {
     if (_length == 0) return;
+    final membership = _membership;
     for (var dense = 0; dense < _length; dense++) {
-      _sparse[_denseEntities[dense]] = 0;
+      final entityIndex = _denseEntities[dense];
+      _sparse[entityIndex] = 0;
+      membership?.remove(entityIndex, _membershipId);
       clearPayload(dense);
     }
     _length = 0;
     bumpRevision();
+    _changeListener?.cleared();
   }
 
   @protected
@@ -68,8 +128,13 @@ abstract base class ComponentStore {
     _denseEntities[dense] = entityIndex;
     _sparse[entityIndex] = dense + 1;
     _length = dense + 1;
+    _membership?.add(entityIndex, _membershipId);
     return dense;
   }
+
+  @protected
+  void notifyRowChanged(int entityIndex) =>
+      _changeListener?.rowChanged(entityIndex);
 
   @protected
   void bumpRevision() {
@@ -88,9 +153,11 @@ abstract base class ComponentStore {
       movePayload(last, dense);
     }
     _sparse[entityIndex] = 0;
+    _membership?.remove(entityIndex, _membershipId);
     _length = last;
     clearPayload(last);
     bumpRevision();
+    _changeListener?.rowChanged(entityIndex);
     return dense;
   }
 
@@ -123,5 +190,25 @@ abstract base class ComponentStore {
     }
     _denseEntities = Uint32List(newCap)..setRange(0, _length, _denseEntities);
     growPayload(newCap);
+  }
+}
+
+final class _ChangeFanOut implements StoreChangeListener {
+  _ChangeFanOut(this.listeners);
+
+  final List<StoreChangeListener> listeners;
+
+  @override
+  void rowChanged(int entityIndex) {
+    for (final listener in listeners) {
+      listener.rowChanged(entityIndex);
+    }
+  }
+
+  @override
+  void cleared() {
+    for (final listener in listeners) {
+      listener.cleared();
+    }
   }
 }

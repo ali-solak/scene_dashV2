@@ -99,7 +99,6 @@ void installFighter(GameBuilder game) {
     ..insert(ButtonInput<CombatAction>())
     ..insert(CombatLog());
   game
-    ..registerComponent<Fighter>()
     ..addSystem(Schedules.fixedUpdate, fighterDriver, writes: {Fighter})
     ..addSystem(
       Schedules.fixedUpdate,

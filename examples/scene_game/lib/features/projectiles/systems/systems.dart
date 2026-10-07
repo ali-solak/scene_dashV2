@@ -5,7 +5,7 @@ final Vector3 _projectilePosition = Vector3.zero();
 final Vector3 _rockHitPosition = Vector3.zero();
 
 void attachBlaster(World world) {
-  final player = world.entitiesWith(require: const [Player]).firstOrNull;
+  final player = world.entitiesWith<Player>().firstOrNull;
   if (player == null) return;
   world.add(player, Blaster());
 }
@@ -15,9 +15,7 @@ void shootProjectiles(World world) {
   final released = world.consumeAny<FireReleased>();
   final canceled = world.consumeAny<FireCanceled>();
 
-  final player = world
-      .query2<Blaster, NodeRef>(require: const [Player])
-      .firstOrNull;
+  final player = world.query2<Blaster, NodeRef>().having<Player>().firstOrNull;
   if (player == null) return;
   final (_, blaster, binding) = player;
   final shots = blaster.update(

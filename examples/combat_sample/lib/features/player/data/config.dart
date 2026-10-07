@@ -10,6 +10,8 @@ const double rollSpeed = 9.5;
 
 const double turnRate = 12;
 
+const double lockedTurnRate = 24;
+
 const double playerSpawnX = 0;
 const double playerSpawnZ = 5;
 
@@ -89,6 +91,9 @@ const double playerCapsuleHeight = 0.95;
 const double playerMaxHealth = 100;
 
 const double locomotionFadeSeconds = 0.001;
+const double locomotionBlendSeconds = 0.16;
+const double shotBlendSeconds = 0.08;
+const double hitBlendSeconds = 0.04;
 const double oneShotFadeSeconds = 0.001;
 
 const double oneShotFadeOutSeconds = 0.001;

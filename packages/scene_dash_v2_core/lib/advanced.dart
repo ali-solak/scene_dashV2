@@ -28,6 +28,7 @@ export 'src/schedule/system_ref.dart';
 export 'src/state/states.dart' show StateScheduleLabel;
 export 'src/storage/component_store.dart';
 export 'src/storage/object_store.dart';
+export 'src/storage/store_membership.dart';
 export 'src/storage/store_registry.dart';
 export 'src/storage/tag_store.dart';
 export 'src/surface/game_builder.dart' show EventCursorHost;

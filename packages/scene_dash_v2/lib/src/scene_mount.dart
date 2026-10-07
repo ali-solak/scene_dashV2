@@ -6,7 +6,7 @@ import 'node_ref.dart';
 
 /// Mounts entity nodes and removes unused mounts.
 final class SceneNodeMountAdapter
-    implements SystemAdapter, SystemAccessProvider {
+    implements SystemAdapter, SystemAccessProvider, StoreChangeListener {
   @override
   SystemAccess get access =>
       const SystemAccess(reads: <Type>{NodeRef}, writes: <Type>{Mounted});
@@ -17,93 +17,116 @@ final class SceneNodeMountAdapter
   final Map<Node, Entity> _index;
 
   late final World _world;
-  late final ObjectComponentStore<NodeRef> _sceneNodeStore;
-  late final Query1<NodeRef> _bound;
+  late final ObjectComponentStore<NodeRef> _nodeRefs;
+  late final TagStore _mounted;
 
   /// Nodes this adapter mounted, mapped to the entity they were mounted for.
   final Map<Node, Entity> _ownedMounted = <Node, Entity>{};
 
-  /// Every bound node seen during the last reconciliation pass.
+  /// Every bound node, mapped to the entity that bound it last.
   final Map<Node, Entity> _knownBound = <Node, Entity>{};
 
-  /// Nodes seen this run.
-  final Set<Node> _seen = <Node>{};
-
-  /// Scratch lists of entities to (un)tag, applied after the bound query stops
-  /// iterating (tag stores cannot be mutated mid-query). Reused each run.
-  final List<Entity> _toTag = <Entity>[];
-  final List<Entity> _toUntag = <Entity>[];
-
-  int _lastRevision = -1;
+  final Map<int, Node> _nodeByEntityIndex = <int, Node>{};
+  final Map<Node, List<int>> _binders = <Node, List<int>>{};
+  final Set<int> _dirty = <int>{};
+  final List<Node> _unbound = <Node>[];
+  bool _cleared = false;
 
   SceneNodeMountAdapter(this._sceneCommands, this._index);
 
   @override
   void initialize(World world) {
     _world = world;
-    world
-      ..ensureObjectStore<NodeRef>()
-      ..ensureTagStore<Mounted>();
-    _sceneNodeStore = world.stores.object<NodeRef>();
-    _bound = world.query1<NodeRef>();
+    _nodeRefs = world.ensureObjectStore<NodeRef>()..addChangeListener(this);
+    _mounted = world.ensureTagStore<Mounted>();
+    for (var dense = 0; dense < _nodeRefs.length; dense++) {
+      _dirty.add(_nodeRefs.entityIndexAt(dense));
+    }
   }
 
   @override
+  void rowChanged(int entityIndex) => _dirty.add(entityIndex);
+
+  @override
+  void cleared() => _cleared = true;
+
+  @override
   void run() {
-    final revision = _sceneNodeStore.revision;
-    if (revision == _lastRevision) return;
-    _lastRevision = revision;
-
-    _seen.clear();
-    _toTag.clear();
-    _toUntag.clear();
-    _bound.each((entity, binding) {
-      final node = binding.node;
-      _seen.add(node);
-      final previousEntity = _knownBound[node];
-      if (previousEntity != null && previousEntity != entity) {
-        _toUntag.add(previousEntity);
-      }
-      _knownBound[node] = entity;
-      // Maintain the reverse node -> entity index for every bound node (not just
-      // ones we mount), so picking can resolve any visible node to its entity.
-      _index[node] = entity;
-      if (_ownedMounted.containsKey(node)) {
-        _ownedMounted[node] = entity;
-        _toTag.add(entity);
-        return;
-      }
-      // Adopt only nodes that have no parent yet; a node the game parented
-      // itself is left alone (and never tracked for auto-detach).
-      if (node.parent == null) {
-        _sceneCommands.add(node);
-        _ownedMounted[node] = entity;
-        _toTag.add(entity);
-      } else {
-        _toTag.add(entity);
-      }
-    });
-    // Forget nodes whose binding disappeared. Only detach nodes this adapter
-    // adopted; game-parented nodes are untagged/index-pruned but left in place.
-    _knownBound.removeWhere((node, entity) {
-      if (_seen.contains(node)) return false;
-      _toUntag.add(entity);
-      if (_ownedMounted.remove(node) != null) {
-        _sceneCommands.remove(node);
-      }
-      return true;
-    });
-    // Prune index entries whose node is no longer bound (despawn, component
-    // removal, or replacement). Reuses the scan's _seen set, no allocation.
-    _index.removeWhere((node, _) => !_seen.contains(node));
-
-    // Apply mount tags after the query.
-    final mounted = _world.ensureTagStore<Mounted>();
-    for (final entity in _toUntag) {
-      if (_world.isAlive(entity)) mounted.removeEntityIndex(entity.index);
+    if (_cleared) _forgetAll();
+    if (_dirty.isEmpty && _unbound.isEmpty) return;
+    for (final entityIndex in _dirty) {
+      _reconcile(entityIndex);
     }
-    for (final entity in _toTag) {
-      if (_world.isAlive(entity)) mounted.add(entity.index);
+    _dirty.clear();
+    for (final node in _unbound) {
+      _settle(node);
     }
+    _unbound.clear();
+  }
+
+  void _forgetAll() {
+    _cleared = false;
+    _unbound.addAll(_nodeByEntityIndex.values);
+    _nodeByEntityIndex.clear();
+    for (final binders in _binders.values) {
+      binders.clear();
+    }
+  }
+
+  void _reconcile(int entityIndex) {
+    final node = _nodeRefs.valueOf(entityIndex)?.node;
+    final previous = _nodeByEntityIndex[entityIndex];
+    if (previous != null && !identical(previous, node)) {
+      _nodeByEntityIndex.remove(entityIndex);
+      _binders[previous]?.remove(entityIndex);
+      _unbound.add(previous);
+      if (node == null) _mounted.removeEntityIndex(entityIndex);
+    }
+    if (node == null) return;
+    _nodeByEntityIndex[entityIndex] = node;
+    final binders = _binders.putIfAbsent(node, () => <int>[]);
+    if (!binders.contains(entityIndex)) binders.add(entityIndex);
+    _bind(node, _world.entities.resolve(entityIndex));
+  }
+
+  void _bind(Node node, Entity entity) {
+    final previousEntity = _knownBound[node];
+    if (previousEntity != null &&
+        previousEntity != entity &&
+        _world.isAlive(previousEntity) &&
+        !_nodeByEntityIndex.containsKey(previousEntity.index)) {
+      _mounted.removeEntityIndex(previousEntity.index);
+    }
+    _knownBound[node] = entity;
+    _index[node] = entity;
+    if (_ownedMounted.containsKey(node)) {
+      _ownedMounted[node] = entity;
+    } else if (node.parent == null) {
+      _sceneCommands.add(node);
+      _ownedMounted[node] = entity;
+    }
+    _mounted.add(entity.index);
+  }
+
+  void _settle(Node node) {
+    final binders = _binders[node];
+    if (binders == null || binders.isEmpty) {
+      _binders.remove(node);
+      _release(node);
+      return;
+    }
+    final owner = _knownBound[node];
+    if (owner != null &&
+        _world.isAlive(owner) &&
+        binders.contains(owner.index)) {
+      return;
+    }
+    _bind(node, _world.entities.resolve(binders.last));
+  }
+
+  void _release(Node node) {
+    _knownBound.remove(node);
+    _index.remove(node);
+    if (_ownedMounted.remove(node) != null) _sceneCommands.remove(node);
   }
 }

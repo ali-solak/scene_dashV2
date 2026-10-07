@@ -2,9 +2,6 @@ part of '../enemies.dart';
 
 void installEnemyDeath(GameBuilder game) {
   game
-    ..registerComponent<PendingCorpse>()
-    ..registerComponent<PhysicsCorpse>()
-    ..registerComponent<Dissolving>()
     ..observe<PendingCorpse>(onRemove: launchPhysicsCorpse)
     ..addSystem(
       Schedules.update,
@@ -97,7 +94,7 @@ void _dropAxe(
 }
 
 void dustCorpseLandings(World world) {
-  world.query<PhysicsCorpse>(require: const [Enemy]).each((entity, corpse) {
+  world.query<PhysicsCorpse>().having<Enemy>().each((entity, corpse) {
     if (corpse.bursts >= corpseDustMaxBursts) return;
     final body = corpse.body;
     if (body.handle == null) return;

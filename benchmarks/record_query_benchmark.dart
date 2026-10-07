@@ -6,12 +6,12 @@
 // view per call (a typed site: it registers stores, claims parked spawn
 // parts, and notes types for the access-drift check) and then delegates to
 // the same cached `Query2` iteration the classic API uses. This benchmark
-// prices exactly that sugar, plus the `.records` for-in form's per-row
+// prices exactly that sugar, plus the `.snapshot()` for-in form's per-row
 // allocation, so the numbers in the design discussion stay honest:
 //
 //   * classic `Query2.each` — construct once, iterate forever (baseline);
 //   * record view, constructed per call — the README idiom inside a system;
-//   * record view `.records` for-in — the documented cold-path alternative.
+//   * record view `.snapshot()` for-in — the documented cold-path alternative.
 import 'package:scene_dash_v2_core/advanced.dart';
 import 'package:scene_dash_v2_core/scene_dash_v2_core.dart'
     show WorldRecordQueries;
@@ -81,8 +81,10 @@ void main(List<String> args) {
         ..z += v.z * dt;
     });
   });
-  benchRepeat('record view .records for-in', n, () {
-    for (final (_, p, v) in WorldRecordQueries(world).query2<Position, Velocity>().records) {
+  benchRepeat('record view .snapshot() for-in', n, () {
+    for (final (_, p, v) in WorldRecordQueries(
+      world,
+    ).query2<Position, Velocity>().snapshot()) {
       p
         ..x += v.x * dt
         ..y += v.y * dt
@@ -96,19 +98,22 @@ void main(List<String> args) {
   });
   benchRepeat('record view .each exclude:', n, () {
     WorldRecordQueries(world)
-        .query2<Position, Velocity>(exclude: const [Frozen])
+        .query2<Position, Velocity>()
+        .without<Frozen>()
         .each((e, p, v) => p.x += v.x * dt);
   });
 
   section('Construction alone (object kept observable)', entities: 1);
   benchRepeat('classic query2(...) construct', 1, () {
-    sink += identityHashCode(
+    sink +=
+        identityHashCode(
           ClassicWorldQueries(world).query2<Position, Velocity>(),
         ) &
         1;
   }, minTime: const Duration(milliseconds: 200));
   benchRepeat('record query2(...) construct', 1, () {
-    sink += identityHashCode(
+    sink +=
+        identityHashCode(
           WorldRecordQueries(world).query2<Position, Velocity>(),
         ) &
         1;

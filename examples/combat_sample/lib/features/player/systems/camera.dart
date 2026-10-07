@@ -16,13 +16,7 @@ void installPlayerCamera(GameBuilder game) {
       Schedules.fixedUpdate,
       updateCameraRig,
       inSet: GameSets.resolution,
-      reads: const {
-        Player,
-        PlayerMotion,
-        SceneTransform,
-        Target,
-        Enemy,
-      },
+      reads: const {Player, PlayerMotion, SceneTransform, Target, Enemy},
     );
 }
 
@@ -31,7 +25,8 @@ void mountCamera(World world) => mountCombatCamera(world.resource<Scene>());
 void updateCameraRig(World world) {
   final rig = world.resource<CameraRig>();
   final row = world
-      .query2<PlayerMotion, SceneTransform>(require: const [Player])
+      .query2<PlayerMotion, SceneTransform>()
+      .having<Player>()
       .firstOrNull;
   if (row == null) return;
   final (player, _, transform) = row;
@@ -183,7 +178,7 @@ void _liftOverOccluders(
   final segZ = rig.target.z - eyeZ;
   final length2 = segX * segX + segY * segY + segZ * segZ;
   var blocked = false;
-  world.query<SceneTransform>(require: const [Enemy]).each((_, transform) {
+  world.query<SceneTransform>().having<Enemy>().each((_, transform) {
     if (blocked) return;
     final px = transform.translation.x - eyeX;
     final py = transform.translation.y + occluderHeight - eyeY;

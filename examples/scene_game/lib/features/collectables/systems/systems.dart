@@ -5,17 +5,17 @@ final Vector3 _playerScratch = Vector3.zero();
 final Vector3 _pickupScratch = Vector3.zero();
 
 void spawnShieldPickups(World world) {
-  if (world.entitiesWith(require: const [ShieldPickup]).count() > 0) return;
+  if (world.entitiesWith<ShieldPickup>().count() > 0) return;
   world.spawn(shieldPickupBundle(x: world.resource<PickupLanes>().nextLane()));
 }
 
 void resetCollectablesOnRunStart(World world) {
-  world.entitiesWith(require: const [Shielded]).each(world.remove<Shielded>);
+  world.entitiesWith<Shielded>().each(world.remove<Shielded>);
 }
 
 void animateShieldPickups(World world) {
   final dt = world.dt;
-  world.query<ShieldPickupVisuals>(require: const [ShieldPickup]).each((
+  world.query<ShieldPickupVisuals>().having<ShieldPickup>().each((
     entity,
     visuals,
   ) {
@@ -27,13 +27,10 @@ void animateShieldPickups(World world) {
 }
 
 void collectShieldPickups(World world) {
-  final player = world.query<NodeRef>(require: const [Player]).firstOrNull;
+  final player = world.query<NodeRef>().having<Player>().firstOrNull;
   if (player == null) return;
   player.$2.node.globalTranslationInto(_playerScratch);
-  world.query<NodeRef>(require: const [ShieldPickup]).eachUntil((
-    entity,
-    binding,
-  ) {
+  world.query<NodeRef>().having<ShieldPickup>().eachUntil((entity, binding) {
     binding.node.globalTranslationInto(_pickupScratch);
     final dx = _pickupScratch.x - _playerScratch.x;
     final dy = _pickupScratch.y - _playerScratch.y;
@@ -59,7 +56,8 @@ void shieldLost(World world, Entity entity, Shielded shielded) {
 
 void updateShieldVisuals(World world) {
   final visuals = world
-      .query<PlayerShieldVisuals>(require: const [Player])
+      .query<PlayerShieldVisuals>()
+      .having<Player>()
       .firstOrNull;
   if (visuals == null) return;
   final v = visuals.$2;

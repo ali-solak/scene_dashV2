@@ -33,4 +33,4 @@ void spawnWaveCreep(World world) {
 }
 
 bool _creepsAlive(World world) =>
-    world.query<SceneTransform>(require: const [Creep]).isNotEmpty;
+    world.query<SceneTransform>().having<Creep>().isNotEmpty;

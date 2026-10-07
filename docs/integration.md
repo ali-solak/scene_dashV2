@@ -253,7 +253,7 @@ queries that answer right away:
 final Vector3 _origin = Vector3.zero();
 
 void probeGround(World world) {
-  final player = world.query<NodeRef>(require: const [Player]).firstOrNull;
+  final player = world.query<NodeRef>().having<Player>().firstOrNull;
   if (player == null) return;
   player.$2.node.globalTranslationInto(_origin);
   final ground = world.physics.raycast(

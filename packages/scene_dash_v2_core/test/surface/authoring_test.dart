@@ -1,3 +1,4 @@
+import 'package:scene_dash_v2_core/advanced.dart' show TagStore;
 import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
 import 'package:test/test.dart';
 
@@ -293,34 +294,22 @@ void main() {
       expect(game.world.get<Unclaimed>(entity).value, 7);
     });
 
-    test('unregistered tags in a spawn list fail with registerTag '
-        'guidance; registered ones insert', () {
+    test('spawning a tag registers its store; registered ones insert', () {
       final game = TestGame.headless();
-      game.world.spawn([Marker()]);
-      expect(
-        game.start,
-        throwsA(
-          isA<StateError>().having(
-            (e) => e.message,
-            'message',
-            allOf(contains('Marker'), contains('registerTag')),
-          ),
-        ),
-      );
+      final marked = game.world.spawn([Marker()]);
+      game.start();
+      expect(game.world.has<Marker>(marked), isTrue);
+      expect(game.world.stores.require(Marker), isA<TagStore>());
 
-      final game2 = TestGame.headless(
-        features: [(game) => game.registerTag<Marker>()],
-      );
+      final game2 = TestGame.headless(features: const []);
       final tagged = game2.world.spawn([Marker(), Position(0)]);
       game2.pump();
       expect(game2.world.has<Marker>(tagged), isTrue);
-      expect(game2.world.query<Position>(require: [Marker]).count(), 1);
+      expect(game2.world.query<Position>().having<Marker>().count(), 1);
     });
 
     test('ownedBy despawns subtrees in one boundary, chains included', () {
-      final game = TestGame.headless(
-        features: [(game) => game.registerComponent<Position>()],
-      );
+      final game = TestGame.headless(features: const []);
       final owner = game.world.spawn([Position(0)]);
       final weapon = game.world.spawn([Position(1)], ownedBy: owner);
       final trail = game.world.spawn([Position(2)], ownedBy: weapon);
@@ -333,9 +322,7 @@ void main() {
     });
 
     test('World.reset rejects pending spawns; flush before resetting', () {
-      final game = TestGame.headless(
-        features: [(game) => game.registerComponent<Position>()],
-      );
+      final game = TestGame.headless(features: const []);
       game.world.spawn([Position(0)]);
       game.start();
       game.world.spawn([Position(1)]); // pending
@@ -358,7 +345,6 @@ void main() {
         features: [
           (game) {
             game
-              ..registerComponent<Position>()
               ..addState(RunMode.playing)
               ..addSystem(OnEnter(RunMode.playing), (w) => log.add('enter'))
               ..addSystem(OnExit(RunMode.playing), (w) => log.add('exit'));

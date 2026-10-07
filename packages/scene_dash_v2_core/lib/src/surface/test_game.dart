@@ -80,10 +80,7 @@ final class TestGame {
       world.resources.getOrInsert<ButtonInput<T>>(ButtonInput<T>.new);
 
   /// Sends [event] into the world.
-  void emit<E extends Object>(E event) {
-    if (E == event.runtimeType) world.registerEvent<E>();
-    world.sendEvent(event);
-  }
+  void emit<E extends Object>(E event) => world.emit<E>(event);
 
   // Frames
 

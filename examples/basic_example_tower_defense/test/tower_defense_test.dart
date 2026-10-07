@@ -37,17 +37,12 @@ void main() {
   );
 
   int towers(TestGame game) =>
-      game.world.query<SceneTransform>(require: const [Tower]).count();
+      game.world.query<SceneTransform>().having<Tower>().count();
 
   test('a runner that reaches the core costs a life', () {
     final game = boot();
     final nearEnd = route[route.length - 2];
-    creepAt(
-      game,
-      nearEnd,
-      next: route.length - 1,
-      extra: [Velocity(creepSpeed)],
-    );
+    creepAt(game, nearEnd, next: route.length - 1, extra: [Speed(creepSpeed)]);
 
     game.pumpFixed(steps: 120);
 
@@ -72,10 +67,7 @@ void main() {
 
     game.pumpFixed(steps: 120);
 
-    expect(
-      game.world.query<SceneTransform>(require: const [Creep]).isEmpty,
-      isTrue,
-    );
+    expect(game.world.query<SceneTransform>().having<Creep>().isEmpty, isTrue);
     expect(game.world.resource<Gold>().value, startingGold + runnerBounty);
   });
 
@@ -130,7 +122,7 @@ void main() {
     creepAt(
       game,
       buildSpot + Vector3(3, 0, 0),
-      extra: [Velocity(raiderSpeed), Raider()],
+      extra: [Speed(raiderSpeed), Raider()],
     );
 
     game.pumpFixed(steps: 60 * 12);

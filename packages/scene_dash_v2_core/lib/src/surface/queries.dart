@@ -7,30 +7,9 @@ import '../query/query_2.dart';
 import '../query/query_3.dart';
 import '../query/query_4.dart';
 import '../storage/component_store.dart';
+import '../storage/object_store.dart';
 import '../world/world.dart';
 import 'game_builder.dart';
-import 'spawning.dart';
-
-/// Resolves `require:`/`exclude:` filter types to their stores, with
-/// guidance when a type was never registered (filters take runtime `Type`
-/// objects, so they cannot register stores themselves).
-List<ComponentStore> _filterStores(World world, List<Type> types) {
-  if (types.isEmpty) return const <ComponentStore>[];
-  final stores = <ComponentStore>[];
-  for (final type in types) {
-    if (!world.stores.isRegistered(type)) {
-      throw StateError(
-        'query(require/exclude: [$type]): no store is registered for '
-        '$type. Filters cannot create stores from a Type object; register '
-        'it once at install time (registerComponent<$type>() / '
-        'registerTag<$type>()) or use the type in a spawn/typed call '
-        'first.',
-      );
-    }
-    stores.add(world.stores.require(type));
-  }
-  return stores;
-}
 
 bool _noteTypes(World world, List<Type> types) {
   final host = world.runningSystem;
@@ -43,26 +22,51 @@ Never _noMatch(String surface) =>
 
 /// A query over one component type.
 final class QueryView1<A extends Object> {
-  final Query1<A> _core;
+  final World _world;
+  final ObjectComponentStore<A> _a;
+  final List<ComponentStore> _with;
+  final List<ComponentStore> _without;
 
-  QueryView1._(this._core);
+  late final Query1<A> _core = Query1<A>(_world, _a, _with, _without);
+
+  QueryView1._(this._world, this._a, this._with, this._without);
 
   /// Builds the query.
-  factory QueryView1(
-    World world, {
-    List<Type> require = const <Type>[],
-    List<Type> exclude = const <Type>[],
-  }) {
-    assert(_noteTypes(world, [A, ...require, ...exclude]));
-    final queue = SpawnQueue.of(world);
+  factory QueryView1(World world) {
+    assert(_noteTypes(world, [A]));
     return QueryView1._(
-      Query1<A>(
-        world,
-        queue.ensureStore<A>(),
-        _filterStores(world, require),
-        _filterStores(world, exclude),
-      ),
+      world,
+      world.ensureObjectStore<A>(),
+      const <ComponentStore>[],
+      const <ComponentStore>[],
     );
+  }
+
+  int get revision {
+    var sum = _a.revision;
+    for (final store in _with) {
+      sum += store.revision;
+    }
+    for (final store in _without) {
+      sum += store.revision;
+    }
+    return sum;
+  }
+
+  QueryView1<A> having<T extends Object>() {
+    assert(_noteTypes(_world, [T]));
+    return QueryView1._(_world, _a, [
+      ..._with,
+      _world.ensureStore<T>(),
+    ], _without);
+  }
+
+  QueryView1<A> without<T extends Object>() {
+    assert(_noteTypes(_world, [T]));
+    return QueryView1._(_world, _a, _with, [
+      ..._without,
+      _world.ensureStore<T>(),
+    ]);
   }
 
   /// Calls [callback] for each match.
@@ -78,10 +82,6 @@ final class QueryView1<A extends Object> {
   /// The first match satisfying [test] as a record, or `null`.
   (Entity, A)? firstWhere(bool Function(Entity entity, A a) test) =>
       _core.firstWhere(test);
-
-  /// Eager snapshot in iteration order. Allocates a list and records;
-  /// prefer [each] for hot loops. Component objects are shared, not copied.
-  Iterable<(Entity, A)> get records => snapshot();
 
   /// Copies matching rows into a new list. Later structural changes do not
   /// change its membership, but the component objects remain live references.
@@ -118,27 +118,53 @@ final class QueryView1<A extends Object> {
 
 /// A query over two component types.
 final class QueryView2<A extends Object, B extends Object> {
-  final Query2<A, B> _core;
+  final World _world;
+  final ObjectComponentStore<A> _a;
+  final ObjectComponentStore<B> _b;
+  final List<ComponentStore> _with;
+  final List<ComponentStore> _without;
 
-  QueryView2._(this._core);
+  late final Query2<A, B> _core = Query2<A, B>(_world, _a, _b, _with, _without);
+
+  QueryView2._(this._world, this._a, this._b, this._with, this._without);
 
   /// Builds the query.
-  factory QueryView2(
-    World world, {
-    List<Type> require = const <Type>[],
-    List<Type> exclude = const <Type>[],
-  }) {
-    assert(_noteTypes(world, [A, B, ...require, ...exclude]));
-    final queue = SpawnQueue.of(world);
+  factory QueryView2(World world) {
+    assert(_noteTypes(world, [A, B]));
     return QueryView2._(
-      Query2<A, B>(
-        world,
-        queue.ensureStore<A>(),
-        queue.ensureStore<B>(),
-        _filterStores(world, require),
-        _filterStores(world, exclude),
-      ),
+      world,
+      world.ensureObjectStore<A>(),
+      world.ensureObjectStore<B>(),
+      const <ComponentStore>[],
+      const <ComponentStore>[],
     );
+  }
+
+  int get revision {
+    var sum = _a.revision + _b.revision;
+    for (final store in _with) {
+      sum += store.revision;
+    }
+    for (final store in _without) {
+      sum += store.revision;
+    }
+    return sum;
+  }
+
+  QueryView2<A, B> having<T extends Object>() {
+    assert(_noteTypes(_world, [T]));
+    return QueryView2._(_world, _a, _b, [
+      ..._with,
+      _world.ensureStore<T>(),
+    ], _without);
+  }
+
+  QueryView2<A, B> without<T extends Object>() {
+    assert(_noteTypes(_world, [T]));
+    return QueryView2._(_world, _a, _b, _with, [
+      ..._without,
+      _world.ensureStore<T>(),
+    ]);
   }
 
   /// Calls [callback] for each match.
@@ -155,10 +181,6 @@ final class QueryView2<A extends Object, B extends Object> {
   /// The first match satisfying [test] as a record, or `null`.
   (Entity, A, B)? firstWhere(bool Function(Entity entity, A a, B b) test) =>
       _core.firstWhere(test);
-
-  /// Eager snapshot in iteration order. Allocates a list and records;
-  /// prefer [each] for hot loops. Component objects are shared, not copied.
-  Iterable<(Entity, A, B)> get records => snapshot();
 
   /// Copies matching rows into a new list with shared component references.
   List<(Entity, A, B)> snapshot() {
@@ -192,28 +214,69 @@ final class QueryView2<A extends Object, B extends Object> {
 
 /// A query over three component types.
 final class QueryView3<A extends Object, B extends Object, C extends Object> {
-  final Query3<A, B, C> _core;
+  final World _world;
+  final ObjectComponentStore<A> _a;
+  final ObjectComponentStore<B> _b;
+  final ObjectComponentStore<C> _c;
+  final List<ComponentStore> _with;
+  final List<ComponentStore> _without;
 
-  QueryView3._(this._core);
+  late final Query3<A, B, C> _core = Query3<A, B, C>(
+    _world,
+    _a,
+    _b,
+    _c,
+    _with,
+    _without,
+  );
+
+  QueryView3._(
+    this._world,
+    this._a,
+    this._b,
+    this._c,
+    this._with,
+    this._without,
+  );
 
   /// Builds the query.
-  factory QueryView3(
-    World world, {
-    List<Type> require = const <Type>[],
-    List<Type> exclude = const <Type>[],
-  }) {
-    assert(_noteTypes(world, [A, B, C, ...require, ...exclude]));
-    final queue = SpawnQueue.of(world);
+  factory QueryView3(World world) {
+    assert(_noteTypes(world, [A, B, C]));
     return QueryView3._(
-      Query3<A, B, C>(
-        world,
-        queue.ensureStore<A>(),
-        queue.ensureStore<B>(),
-        queue.ensureStore<C>(),
-        _filterStores(world, require),
-        _filterStores(world, exclude),
-      ),
+      world,
+      world.ensureObjectStore<A>(),
+      world.ensureObjectStore<B>(),
+      world.ensureObjectStore<C>(),
+      const <ComponentStore>[],
+      const <ComponentStore>[],
     );
+  }
+
+  int get revision {
+    var sum = _a.revision + _b.revision + _c.revision;
+    for (final store in _with) {
+      sum += store.revision;
+    }
+    for (final store in _without) {
+      sum += store.revision;
+    }
+    return sum;
+  }
+
+  QueryView3<A, B, C> having<T extends Object>() {
+    assert(_noteTypes(_world, [T]));
+    return QueryView3._(_world, _a, _b, _c, [
+      ..._with,
+      _world.ensureStore<T>(),
+    ], _without);
+  }
+
+  QueryView3<A, B, C> without<T extends Object>() {
+    assert(_noteTypes(_world, [T]));
+    return QueryView3._(_world, _a, _b, _c, _with, [
+      ..._without,
+      _world.ensureStore<T>(),
+    ]);
   }
 
   /// Calls [callback] for each match.
@@ -231,10 +294,6 @@ final class QueryView3<A extends Object, B extends Object, C extends Object> {
   (Entity, A, B, C)? firstWhere(
     bool Function(Entity entity, A a, B b, C c) test,
   ) => _core.firstWhere(test);
-
-  /// Eager snapshot in iteration order. Allocates a list and records;
-  /// prefer [each] for hot loops. Component objects are shared, not copied.
-  Iterable<(Entity, A, B, C)> get records => snapshot();
 
   /// Copies matching rows into a new list with shared component references.
   List<(Entity, A, B, C)> snapshot() {
@@ -273,29 +332,73 @@ final class QueryView4<
   C extends Object,
   D extends Object
 > {
-  final Query4<A, B, C, D> _core;
+  final World _world;
+  final ObjectComponentStore<A> _a;
+  final ObjectComponentStore<B> _b;
+  final ObjectComponentStore<C> _c;
+  final ObjectComponentStore<D> _d;
+  final List<ComponentStore> _with;
+  final List<ComponentStore> _without;
 
-  QueryView4._(this._core);
+  late final Query4<A, B, C, D> _core = Query4<A, B, C, D>(
+    _world,
+    _a,
+    _b,
+    _c,
+    _d,
+    _with,
+    _without,
+  );
+
+  QueryView4._(
+    this._world,
+    this._a,
+    this._b,
+    this._c,
+    this._d,
+    this._with,
+    this._without,
+  );
 
   /// Builds the query.
-  factory QueryView4(
-    World world, {
-    List<Type> require = const <Type>[],
-    List<Type> exclude = const <Type>[],
-  }) {
-    assert(_noteTypes(world, [A, B, C, D, ...require, ...exclude]));
-    final queue = SpawnQueue.of(world);
+  factory QueryView4(World world) {
+    assert(_noteTypes(world, [A, B, C, D]));
     return QueryView4._(
-      Query4<A, B, C, D>(
-        world,
-        queue.ensureStore<A>(),
-        queue.ensureStore<B>(),
-        queue.ensureStore<C>(),
-        queue.ensureStore<D>(),
-        _filterStores(world, require),
-        _filterStores(world, exclude),
-      ),
+      world,
+      world.ensureObjectStore<A>(),
+      world.ensureObjectStore<B>(),
+      world.ensureObjectStore<C>(),
+      world.ensureObjectStore<D>(),
+      const <ComponentStore>[],
+      const <ComponentStore>[],
     );
+  }
+
+  int get revision {
+    var sum = _a.revision + _b.revision + _c.revision + _d.revision;
+    for (final store in _with) {
+      sum += store.revision;
+    }
+    for (final store in _without) {
+      sum += store.revision;
+    }
+    return sum;
+  }
+
+  QueryView4<A, B, C, D> having<T extends Object>() {
+    assert(_noteTypes(_world, [T]));
+    return QueryView4._(_world, _a, _b, _c, _d, [
+      ..._with,
+      _world.ensureStore<T>(),
+    ], _without);
+  }
+
+  QueryView4<A, B, C, D> without<T extends Object>() {
+    assert(_noteTypes(_world, [T]));
+    return QueryView4._(_world, _a, _b, _c, _d, _with, [
+      ..._without,
+      _world.ensureStore<T>(),
+    ]);
   }
 
   /// Calls [callback] for each match.
@@ -314,10 +417,6 @@ final class QueryView4<
   (Entity, A, B, C, D)? firstWhere(
     bool Function(Entity entity, A a, B b, C c, D d) test,
   ) => _core.firstWhere(test);
-
-  /// Eager snapshot in iteration order. Allocates a list and records;
-  /// prefer [each] for hot loops. Component objects are shared, not copied.
-  Iterable<(Entity, A, B, C, D)> get records => snapshot();
 
   /// Copies matching rows into a new list with shared component references.
   List<(Entity, A, B, C, D)> snapshot() {
@@ -354,23 +453,16 @@ final class QueryView4<
 /// Record query methods for [World].
 extension WorldRecordQueries on World {
   /// A record query over one component type; see [QueryView1].
-  QueryView1<A> query<A extends Object>({
-    List<Type> require = const <Type>[],
-    List<Type> exclude = const <Type>[],
-  }) => QueryView1<A>(this, require: require, exclude: exclude);
+  QueryView1<A> query<A extends Object>() => QueryView1<A>(this);
 
   /// A record query over two component types; see [QueryView2].
-  QueryView2<A, B> query2<A extends Object, B extends Object>({
-    List<Type> require = const <Type>[],
-    List<Type> exclude = const <Type>[],
-  }) => QueryView2<A, B>(this, require: require, exclude: exclude);
+  QueryView2<A, B> query2<A extends Object, B extends Object>() =>
+      QueryView2<A, B>(this);
 
   /// A record query over three component types; see [QueryView3].
   QueryView3<A, B, C>
-  query3<A extends Object, B extends Object, C extends Object>({
-    List<Type> require = const <Type>[],
-    List<Type> exclude = const <Type>[],
-  }) => QueryView3<A, B, C>(this, require: require, exclude: exclude);
+  query3<A extends Object, B extends Object, C extends Object>() =>
+      QueryView3<A, B, C>(this);
 
   /// A record query over four component types; see [QueryView4].
   QueryView4<A, B, C, D> query4<
@@ -378,8 +470,5 @@ extension WorldRecordQueries on World {
     B extends Object,
     C extends Object,
     D extends Object
-  >({
-    List<Type> require = const <Type>[],
-    List<Type> exclude = const <Type>[],
-  }) => QueryView4<A, B, C, D>(this, require: require, exclude: exclude);
+  >() => QueryView4<A, B, C, D>(this);
 }

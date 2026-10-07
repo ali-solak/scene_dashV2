@@ -19,9 +19,7 @@ void main() {
   Future<WorldGame> bootHud() => WorldGame.boot(
     features: [
       (g) {
-        g
-          ..registerComponent<Blaster>()
-          ..registerComponent<Shielded>();
+        g;
         g.addState<GameStatus>(GameStatus.playing);
         g.world
           ..insert(GameState())

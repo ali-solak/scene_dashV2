@@ -3,8 +3,7 @@ library;
 
 import 'package:flutter/foundation.dart' show mapEquals, setEquals;
 import 'package:flutter/widgets.dart';
-import 'package:scene_dash_v2_core/advanced.dart'
-    show ComponentStore, EventReader;
+import 'package:scene_dash_v2_core/advanced.dart' show EventReader;
 import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
 
 import 'game_scope.dart';
@@ -138,14 +137,12 @@ class EntityBuilder<T extends Object, S> extends StatefulWidget {
     required this.builder,
     this.absent,
     this.every,
-  }) : require = null,
-       exclude = null;
+  }) : where = null;
 
   /// Watches an entity matching the filters until it stops matching.
   const EntityBuilder.matching({
     super.key,
-    this.require = const <Type>[],
-    this.exclude = const <Type>[],
+    this.where,
     required this.select,
     required this.builder,
     this.absent,
@@ -155,10 +152,7 @@ class EntityBuilder<T extends Object, S> extends StatefulWidget {
   /// The entity to watch (handle form; null in `.matching` form).
   final Entity? entity;
 
-  /// `.matching` filters (tags or components beside [T]); null in the
-  /// handle form.
-  final List<Type>? require;
-  final List<Type>? exclude;
+  final QueryView1<T> Function(QueryView1<T> query)? where;
 
   /// Rebuilds when the selection changes: `==`, with lists, sets, maps, and
   /// iterables compared by contents, one level deep.
@@ -186,7 +180,6 @@ class _EntityBuilderState<T extends Object, S>
   bool _needsRead = false;
 
   QueryView1<T>? _matchQuery;
-  List<ComponentStore> _matchStores = const [];
   Entity? _matched;
   int _missRevision = -1;
 
@@ -196,7 +189,7 @@ class _EntityBuilderState<T extends Object, S>
   @override
   void attached(WorldGame? previous) {
     // Ensure the component store exists.
-    SpawnQueue.of(game.world).ensureStore<T>();
+    game.world.ensureObjectStore<T>();
     _dropMatch();
     _read(rebuild: false);
     _needsRead = false;
@@ -216,22 +209,21 @@ class _EntityBuilderState<T extends Object, S>
 
   void _dropMatch() {
     _matchQuery = null;
-    _matchStores = const [];
     _matched = null;
     _missRevision = -1;
   }
 
   T? _resolve() {
-    final require = widget.require;
-    if (require == null) return game.world.tryGet<T>(widget.entity!);
-    final query = _matchQuery ??= _buildMatchQuery(require, widget.exclude!);
+    final entity = widget.entity;
+    if (entity != null) return game.world.tryGet<T>(entity);
+    final query = _matchQuery ??= _buildMatchQuery();
     final matched = _matched;
     if (matched != null) {
       final component = query.get(matched);
       if (component != null) return component;
       _matched = null;
     }
-    final revision = _matchStoresRevision();
+    final revision = query.revision;
     if (revision == _missRevision) return null;
     final hit = query.firstOrNull;
     if (hit == null) {
@@ -243,22 +235,10 @@ class _EntityBuilderState<T extends Object, S>
     return hit.$2;
   }
 
-  QueryView1<T> _buildMatchQuery(List<Type> require, List<Type> exclude) {
-    final world = game.world;
-    final query = world.query<T>(require: require, exclude: exclude);
-    _matchStores = [
-      for (final type in [T, ...require, ...exclude])
-        world.stores.require(type),
-    ];
-    return query;
-  }
-
-  int _matchStoresRevision() {
-    var revision = 0;
-    for (final store in _matchStores) {
-      revision += store.revision;
-    }
-    return revision;
+  QueryView1<T> _buildMatchQuery() {
+    final query = game.world.query<T>();
+    final where = widget.where;
+    return where == null ? query : where(query);
   }
 
   void _read({required bool rebuild}) {

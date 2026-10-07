@@ -40,7 +40,7 @@ The other builders work the same way: pick a value, rebuild when it
 changes.
 
 ```dart
-WorldBuilder<int>(select: (w) => w.query<Health>(require: const [Enemy]).count(),
+WorldBuilder<int>(select: (w) => w.query<Health>().having<Enemy>().count(),
     builder: (ctx, n) => Text('$n enemies'))     // any world-derived value
 
 GameStateBuilder<GameStatus>(builder: (ctx, s) => switch (s) { ... })

@@ -1,4 +1,16 @@
 # Changelog
+## 0.6.0
+- `SceneTransform` sync writes a node only when its transform or bound node
+  changed (or the node's matrix was replaced); unchanged entities cost about
+  half as much per frame.
+- Scene mounting tracks `NodeRef` row changes instead of rescanning every
+  bound entity. A node shared by several entities stays mounted until the
+  last one drops it, and every entity whose node is mounted is `Mounted`.
+- `EntityBuilder.matching` takes `where: (q) => q.having<T>()` instead of
+  `require:`/`exclude:` `Type` lists.
+- `Game.emit` routes like `world.emit`.
+- Requires scene_dash_v2_core 0.6.0.
+
 ## 0.5.6
 - upgrade to flutter scene 0.24
 

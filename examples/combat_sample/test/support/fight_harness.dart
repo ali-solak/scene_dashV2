@@ -72,8 +72,7 @@ TestGame boot({
   return game;
 }
 
-Entity playerOf(World world) =>
-    world.entitiesWith(require: const [Player]).firstOrNull!;
+Entity playerOf(World world) => world.entitiesWith<Player>().firstOrNull!;
 
 /// Winds up a strike and plants [enemy] right in front of the player just
 /// before the active edge, so exactly that swing connects.
@@ -103,7 +102,7 @@ void landPlayerStrike(TestGame game, Entity enemy, {bool heavy = false}) {
 /// of the player, at full health. Returns it.
 Entity dummyInFront(TestGame game, {double distance = 3}) {
   final world = game.world;
-  world.entitiesWith(require: const [Enemy]).each(world.despawn);
+  world.entitiesWith<Enemy>().each(world.despawn);
   game.pumpFixed(steps: 1);
 
   final player = playerOf(world);
@@ -117,7 +116,7 @@ Entity dummyInFront(TestGame game, {double distance = 3}) {
     ),
   );
   game.pumpFixed(steps: 1);
-  return world.entitiesWith(require: const [Enemy]).firstOrNull!;
+  return world.entitiesWith<Enemy>().firstOrNull!;
 }
 
 /// Pumps [steps] fixed steps while pinning [enemy] where it stands.

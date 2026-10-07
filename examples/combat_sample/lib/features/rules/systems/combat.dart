@@ -44,7 +44,8 @@ void installHitResolution(GameBuilder game) {
 
 void resolveStrikes(World world) {
   final row = world
-      .query3<Fighter, PlayerMotion, SceneTransform>(require: const [Player])
+      .query3<Fighter, PlayerMotion, SceneTransform>()
+      .having<Player>()
       .firstOrNull;
   if (row == null) return;
   final (player, fighter, motion, transform) = row;
@@ -74,7 +75,7 @@ void _resolveEnemyStrikes(
   Entity player,
   SceneTransform playerTransform,
 ) {
-  world.query2<Brawler, SceneTransform>(require: const [Enemy]).each((
+  world.query2<Brawler, SceneTransform>().having<Enemy>().each((
     _,
     brawler,
     enemyTransform,
@@ -114,7 +115,7 @@ void _strikeEnemies(
   SceneTransform playerTransform,
 ) {
   final swing = fighter.swing;
-  world.query2<Health, SceneTransform>(require: const [Enemy]).each((
+  world.query2<Health, SceneTransform>().having<Enemy>().each((
     enemy,
     health,
     enemyTransform,

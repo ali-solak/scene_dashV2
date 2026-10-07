@@ -13,9 +13,7 @@ void installFighter(GameBuilder game) {
   game.world
     ..insert(InputBuffer<CombatAction>(window: bufferWindow))
     ..insert(ButtonInput<CombatAction>());
-  game
-    ..registerComponent<Fighter>()
-    ..addSystem(Schedules.fixedUpdate, fighterDriver, writes: {Fighter});
+  game.addSystem(Schedules.fixedUpdate, fighterDriver, writes: {Fighter});
 }
 
 (TestGame, Fighter) boot() {
@@ -76,13 +74,24 @@ void main() {
     expect(fighter.combo, 0);
   });
 
-  test('a press older than the buffer window never fires', () {
+  test('a press early in a swing queues the next hit', () {
     final (game, fighter) = boot();
     press(game, CombatAction.attack);
     game.pumpFixed(steps: 1);
     press(game, CombatAction.attack);
     pumpToRecovery(game, fighter);
-    game.pumpFixed(steps: ticksFor(recoverySeconds) + 2);
+    game.pumpFixed(steps: ticksFor(comboLinkSeconds) + 1);
+    expect(fighter.swings, 2);
+    expect(fighter.combo, 1);
+  });
+
+  test('a roll drops the queued hit', () {
+    final (game, fighter) = boot();
+    press(game, CombatAction.attack);
+    game.pumpFixed(steps: 1);
+    press(game, CombatAction.attack);
+    press(game, CombatAction.roll);
+    game.pumpFixed(steps: ticksFor(rollSeconds) + 2);
     expect(fighter.phase.state, CombatPhase.idle);
     expect(fighter.swings, 1);
   });

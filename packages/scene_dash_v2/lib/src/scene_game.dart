@@ -86,10 +86,7 @@ class WorldGame {
   Listenable get frameTick => engine.frameTick;
 
   /// Sends [event] into the world.
-  void emit<E extends Object>(E event) {
-    if (E == event.runtimeType) world.registerEvent<E>();
-    world.sendEvent(event);
-  }
+  void emit<E extends Object>(E event) => world.emit<E>(event);
 
   /// Runs the custom schedule [label] inline, to completion.
   ///

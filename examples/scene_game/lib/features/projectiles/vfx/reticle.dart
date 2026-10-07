@@ -54,7 +54,7 @@ void updateLockOnReticle(World world) {
   reticle.firedFlash = math.max(0, reticle.firedFlash - dt / 0.25);
   reticle.impactFlash = math.max(0, reticle.impactFlash - dt / 0.3);
 
-  final player = world.query<NodeRef>(require: const [Player]).firstOrNull;
+  final player = world.query<NodeRef>().having<Player>().firstOrNull;
   if (player == null) return;
   player.$2.node.globalTranslationInto(_reticlePlayerPos);
   final pos = _reticlePlayerPos;
@@ -63,7 +63,7 @@ void updateLockOnReticle(World world) {
   var bestZ = -1e9;
   var hasRock = false;
   var bx = 0.0, by = 0.0, bz = 0.0;
-  world.query<NodeRef>(require: const [Rock]).each((entity, binding) {
+  world.query<NodeRef>().having<Rock>().each((entity, binding) {
     final m = binding.node.globalTransform.storage;
     final rx = m[12], ry = m[13], rz = m[14];
     if (rz > pos.z + 1.0) return;

@@ -35,7 +35,8 @@ void spawnPlayer(World world) {
 
 void resetPlayerRun(World world) {
   final row = world
-      .query3<Fighter, PlayerMotion, Health>(require: const [Player])
+      .query3<Fighter, PlayerMotion, Health>()
+      .having<Player>()
       .firstOrNull;
   if (row == null) return;
   final (player, fighter, motion, health) = row;

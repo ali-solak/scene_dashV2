@@ -23,13 +23,13 @@ void main() {
   int stepsFor(double seconds) => (seconds * 60).ceil() + 1;
 
   int creepCount(TestGame game) =>
-      game.world.query<SceneTransform>(require: const [Creep]).count();
+      game.world.query<SceneTransform>().having<Creep>().count();
 
   void finishWave(TestGame game) {
     game.world.resource<Wave>().left = 0;
-    game.world
-        .query<SceneTransform>(require: const [Creep])
-        .each((creep, _) => game.world.despawn(creep));
+    game.world.query<SceneTransform>().having<Creep>().each(
+      (creep, _) => game.world.despawn(creep),
+    );
     game.pumpFixed(steps: 2);
   }
 
@@ -76,8 +76,9 @@ void main() {
     game.pumpFixed(steps: stepsFor(breatherSeconds + spawnGapSeconds));
 
     final (_, health) = game.world
-        .query<Health>(require: const [Creep])
-        .records
+        .query<Health>()
+        .having<Creep>()
+        .snapshot()
         .first;
     expect(game.world.resource<Wave>().number, 2);
     expect(health.max, runnerHealth * waveHealthScale(2));

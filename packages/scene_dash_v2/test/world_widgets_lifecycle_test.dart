@@ -12,6 +12,10 @@ final class Marked implements Tag {
   const Marked();
 }
 
+final class Unseen implements Tag {
+  const Unseen();
+}
+
 final class Hit {
   const Hit(this.damage);
   final int damage;
@@ -90,27 +94,24 @@ void main() {
   testWidgets('entity filters and handle/matching modes refresh immediately', (
     tester,
   ) async {
-    final game = await boot(tester, features: [(g) => g.registerTag<Marked>()]);
+    final game = await boot(tester);
     game.world.spawn([Health(100)]);
     final marked = game.world.spawn([Health(40), const Marked()]);
     tick(game);
-    Widget matching({
-      List<Type> require = const [],
-      List<Type> exclude = const [],
-    }) => GameScope(
-      game: game,
-      child: EntityBuilder<Health, double>.matching(
-        require: require,
-        exclude: exclude,
-        select: (h) => h.current,
-        builder: (_, value) => label(value),
-      ),
-    );
+    Widget matching([QueryView1<Health> Function(QueryView1<Health>)? where]) =>
+        GameScope(
+          game: game,
+          child: EntityBuilder<Health, double>.matching(
+            where: where,
+            select: (h) => h.current,
+            builder: (_, value) => label(value),
+          ),
+        );
     await tester.pumpWidget(matching());
     expect(find.text('100.0'), findsOneWidget);
-    await tester.pumpWidget(matching(require: [Marked]));
+    await tester.pumpWidget(matching((q) => q.having<Marked>()));
     expect(find.text('40.0'), findsOneWidget);
-    await tester.pumpWidget(matching(exclude: [Marked]));
+    await tester.pumpWidget(matching((q) => q.without<Marked>()));
     expect(find.text('100.0'), findsOneWidget);
     await tester.pumpWidget(
       GameScope(
@@ -123,8 +124,34 @@ void main() {
       ),
     );
     expect(find.text('40.0'), findsOneWidget);
-    await tester.pumpWidget(matching(exclude: [Marked]));
+    await tester.pumpWidget(matching((q) => q.without<Marked>()));
     expect(find.text('100.0'), findsOneWidget);
+  });
+
+  testWidgets('matching waits for filter types nothing has spawned yet', (
+    tester,
+  ) async {
+    final game = await boot(tester);
+    game.world.spawn([Health(100)]);
+    tick(game);
+    Widget matching([QueryView1<Health> Function(QueryView1<Health>)? where]) =>
+        GameScope(
+          game: game,
+          child: EntityBuilder<Health, double>.matching(
+            where: where,
+            select: (h) => h.current,
+            builder: (_, value) => label(value),
+            absent: label('absent'),
+          ),
+        );
+    await tester.pumpWidget(matching((q) => q.without<Unseen>()));
+    expect(find.text('100.0'), findsOneWidget);
+    await tester.pumpWidget(matching((q) => q.having<Marked>()));
+    expect(find.text('absent'), findsOneWidget);
+    game.world.spawn([Health(40), const Marked()]);
+    tick(game);
+    await tester.pump();
+    expect(find.text('40.0'), findsOneWidget);
   });
 
   testWidgets(
@@ -153,34 +180,32 @@ void main() {
     tester,
   ) async {
     final first = await boot(tester);
-    final second = await boot(
-      tester,
-      features: [(g) => g.registerTag<Marked>()],
-    );
+    final second = await boot(tester);
     first.world.spawn([Health(100)]);
     second.world.spawn([Health(40), const Marked()]);
     tick(first);
     tick(second);
-    Widget tree(WorldGame game, List<Type> require) => GameScope(
+    Widget tree(WorldGame game, {required bool marked}) => GameScope(
       game: game,
       child: Column(
         children: [
           EntityBuilder<Health, double>.matching(
-            require: require,
+            where: (q) => marked ? q.having<Marked>() : q,
             select: (h) => h.current,
             builder: (_, value) => label(value),
           ),
           WorldBuilder<int>(
-            select: (w) => w.query<Health>(require: require).count(),
+            select: (w) {
+              final query = w.query<Health>();
+              return (marked ? query.having<Marked>() : query).count();
+            },
             builder: (_, count) => label('count: $count'),
           ),
         ],
       ),
     );
-    await tester.pumpWidget(tree(first, []));
-    // Marked is deliberately unregistered in the old world: reading it
-    // before didChangeDependencies attaches the new game would throw.
-    await tester.pumpWidget(tree(second, [Marked]));
+    await tester.pumpWidget(tree(first, marked: false));
+    await tester.pumpWidget(tree(second, marked: true));
     expect(tester.takeException(), isNull);
     expect(find.text('40.0'), findsOneWidget);
     expect(find.text('count: 1'), findsOneWidget);

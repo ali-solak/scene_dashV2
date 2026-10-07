@@ -27,7 +27,6 @@ void main() {
       final game = TestGame.headless(
         features: [
           (g) => g
-            ..registerComponent<Health>()
             ..observe<Health>(
               onAdd: (world, entity, health) => log.add('add:${health.amount}'),
               onRemove: (world, entity, health) =>
@@ -68,7 +67,6 @@ void main() {
       final game = TestGame.headless(
         features: [
           (g) => g
-            ..registerComponent<Health>()
             ..observe<Health>(
               onRemove: (world, entity, health) => removed = health,
             ),
@@ -88,9 +86,7 @@ void main() {
       var adds = 0;
       final game = TestGame.headless(
         features: [
-          (g) => g
-            ..registerComponent<Health>()
-            ..observe<Health>(onAdd: (world, entity, health) => adds++),
+          (g) => g..observe<Health>(onAdd: (world, entity, health) => adds++),
         ],
       );
       game.start();
@@ -127,7 +123,6 @@ void main() {
       final game = TestGame.headless(
         features: [
           (g) => g
-            ..registerComponent<Health>()
             ..observe<Health>(
               onAdd: (world, entity, health) => world.events<Ping>(),
             ),
@@ -151,7 +146,6 @@ void main() {
       final game = TestGame.headless(
         features: [
           (g) => g
-            ..registerComponent<Health>()
             ..observe<Health>(
               onAdd: (world, entity, health) => world.emit(const Ping()),
             ),
@@ -189,9 +183,8 @@ void main() {
         'may add an observed component to any number of entities', () {
       final world = World();
       var fires = 0;
-      ObserverRegistry.of(
-        world,
-      ).observe<Health>(onAdd: (w, entity, health) => fires++);
+      ObserverRegistry.of(world)
+          .observe<Health>(onAdd: (w, entity, health) => fires++);
       // Many entities can add the same observed type together.
       for (var i = 0; i < 40; i++) {
         world.spawn([Health(1)]);
@@ -285,7 +278,6 @@ void main() {
         final game = TestGame.headless(
           features: [
             (g) => g
-              ..registerComponent<Health>()
               ..observe<Health>(
                 onAdd: (world, entity, health) =>
                     log.add('add:${entity.index}:${health.amount}'),

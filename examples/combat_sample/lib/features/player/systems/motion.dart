@@ -15,39 +15,42 @@ void movePlayer(World world) {
   final axes = world.axes<MoveAxis>();
   final rig = world.resource<CameraRig>();
   final dt = world.dt;
-  world
-      .query3<Fighter, PlayerMotion, SceneTransform>(require: const [Player])
-      .each((entity, fighter, motion, transform) {
-        final (moveX, moveZ) = _stickWorldMove(axes, rig);
-        final moving = moveX * moveX + moveZ * moveZ > 1e-6;
+  world.query3<Fighter, PlayerMotion, SceneTransform>().having<Player>().each((
+    entity,
+    fighter,
+    motion,
+    transform,
+  ) {
+    final (moveX, moveZ) = _stickWorldMove(axes, rig);
+    final moving = moveX * moveX + moveZ * moveZ > 1e-6;
 
-        if (moving) {
-          motion.moveIntent
-            ..setValues(moveX, 0, moveZ)
-            ..normalize();
-        }
-        if (fighter.phase.justEntered(CombatPhase.rolling)) {
-          _commitRollDirection(motion, moveX, moveZ, moving: moving);
-        }
-        if (fighter.phase.justEntered(CombatPhase.startup)) {
-          _aimSwing(world, entity, fighter, motion, transform, moveX, moveZ);
-        } else if (fighter.phase.justEntered(CombatPhase.casting)) {
-          _aimSwing(world, entity, fighter, motion, transform, moveX, moveZ);
-          motion.lunge = 0;
-        }
+    if (moving) {
+      motion.moveIntent
+        ..setValues(moveX, 0, moveZ)
+        ..normalize();
+    }
+    if (fighter.phase.justEntered(CombatPhase.rolling)) {
+      _commitRollDirection(motion, moveX, moveZ, moving: moving);
+    }
+    if (fighter.phase.justEntered(CombatPhase.startup)) {
+      _aimSwing(world, entity, fighter, motion, transform, moveX, moveZ);
+    } else if (fighter.phase.justEntered(CombatPhase.casting)) {
+      _aimSwing(world, entity, fighter, motion, transform, moveX, moveZ);
+      motion.lunge = 0;
+    }
 
-        _planarVelocity(
-          world,
-          entity,
-          fighter,
-          motion,
-          transform,
-          moveX,
-          moveZ,
-          dt,
-        );
-        _integrateMotion(world, entity, fighter, motion, transform, dt);
-      });
+    _planarVelocity(
+      world,
+      entity,
+      fighter,
+      motion,
+      transform,
+      moveX,
+      moveZ,
+      dt,
+    );
+    _integrateMotion(world, entity, fighter, motion, transform, dt);
+  });
 }
 
 (double, double) _stickWorldMove(AxisInput<MoveAxis> axes, CameraRig rig) {
@@ -122,7 +125,7 @@ SceneTransform? _assistTarget(
 ) {
   SceneTransform? best;
   var bestScore = double.infinity;
-  world.query2<Health, SceneTransform>(require: const [Enemy]).each((
+  world.query2<Health, SceneTransform>().having<Enemy>().each((
     _,
     health,
     transform,
@@ -162,7 +165,11 @@ void _planarVelocity(
       if (targetTransform != null) {
         final dx = targetTransform.translation.x - transform.translation.x;
         final dz = targetTransform.translation.z - transform.translation.z;
-        motion.facing = math.atan2(dx, dz);
+        motion.facing = turnToward(
+          motion.facing,
+          math.atan2(dx, dz),
+          lockedTurnRate * dt,
+        );
         // Retreating while locked is slower.
         if (dx * velocity.x + dz * velocity.z < 0) {
           velocity.scale(backpedalFactor);

@@ -14,6 +14,7 @@ import '../../common/light_channels.dart';
 import '../../common/physics_layers.dart';
 import '../../common/camera_rig.dart';
 import '../../common/clip_hold.dart';
+import '../../common/pose_blend.dart';
 import '../../common/reactions.dart';
 import '../../common/combat_math.dart';
 import '../../assets/character_assets.dart';
@@ -40,14 +41,7 @@ part 'systems/visuals.dart';
 
 /// Installs the player.
 void installPlayer(GameBuilder game) {
-  game
-    ..registerTag<Player>()
-    ..registerComponent<Fighter>()
-    ..registerComponent<PlayerMotion>()
-    ..registerComponent<Knockback>()
-    ..registerComponent<Target>()
-    ..registerComponent<BladeTrail>()
-    ..registerComponent<DashTrail>();
+  game;
   installPlayerLifecycle(game);
   installPlayerMotion(game);
   installPlayerActions(game);

@@ -23,7 +23,6 @@ void main() {
         (g) {
           g.addState<GameStatus>(GameStatus.playing);
           g.configureSets(Schedules.update, [GameSets.logic, GameSets.rules]);
-          g.registerTag<Player>();
         },
         installCollectables,
       ],
@@ -38,7 +37,7 @@ void main() {
     final game = boot();
     game.pumpFixed(steps: intervalSteps * 2);
     expect(
-      game.world.entitiesWith(require: const [ShieldPickup]).count(),
+      game.world.entitiesWith<ShieldPickup>().count(),
       0,
       reason: 'no Scene resource — the spawn system never runs',
     );

@@ -22,7 +22,7 @@ import 'support/fight_harness.dart';
 
 int attackersOf(World world) {
   var count = 0;
-  world.query<Brawler>(require: const [Enemy]).each((entity, brawler) {
+  world.query<Brawler>().having<Enemy>().each((entity, brawler) {
     if (brawler.phase.state == BrawlPhase.telegraph ||
         brawler.phase.state == BrawlPhase.swing) {
       count++;
@@ -33,7 +33,7 @@ int attackersOf(World world) {
 
 Entity? holderInTelegraph(World world) {
   Entity? found;
-  world.query<Brawler>(require: const [Enemy]).each((entity, brawler) {
+  world.query<Brawler>().having<Enemy>().each((entity, brawler) {
     if (brawler.phase.state == BrawlPhase.telegraph) found = entity;
   });
   return found;
@@ -44,7 +44,7 @@ void main() {
       'wide', () {
     final game = boot();
     final world = game.world;
-    final enemy = world.entitiesWith(require: const [Enemy]).firstOrNull!;
+    final enemy = world.entitiesWith<Enemy>().firstOrNull!;
     landPlayerStrike(game, enemy);
     final health = world.get<Health>(enemy);
     expect(health.current, enemyMaxHealth - lightDamage);
@@ -59,7 +59,7 @@ void main() {
   test('a heavy connect does heavy damage', () {
     final game = boot();
     final world = game.world;
-    final enemy = world.entitiesWith(require: const [Enemy]).firstOrNull!;
+    final enemy = world.entitiesWith<Enemy>().firstOrNull!;
     landPlayerStrike(game, enemy, heavy: true);
     expect(world.get<Health>(enemy).current, enemyMaxHealth - heavyDamage);
   });
@@ -67,7 +67,7 @@ void main() {
   test('the heavy spin connects several times over its sweep', () {
     final game = boot();
     final world = game.world;
-    world.entitiesWith(require: const [Enemy]).each(world.despawn);
+    world.entitiesWith<Enemy>().each(world.despawn);
     game.pumpFixed(steps: 1);
 
     // A barbarian planted in the arc, with enough health to survive the
@@ -112,7 +112,7 @@ void main() {
 
     // Park both barbarians near the idle player and let the loop run.
     var i = 0;
-    world.query<SceneTransform>(require: const [Enemy]).each((entity, t) {
+    world.query<SceneTransform>().having<Enemy>().each((entity, t) {
       t.translation.setValues(i == 0 ? 0 : 2.5, 0, i == 0 ? 2.4 : 5);
       i++;
     });
@@ -201,7 +201,7 @@ void main() {
     final game = boot();
     final world = game.world;
     var i = 0;
-    world.query<SceneTransform>(require: const [Enemy]).each((entity, t) {
+    world.query<SceneTransform>().having<Enemy>().each((entity, t) {
       t.translation.setValues(i == 0 ? 0 : 2.5, 0, i == 0 ? 2.4 : 5);
       i++;
     });
@@ -219,7 +219,7 @@ void main() {
     // Ride out the hit's frozen pumps; the coordinator releases on the
     // next real fixed step.
     game.pumpFixed(steps: 6);
-    final coordinator = world.query<AggroCoordinator>().firstOrNull!.$2;
+    final coordinator = world.resource<AggroCoordinator>();
     expect(coordinator.holder, isNull, reason: 'stagger returns the token');
 
     // Nobody may attack until the cooldown has cooled.
@@ -238,7 +238,7 @@ void main() {
     final game = boot();
     final world = game.world;
     final player = playerOf(world);
-    final enemy = world.entitiesWith(require: const [Enemy]).firstOrNull!;
+    final enemy = world.entitiesWith<Enemy>().firstOrNull!;
     world.get<Health>(enemy).current = 10; // the next strike kills
 
     // Lock onto it first so the death also releases the lock: park it
@@ -289,7 +289,7 @@ void main() {
 
     // Kill a barbarian: it pays points. Then the player dies and the world
     // drops into `lost`.
-    final enemy = world.entitiesWith(require: const [Enemy]).firstOrNull!;
+    final enemy = world.entitiesWith<Enemy>().firstOrNull!;
     world.get<Health>(enemy).current = 5;
     landPlayerStrike(game, enemy);
     expect(world.get<Brawler>(enemy).phase.state, BrawlPhase.dying);
@@ -317,7 +317,7 @@ void main() {
     expect(world.tryGet<Health>(enemy), isNull, reason: 'the old pack is gone');
 
     var refielded = 0;
-    world.query2<Health, Brawler>(require: const [Enemy]).each((
+    world.query2<Health, Brawler>().having<Enemy>().each((
       entity,
       health,
       brawler,

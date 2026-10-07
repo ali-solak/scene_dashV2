@@ -11,17 +11,12 @@ const double raiderHealth = 60;
 const int raiderBounty = 15;
 const double raiderAggro = 5;
 const double raiderReach = 1.4;
-const double raiderStandOff = 1.1;
 const double raiderBite = 8;
 const double raiderBiteSeconds = 0.8;
 
 const double creepMinScale = 0.55;
 const double creepSpeed = 3.4;
 const double raiderSpeed = 2.4;
-const double creepSteering = 14;
-const double creepSpacing = 0.9;
-const double creepSeparationWeight = 1.6;
-const double waypointReach = 1.3;
 const double spawnScatter = 0.7;
 const double spawnTurn = 2.39996;
 

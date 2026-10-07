@@ -139,6 +139,7 @@ final class Fighter {
 
   bool heavy = false;
   int combo = 0;
+  CombatAction? queued;
   int swings = 0;
   int strikeHits = 0;
 
@@ -177,6 +178,7 @@ final class Fighter {
       phase.elapsed >= castMotion!.release + castMotion!.recovery * 0.5;
 
   void beginSwing({required bool heavy, int combo = 0}) {
+    queued = null;
     this.heavy = heavy;
     this.combo = combo;
     swings++;
@@ -204,6 +206,7 @@ void fighterDriver(World world) {
     if (leapt) fighter.sinceCast = 0;
     final phase = fighter.phase..tick(world.dt);
     final swing = fighter.swing;
+    if (fighter.swinging) _queueAttack(buffer, fighter);
     switch (phase.state) {
       case CombatPhase.idle:
         if (!_startAttack(buffer, fighter, combo: 0) &&
@@ -212,6 +215,7 @@ void fighterDriver(World world) {
         }
       case CombatPhase.startup:
         if (buffer.consume(CombatAction.roll)) {
+          fighter.queued = null;
           phase.go(CombatPhase.rolling);
         } else if (phase.elapsed >= swing.startup) {
           phase.go(CombatPhase.active);
@@ -226,9 +230,10 @@ void fighterDriver(World world) {
         }
       case CombatPhase.recovery:
         if (buffer.consume(CombatAction.roll)) {
+          fighter.queued = null;
           phase.go(CombatPhase.rolling);
         } else if (phase.elapsed >= comboLinkSeconds &&
-            _startAttack(buffer, fighter, combo: _nextCombo(fighter))) {
+            _startQueued(fighter, combo: _nextCombo(fighter))) {
           break;
         } else if (phase.elapsed >= swing.recovery ||
             (moving && phase.elapsed >= swing.moveCancelSeconds)) {
@@ -255,6 +260,21 @@ void fighterDriver(World world) {
         }
     }
   });
+}
+
+void _queueAttack(InputBuffer<CombatAction> buffer, Fighter fighter) {
+  if (buffer.consume(CombatAction.heavy)) {
+    fighter.queued = CombatAction.heavy;
+  } else if (buffer.consume(CombatAction.attack)) {
+    fighter.queued ??= CombatAction.attack;
+  }
+}
+
+bool _startQueued(Fighter fighter, {required int combo}) {
+  final queued = fighter.queued;
+  if (queued == null) return false;
+  fighter.beginSwing(heavy: queued == CombatAction.heavy, combo: combo);
+  return true;
 }
 
 int _nextCombo(Fighter fighter) =>

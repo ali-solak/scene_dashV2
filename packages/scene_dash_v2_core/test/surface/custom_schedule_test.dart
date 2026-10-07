@@ -53,7 +53,6 @@ void main() {
           (game) => game
             ..addSchedule(TurnSchedules.resolve)
             ..addSystem(TurnSchedules.resolve, (world) {}, reads: const {})
-            ..registerComponent<Turn>()
             ..observe<Turn>(
               onAdd: (world, entity, turn) {
                 added.add(turn.number);
@@ -154,7 +153,6 @@ void main() {
         features: [
           (game) => game
             ..world.insert(Log())
-            ..registerComponent<Turn>()
             ..addSchedule(TurnSchedules.resolve)
             ..addSchedule(TurnSchedules.cleanup)
             ..addSystem(TurnSchedules.resolve, reinforce, writes: {Turn})

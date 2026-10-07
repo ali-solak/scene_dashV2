@@ -12,13 +12,6 @@ part 'systems/systems.dart';
 
 void installDamage(GameBuilder game) {
   game
-    ..registerComponent<Health>()
-    ..registerComponent<Shield>()
-    ..registerComponent<Bounty>()
-    ..registerComponent<Tint>()
-    ..registerComponent<ShieldBubble>()
-    ..registerComponent<HitFlash>()
-    ..registerTag<Pop>()
     ..configureEvent<DamageDealt>()
     ..configureEvent<Destroyed>()
     ..observe<HitFlash>(onAdd: flashOn, onRemove: flashOff)

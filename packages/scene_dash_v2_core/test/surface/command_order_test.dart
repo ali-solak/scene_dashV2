@@ -1,3 +1,4 @@
+import 'package:scene_dash_v2_core/advanced.dart' show ObjectComponentStore;
 import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
 import 'package:test/test.dart';
 
@@ -83,13 +84,15 @@ void main() {
   });
 
   test('a failed part is discarded without replaying its prefix', () {
-    final world = World()..ensureObjectStore<Health>();
+    final world = World()
+      ..ensureObjectStore<Health>()
+      ..stores.register<Stunned>(ObjectComponentStore<int>());
     var adds = 0;
     world.observers.observe<Health>(onAdd: (_, _, _) => adds++);
     world.spawn([const Health(1)]);
-    world.spawn([const Stunned()]); // unregistered tag
+    world.spawn([const Stunned()]);
     final tail = world.spawn([const Health(2)]);
-    expect(SpawnQueue.of(world).flush, throwsStateError);
+    expect(SpawnQueue.of(world).flush, throwsA(isA<TypeError>()));
     SpawnQueue.of(world).flush();
     expect(adds, 2);
     expect(world.get<Health>(tail).value, 2);

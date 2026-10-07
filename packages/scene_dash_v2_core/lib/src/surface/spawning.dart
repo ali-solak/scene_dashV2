@@ -6,6 +6,7 @@ import '../entity/entity.dart';
 import '../events/event_channel.dart';
 import '../state/despawn_after.dart';
 import '../state/states.dart';
+import '../storage/component_store.dart';
 import '../storage/object_store.dart';
 import '../time/frame_time.dart';
 import '../world/world.dart';
@@ -33,7 +34,6 @@ final class SpawnQueue {
   final Map<Entity, int> _parkedAtFrame = <Entity, int>{};
   final Set<Type> _reportedParkedTypes = <Type>{};
   int _parkedRevision = 0;
-  final Map<Type, int> _claimedAtRevision = <Type, int>{};
   int _reportedAtRevision = -1;
   int _lastDiagnosticFrame = -1;
   final ObjectComponentStore<OwnedBy> _owned;
@@ -42,7 +42,8 @@ final class SpawnQueue {
     world
       ..ensureObjectStore<Name>()
       ..ensureObjectStore<DespawnAfter>()
-      ..ensureObjectStore<DespawnOnExit>();
+      ..ensureObjectStore<DespawnOnExit>()
+      ..stores.onCreated = _claimParked;
   }
 
   /// The world's queue, created on first use.
@@ -62,6 +63,7 @@ final class SpawnQueue {
   }
 
   void _queueParts(Entity entity, List<Object> parts, Entity? ownedBy) {
+    assert(parts.every(_checkPart));
     final epoch = _resetEpoch;
     world.commands.defer(entity, (world, entity) {
       if (epoch != _resetEpoch || !world.isAlive(entity)) return;
@@ -85,18 +87,8 @@ final class SpawnQueue {
     });
   }
 
-  /// Creates the store for [T] and inserts waiting parts.
-  ObjectComponentStore<T> ensureStore<T extends Object>() {
-    final store = world.ensureObjectStore<T>();
-    if (_parked.isNotEmpty && _claimedAtRevision[T] != _parkedRevision) {
-      final revision = _parkedRevision;
-      _claimParked<T>();
-      _claimedAtRevision[T] = revision;
-    }
-    return store;
-  }
-
-  void _claimParked<T extends Object>() {
+  void _claimParked(Type type, ComponentStore store) {
+    if (_parked.isEmpty) return;
     List<Entity>? emptied;
     for (final entry in _parked.entries) {
       final entity = entry.key;
@@ -105,8 +97,8 @@ final class SpawnQueue {
         continue;
       }
       entry.value.removeWhere((part) {
-        if (part is! T) return false;
-        world.insertNow<T>(entity, part);
+        if (!store.accepts(part)) return false;
+        store.insertDynamic(entity.index, part);
         return true;
       });
       if (entry.value.isEmpty) (emptied ??= <Entity>[]).add(entity);
@@ -147,11 +139,10 @@ final class SpawnQueue {
       if (world.stores.isRegistered(type)) {
         world.insertNowByType(type, entity, part);
       } else if (part is Tag) {
-        throw StateError(
-          'spawn(...) included tag $type, but no tag store is registered '
-          'for it. Tag stores cannot be created from an instance; call '
-          'registerTag<$type>() at install time.',
-        );
+        world.stores.ensureTagByType(type);
+        world.insertNowByType(type, entity, part);
+      } else if (world.stores.supertypeStoreAccepting(part) case final store?) {
+        store.insertDynamic(entity.index, part);
       } else {
         (_parked[entity] ??= <Object>[]).add(part);
         _parkedRevision++;
@@ -243,9 +234,22 @@ final class SpawnQueue {
     _resetEpoch++;
     _parked.clear();
     _parkedAtFrame.clear();
-    _claimedAtRevision.clear();
     _parkedRevision++;
     _reportedAtRevision = -1;
     _lastDiagnosticFrame = -1;
   }
+}
+
+bool _checkPart(Object part) {
+  if (part is Type || part is Future || part is Iterable || part is Function) {
+    throw ArgumentError.value(
+      part,
+      'part',
+      'spawn(...)/add(...) takes component instances. Got a '
+          '${part.runtimeType}: pass Enemy() rather than Enemy or '
+          'Enemy.new, await futures first, and spread nested lists with '
+          '`...`.',
+    );
+  }
+  return true;
 }

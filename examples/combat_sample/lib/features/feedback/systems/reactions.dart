@@ -2,9 +2,6 @@ part of '../feedback.dart';
 
 void installReactions(GameBuilder game) {
   game
-    ..registerTag<HitFlash>()
-    ..registerTag<HitPause>()
-    ..registerComponent<Recoil>()
     ..addSystem(
       Schedules.fixedUpdate,
       reactToDamage,
@@ -22,7 +19,7 @@ void installReactions(GameBuilder game) {
 }
 
 void reactToDamage(World world) {
-  final player = world.entitiesWith(require: const [Player]).firstOrNull;
+  final player = world.entitiesWith<Player>().firstOrNull;
   for (final hit in world.events<DamageDealt>()) {
     if (!hit.impact || !world.isAlive(hit.target)) continue;
     world.add(hit.target, const HitFlash(), removeAfter: hitFlashSeconds);
@@ -32,10 +29,12 @@ void reactToDamage(World world) {
     } else {
       recoil.restart(hit.direction, recoilFor(hit));
     }
-    if (hit.weight == HitWeight.light && !hit.killed) continue;
-    world.add(hit.target, const HitPause(), removeAfter: hitPauseSeconds);
+    final pause = hit.weight == HitWeight.light && !hit.killed
+        ? lightHitPauseSeconds
+        : hitPauseSeconds;
+    world.add(hit.target, const HitPause(), removeAfter: pause);
     if (player != null && player != hit.target) {
-      world.add(player, const HitPause(), removeAfter: hitPauseSeconds);
+      world.add(player, const HitPause(), removeAfter: pause);
     }
   }
 }

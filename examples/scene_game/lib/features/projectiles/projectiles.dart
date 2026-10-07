@@ -21,6 +21,7 @@ import '../rocks/data/config.dart';
 import '../rocks/rocks.dart';
 import 'data/config.dart';
 import 'vfx/reticle_widget.dart';
+
 import 'package:flutter_scene/physics.dart';
 
 import '../../hud/debug_panel.dart';
@@ -36,10 +37,6 @@ part 'vfx/reticle.dart';
 
 void installProjectiles(GameBuilder game) {
   game
-    ..registerComponent<Projectile>()
-    ..registerComponent<Blaster>()
-    ..registerComponent<LockOnReticle>()
-    ..registerComponent<ChargePlasmaEmitter>()
     ..configureEvent<FirePressed>(retainedUpdates: null)
     ..configureEvent<FireReleased>(retainedUpdates: null)
     ..configureEvent<FireCanceled>(retainedUpdates: null)

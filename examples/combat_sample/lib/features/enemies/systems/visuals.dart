@@ -1,13 +1,11 @@
 part of '../enemies.dart';
 
 void announceBrawlerDodge(World world) {
-  final playerRow = world
-      .query<SceneTransform>(require: const [Player])
-      .firstOrNull;
+  final playerRow = world.query<SceneTransform>().having<Player>().firstOrNull;
   if (playerRow == null) return;
   final playerPosition = playerRow.$2.translation;
 
-  world.query2<Brawler, SceneTransform>(require: const [Enemy]).each((
+  world.query2<Brawler, SceneTransform>().having<Enemy>().each((
     entity,
     brawler,
     transform,
@@ -38,10 +36,6 @@ void announceBrawlerDodge(World world) {
 /// giant growth and death materials.
 void installEnemyVisuals(GameBuilder game) {
   game
-    ..registerComponent<BrawlerVisuals>()
-    ..registerComponent<EnemyAnimator>()
-    ..registerComponent<EnemyHealthBar>()
-    ..registerComponent<ModelSlot>()
     // Return despawned models to the pool.
     ..observe<ModelSlot>(onRemove: releaseEnemyModel)
     // Attach bodies to new enemies.
@@ -110,7 +104,7 @@ void attachEnemyVisuals(World world) {
   final assets = world.hasResource<CharacterAssets>()
       ? world.resource<CharacterAssets>()
       : null;
-  world.entitiesWith(require: const [Enemy]).each((enemy) {
+  world.entitiesWith<Enemy>().each((enemy) {
     if (world.tryGet<NodeRef>(enemy) != null) return;
     final giant = world.tryGet<Brawler>(enemy)?.giant ?? false;
     final lent = assets?.takeBarbarian();
@@ -201,7 +195,7 @@ void _attachHealthBar(
 /// Updates enemy health bars.
 void updateHealthBars(World world) {
   final rig = world.resource<CameraRig>();
-  world.query3<Brawler, Health, EnemyHealthBar>(require: const [Enemy]).each((
+  world.query3<Brawler, Health, EnemyHealthBar>().having<Enemy>().each((
     enemy,
     brawler,
     health,
@@ -256,7 +250,7 @@ void releaseEnemyModel(World world, Entity entity, ModelSlot slot) {
 /// Render-side consumer of the brawl machine + velocity.
 void updateEnemyAnimation(World world) {
   final dt = world.dt;
-  world.query2<Brawler, EnemyAnimator>(require: const [Enemy]).each((
+  world.query2<Brawler, EnemyAnimator>().having<Enemy>().each((
     enemy,
     brawler,
     animator,
@@ -271,7 +265,7 @@ void updateEnemyAnimation(World world) {
 }
 
 void applyEnemyRecoil(World world) {
-  world.query2<Brawler, BrawlerVisuals>(require: const [Enemy]).each((
+  world.query2<Brawler, BrawlerVisuals>().having<Enemy>().each((
     enemy,
     brawler,
     visuals,
@@ -301,7 +295,7 @@ final Vector3 _noLean = Vector3.zero();
 /// swells from normal size to its giant base scale. The clip and the
 /// scale share the same clock, so they finish together.
 void updateGiantGrowth(World world) {
-  world.query2<Brawler, BrawlerVisuals>(require: const [Enemy]).each((
+  world.query2<Brawler, BrawlerVisuals>().having<Enemy>().each((
     enemy,
     brawler,
     visuals,
@@ -323,7 +317,7 @@ void updateGiantGrowth(World world) {
 /// dissolve `.fmat` did not read on the skinned body). Also ramps the
 /// graybox capsule's emissive telegraph tell.
 void updateBrawlerMaterials(World world) {
-  world.query2<Brawler, BrawlerVisuals>(require: const [Enemy]).each((
+  world.query2<Brawler, BrawlerVisuals>().having<Enemy>().each((
     entity,
     brawler,
     visuals,

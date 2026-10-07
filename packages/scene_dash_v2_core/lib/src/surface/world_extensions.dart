@@ -21,10 +21,14 @@ import 'remove_after.dart';
 import 'spawning.dart';
 
 extension WorldSurface on World {
-  /// Sends [event] to its channel, registering the channel on first use.
+  /// Sends [event] to its own class's channel when one exists, otherwise to
+  /// the channel of [E], registering it on first use.
   void emit<E extends Object>(E event) {
-    if (E == event.runtimeType) registerEvent<E>();
-    sendEvent(event);
+    if (E != event.runtimeType && hasEventChannel(event.runtimeType)) {
+      sendEvent(event);
+    } else {
+      ensureEventChannel<E>().send(event);
+    }
   }
 
   /// Unread [E] events for the current system.
@@ -95,7 +99,12 @@ extension WorldSurface on World {
   ///
   /// [removeAfter] removes it after that many seconds of fixed game time.
   /// Adding it again without [removeAfter] cancels the deadline.
-  void add(Entity entity, Object component, {double? removeAfter}) {
+  void add<T extends Object>(
+    Entity entity,
+    T component, {
+    double? removeAfter,
+  }) {
+    if (T == component.runtimeType) ensureStore<T>();
     SpawnQueue.of(this).addPart(entity, component);
     if (removeAfter != null) {
       RemoveAfterTracker.of(this)
@@ -123,11 +132,14 @@ extension WorldSurface on World {
     return resources.tryGet<RemoveAfterTracker>()?.expiryOf(entity, T);
   }
 
+  EntityQuery entitiesWith<T extends Object>() =>
+      EntityQuery(this, [ensureStore<T>()], const []);
+
   // Single components
 
   /// The only [T] in the world.
   T single<T extends Object>() {
-    final store = SpawnQueue.of(this).ensureStore<T>();
+    final store = ensureObjectStore<T>();
     if (store.length != 1) {
       throw StateError(
         'world.single<$T>(): expected exactly one entity with $T, '
@@ -139,7 +151,7 @@ extension WorldSurface on World {
 
   /// The only [T], or `null` when none exists.
   T? singleOrNull<T extends Object>() {
-    final store = SpawnQueue.of(this).ensureStore<T>();
+    final store = ensureObjectStore<T>();
     if (store.length > 1) {
       throw StateError(
         'world.singleOrNull<$T>(): expected at most one entity with $T, '
@@ -182,12 +194,4 @@ extension WorldSurface on World {
   /// use with the default window.
   InputBuffer<A> buffer<A extends Object>() =>
       resources.getOrInsert<InputBuffer<A>>(InputBuffer<A>.new);
-
-  // Entity filters
-
-  /// Entities with every [require] type and no [exclude] type.
-  EntityQuery entitiesWith({
-    required List<Type> require,
-    List<Type> exclude = const <Type>[],
-  }) => queryEntities(withTypes: require, withoutTypes: exclude);
 }

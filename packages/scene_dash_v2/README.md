@@ -46,7 +46,7 @@ You can also display a value from the whole world, display game state,
 or react to an event:
 
 ```dart
-WorldBuilder<int>(select: (w) => w.query<Health>(require: const [Enemy]).count(),
+WorldBuilder<int>(select: (w) => w.query<Health>().having<Enemy>().count(),
     builder: (ctx, n) => Text('$n enemies'))     // any world-derived value
 
 GameStateBuilder<GameStatus>(builder: (ctx, s) => switch (s) { ... })

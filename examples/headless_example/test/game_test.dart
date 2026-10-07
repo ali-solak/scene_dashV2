@@ -31,7 +31,7 @@ void main() {
     game.pumpFixed(steps: 1);
     expect(position.x, 0.5, reason: 'stable reference writes through');
     expect(race.statusReports, 1);
-    expect(game.world.entitiesWith(require: [BoostMarker]).count(), 0);
+    expect(game.world.entitiesWith<BoostMarker>().count(), 0);
 
     // Frames 3-4: the referee now sees the boost gone; x reaches the
     // finish line on step 4 and the referee (after move) records the

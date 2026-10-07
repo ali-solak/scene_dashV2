@@ -23,7 +23,7 @@ void main() {
 
     expect(world.state<GameStatus>(), GameStatus.title);
     expect(
-      world.entitiesWith(require: const [Enemy]).count(),
+      world.entitiesWith<Enemy>().count(),
       0,
       reason: 'the wave director gates on fighting',
     );

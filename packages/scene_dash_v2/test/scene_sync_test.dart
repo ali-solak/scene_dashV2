@@ -255,13 +255,7 @@ void main() {
       ..insertNow<SceneTransform>(e, transform)
       ..insertNow<NodeRef>(e, NodeRef(node));
 
-    SyncSceneNodesAdapter<SceneTransform>.full(
-        (transform, target) => target.setFromTranslationRotationScale(
-          transform.translation,
-          transform.rotation,
-          transform.scale,
-        ),
-      )
+    SceneTransformSyncAdapter()
       ..initialize(world)
       ..run();
 
@@ -272,5 +266,38 @@ void main() {
         transform.scale,
       );
     _expectMatrixClose(node.localTransform, expected);
+  });
+
+  test('SceneTransform sync skips unchanged entities and catches changes', () {
+    final world = World()
+      ..stores.register<SceneTransform>(ObjectComponentStore<SceneTransform>())
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
+    final node = Node();
+    final e = world.entities.spawn();
+    final transform = SceneTransform(1, 2, 3);
+    world
+      ..insertNow<SceneTransform>(e, transform)
+      ..insertNow<NodeRef>(e, NodeRef(node));
+    final adapter = SceneTransformSyncAdapter()..initialize(world);
+
+    adapter.run();
+    expect(adapter.lastRunWrites, 1);
+    adapter.run();
+    expect(adapter.lastRunWrites, 0, reason: 'nothing changed');
+
+    transform.rotation.setAxisAngle(Vector3(0, 1, 0), 0.5);
+    adapter.run();
+    expect(adapter.lastRunWrites, 1, reason: 'rotation changed');
+
+    node.localTransform = Matrix4.identity();
+    adapter.run();
+    expect(adapter.lastRunWrites, 1, reason: 'node matrix replaced');
+    expect(node.localTransform.getTranslation().x, 1);
+
+    final other = Node();
+    world.insertNow<NodeRef>(e, NodeRef(other));
+    adapter.run();
+    expect(adapter.lastRunWrites, 1, reason: 'bound to a new node');
+    expect(other.localTransform.getTranslation().z, 3);
   });
 }

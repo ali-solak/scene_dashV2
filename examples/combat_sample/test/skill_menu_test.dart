@@ -41,7 +41,7 @@ void main() {
     openMenu(game);
 
     final positions = <Entity, Vector3>{};
-    world.query<SceneTransform>(require: const [Enemy]).each((entity, t) {
+    world.query<SceneTransform>().having<Enemy>().each((entity, t) {
       positions[entity] = t.translation.clone();
     });
     final wave = world.resource<WaveState>().wave;
@@ -50,7 +50,7 @@ void main() {
       game.pump();
     }
 
-    world.query<SceneTransform>(require: const [Enemy]).each((entity, t) {
+    world.query<SceneTransform>().having<Enemy>().each((entity, t) {
       expect(t.translation, positions[entity], reason: 'nobody moved');
     });
     expect(world.resource<WaveState>().wave, wave);
@@ -63,7 +63,7 @@ void main() {
     final health = world.get<Health>(playerOf(world))..current = 40;
 
     // Get the run somewhere recognisable: wave 2, points banked, hurt.
-    world.entitiesWith(require: const [Enemy]).each(world.despawn);
+    world.entitiesWith<Enemy>().each(world.despawn);
     game.pumpFixed(steps: ticksFor(waveIntermissionSeconds) + 6);
     expect(world.resource<WaveState>().wave, 2);
     health.current = 40; // the wave heal just topped it up

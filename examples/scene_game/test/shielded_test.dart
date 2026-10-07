@@ -38,7 +38,6 @@ void main() {
         (g) {
           g.addState<GameStatus>(GameStatus.playing);
           g.configureSets(Schedules.update, [GameSets.logic, GameSets.rules]);
-          g.registerTag<Player>();
           // The probe pair: registered alongside the feature's VFX pair,
           // firing in registration order on the same lifecycle.
           g.observe<Shielded>(

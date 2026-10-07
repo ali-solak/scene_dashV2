@@ -23,9 +23,7 @@ class Handle implements Disposable {
 Future<void> main() async {
   var sink = 0;
   for (final count in [0, 1000, 10000]) {
-    final game = TestGame.headless(
-      features: [(g) => g.registerComponent<Position>()],
-    );
+    final game = TestGame.headless(features: const []);
     for (var i = 0; i < count; i++) {
       game.world.spawn([Unregistered(i)]);
     }

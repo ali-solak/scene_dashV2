@@ -5,12 +5,14 @@ enum BrawlerLoco { idle, walk, run, strafeLeft, strafeRight }
 enum BrawlerShot { rise, taunt, attack, hit, death, fall, dodge, transform }
 
 final class EnemyAnimator {
-  EnemyAnimator({required this.locomotion, required this.shots});
+  EnemyAnimator({required this.locomotion, required this.shots, this.blend});
 
   final Map<BrawlerLoco, AnimationClip> locomotion;
   final Map<BrawlerShot, AnimationClip> shots;
+  final PoseBlend? blend;
 
   BrawlerShot? active;
+  BrawlerLoco? _loco;
 
   int _lastChop = -1;
   bool frozen = false;
@@ -66,6 +68,12 @@ final class EnemyAnimator {
   }
 
   void _enterShot(BrawlerShot? desired) {
+    blend?.start(
+      desired == BrawlerShot.hit
+          ? brawlerHitBlendSeconds
+          : brawlerShotBlendSeconds,
+    );
+    _loco = null;
     active = desired;
     final clip = desired == null ? null : shots[desired];
     if (clip == null) return;
@@ -87,6 +95,7 @@ final class EnemyAnimator {
   void _replayOnNewChop(Brawler brawler) {
     if (active != BrawlerShot.attack || _lastChop == brawler.chopIndex) return;
     _lastChop = brawler.chopIndex;
+    blend?.start(brawlerShotBlendSeconds);
     shots[BrawlerShot.attack]!
       ..playbackTimeScale =
           chopClipSeconds *
@@ -126,6 +135,11 @@ final class EnemyAnimator {
           ? BrawlerLoco.run
           : BrawlerLoco.walk;
     }
+
+    if (_loco != null && target != _loco) {
+      blend?.start(brawlerLocomotionBlendSeconds);
+    }
+    _loco = target;
 
     _stride(BrawlerLoco.walk, speed, brawlerWalkStrideSpeed);
     _stride(BrawlerLoco.run, speed, brawlerRunStrideSpeed);
@@ -167,6 +181,7 @@ final class EnemyAnimator {
   void reset() {
     frozen = false;
     active = null;
+    _loco = null;
     _lastChop = -1;
     for (final clip in shots.values) {
       clip.stop();
@@ -239,5 +254,9 @@ EnemyAnimator buildEnemyAnimator(CharacterAssets assets, Node model) {
       giantTransformSeconds,
     ),
   };
-  return EnemyAnimator(locomotion: locomotion, shots: shots);
+  return EnemyAnimator(
+    locomotion: locomotion,
+    shots: shots,
+    blend: PoseBlend.of(model),
+  );
 }

@@ -5,12 +5,14 @@ import '../events/event_channel.dart';
 import '../query/entity_query.dart';
 import '../query/query.dart';
 import '../resources/resources.dart';
+import '../storage/component_store.dart';
 import '../storage/object_store.dart';
 import '../storage/store_registry.dart';
 import '../storage/tag_store.dart';
 import '../surface/observers.dart';
 import '../surface/remove_after.dart';
 import '../surface/spawning.dart';
+import '../surface/tag.dart';
 
 /// Stores entities, components, resources, and events.
 final class World {
@@ -50,6 +52,8 @@ final class World {
   /// Whether the current schedule uses fixed time.
   bool fixedContext = false;
 
+  static const int _linearDespawnStoreLimit = 10;
+
   /// Number of queries currently iterating. Used by debug guards to detect
   /// structural mutation during active iteration.
   int _activeQueries = 0;
@@ -83,16 +87,28 @@ final class World {
   /// Returns the tag store for [T], creating it when needed.
   TagStore ensureTagStore<T>() => stores.ensureTag<T>();
 
+  ComponentStore ensureStore<T>() =>
+      stores.lookup(T) ??
+      (<T>[] is List<Tag> ? stores.ensureTag<T>() : stores.ensureObject<T>());
+
   /// Registers an event channel for event type [T] if one does not yet exist.
   ///
   /// [retainedUpdates] controls how long unread events remain.
   /// Use `null` to keep them until every reader consumes them.
   void registerEvent<T>({int? retainedUpdates = 8}) {
-    if (_eventChannels.containsKey(T)) return;
+    ensureEventChannel<T>(retainedUpdates: retainedUpdates);
+  }
+
+  bool hasEventChannel(Type type) => _eventChannels.containsKey(type);
+
+  EventChannel<T> ensureEventChannel<T>({int? retainedUpdates = 8}) {
+    final existing = _eventChannels[T];
+    if (existing != null) return existing as EventChannel<T>;
     final channel = EventChannel<T>(retainedUpdates: retainedUpdates);
     _eventChannels[T] = channel;
     _eventTypes.add(T);
     _eventChannelList.add(channel);
+    return channel;
   }
 
   /// Sends [event] to its runtime type channel.
@@ -137,20 +153,23 @@ final class World {
 
   /// Whether live [entity] currently has component or tag [T].
   bool has<T>(Entity entity) {
-    if (!entities.isAlive(entity) || !stores.isRegistered(T)) return false;
-    return stores.require(T).containsIndex(entity.index);
+    if (!entities.isAlive(entity)) return false;
+    final store = _lookupStore<T>();
+    if (store == null) return false;
+    if (store is TagStore || store is ObjectComponentStore<T>) {
+      return store.containsIndex(entity.index);
+    }
+    return store.payloadOf(entity.index) is T;
   }
 
   /// The component of type [T] on live [entity].
   ///
-  /// Throws if the entity is stale, the component store is not registered, or
-  /// the entity does not currently have [T].
+  /// Throws if the entity is stale or does not currently have [T].
   T get<T>(Entity entity) {
     if (!entities.isAlive(entity)) {
       throw StateError('Cannot get $T from stale entity $entity.');
     }
-    final store = stores.object<T>();
-    final value = store.valueOf(entity.index);
+    final value = tryGet<T>(entity);
     if (value == null) {
       throw StateError('Entity $entity does not have component $T.');
     }
@@ -159,8 +178,18 @@ final class World {
 
   /// The component of type [T] on [entity], or `null` if absent or stale.
   T? tryGet<T>(Entity entity) {
-    if (!entities.isAlive(entity) || !stores.isRegistered(T)) return null;
-    return stores.object<T>().valueOf(entity.index);
+    if (!entities.isAlive(entity)) return null;
+    final store = _lookupStore<T>();
+    if (store is ObjectComponentStore<T>) return store.valueOf(entity.index);
+    final value = store?.payloadOf(entity.index);
+    return value is T ? value : null;
+  }
+
+  ComponentStore? _lookupStore<T>() {
+    final existing = stores.lookup(T);
+    if (existing != null) return existing;
+    if (<T>[] is List<Tag>) return null;
+    return stores.supertypeStoreOf<T>() ?? stores.ensureObject<T>();
   }
 
   /// Returns [A] and [B], or `null` when either is missing.
@@ -251,14 +280,28 @@ final class World {
     );
     assert(entities.isAlive(entity), 'Cannot despawn stale entity $entity.');
     if (!entities.isAlive(entity)) return;
+    resources.tryGet<SpawnQueue>()?.discard(entity);
     final index = entity.index;
-    final all = stores.all;
-    final count = all.length;
-    for (var i = 0; i < count; i++) {
-      all.elementAt(i).removeEntityIndex(index);
+    final storeCount = stores.count;
+    if (storeCount <= _linearDespawnStoreLimit) {
+      for (var id = 0; id < storeCount; id++) {
+        stores.storeAt(id).removeEntityIndex(index);
+      }
+      entities.despawn(entity);
+      return;
+    }
+    final membership = stores.membership;
+    for (var word = 0, words = membership.wordCount; word < words; word++) {
+      var bits = membership.bitsAt(word, index);
+      while (bits != 0) {
+        final lowest = bits & -bits;
+        bits ^= lowest;
+        stores
+            .storeAt((word << 5) + lowest.bitLength - 1)
+            .removeEntityIndex(index);
+      }
     }
     entities.despawn(entity);
-    resources.tryGet<SpawnQueue>()?.discard(entity);
   }
 
   /// Immediately despawns every entity alive when this method is called.

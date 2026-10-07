@@ -2,16 +2,13 @@ part of '../world.dart';
 
 /// Installs the clearing.
 void installClearing(GameBuilder game) {
-  game
-    ..registerTag<Grass>()
-    ..registerTag<Ocean>()
-    ..addSystem(
-      Schedules.startup,
-      spawnClearing,
-      writes: const {Grass, Ocean},
-      after: const [setupWorld],
-      runIf: hasResource<Scene>(),
-    );
+  game.addSystem(
+    Schedules.startup,
+    spawnClearing,
+    writes: const {Grass, Ocean},
+    after: const [setupWorld],
+    runIf: hasResource<Scene>(),
+  );
 }
 
 /// Builds the clearing.

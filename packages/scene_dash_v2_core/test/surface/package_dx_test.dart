@@ -36,11 +36,11 @@ void main() {
     expect(game.world.query<Position>().single.$2.x, 8);
   });
 
-  test('explicit registration claims waiting parts and reset drops them', () {
+  test('creating a store claims waiting parts and reset drops them', () {
     final game = TestGame.headless();
     final entity = game.world.spawn([SpecialPosition(4)]);
     game.start();
-    game.builder.registerComponent<Position>();
+    game.world.ensureObjectStore<Position>();
     expect(game.world.get<Position>(entity).x, 4);
     game.world.spawn([Unclaimed()]);
     game.pump();
@@ -182,10 +182,10 @@ void main() {
       final two = w.query2<Position, Velocity>().snapshot();
       final three = w.query3<Position, Velocity, Health>().snapshot();
       final four = w.query4<Position, Velocity, Health, Armor>().snapshot();
-      expect(w.query<Position>().records, one);
-      expect(w.query2<Position, Velocity>().records, two);
-      expect(w.query3<Position, Velocity, Health>().records, three);
-      expect(w.query4<Position, Velocity, Health, Armor>().records, four);
+      expect(w.query<Position>().snapshot(), one);
+      expect(w.query2<Position, Velocity>().snapshot(), two);
+      expect(w.query3<Position, Velocity, Health>().snapshot(), three);
+      expect(w.query4<Position, Velocity, Health, Armor>().snapshot(), four);
       position.x = 5;
       w.despawn(one.single.$1);
       w.spawn([Position(2), Velocity(), Health(), Armor()]);

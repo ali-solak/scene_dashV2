@@ -16,8 +16,7 @@ final class SceneBakeLog {
   final Map<Type, Set<Node>> _baked = <Type, Set<Node>>{};
 
   /// Records [node] as baked for [type]; false when it already was.
-  bool mark(Type type, Node node) =>
-      (_baked[type] ??= <Node>{}).add(node);
+  bool mark(Type type, Node node) => (_baked[type] ??= <Node>{}).add(node);
 
   /// Nodes baked for [type] so far.
   int countFor(Type type) => _baked[type]?.length ?? 0;
@@ -82,34 +81,31 @@ Feature installSceneBaker<T extends Object>({
   Set<Type> writes = const <Type>{},
 }) {
   return (game) {
-    game
-      ..registerComponent<T>()
-      ..registerComponent<NodeRef>()
-      ..addSystem(
-        Schedules.startup,
-        (world) {
-          final spawned = world.bakeSceneComponents<T>(
-            bundle: bundle,
-            root: root,
+    game.addSystem(
+      Schedules.startup,
+      (world) {
+        final spawned = world.bakeSceneComponents<T>(
+          bundle: bundle,
+          root: root,
+        );
+        // Finding nothing looks the same as a document with no [T] in it,
+        // and the likeliest cause is timing: startup runs before the first
+        // SceneCommands flush, so a queued node is not reachable yet.
+        if (kDebugMode && spawned == 0) {
+          debugPrint(
+            'scene_dash_v2: sceneBaker<$T> found no nodes at startup. A '
+            'scene mounted later, or a node still queued through '
+            'SceneCommands, is not visible yet: call '
+            'world.bakeSceneComponents<$T>() once it is mounted.',
           );
-          // Finding nothing looks the same as a document with no [T] in it,
-          // and the likeliest cause is timing: startup runs before the first
-          // SceneCommands flush, so a queued node is not reachable yet.
-          if (kDebugMode && spawned == 0) {
-            debugPrint(
-              'scene_dash_v2: sceneBaker<$T> found no nodes at startup. A '
-              'scene mounted later, or a node still queued through '
-              'SceneCommands, is not visible yet: call '
-              'world.bakeSceneComponents<$T>() once it is mounted.',
-            );
-          }
-        },
-        writes: <Type>{T, NodeRef, ...writes},
-        // An explicit root is walked directly, so only the default (walk the
-        // scene) needs a Scene to exist.
-        runIf: root == null ? hasResource<Scene>() : null,
-        // Generated closures otherwise all label as `closure`.
-        label: 'sceneBaker<$T>',
-      );
+        }
+      },
+      writes: <Type>{T, NodeRef, ...writes},
+      // An explicit root is walked directly, so only the default (walk the
+      // scene) needs a Scene to exist.
+      runIf: root == null ? hasResource<Scene>() : null,
+      // Generated closures otherwise all label as `closure`.
+      label: 'sceneBaker<$T>',
+    );
   };
 }

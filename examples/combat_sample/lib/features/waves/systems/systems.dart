@@ -5,16 +5,19 @@ void advanceWaves(World world) {
   final waves = world.resource<WaveState>();
   final routine = waves.routine;
 
-  routine.advance(world.dt, (step) => switch (step) {
-    HealPlayer() => _healPlayer(world),
-    FieldWave() => _fieldWave(world, waves),
-    UntilEngaged() =>
-      _livingEnemies(world) > 0 ? StepResult.success : StepResult.running,
-    UntilCleared() =>
-      _livingEnemies(world) == 0 ? StepResult.success : StepResult.running,
-    Breather(:final seconds) =>
-      routine.elapsed >= seconds ? StepResult.success : StepResult.running,
-  });
+  routine.advance(
+    world.dt,
+    (step) => switch (step) {
+      HealPlayer() => _healPlayer(world),
+      FieldWave() => _fieldWave(world, waves),
+      UntilCleared() =>
+        waves.fielded.any((enemy) => _standing(world, enemy))
+            ? StepResult.running
+            : StepResult.success,
+      Breather(:final seconds) =>
+        routine.elapsed >= seconds ? StepResult.success : StepResult.running,
+    },
+  );
 
   // What the HUD reads.
   waves.intermission = switch (routine.current) {
@@ -24,22 +27,18 @@ void advanceWaves(World world) {
 }
 
 StepResult _healPlayer(World world) {
-  world.query<Health>(require: const [Player]).each((entity, health) {
+  world.query<Health>().having<Player>().each((entity, health) {
     health.heal(health.max * waveHealFraction);
   });
   return StepResult.success;
 }
 
-int _livingEnemies(World world) {
-  var living = 0;
-  world.query2<Brawler, Health>(require: const [Enemy]).each((
-    entity,
-    brawler,
-    health,
-  ) {
-    if (health.alive && brawler.phase.state != BrawlPhase.dying) living++;
-  });
-  return living;
+bool _standing(World world, Entity enemy) {
+  if (!world.isAlive(enemy)) return false;
+  final health = world.tryGet<Health>(enemy);
+  if (health == null) return true;
+  return health.alive &&
+      world.tryGet<Brawler>(enemy)?.phase.state != BrawlPhase.dying;
 }
 
 StepResult _fieldWave(World world, WaveState waves) {
@@ -49,6 +48,7 @@ StepResult _fieldWave(World world, WaveState waves) {
   final power = powerForWave(wave);
   final tempo = tempoForWave(wave);
   final giantIndex = waveHasGiant(wave) ? wave % count : -1;
+  waves.fielded.clear();
 
   for (var i = 0; i < count; i++) {
     final theta = (i + 0.5) * (2 * math.pi / count) + wave * 0.6;
@@ -65,6 +65,7 @@ StepResult _fieldWave(World world, WaveState waves) {
         giant: giant,
       ),
     );
+    waves.fielded.add(entity);
     if (giant) {
       world.add(
         entity,
@@ -79,5 +80,5 @@ StepResult _fieldWave(World world, WaveState waves) {
 void resetWaves(World world) {
   world.resource<WaveState>().reset();
   world.resource<Score>().reset();
-  world.entitiesWith(require: const [Enemy]).each(world.despawn);
+  world.entitiesWith<Enemy>().each(world.despawn);
 }

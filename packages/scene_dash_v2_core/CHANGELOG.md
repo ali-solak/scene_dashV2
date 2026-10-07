@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.6.0
+- Stores create themselves on first use: spawning, `add<T>`, any type
+  argument. `registerTag` and `registerComponent` are gone.
+- Typed filters: `.having<T>()` / `.without<T>()` on query views and
+  `world.entitiesWith<T>()`. The `require:`/`exclude:` `Type` lists are gone.
+- `.records` is gone; use `snapshot()`.
+- `emit<E>` delivers to the event's own class channel when one exists,
+  otherwise to the channel of `E`, so `emit<GameEvent>(EnemyKilled())`
+  reaches `events<GameEvent>()` readers instead of throwing, and
+  `emit(c ? A() : B())` still reaches `events<A>()` / `events<B>()`.
+- `world.add` is generic and creates the store of its static type when that
+  is the component's exact type.
+- `get`, `tryGet` and `has` see components no query has named yet, and read
+  subtypes from their supertype's store without splitting it.
+- Waiting spawn parts are claimed when their store is created, never during
+  a running query and never through observers.
+- A part with no exact store goes straight into a registered supertype store.
+- `spawn` and `add` assert against `Type`, function, `Future` and `Iterable`
+  parts (`spawn([Enemy])`, `Enemy.new`, nested lists).
+- Despawn visits only the entity's stores once a world has more than 10, so
+  its cost no longer grows with the number of component types.
+- Add `QueryView.revision`, `World.ensureStore<T>()`,
+  `World.ensureEventChannel`, store change listeners
+  (`addChangeListener`/`removeChangeListener`), `StoreRegistry.onCreated`,
+  `lookup`, `count`, `storeAt` and `StoreMembership`.
+- `SpawnQueue.ensureStore` and `world.entitiesWith(require:)` are gone.
+
 ## 0.5.4
 - Add `QueryView1.get(entity)`: the component when the entity matches the
   query, or `null`.

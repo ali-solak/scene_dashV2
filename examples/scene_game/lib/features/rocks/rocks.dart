@@ -10,6 +10,7 @@ import '../../common/bounds.dart';
 import '../../common/game_state.dart';
 import '../../common/physics_layers.dart';
 import 'data/config.dart';
+
 import 'package:flutter_scene/physics.dart';
 
 part 'data/components.dart';
@@ -20,10 +21,6 @@ part 'systems/systems.dart';
 
 void installRocks(GameBuilder game) {
   game
-    ..registerTag<Rock>()
-    ..registerTag<Flaming>()
-    ..registerComponent<RockSpawner>()
-    ..registerComponent<FlameTrailEmitter>()
     ..observe<Flaming>(onAdd: igniteRock, onRemove: extinguishRock)
     ..observe<RockHitReaction>(onRemove: clearHitShell)
     ..addSystem(

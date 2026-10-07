@@ -12,11 +12,6 @@ final class FieldWave extends WaveStep {
   const FieldWave();
 }
 
-/// Spawns are queued, so a wave is not on the field the tick it is sent.
-final class UntilEngaged extends WaveStep {
-  const UntilEngaged();
-}
-
 final class UntilCleared extends WaveStep {
   const UntilCleared();
 }
@@ -32,7 +27,6 @@ const endlessRun = Repeat(
   Sequence([
     HealPlayer(),
     FieldWave(),
-    UntilEngaged(),
     UntilCleared(),
     Breather(waveIntermissionSeconds),
   ]),

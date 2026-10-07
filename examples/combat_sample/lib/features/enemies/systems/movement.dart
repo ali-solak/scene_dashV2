@@ -12,14 +12,12 @@ void installBrawlerMovement(GameBuilder game) {
 }
 
 void moveBrawlers(World world) {
-  final playerRow = world
-      .query<SceneTransform>(require: const [Player])
-      .firstOrNull;
+  final playerRow = world.query<SceneTransform>().having<Player>().firstOrNull;
   if (playerRow == null) return;
   final playerPosition = playerRow.$2.translation;
   final dt = world.dt;
 
-  world.query2<Brawler, SceneTransform>(require: const [Enemy]).each((
+  world.query2<Brawler, SceneTransform>().having<Enemy>().each((
     entity,
     brawler,
     transform,

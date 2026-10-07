@@ -131,6 +131,9 @@ const PhysicsMaterial corpseMaterial = PhysicsMaterial(
 // Animation
 
 const double brawlerLocomotionFadeSeconds = 0.001;
+const double brawlerLocomotionBlendSeconds = 0.18;
+const double brawlerShotBlendSeconds = 0.1;
+const double brawlerHitBlendSeconds = 0.04;
 const double brawlerOneShotFadeSeconds = 0.001;
 
 const double brawlerWalkStrideSpeed = 2.3;

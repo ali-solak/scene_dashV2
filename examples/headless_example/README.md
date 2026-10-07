@@ -8,7 +8,7 @@ What it shows:
 
 - a feature installing systems on `startup` and `fixedUpdate` with
   `reads:`/`writes:`, `after:` ordering and an `every(...)` run condition;
-- tags (`registerTag`) and record queries with `require:` and `.each`;
+- tags and record queries with `.having<T>()` and `.each`;
 - events (`world.emit`/`world.events<T>()`) between systems;
 - timed despawn with `DespawnAfter`;
 - `TestGame.headless` running the same frame pipeline as a device, in

@@ -1,7 +1,8 @@
 part of '../feedback.dart';
 
 const double hitFlashSeconds = 0.1;
-const double hitPauseSeconds = 0.06;
+const double lightHitPauseSeconds = 0.035;
+const double hitPauseSeconds = 0.07;
 
 const double recoilSettleSeconds = 0.45;
 const double lightRecoil = 0.6;

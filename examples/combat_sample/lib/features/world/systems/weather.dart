@@ -52,7 +52,7 @@ void updateWindMaterials(World world) {
       }
     }
   }
-  world.query<NodeRef>(require: const [Ocean]).each((entity, ref) {
+  world.query<NodeRef>().having<Ocean>().each((entity, ref) {
     drive(ref);
   });
 }

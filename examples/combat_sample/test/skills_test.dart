@@ -328,7 +328,7 @@ void main() {
     final full = health.current;
 
     cast(game, Skill.lavaPit);
-    expect(world.entitiesWith(require: const [LavaPit]).count(), 1);
+    expect(world.entitiesWith<LavaPit>().count(), 1);
 
     // No burst: the pit does its work over time.
     expect(health.current, full);
@@ -339,7 +339,7 @@ void main() {
     pumpHolding(game, enemy, steps: ticksFor(lavaTickSeconds * 3));
     expect(health.current, lessThan(full - lavaTickDamage));
     game.pumpFixed(steps: ticksFor(lavaPitSeconds) + 4);
-    expect(world.entitiesWith(require: const [LavaPit]).count(), 0);
+    expect(world.entitiesWith<LavaPit>().count(), 0);
 
     final afterClose = health.current;
     game.pumpFixed(steps: ticksFor(lavaTickSeconds) * 3);
@@ -370,7 +370,7 @@ void main() {
     grant(game, Skill.windBlast);
 
     // A ring of barbarians around the player, well inside the blast.
-    world.entitiesWith(require: const [Enemy]).each(world.despawn);
+    world.entitiesWith<Enemy>().each(world.despawn);
     game.pumpFixed(steps: 1);
     final at = world.get<SceneTransform>(playerOf(world)).translation.clone();
     final start = <Entity, double>{};
@@ -385,14 +385,14 @@ void main() {
       );
     }
     game.pumpFixed(steps: 1);
-    world.query<SceneTransform>(require: const [Enemy]).each((entity, t) {
+    world.query<SceneTransform>().having<Enemy>().each((entity, t) {
       start[entity] = _distance(t.translation, at);
     });
 
     cast(game, Skill.windBlast, settle: 4);
 
     var launched = 0;
-    world.query2<Knockback, SceneTransform>(require: const [Enemy]).each((
+    world.query2<Knockback, SceneTransform>().having<Enemy>().each((
       entity,
       knockback,
       transform,
@@ -411,7 +411,7 @@ void main() {
     // land well outside where they stood. Hang time is 2 * lift / gravity,
     // derived so retuning the arc cannot make this assertion vacuous.
     game.pumpFixed(steps: ticksFor(2 * windBlastLift / knockbackGravity) + 8);
-    world.query2<Knockback, SceneTransform>(require: const [Enemy]).each((
+    world.query2<Knockback, SceneTransform>().having<Enemy>().each((
       entity,
       knockback,
       transform,
@@ -691,7 +691,7 @@ void main() {
     final world = game.world;
     grant(game, Skill.lavaPit);
     cast(game, Skill.lavaPit);
-    expect(world.entitiesWith(require: const [LavaPit]).count(), 1);
+    expect(world.entitiesWith<LavaPit>().count(), 1);
 
     world.get<Health>(playerOf(world)).current = 0;
     game.pump();
@@ -705,7 +705,7 @@ void main() {
     final book = world.resource<SkillBook>();
     expect(book.isUnlocked(Skill.lavaPit), isFalse);
     expect(book.vitalityLevel, 0);
-    expect(world.entitiesWith(require: const [LavaPit]).count(), 0);
+    expect(world.entitiesWith<LavaPit>().count(), 0);
   });
 
   test('clearing a wave patches the player back up', () {
@@ -716,7 +716,7 @@ void main() {
 
     // Wipe the wave and ride out the breather: the next one walks in and
     // the player walks in with it, whole.
-    world.entitiesWith(require: const [Enemy]).each(world.despawn);
+    world.entitiesWith<Enemy>().each(world.despawn);
     game.pumpFixed(steps: ticksFor(waveIntermissionSeconds) + 6);
 
     expect(world.resource<WaveState>().wave, 2);

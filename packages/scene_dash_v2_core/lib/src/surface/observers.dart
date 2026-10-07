@@ -2,13 +2,14 @@
 library;
 
 import '../entity/entity.dart';
-import '../storage/component_store.dart';
 import '../world/world.dart';
-import 'tag.dart';
 
 /// Runs after a component is added or removed.
-typedef ComponentObserver<T> =
-    void Function(World world, Entity entity, T component);
+typedef ComponentObserver<T> = void Function(
+  World world,
+  Entity entity,
+  T component,
+);
 
 /// The value [World.runningSystem] holds while observer callbacks run.
 ///
@@ -63,7 +64,7 @@ final class ObserverRegistry {
         'observe<$T>() needs at least one of onAdd:/onRemove:.',
       );
     }
-    final store = _storeFor<T>();
+    final store = world.ensureStore<T>();
     final entry = _byType.putIfAbsent(T, _TypeObservers.new);
     if (onAdd != null) {
       entry.onAdd.add(
@@ -78,15 +79,6 @@ final class ObserverRegistry {
     store.onAdded ??= (index, payload) => _fire(T, entry.onAdd, index, payload);
     store.onRemoved ??= (index, payload) =>
         _fire(T, entry.onRemove, index, payload);
-  }
-
-  ComponentStore _storeFor<T extends Object>() {
-    if (world.stores.isRegistered(T)) return world.stores.require(T);
-    // A tag type's store cannot be created from an instance, so decide by
-    // the static type: List<T> is covariant, making this a subtype test.
-    return <T>[] is List<Tag>
-        ? world.ensureTagStore<T>()
-        : world.ensureObjectStore<T>();
   }
 
   void _fire(

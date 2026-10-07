@@ -51,7 +51,8 @@ void installPlayerActions(GameBuilder game) {
 
 void announceWindup(World world) {
   final row = world
-      .query2<Fighter, PlayerMotion>(require: const [Player])
+      .query2<Fighter, PlayerMotion>()
+      .having<Player>()
       .firstOrNull;
   if (row == null) return;
   final (_, fighter, motion) = row;
@@ -61,7 +62,7 @@ void announceWindup(World world) {
 }
 
 void announceShockwave(World world) {
-  world.query2<Fighter, SceneTransform>(require: const [Player]).each((
+  world.query2<Fighter, SceneTransform>().having<Player>().each((
     _,
     fighter,
     transform,
@@ -73,34 +74,31 @@ void announceShockwave(World world) {
 }
 
 void announceDash(World world) {
-  world
-      .query3<Fighter, PlayerMotion, SceneTransform>(require: const [Player])
-      .each((entity, fighter, motion, transform) {
-        if (!fighter.phase.justEntered(CombatPhase.rolling)) return;
-        world.emit(
-          Dashed(
-            entity,
-            transform.translation.clone(),
-            motion.rollDirection.clone(),
-          ),
-        );
-      });
+  world.query3<Fighter, PlayerMotion, SceneTransform>().having<Player>().each((
+    entity,
+    fighter,
+    motion,
+    transform,
+  ) {
+    if (!fighter.phase.justEntered(CombatPhase.rolling)) return;
+    world.emit(
+      Dashed(
+        entity,
+        transform.translation.clone(),
+        motion.rollDirection.clone(),
+      ),
+    );
+  });
 }
 
 void updateDashTrail(World world) {
-  world.query2<Fighter, DashTrail>(require: const [Player]).each((
-    _,
-    fighter,
-    dash,
-  ) {
+  world.query2<Fighter, DashTrail>().having<Player>().each((_, fighter, dash) {
     dash.trail.emitting = fighter.phase.state == CombatPhase.rolling;
   });
 }
 
 void updateBladeTrail(World world) {
-  final row = world
-      .query2<Fighter, BladeTrail>(require: const [Player])
-      .firstOrNull;
+  final row = world.query2<Fighter, BladeTrail>().having<Player>().firstOrNull;
   if (row == null) return;
   final (_, fighter, blade) = row;
 

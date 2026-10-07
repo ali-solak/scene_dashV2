@@ -21,7 +21,6 @@ final class Winner {
 
 void installRace(GameBuilder game) {
   game
-    ..registerTag<Racer>()
     ..world.insert(Winner())
     ..addSystem(Schedules.startup, spawnRacers, writes: {Position, Velocity})
     ..addSystem(Schedules.fixedUpdate, advance, writes: {Position})
@@ -34,7 +33,7 @@ void spawnRacers(World world) {
 }
 
 void advance(World world) {
-  world.query2<Position, Velocity>(require: const [Racer]).each((
+  world.query2<Position, Velocity>().having<Racer>().each((
     entity,
     position,
     velocity,
@@ -46,7 +45,7 @@ void advance(World world) {
 void checkFinish(World world) {
   final winner = world.resource<Winner>();
   if (winner.entity != null) return;
-  world.query<Position>(require: const [Racer]).eachUntil((entity, position) {
+  world.query<Position>().having<Racer>().eachUntil((entity, position) {
     if (position.x < 10) return true; // keep scanning
     winner.entity = entity;
     return false; // stop
@@ -61,7 +60,7 @@ void main() {
 
   final winner = game.world.resource<Winner>().entity;
   print('winner: $winner');
-  for (final (entity, position) in game.world.query<Position>().records) {
+  for (final (entity, position) in game.world.query<Position>().snapshot()) {
     print('  $entity at ${position.x.toStringAsFixed(2)}m');
   }
 }

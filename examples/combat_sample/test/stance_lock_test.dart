@@ -60,11 +60,7 @@ TestGame boot() {
   game.start();
   // Event readers register lazily; one boot frame before any emit.
   game.pumpFixed(steps: 1);
-  final coordinator = game.world.query<AggroCoordinator>().firstOrNull;
-  if (coordinator != null) {
-    game.world.despawn(coordinator.$1);
-    game.pumpFixed(steps: 1);
-  }
+  game.world.resources.remove<AggroCoordinator>();
   // Wave 1 fields its barbarians on a ring; this suite pins stance and
   // lock behaviour against known spots, so place them deterministically.
   placeEnemies(game.world, const [(-3.0, -2.0), (4.0, 1.5)]);
@@ -74,7 +70,7 @@ TestGame boot() {
 /// Puts the wave's barbarians at [spots], in query order.
 void placeEnemies(World world, List<(double, double)> spots) {
   var i = 0;
-  world.query<SceneTransform>(require: const [Enemy]).each((entity, t) {
+  world.query<SceneTransform>().having<Enemy>().each((entity, t) {
     if (i >= spots.length) return;
     t.translation.setValues(spots[i].$1, 0, spots[i].$2);
     i++;
@@ -82,15 +78,14 @@ void placeEnemies(World world, List<(double, double)> spots) {
   expect(i, spots.length, reason: 'wave 1 fielded \${spots.length}');
 }
 
-Entity playerOf(World world) =>
-    world.entitiesWith(require: const [Player]).firstOrNull!;
+Entity playerOf(World world) => world.entitiesWith<Player>().firstOrNull!;
 
 /// The enemy nearest to (x, z): spawn spots drift once the brawl
 /// machines start walking, so lookups are proximity-based.
 Entity enemyAt(World world, double x, double z) {
   Entity? found;
   var best = double.infinity;
-  world.query<SceneTransform>(require: const [Enemy]).each((entity, t) {
+  world.query<SceneTransform>().having<Enemy>().each((entity, t) {
     final dx = t.translation.x - x;
     final dz = t.translation.z - z;
     final d = dx * dx + dz * dz;
@@ -108,11 +103,8 @@ void main() {
       'the player and both dummies headless', () {
     final game = boot();
     final world = game.world;
-    expect(world.entitiesWith(require: const [Player]).count(), 1);
-    expect(
-      world.entitiesWith(require: const [Enemy]).count(),
-      enemiesForWave(1),
-    );
+    expect(world.entitiesWith<Player>().count(), 1);
+    expect(world.entitiesWith<Enemy>().count(), enemiesForWave(1));
     expect(world.state<GameStatus>(), GameStatus.fighting);
   });
 
@@ -220,6 +212,7 @@ void main() {
     game.emit(const LockPressed());
     game.pumpFixed(steps: 1);
     game.pumpFixed(steps: 1); // movement sees the flushed Target
+    game.pumpFixed(steps: ticksFor(math.pi / lockedTurnRate) + 1);
     final near = world.tryGet<Target>(playerOf(world))!.entity;
     final nearTransform = world.get<SceneTransform>(near);
     double toTarget() => math.atan2(

@@ -5,7 +5,7 @@ List<Object> runnerBundle(World world, {double scale = 1, int index = 0}) => [
   if (world.hasResource<Scene>()) ..._visuals(_runnerGeometry, runnerColor),
   Health(runnerHealth * scale),
   const Bounty(runnerBounty),
-  Velocity(creepSpeed),
+  Speed(creepSpeed),
 ];
 
 List<Object> raiderBundle(World world, {double scale = 1, int index = 0}) => [
@@ -13,7 +13,7 @@ List<Object> raiderBundle(World world, {double scale = 1, int index = 0}) => [
   if (world.hasResource<Scene>()) ..._visuals(_raiderGeometry, raiderColor),
   Health(raiderHealth * scale),
   const Bounty(raiderBounty),
-  Velocity(raiderSpeed),
+  Speed(raiderSpeed),
   Raider(),
 ];
 

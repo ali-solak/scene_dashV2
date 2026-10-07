@@ -9,7 +9,6 @@ import 'scene_driver.dart';
 import 'scene_mount.dart';
 import 'scene_node_index.dart';
 import 'scene_sync.dart';
-import 'scene_transform.dart';
 
 /// Connects an [App] to a scene.
 final class Game {
@@ -167,13 +166,7 @@ final class Game {
       ..insert<SceneNodeIndex>(SceneNodeIndex(_nodeIndex));
     // Sync entity transforms to scene nodes.
     app.addSystemAdapter(
-      SyncSceneNodesAdapter<SceneTransform>.full(
-        (transform, target) => target.setFromTranslationRotationScale(
-          transform.translation,
-          transform.rotation,
-          transform.scale,
-        ),
-      ),
+      SceneTransformSyncAdapter(),
       schedule: Schedules.renderSync,
       label: const SystemLabel('scene.syncTransform'),
     );

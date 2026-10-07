@@ -74,6 +74,22 @@ void main() {
     expect(g.fired, isNotEmpty, reason: 'release should fire a charged shot');
   });
 
+  test('a release emitted like the touch controls still fires', () {
+    final g = build();
+    g.game.pump();
+    g.game.setPressed(GameAction.fire, down: true);
+    g.game.emit(const FirePressed());
+    g.game.pump();
+    g.game.pumpFixed(steps: 40);
+
+    final canceled = g.fired.length > 1;
+    g.game.setPressed(GameAction.fire, down: false);
+    g.game.emit(canceled ? FireCanceled() : FireReleased());
+    g.game.pump();
+
+    expect(g.fired, isNotEmpty, reason: 'release should fire a charged shot');
+  });
+
   test('release landing on a zero-fixed-step frame still fires '
       '(null retention)', () {
     final g = build();

@@ -10,6 +10,7 @@ import 'package:vector_math/vector_math.dart'
 import '../../common/actors.dart';
 import '../../common/camera_rig.dart';
 import '../../common/clip_hold.dart';
+import '../../common/pose_blend.dart';
 import '../../common/light_channels.dart';
 import '../../common/widget_quad.dart';
 import '../../common/combat_math.dart';
@@ -38,12 +39,7 @@ part 'systems/visuals.dart';
 
 /// Installs enemies.
 void installEnemies(GameBuilder game) {
-  game
-    ..registerTag<Enemy>()
-    ..registerComponent<Health>()
-    ..registerComponent<Knockback>()
-    ..registerComponent<Brawler>()
-    ..registerComponent<Mired>();
+  game;
   installBrawlBrain(game);
   installBrawlerMovement(game);
   installEnemyDeath(game);

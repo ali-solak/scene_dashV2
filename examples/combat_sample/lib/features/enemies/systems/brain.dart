@@ -2,16 +2,11 @@ part of '../enemies.dart';
 
 void installBrawlBrain(GameBuilder game) {
   game
-    ..registerComponent<AggroCoordinator>()
-    ..addSystem(
-      Schedules.startup,
-      spawnEnemies,
-      writes: const {Enemy, Health, Brawler, AggroCoordinator},
-    )
+    ..world.insert(AggroCoordinator())
     ..addSystem(
       OnEnter(GameStatus.fighting),
       resetEncounter,
-      writes: const {AggroCoordinator},
+      reads: const {},
       runIf: freshRun,
     )
     ..addSystem(
@@ -27,18 +22,14 @@ void installBrawlBrain(GameBuilder game) {
       coordinateAggro,
       inSet: GameSets.actions,
       reads: const {Player, Enemy, Health, SceneTransform},
-      writes: const {AggroCoordinator, Brawler},
+      writes: const {Brawler},
       after: const [brawlerDriver],
       runIf: inState(GameStatus.fighting),
     );
 }
 
-void spawnEnemies(World world) {
-  world.spawn([AggroCoordinator()]);
-}
-
 void resetEncounter(World world) {
-  final coordinator = world.query<AggroCoordinator>().firstOrNull?.$2;
+  final coordinator = world.tryResource<AggroCoordinator>();
   if (coordinator == null) return;
   coordinator
     ..holder = null
@@ -46,14 +37,11 @@ void resetEncounter(World world) {
 }
 
 void brawlerDriver(World world) {
-  final player = world
-      .query<SceneTransform>(require: const [Player])
-      .firstOrNull
-      ?.$2;
+  final player = world.query<SceneTransform>().having<Player>().firstOrNull?.$2;
   if (player == null) return;
   final windup = world.events<PlayerWindup>().lastOrNull;
 
-  world.query3<Brawler, Health, SceneTransform>(require: const [Enemy]).each((
+  world.query3<Brawler, Health, SceneTransform>().having<Enemy>().each((
     entity,
     brawler,
     health,
@@ -190,7 +178,7 @@ void _beginChop(Brawler brawler, double windup) {
 }
 
 void coordinateAggro(World world) {
-  final coordinator = world.query<AggroCoordinator>().firstOrNull?.$2;
+  final coordinator = world.tryResource<AggroCoordinator>();
   if (coordinator == null) return;
 
   _releaseAggro(world, coordinator);
@@ -220,10 +208,7 @@ void _grantAggro(World world, AggroCoordinator coordinator) {
   if (coordinator.holder != null) return;
   coordinator.cooldown -= world.dt;
   if (coordinator.cooldown > 0) return;
-  final player = world
-      .query<SceneTransform>(require: const [Player])
-      .firstOrNull
-      ?.$2;
+  final player = world.query<SceneTransform>().having<Player>().firstOrNull?.$2;
   if (player == null) return;
   coordinator.holder = _nearestAttacker(world, player);
 }
@@ -231,7 +216,7 @@ void _grantAggro(World world, AggroCoordinator coordinator) {
 Entity? _nearestAttacker(World world, SceneTransform player) {
   Entity? nearest;
   var nearestDistance = double.infinity;
-  world.query3<Brawler, Health, SceneTransform>(require: const [Enemy]).each((
+  world.query3<Brawler, Health, SceneTransform>().having<Enemy>().each((
     entity,
     brawler,
     health,
@@ -249,7 +234,7 @@ Entity? _nearestAttacker(World world, SceneTransform player) {
 }
 
 void _syncAggro(World world, Entity? holder) {
-  world.query<Brawler>(require: const [Enemy]).each((entity, brawler) {
+  world.query<Brawler>().having<Enemy>().each((entity, brawler) {
     brawler.hasToken = entity == holder;
   });
 }

@@ -20,9 +20,7 @@ part 'systems/combat.dart';
 /// Installs the rules as two sub-features: the run's flow, and the hit
 /// resolution every fighter's swing goes through.
 void installRules(GameBuilder game) {
-  game
-    ..registerComponent<DespawnAfter>()
-    ..registerComponent<DespawnOnExit>();
+  game;
   installRunFlow(game);
   installHitResolution(game);
 }

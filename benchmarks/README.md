@@ -44,13 +44,13 @@ cached loop the classic API uses. Desktop JIT, N = 10k
 | --- | ---: |
 | classic `Query2.each` (construct once, cached) | 9.7 ns/entity |
 | record view `.each`, constructed per call | 9.7 ns/entity |
-| record view `.records` for-in | 21.0 ns/entity |
+| record view `snapshot()` for-in | 21.0 ns/entity |
 | classic `query2(...)` construction alone | ~87 ns/call |
 | record `query2(...)` construction alone | ~75 ns/call |
 
 These are older JIT measurements. `.each` hands off to the cached classic
-loop. `.records` allocates a list and one record per match up front;
-`snapshot()` is the same thing under a clearer name. Allocation costs
+loop. `snapshot()` allocates a list and one record per match up front.
+Allocation costs
 differ a lot between JIT and AOT, so do not read the 2× gap above as a
 general rule. Use `.each` in frame loops, and a snapshot when you need the
 set of matches fixed.
@@ -70,10 +70,36 @@ records results before and after the fix:
 | Empty query, no parked parts | 81.96 ns | 88.40 ns |
 | Consume a 10,000-event batch (cursor operation only) | 9.70 µs | 61.69 ns |
 
-A query's scan result is cached until new parts arrive. The first typed
-use after that still scans the waiting parts. Reading events moves the
-cursor forward without copying the batch. These are single desktop runs,
-timer overhead included. They do not predict a rendered frame rate.
+Since 0.6.0 queries never look at waiting parts: a part is claimed once,
+when its store is created, so the parked-part rows above only describe
+0.5.x. Reading events moves the cursor forward without copying the batch.
+These are single desktop runs, timer overhead included. They do not
+predict a rendered frame rate.
+
+## Despawn cost and store count
+
+Each store tracks which entities it holds in a per-entity bit set, so a
+despawn visits only that entity's stores once a world has more than 10.
+AOT desktop, N = 10,000, entities with 4 components
+(`despawn_store_scaling_benchmark.dart`):
+
+| Registered stores | 0.5.x | 0.6.0 |
+| ---: | ---: | ---: |
+| 8 | 53 ns | 62 ns |
+| 32 | 114 ns | 64 ns |
+| 64 | 144 ns | 67 ns |
+| 128 | 244 ns | 62 ns |
+
+Keeping the bit set costs about 4 ns per component insert
+(`spawn_despawn_benchmark.dart`: 29.5 → 33.7 ns).
+
+## Transform sync
+
+`SceneTransform` sync remembers the 10 values it last wrote per entity and
+skips entities whose transform and node matrix are unchanged. Flutter test
+runner (debug JIT), 10,000 bound entities, nothing moving: 50.8 ns/entity
+before, 22.2 ns/entity after. A moving entity still pays the full compose
+and write.
 
 ## Suites carried over from v1
 

@@ -89,22 +89,20 @@ void setupWorld(World world) {
     ..smoothness = sceneVignetteSmoothness;
   scene.ambientOcclusion
     ..enabled = boot.ambientOcclusion
-    ..intensity = 0.55 // 0.21 folded the estimator's 2x
+    ..intensity =
+        0.55 // 0.21 folded the estimator's 2x
     ..radius = 0.4;
 
   scene.root.add(
     Node(
-        name: 'irradiance-volume',
-        localTransform: Matrix4.translation(
-          Vector3(0, giVolumeCenterHeight, 0),
-        ),
-      )
-      ..addComponent(
-        IrradianceVolumeComponent(
-          extents: giVolumeExtents,
-          resolution: giResolution,
-        ),
+      name: 'irradiance-volume',
+      localTransform: Matrix4.translation(Vector3(0, giVolumeCenterHeight, 0)),
+    )..addComponent(
+      IrradianceVolumeComponent(
+        extents: giVolumeExtents,
+        resolution: giResolution,
       ),
+    ),
   );
   scene.globalIllumination
     ..enabled = boot.globalIllumination
@@ -123,7 +121,7 @@ void applyGraphicsQuality(World world) {
   final quality = world.resource<GraphicsQuality>();
   if (level == quality.level) return;
 
-  final grass = world.query<NodeRef>(require: const [Grass]).firstOrNull;
+  final grass = world.query<NodeRef>().having<Grass>().firstOrNull;
   _applyQuality(
     world.resource<Scene>(),
     grass?.$2.node,

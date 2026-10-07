@@ -18,6 +18,7 @@ import 'package:combat_sample/features/enemies/enemies.dart';
 import 'package:combat_sample/common/game_state.dart';
 import 'package:combat_sample/features/player/player.dart' show Player;
 import 'package:combat_sample/features/skills/skills.dart' show LavaPit;
+import 'package:combat_sample/features/waves/waves.dart' show WaveState;
 import 'package:flutter/foundation.dart'
     show debugPrint, kProfileMode, kReleaseMode;
 import 'package:flutter_test/flutter_test.dart';
@@ -43,7 +44,7 @@ double measureFrameMs(int n, {int pits = 0}) {
   final world = game.world;
 
   // Exact-N field: clear whatever wave 1 spawned.
-  world.entitiesWith(require: const [Enemy]).each(world.despawn);
+  world.entitiesWith<Enemy>().each(world.despawn);
   game.pumpFixed(steps: 1);
 
   // The player must survive N barbarians pounding on it for the whole
@@ -53,10 +54,11 @@ double measureFrameMs(int n, {int pits = 0}) {
     ..max = 1e12
     ..current = 1e12;
 
+  final fielded = world.resource<WaveState>().fielded..clear();
   for (var i = 0; i < n; i++) {
     final radius = 2.5 + 10.5 * i / math.max(1, n - 1);
     final theta = i * _golden;
-    world.spawn(
+    final enemy = world.spawn(
       enemyBundle(
         math.sin(theta) * radius,
         math.cos(theta) * radius,
@@ -64,6 +66,7 @@ double measureFrameMs(int n, {int pits = 0}) {
         health: 1e12, // burns and swings never thin the pack mid-measure
       ),
     );
+    fielded.add(enemy);
   }
   for (var i = 0; i < pits; i++) {
     // On the circling ring, so the pack stays in the heat.
@@ -78,10 +81,8 @@ double measureFrameMs(int n, {int pits = 0}) {
       DespawnAfter(1e9),
     ]);
   }
-  // The director parks itself: wave 1 was cleared before it ever engaged,
-  // so the plan is still waiting on UntilEngaged. It latches onto these N
-  // barbarians and then waits for a clear that never comes — no countdown
-  // and no extra barbarians mid-measure.
+  // These N barbarians stand in for the live wave, so the director waits
+  // on a clear that never comes: no extra barbarians mid-measure.
   game.pumpFixed(steps: 1); // flush the queued spawns
 
   game.pumpFixed(steps: warmupSteps);
@@ -91,8 +92,8 @@ double measureFrameMs(int n, {int pits = 0}) {
 
   // Sanity: the fight is still on and the pack is still exactly N.
   expect(world.state<GameStatus>(), GameStatus.fighting);
-  expect(world.query<Brawler>(require: const [Enemy]).count(), n);
-  expect(world.entitiesWith(require: const [Player]).firstOrNull, isNotNull);
+  expect(world.query<Brawler>().having<Enemy>().count(), n);
+  expect(world.entitiesWith<Player>().firstOrNull, isNotNull);
 
   return stopwatch.elapsedMicroseconds / measuredSteps / 1000;
 }

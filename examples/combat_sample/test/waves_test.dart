@@ -14,13 +14,12 @@ import 'package:scene_dash_v2/scene_dash_v2.dart';
 
 import 'support/fight_harness.dart';
 
-int enemyCount(World world) =>
-    world.entitiesWith(require: const [Enemy]).count();
+int enemyCount(World world) => world.entitiesWith<Enemy>().count();
 
 /// Wipes the field the blunt way; these tests are about the director,
 /// not about how a barbarian dies.
 void clearField(TestGame game) {
-  game.world.entitiesWith(require: const [Enemy]).each(game.world.despawn);
+  game.world.entitiesWith<Enemy>().each(game.world.despawn);
   game.pumpFixed(steps: 1);
 }
 
@@ -36,7 +35,7 @@ void armWave(TestGame game, int wave) {
 /// The one giant on the field.
 (Entity, Brawler) giantOf(World world) {
   final found = <(Entity, Brawler)>[];
-  world.query<Brawler>(require: const [Enemy]).each((entity, brawler) {
+  world.query<Brawler>().having<Enemy>().each((entity, brawler) {
     if (brawler.giant) found.add((entity, brawler));
   });
   expect(found.length, 1, reason: 'a giant wave fields exactly one giant');
@@ -71,7 +70,7 @@ void main() {
     game.pumpFixed(steps: 4);
     expect(waves.wave, 2);
     expect(enemyCount(world), enemiesForWave(2));
-    world.query<Health>(require: const [Enemy]).each((entity, health) {
+    world.query<Health>().having<Enemy>().each((entity, health) {
       expect(health.max, closeTo(healthForWave(2), 1e-6));
       expect(health.max, greaterThan(enemyMaxHealth));
     });
@@ -79,7 +78,7 @@ void main() {
 
   test('barbarians walk in from outside the fighting circle', () {
     final game = boot();
-    game.world.query<SceneTransform>(require: const [Enemy]).each((entity, t) {
+    game.world.query<SceneTransform>().having<Enemy>().each((entity, t) {
       final distance = math.sqrt(
         t.translation.x * t.translation.x + t.translation.z * t.translation.z,
       );
@@ -94,7 +93,7 @@ void main() {
     final score = world.resource<Score>();
     expect(score.points, 0);
 
-    final enemy = world.entitiesWith(require: const [Enemy]).firstOrNull!;
+    final enemy = world.entitiesWith<Enemy>().firstOrNull!;
     world.get<Health>(enemy).current = 10; // the next strike kills
     landPlayerStrike(game, enemy);
 

@@ -11,7 +11,7 @@ dependencies:
   data_assets: ^0.20.0
   flutter:
     sdk: flutter
-  flutter_scene: ^0.24.0
+  flutter_scene: ^0.24.1
   flutter_scene_rapier: ^0.5.2
   # hook/build.dart compiles the .fmat materials into a shader bundle.
   hooks: ^2.0.0

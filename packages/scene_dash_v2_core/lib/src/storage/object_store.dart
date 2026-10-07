@@ -13,17 +13,25 @@ final class ObjectComponentStore<T> extends ComponentStore {
     if (existing >= 0) {
       _values[existing] = value;
       bumpRevision();
+      notifyRowChanged(entityIndex);
       return;
     }
     final dense = putSlot(entityIndex);
     _values[dense] = value;
     bumpRevision();
+    notifyRowChanged(entityIndex);
     onAdded?.call(entityIndex, value);
   }
 
   @override
   void insertDynamic(int entityIndex, Object? value) =>
       insert(entityIndex, value as T);
+
+  @override
+  bool accepts(Object? value) => value is T;
+
+  @override
+  bool holdsSubtype<U>() => <U>[] is List<T>;
 
   T valueAt(int dense) => _values[dense] as T;
 

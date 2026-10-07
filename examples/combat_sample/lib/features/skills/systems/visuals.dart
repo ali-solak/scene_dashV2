@@ -4,8 +4,6 @@ part of '../skills.dart';
 /// mounted shield, and the lava pits' bodies and materials.
 void installSkillVisuals(GameBuilder game) {
   game
-    ..registerComponent<BurnFlame>()
-    ..registerComponent<BarrierVisual>()
     ..addSystem(
       Schedules.update,
       attachLavaVisuals,
@@ -39,7 +37,7 @@ void installSkillVisuals(GameBuilder game) {
 
 /// Updates attached burn flames.
 void updateBurnFlames(World world) {
-  world.query<NodeRef>(require: const [Enemy]).each((entity, ref) {
+  world.query<NodeRef>().having<Enemy>().each((entity, ref) {
     final burning = world.tryGet<Burning>(entity) != null;
     final flame = world.tryGet<BurnFlame>(entity);
     if (burning && flame == null) {
@@ -56,7 +54,7 @@ void updateBurnFlames(World world) {
 /// Updates barrier visuals.
 void updateBarrierVisual(World world) {
   final dt = world.dt;
-  world.query<NodeRef>(require: const [Player]).each((entity, ref) {
+  world.query<NodeRef>().having<Player>().each((entity, ref) {
     final barrier = world.tryGet<Barrier>(entity);
     final visual = world.tryGet<BarrierVisual>(entity);
 

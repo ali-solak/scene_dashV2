@@ -1,5 +1,4 @@
 import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
-import 'package:scene_dash_v2_core/advanced.dart' show ComponentStore;
 import 'package:scene_dash_v2_benchmarks/harness.dart';
 
 class Health {
@@ -12,12 +11,9 @@ final class Dead implements Tag {
 }
 
 final class CachedMatch<T extends Object> {
-  CachedMatch(World world, {required List<Type> exclude})
-    : _query = world.query<T>(exclude: exclude),
-      _stores = [for (final type in [T, ...exclude]) world.stores.require(type)];
+  CachedMatch(this._query);
 
   final QueryView1<T> _query;
-  final List<ComponentStore> _stores;
   Entity? _matched;
   int _missRevision = -1;
 
@@ -28,7 +24,7 @@ final class CachedMatch<T extends Object> {
       if (component != null) return component;
       _matched = null;
     }
-    final revision = _revision();
+    final revision = _query.revision;
     if (revision == _missRevision) return null;
     final hit = _query.firstOrNull;
     if (hit == null) {
@@ -39,24 +35,10 @@ final class CachedMatch<T extends Object> {
     _missRevision = -1;
     return hit.$2;
   }
-
-  int _revision() {
-    var revision = 0;
-    for (final store in _stores) {
-      revision += store.revision;
-    }
-    return revision;
-  }
 }
 
 TestGame _world({required int dead, required bool aliveLast}) {
-  final game = TestGame.headless(
-    features: [
-      (g) => g
-        ..registerComponent<Health>()
-        ..registerTag<Dead>(),
-    ],
-  );
+  final game = TestGame.headless();
   for (var i = 0; i < dead; i++) {
     game.world.spawn([Health(0), const Dead()]);
   }
@@ -74,10 +56,9 @@ void main() {
       final label = aliveLast ? 'hit, match scanned last' : 'miss';
       benchRepeat('per-frame query; $label; $count dead', 1, () {
         sink +=
-            world.query<Health>(exclude: const [Dead]).firstOrNull?.$2.current ??
-            0;
+            world.query<Health>().without<Dead>().firstOrNull?.$2.current ?? 0;
       });
-      final cached = CachedMatch<Health>(world, exclude: const [Dead]);
+      final cached = CachedMatch<Health>(world.query<Health>().without<Dead>());
       benchRepeat('cached match;    $label; $count dead', 1, () {
         sink += cached.resolve()?.current ?? 0;
       });

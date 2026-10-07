@@ -21,13 +21,6 @@ part 'systems/systems.dart';
 
 void installTowers(GameBuilder game) {
   game
-    ..registerComponent<Tower>()
-    ..registerComponent<Gun>()
-    ..registerComponent<Pulser>()
-    ..registerTag<ShieldEmitter>()
-    ..registerComponent<TowerBeam>()
-    ..registerComponent<PulseRing>()
-    ..registerComponent<TowerGhost>()
     ..configureEvent<PlaceTowerRequested>()
     ..world.insert(BoardPointer())
     ..world.insert(BuildChoice())

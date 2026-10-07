@@ -35,7 +35,7 @@ class _StatBar extends StatelessWidget {
           const _Divider(),
           WorldBuilder<int>(
             select: (world) =>
-                world.query<SceneTransform>(require: const [Creep]).count(),
+                world.query<SceneTransform>().having<Creep>().count(),
             builder: (context, alive) =>
                 _Stat('creeps', '$alive', const Color(0xFF7FC6F2)),
           ),

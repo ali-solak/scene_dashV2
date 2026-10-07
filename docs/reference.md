@@ -58,7 +58,7 @@ The other builders work the same way: pick a value, rebuild when it
 changes.
 
 ```dart
-WorldBuilder<int>(select: (w) => w.query<Health>(require: const [Enemy]).count(),
+WorldBuilder<int>(select: (w) => w.query<Health>().having<Enemy>().count(),
     builder: (ctx, n) => Text('$n enemies'))       // any world-derived value
 
 GameStateBuilder<GameStatus>(builder: (ctx, s) => switch (s) { ... })
@@ -89,7 +89,7 @@ finds it by its components:
 
 ```dart
 EntityBuilder<Health, double>.matching(
-  require: const [Player],            // an entity with Health + Player, kept
+  where: (q) => q.having<Player>(),   // an entity with Health + Player, kept
   select: (h) => h.current,           //   while it matches; a respawned
   builder: (context, hp) =>           //   player is picked up automatically
       HealthBar(hp),
@@ -176,8 +176,6 @@ const enemyCloseSpeed = 1.5;
 
 void installEnemies(GameBuilder game) {
   game
-    ..registerTag<Enemy>()
-    ..registerTag<Stunned>()
     ..addSystem(Schedules.fixedUpdate, closeIn,
         writes: {SceneTransform},            // access declaration for the
                                              //   conflict detector
@@ -190,8 +188,7 @@ void installEnemies(GameBuilder game) {
 
 // enemies advance on their target: one query, one mutation, world.dt
 void closeIn(World world) {
-  world.query2<SceneTransform, Target>(
-      require: const [Enemy], exclude: const [Stunned])   // stunned: frozen
+  world.query2<SceneTransform, Target>().having<Enemy>().without<Stunned>()   // stunned: frozen
       .each((entity, transform, target) {
     final prey = world.tryGet<SceneTransform>(target.entity);
     if (prey == null) return;
@@ -257,7 +254,7 @@ List<Object> enemyBundle(Node node, {required Entity target}) => [
 ```
 
 `Stunned` is a tag you add and remove at runtime. The entity drops out of
-`exclude: [Stunned]` queries, and comes back, at the next frame boundary.
+`.without<Stunned>()` queries, and comes back, at the next frame boundary.
 `applyDamage` (Events) adds it with `removeAfter`, which takes it off again.
 
 A bundle binds to a plain `flutter_scene` node, usually built by the system
@@ -283,21 +280,20 @@ final sword = world.spawn(
                                          //   everything it owns
 ```
 
-A component type gets its store the first time you use it as a type
-argument: `query2<Health, NodeRef>()`, `world.add<Mired>(...)`,
-`tryGet<Brawler>(...)`. Two cases never do that, so register them when the
-feature installs:
-
 ```dart
-void installEnemies(GameBuilder game) {
-  game
-    ..registerTag<Enemy>()            // spawning an unregistered tag throws:
-                                      //   a tag store cannot be built from an
-                                      //   instance
-    ..registerComponent<Mired>();     // named only in require:/exclude:, which
-                                      //   take Type objects and cannot create
-                                      //   a store, so the query throws
-}
+// cheatsheet: stores create themselves, nothing to register
+world.spawn([const Enemy(), Health(40)]);   // first spawn of a tag or
+                                            //   component creates its store
+world.add(enemy, const Mired());            // so does add<T>
+world.query<Health>().having<Mired>();      // and any type argument:
+world.tryGet<Brawler>(entity);              //   queries, filters, lookups
+
+// subtypes live in their supertype's store once one exists
+world.spawn([Goblin()]);                    // Goblin extends Unit, queried
+world.query<Unit>();                        //   as Unit: Goblin rows show up
+world.tryGet<Goblin>(entity);               // reads it back from Unit's store
+world.query<Goblin>();                      // gives Goblin its own store: later
+                                            //   spawns land there, not in Unit
 ```
 
 ## Queries
@@ -306,11 +302,10 @@ Use `.each` in per-frame loops. It allocates nothing. Inside it, `return`
 skips to the next row; use `eachUntil` to stop early.
 
 `snapshot()` builds a list of records right away, so the matching entities
-are fixed at the moment you call it. `.records` is the older name for the
-same thing. Neither copies the components: their fields can still change,
-and they can outlive an entity that gets despawned.
+are fixed at the moment you call it. It does not copy the components: their
+fields can still change, and they can outlive an entity that gets despawned.
 
-`require:` and `exclude:` filter which entities match. If you stored an
+`.having<T>()` and `.without<T>()` filter which entities match. If you stored an
 `Entity` on a component, like `Target.entity`, get it back with `tryGet`.
 It returns `null` once that entity is gone. `closeIn` above uses all of
 this.
@@ -330,11 +325,14 @@ world.query2<Health, SceneTransform>()
 world.query3<Health, SceneTransform, Target>()
 world.query4<Health, SceneTransform, Target, EnemyAttack>()
 
-// filters shape the match set without taking a slot
-world.query<Health>(require: const [Enemy])            // must also carry Enemy
-world.query<Health>(exclude: const [Stunned])          // skip carriers
-world.query2<Health, Target>(
-    require: const [Enemy], exclude: const [Stunned])  // combined
+// filters shape the match set without taking a slot; chain as many as needed
+world.query<Health>().having<Enemy>()            // must also carry Enemy
+world.query<Health>().without<Stunned>()          // skip carriers
+world.query2<Health, Target>().having<Enemy>().without<Stunned>()  // combined
+
+// entity-only rows, for tags: no component slot to fill
+world.entitiesWith<Enemy>().without<Stunned>().each(world.despawn);
+world.entitiesWith<Player>().firstOrNull;
 ```
 
 ```dart
@@ -346,15 +344,15 @@ world.query<Health>()
 
 for (final (entity, health) in world.query<Health>().snapshot()) {}
                                                   // for-loop form: allocates a
-                                                  //   list; .records = alias
+                                                  //   list
 
-final row = world.query<Health>(require: const [Player]).firstOrNull;
-final (e, hp) = world.query<Health>(require: const [Player]).single;
+final row = world.query<Health>().having<Player>().firstOrNull;
+final (e, hp) = world.query<Health>().having<Player>().single;
                                                   // first/firstOrNull/single/
                                                   //   singleOrNull; rows as records
 world.query<Health>().any((entity, h) => h.current < 10);        // predicate
 world.query<Health>().firstWhere((entity, h) => h.current < 10); // row or null
-world.query<Health>(require: const [Enemy]).isNotEmpty;          // existence
+world.query<Health>().having<Enemy>().isNotEmpty;          // existence
 world.query<Health>().count();                                   // O(n) scan
 
 world.single<Fighter>();       // THE one, unwrapped: component singletons
@@ -481,7 +479,7 @@ runIf: not(inState(GameStatus.lost))
 
 // a custom condition is any bool Function(World)
 bool anyEnemiesLeft(World world) =>
-    world.query<Health>(require: const [Enemy]).isNotEmpty;
+    world.query<Health>().having<Enemy>().isNotEmpty;
 ```
 
 ## Custom schedules (game driven systems)
@@ -575,8 +573,7 @@ final class EnemyAttack {
 }
 
 void enemyAttacks(World world) {
-  world.query3<EnemyAttack, Target, SceneTransform>(
-      require: const [Enemy], exclude: const [Stunned])
+  world.query3<EnemyAttack, Target, SceneTransform>().having<Enemy>().without<Stunned>()
       .each((entity, attack, target, transform) {
     attack.windup.tick(world.dt);
     if (!attack.windup.justFinished) return;   // true for exactly one tick
@@ -756,6 +753,16 @@ game.emit(const PauseRequested());            // from a widget
 ```
 
 ```dart
+// One channel per event: its own class when that channel exists (a reader or
+// configureEvent registered it), otherwise the type it is emitted as.
+world.emit(EnemyKilled(10));                  // events<EnemyKilled>()
+game.emit(lost ? Defeat() : Victory());       // inferred as GameEvent, still
+                                              //   reaches events<Victory>()
+world.emit<GameEvent>(EnemyKilled(10));       // no EnemyKilled channel yet:
+                                              //   events<GameEvent>() gets it
+```
+
+```dart
 // System reads. Everything unread since this system last ran, in
 // emission order; the cursor is per registration, so the function stays
 // stateless and no system consumes another's events.
@@ -875,7 +882,7 @@ game.addSystem(Schedules.update, evaluateGameRules,
     reads: const {}, runIf: inState(GameStatus.playing));
 
 void evaluateGameRules(World world) {
-  final row = world.query<Health>(require: const [Player]).firstOrNull;
+  final row = world.query<Health>().having<Player>().firstOrNull;
   if (row == null) return;
   final (_, health) = row;                       // destructure the record
   if (health.current <= 0) {
@@ -934,7 +941,7 @@ final class Fighter {
 }
 
 void fighterActions(World world) {
-  final row = world.query<Fighter>(require: const [Player]).firstOrNull;
+  final row = world.query<Fighter>().having<Player>().firstOrNull;
   if (row == null) return;
   final (entity, fighter) = row;
   final phase = fighter.phase..tick(world.dt);
@@ -1123,8 +1130,8 @@ const strikeRange = 1.6;
 // the fighter's strike: a synchronous overlap the frame the machine
 // enters `striking`; it emits the HitLanded that applyDamage (Events) consumes
 void playerStrikes(World world) {
-  final row = world.query2<Fighter, SceneTransform>(
-      require: const [Player]).firstOrNull;
+  final row =
+      world.query2<Fighter, SceneTransform>().having<Player>().firstOrNull;
   if (row == null) return;
   final (_, fighter, transform) = row;
   if (!fighter.phase.justEntered(FighterPhase.striking)) return;
@@ -1163,7 +1170,8 @@ final hit = world.physics.raycast(
 ```dart
 // the only bridge between world and scene; everything you see is a real Node
 NodeRef(node)            // mounted into the scene automatically
-SceneTransform.zero()    // when present, synced onto the bound node per frame
+SceneTransform.zero()    // when present, written to the bound node whenever
+                         //   it changes (or the node's matrix is replaced)
 const PhysicsDriven()    // a physics body owns the transform instead
 ```
 
@@ -1174,7 +1182,7 @@ An entity's transform can also live on the node itself.
 const playerStrafeSpeed = 6.0;
 
 void strafePlayer(World world) {
-  final row = world.query<NodeRef>(require: const [Player]).firstOrNull;
+  final row = world.query<NodeRef>().having<Player>().firstOrNull;
   if (row == null) return;
   final (_, binding) = row;
 

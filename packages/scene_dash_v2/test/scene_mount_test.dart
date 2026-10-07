@@ -264,4 +264,132 @@ void main() {
 
     expect(node.parent, same(elsewhere), reason: 'game owns this node');
   });
+
+  test('keeps a node mounted when it moves to another entity in one run', () {
+    final root = Node();
+    final commands = SceneCommands(root);
+    final node = Node();
+    final world = World()
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
+    final first = world.entities.spawn();
+    world.insertNow<NodeRef>(first, NodeRef(node));
+
+    final map = <Node, Entity>{};
+    final adapter = SceneNodeMountAdapter(commands, map)..initialize(world);
+    adapter.run();
+    commands.flush();
+
+    world.removeNow<NodeRef>(first);
+    final second = world.entities.spawn();
+    world.insertNow<NodeRef>(second, NodeRef(node));
+    adapter.run();
+    commands.flush();
+
+    expect(node.parent, same(root));
+    expect(map[node], second);
+    expect(world.has<Mounted>(second), isTrue);
+    expect(world.has<Mounted>(first), isFalse);
+  });
+
+  test('keeps a node mounted when re-bound right after World.reset', () {
+    final root = Node();
+    final commands = SceneCommands(root);
+    final node = Node();
+    final world = _worldWithBinding(node);
+
+    final adapter = SceneNodeMountAdapter(commands, <Node, Entity>{})
+      ..initialize(world);
+    adapter.run();
+    commands.flush();
+
+    world.reset();
+    final entity = world.entities.spawn();
+    world.insertNow<NodeRef>(entity, NodeRef(node));
+    adapter.run();
+    commands.flush();
+
+    expect(node.parent, same(root));
+    expect(world.has<Mounted>(entity), isTrue);
+  });
+
+  test('a run touches only entities whose binding changed', () {
+    final root = Node();
+    final commands = SceneCommands(root);
+    final world = World()
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
+    final adapter = SceneNodeMountAdapter(commands, <Node, Entity>{})
+      ..initialize(world);
+    final holder = Node();
+    final settled = Node();
+    holder.add(settled);
+    world.insertNow<NodeRef>(world.entities.spawn(), NodeRef(settled));
+    adapter.run();
+    commands.flush();
+
+    holder.remove(settled);
+    final fresh = Node();
+    world.insertNow<NodeRef>(world.entities.spawn(), NodeRef(fresh));
+    adapter.run();
+    commands.flush();
+
+    expect(fresh.parent, same(root));
+    expect(settled.parent, isNull, reason: 'not rescanned');
+  });
+
+  test('a node shared by two entities stays mounted until both drop it', () {
+    final root = Node();
+    final commands = SceneCommands(root);
+    final node = Node();
+    final world = World()
+      ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
+    final first = world.entities.spawn();
+    final second = world.entities.spawn();
+    world
+      ..insertNow<NodeRef>(first, NodeRef(node))
+      ..insertNow<NodeRef>(second, NodeRef(node));
+    final map = <Node, Entity>{};
+    final adapter = SceneNodeMountAdapter(commands, map)..initialize(world);
+    adapter.run();
+    commands.flush();
+    expect(node.parent, same(root));
+
+    world.removeNow<NodeRef>(second);
+    adapter.run();
+    commands.flush();
+    expect(node.parent, same(root), reason: 'first still binds it');
+    expect(map[node], first);
+    expect(world.has<Mounted>(first), isTrue);
+    expect(world.has<Mounted>(second), isFalse);
+
+    world.removeNow<NodeRef>(first);
+    adapter.run();
+    commands.flush();
+    expect(node.parent, isNull);
+    expect(map, isEmpty);
+  });
+
+  test(
+    'an entity switching nodes keeps Mounted when its old node moves on',
+    () {
+      final root = Node();
+      final commands = SceneCommands(root);
+      final shared = Node();
+      final world = World()
+        ..stores.register<NodeRef>(ObjectComponentStore<NodeRef>());
+      final first = world.entities.spawn();
+      final second = world.entities.spawn();
+      world
+        ..insertNow<NodeRef>(first, NodeRef(shared))
+        ..insertNow<NodeRef>(second, NodeRef(shared));
+      final adapter = SceneNodeMountAdapter(commands, <Node, Entity>{})
+        ..initialize(world);
+      adapter.run();
+      commands.flush();
+
+      world.insertNow<NodeRef>(second, NodeRef(Node()));
+      adapter.run();
+      expect(world.has<Mounted>(first), isTrue);
+      expect(world.has<Mounted>(second), isTrue);
+    },
+  );
 }

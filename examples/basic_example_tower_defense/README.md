@@ -38,7 +38,6 @@ one place:
 ```dart
 void installTowers(GameBuilder game) {
   game
-    ..registerComponent<Tower>()
     ..configureEvent<PlaceTowerRequested>()
     ..addSystem(
       Schedules.fixedUpdate,

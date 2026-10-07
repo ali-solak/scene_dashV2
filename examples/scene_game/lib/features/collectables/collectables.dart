@@ -13,6 +13,7 @@ import '../../common/sets.dart';
 import '../player/data/config.dart';
 import '../player/player.dart';
 import 'data/config.dart';
+
 import 'package:flutter_scene/physics.dart';
 
 part 'data/components.dart';
@@ -24,9 +25,6 @@ part 'systems/systems.dart';
 void installCollectables(GameBuilder game) {
   game.world.insert(PickupLanes());
   game
-    ..registerTag<Collectable>()
-    ..registerTag<ShieldPickup>()
-    ..registerComponent<Shielded>()
     ..observe<Shielded>(onAdd: shieldGained, onRemove: shieldLost)
     ..addSystem(
       OnEnter(GameStatus.playing),

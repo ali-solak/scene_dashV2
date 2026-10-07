@@ -66,9 +66,9 @@ void referee(World world) {
   for (final _ in world.events<PlayerSpawned>()) {
     race.spawnsSeen++;
   }
-  race.boostAvailable = world.entitiesWith(require: [BoostMarker]).count() > 0;
+  race.boostAvailable = world.entitiesWith<BoostMarker>().count() > 0;
   if (race.winner == null) {
-    final leader = world.query<Position>(require: [PlayerMarker]).firstOrNull;
+    final leader = world.query<Position>().having<PlayerMarker>().firstOrNull;
     if (leader != null && leader.$2.x >= RaceState.finishLine) {
       race.winner = leader.$1;
     }
@@ -83,8 +83,6 @@ void reportStatus(World world) {
 void installRace(GameBuilder game) {
   game.world.insert(RaceState());
   game
-    ..registerTag<PlayerMarker>()
-    ..registerTag<BoostMarker>()
     ..addSystem(Schedules.startup, spawnRun, writes: {Position, Velocity})
     ..addSystem(
       Schedules.fixedUpdate,

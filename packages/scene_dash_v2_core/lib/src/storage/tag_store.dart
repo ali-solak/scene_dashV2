@@ -11,6 +11,7 @@ final class TagStore extends ComponentStore {
     if (containsIndex(entityIndex)) return;
     putSlot(entityIndex);
     bumpRevision();
+    notifyRowChanged(entityIndex);
     onAdded?.call(entityIndex, _witness);
   }
 

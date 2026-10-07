@@ -24,9 +24,7 @@ void main() {
   const dt = 1 / 60;
 
   TestGame boot({List<Feature> features = const <Feature>[]}) {
-    final game = TestGame.headless(
-      features: [(g) => g.registerComponent<Shield>(), ...features],
-    );
+    final game = TestGame.headless(features: [...features]);
     game.start();
     return game;
   }

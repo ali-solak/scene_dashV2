@@ -83,19 +83,13 @@ void main() {
   group('bakeSceneComponents', () {
     test('spawns one entity per authored node, carrying node and data', () {
       final t = _tree();
-      final game = TestGame.headless(
-        features: [
-          (game) => game
-            ..registerComponent<_Torch>()
-            ..registerComponent<NodeRef>(),
-        ],
-      )..start();
+      final game = TestGame.headless(features: const [])..start();
 
       final spawned = game.world.bakeSceneComponents<_Torch>(root: t.root);
       game.pump();
 
       expect(spawned, 2);
-      final rows = game.world.query2<_Torch, NodeRef>().records.toList();
+      final rows = game.world.query2<_Torch, NodeRef>().snapshot();
       expect(rows.length, 2);
       expect(
         rows.map((r) => r.$3.node),
@@ -106,13 +100,7 @@ void main() {
 
     test('is idempotent, so a re-bake only picks up new nodes', () {
       final t = _tree();
-      final game = TestGame.headless(
-        features: [
-          (game) => game
-            ..registerComponent<_Torch>()
-            ..registerComponent<NodeRef>(),
-        ],
-      )..start();
+      final game = TestGame.headless(features: const [])..start();
 
       expect(game.world.bakeSceneComponents<_Torch>(root: t.root), 2);
       expect(
@@ -131,14 +119,7 @@ void main() {
 
     test('a custom bundle keeps runtime state off the authored component', () {
       final t = _tree();
-      final game = TestGame.headless(
-        features: [
-          (game) => game
-            ..registerComponent<_Torch>()
-            ..registerComponent<_Flicker>()
-            ..registerComponent<NodeRef>(),
-        ],
-      )..start();
+      final game = TestGame.headless(features: const [])..start();
 
       game.world.bakeSceneComponents<_Torch>(
         root: t.root,
@@ -146,7 +127,7 @@ void main() {
       );
       game.pump();
 
-      final rows = game.world.query2<_Torch, _Flicker>().records.toList();
+      final rows = game.world.query2<_Torch, _Flicker>().snapshot();
       expect(rows.length, 2);
       expect(
         rows.map((r) => r.$3),
@@ -157,13 +138,7 @@ void main() {
 
     test('forgetting a type lets its nodes bake again', () {
       final t = _tree();
-      final game = TestGame.headless(
-        features: [
-          (game) => game
-            ..registerComponent<_Torch>()
-            ..registerComponent<NodeRef>(),
-        ],
-      )..start();
+      final game = TestGame.headless(features: const [])..start();
 
       game.world.bakeSceneComponents<_Torch>(root: t.root);
       game.world.resource<SceneBakeLog>().forget(_Torch);

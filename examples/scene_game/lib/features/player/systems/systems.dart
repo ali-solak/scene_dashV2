@@ -5,7 +5,7 @@ void spawnPlayer(World world) {
 }
 
 void attachPlayerKnockback(World world) {
-  final player = world.entitiesWith(require: const [Player]).firstOrNull;
+  final player = world.entitiesWith<Player>().firstOrNull;
   if (player == null) return;
   world.add(player, PlayerKnockback());
 }
@@ -13,7 +13,7 @@ void attachPlayerKnockback(World world) {
 void movePlayer(World world) {
   final input = world.buttons<GameAction>();
   final dt = world.dt;
-  world.query2<PlayerKnockback, NodeRef>(require: const [Player]).each((
+  world.query2<PlayerKnockback, NodeRef>().having<Player>().each((
     entity,
     knockback,
     ref,
@@ -53,7 +53,7 @@ void _snapToRamp(Node node, PlayerKnockback knockback) {
 void animateCrabLegs(World world) {
   final input = world.buttons<GameAction>();
   final dt = world.dt;
-  world.query<PlayerVisuals>(require: const [Player]).each((entity, v) {
+  world.query<PlayerVisuals>().having<Player>().each((entity, v) {
     v.legExtension01 = smoothTo(
       v.legExtension01,
       1.0,
@@ -86,7 +86,7 @@ void animateCrabLegs(World world) {
 }
 
 void resetPlayerOnRunStart(World world) {
-  world.query2<NodeRef, PlayerVisuals>(require: const [Player]).each((
+  world.query2<NodeRef, PlayerVisuals>().having<Player>().each((
     entity,
     ref,
     visuals,

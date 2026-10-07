@@ -3,7 +3,6 @@ part of '../player.dart';
 /// The knight's model, its animation mapper, and the i-frame ghost.
 void installPlayerVisuals(GameBuilder game) {
   game
-    ..registerComponent<PlayerAnimator>()
     ..addSystem(
       Schedules.update,
       attachPlayerVisuals,
@@ -30,7 +29,7 @@ void installPlayerVisuals(GameBuilder game) {
 
 /// Attaches the player model or fallback capsule.
 void attachPlayerVisuals(World world) {
-  final player = world.entitiesWith(require: const [Player]).firstOrNull;
+  final player = world.entitiesWith<Player>().firstOrNull;
   if (player == null) return;
   if (world.tryGet<NodeRef>(player) != null) return;
 
@@ -117,19 +116,20 @@ void attachPlayerVisuals(World world) {
 /// Updates player animation.
 void updatePlayerAnimation(World world) {
   final dt = world.dt;
-  world
-      .query3<Fighter, PlayerMotion, PlayerAnimator>(require: const [Player])
-      .each((entity, fighter, motion, animator) {
-        if (animator.hold(world.has<HitPause>(entity))) return;
-        animator.update(fighter, motion, dt);
-      });
+  world.query3<Fighter, PlayerMotion, PlayerAnimator>().having<Player>().each((
+    entity,
+    fighter,
+    motion,
+    animator,
+  ) {
+    if (animator.hold(world.has<HitPause>(entity))) return;
+    animator.update(fighter, motion, dt);
+  });
 }
 
 /// Shows a cyan outline while the player is invulnerable.
 void updatePlayerGhost(World world) {
-  final row = world
-      .query2<Fighter, NodeRef>(require: const [Player])
-      .firstOrNull;
+  final row = world.query2<Fighter, NodeRef>().having<Player>().firstOrNull;
   if (row == null) return;
   final (entity, fighter, ref) = row;
   final launched = world.tryGet<Knockback>(entity)?.incapacitated ?? false;

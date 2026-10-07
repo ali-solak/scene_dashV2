@@ -15,8 +15,7 @@ typedef _SlotState = ({int level, double readiness, int charges});
 _SlotState _selectSlot(World world, Skill skill) {
   final book = world.resource<SkillBook>();
   final charges = skill == Skill.shield
-      ? world.query<Barrier>(require: const [Player]).firstOrNull?.$2.charges ??
-            0
+      ? world.query<Barrier>().having<Player>().firstOrNull?.$2.charges ?? 0
       : 0;
   return (
     level: book.levelOf(skill),

@@ -7,7 +7,7 @@ final Vector3 _down = Vector3(0, -1, 0);
 final Ray _groundRay = Ray.originDirection(Vector3.zero(), Vector3(0, -1, 0));
 
 void evaluateGameRules(World world) {
-  final player = world.query<NodeRef>(require: const [Player]).firstOrNull;
+  final player = world.query<NodeRef>().having<Player>().firstOrNull;
   if (player == null) return;
   final node = player.$2.node;
   node.globalTranslationInto(_playerPos);
@@ -122,7 +122,7 @@ void _deflectRock(
 }
 
 void playerView(World world) {
-  final player = world.query<NodeRef>(require: const [Player]).firstOrNull;
+  final player = world.query<NodeRef>().having<Player>().firstOrNull;
   if (player == null) return;
   player.$2.node.globalTranslationInto(_playerPos);
   world.resource<CameraRig>().follow(_playerPos, world.dt);

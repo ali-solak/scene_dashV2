@@ -14,7 +14,6 @@ import '../system/system_access.dart';
 import '../system/system_adapter.dart';
 import '../world/world.dart';
 import 'observers.dart';
-import 'spawning.dart';
 
 /// A system that updates the world.
 typedef WorldSystem = void Function(World world);
@@ -135,14 +134,6 @@ final class GameBuilder {
     ComponentObserver<T>? onAdd,
     ComponentObserver<T>? onRemove,
   }) => ObserverRegistry.of(world).observe<T>(onAdd: onAdd, onRemove: onRemove);
-
-  /// Registers the component store for [T] up front, for types that only
-  /// ever appear in spawn lists (never queried). Idempotent.
-  void registerComponent<T extends Object>() =>
-      SpawnQueue.of(world).ensureStore<T>();
-
-  /// Registers the tag store for [T].
-  void registerTag<T>() => world.ensureTagStore<T>();
 
   SystemLabel _labelFor(WorldSystem system, String? override) {
     final existing = _labels[system];

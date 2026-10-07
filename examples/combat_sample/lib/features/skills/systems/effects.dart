@@ -2,9 +2,6 @@ part of '../skills.dart';
 
 void installSkillEffects(GameBuilder game) {
   game
-    ..registerComponent<Burning>()
-    ..registerComponent<LavaPit>()
-    ..registerComponent<Barrier>()
     ..observe<Burning>(
       onAdd: (world, entity, _) => world.tryGet<Brawler>(entity)?.sinceHurt = 0,
     )
@@ -61,7 +58,7 @@ void tickLavaPits(World world) {
     pit.sinceTick += dt;
     final cook = pit.sinceTick >= lavaTickSeconds;
     if (cook) pit.sinceTick -= lavaTickSeconds;
-    world.query2<Health, SceneTransform>(require: const [Enemy]).each((
+    world.query2<Health, SceneTransform>().having<Enemy>().each((
       enemy,
       health,
       standing,

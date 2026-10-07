@@ -24,6 +24,16 @@ final class EntityQuery extends Query {
         'EntityQuery needs at least one required type to drive iteration.',
       );
 
+  EntityQuery having<T>() => EntityQuery(_world, [
+    ..._withStores,
+    _world.ensureStore<T>(),
+  ], _withoutStores);
+
+  EntityQuery without<T>() => EntityQuery(_world, _withStores, [
+    ..._withoutStores,
+    _world.ensureStore<T>(),
+  ]);
+
   void each(EntityQueryCallback callback) {
     final driver = Query.chooseDriver(_withStores);
     _world.beginQuery(this);

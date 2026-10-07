@@ -83,13 +83,16 @@ final class PlayerAnimator {
     required this.locomotion,
     required this.shots,
     this.shotStarts = const {},
+    this.blend,
   });
 
   final Map<PlayerLoco, AnimationClip> locomotion;
   final Map<PlayerShot, AnimationClip> shots;
   final Map<PlayerShot, double> shotStarts;
+  final PoseBlend? blend;
 
   PlayerShot? active;
+  PlayerLoco? _loco;
   int _swing = 0;
   final ClipHold _pause = ClipHold();
 
@@ -127,6 +130,10 @@ final class PlayerAnimator {
   }
 
   void _enterShot(PlayerShot? desired, Fighter fighter) {
+    blend?.start(
+      desired == PlayerShot.hit ? hitBlendSeconds : shotBlendSeconds,
+    );
+    _loco = null;
     active = desired;
     final clip = desired == null ? null : shots[desired];
     if (clip == null) return;
@@ -162,6 +169,8 @@ final class PlayerAnimator {
   void _playLocomotion(Fighter fighter, PlayerMotion motion, double dt) {
     final speed = motion.velocity.length;
     final target = _locomotionTarget(fighter, motion, speed);
+    if (_loco != null && target != _loco) blend?.start(locomotionBlendSeconds);
+    _loco = target;
 
     _stride(PlayerLoco.walk, speed, walkStrideSpeed);
     _stride(PlayerLoco.run, speed, runStrideSpeed);
@@ -224,6 +233,7 @@ final class PlayerAnimator {
   void reset() {
     hold(false);
     active = null;
+    _loco = null;
     _swing = 0;
     for (final clip in shots.values) {
       clip.stop();
@@ -324,6 +334,7 @@ PlayerAnimator buildPlayerAnimator(CharacterAssets assets, Node model) {
         ..weight = 0,
   };
   return PlayerAnimator(
+    blend: PoseBlend.of(model),
     locomotion: locomotion,
     shots: shots,
     shotStarts: {

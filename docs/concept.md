@@ -64,11 +64,10 @@ world.query2<SceneTransform, Velocity>().each((entity, transform, velocity) {
 });
 ```
 
-`.each` is the main form. `for (final (e, t, v) in query.records)`
+`.each` is the main form. `for (final (e, t, v) in query.snapshot())`
 allocates a list and one record per row up front, so keep it out of hot
-loops. `query.snapshot()` is the same thing under a clearer name. Both fix
-which entities match at the moment you call them, but they still hand out
-the live component objects. If a UI selector needs values that will not
+loops. It fixes which entities match at the moment you call it, but it
+still hands out the live component objects. If a UI selector needs values that will not
 change under it, copy the fields.
 
 ## Drive from the smallest store
@@ -76,7 +75,7 @@ change under it, copy the fields.
 For a query like:
 
 ```dart
-world.query2<SceneTransform, Velocity>(require: const [Player])
+world.query2<SceneTransform, Velocity>().having<Player>()
 ```
 
 Scene-Dash walks whichever store holds the fewest entities, then checks

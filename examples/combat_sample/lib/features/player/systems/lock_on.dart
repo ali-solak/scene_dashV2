@@ -47,7 +47,8 @@ void lockOnSystem(World world) {
   final pressed = world.consumeAny<LockPressed>();
   final cycled = world.consumeAny<LockCycled>();
   final row = world
-      .query3<Fighter, PlayerMotion, SceneTransform>(require: const [Player])
+      .query3<Fighter, PlayerMotion, SceneTransform>()
+      .having<Player>()
       .firstOrNull;
   if (row == null) return;
   final (player, fighter, _, transform) = row;
@@ -107,7 +108,7 @@ typedef _Candidate = ({Entity entity, double distance, double angle});
 
 List<_Candidate> _lockCandidates(World world, SceneTransform player) {
   final candidates = <_Candidate>[];
-  world.query2<Health, SceneTransform>(require: const [Enemy]).each((
+  world.query2<Health, SceneTransform>().having<Enemy>().each((
     enemy,
     health,
     enemyTransform,
@@ -157,14 +158,10 @@ double _angleTo(World world, SceneTransform player, Entity entity) {
 
 /// Updates highlights only when their steady state changes.
 void updateEnemyHighlights(World world) {
-  final player = world.entitiesWith(require: const [Player]).firstOrNull;
+  final player = world.entitiesWith<Player>().firstOrNull;
   final locked = player == null ? null : world.tryGet<Target>(player)?.entity;
   final applied = world.resource<EnemyHighlights>().applied;
-  world.query2<Brawler, NodeRef>(require: const [Enemy]).each((
-    enemy,
-    brawler,
-    ref,
-  ) {
+  world.query2<Brawler, NodeRef>().having<Enemy>().each((enemy, brawler, ref) {
     if (world.has<HitFlash>(enemy)) {
       if (applied[enemy.index] == EnemyHighlights.flash) return;
       applied[enemy.index] = EnemyHighlights.flash;
@@ -201,7 +198,7 @@ void updateEnemyHighlights(World world) {
 /// target without touching the ground, the grass, or the enemy beside it.
 void trackLockOnLight(World world) {
   final scene = world.resource<Scene>();
-  final player = world.entitiesWith(require: const [Player]).firstOrNull;
+  final player = world.entitiesWith<Player>().firstOrNull;
   final locked = player == null ? null : world.tryGet<Target>(player)?.entity;
   final node = _lockOnLightNode ??= _buildLockOnLight(scene);
 

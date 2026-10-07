@@ -3,7 +3,6 @@ part of '../skills.dart';
 void installSkillCasting(GameBuilder game) {
   game
     ..configureEvent<CastLeap>(retainedUpdates: null)
-    ..registerComponent<PendingCast>()
     ..world.insert(SkillBook())
     ..addSystem(Schedules.frameStart, buyUpgrades, writes: const {Health})
     ..addSystem(
@@ -59,7 +58,7 @@ void buyUpgrades(World world) {
     if (book.vitalityLevel >= maxVitalityLevel) continue;
     if (!score.spend(vitalityCost(book.vitalityLevel))) continue;
     book.vitalityLevel++;
-    world.query<Health>(require: const [Player]).each((entity, health) {
+    world.query<Health>().having<Player>().each((entity, health) {
       health.max += vitalityHealthPerLevel;
       health.current += vitalityHealthPerLevel;
     });
@@ -68,7 +67,7 @@ void buyUpgrades(World world) {
 
 void castSkills(World world) {
   final book = world.resource<SkillBook>()..tick(world.dt);
-  final row = world.query<Fighter>(require: const [Player]).firstOrNull;
+  final row = world.query<Fighter>().having<Player>().firstOrNull;
   if (row == null) return;
   final (player, fighter) = row;
 
@@ -94,7 +93,8 @@ void castSkills(World world) {
 void releaseCasts(World world) {
   final book = world.resource<SkillBook>();
   final row = world
-      .query3<Fighter, PlayerMotion, SceneTransform>(require: const [Player])
+      .query3<Fighter, PlayerMotion, SceneTransform>()
+      .having<Player>()
       .firstOrNull;
   if (row == null) return;
   final (player, fighter, motion, transform) = row;
@@ -134,7 +134,7 @@ void _castFireGush(
   SceneTransform origin,
   double power,
 ) {
-  world.query2<Health, SceneTransform>(require: const [Enemy]).each((
+  world.query2<Health, SceneTransform>().having<Enemy>().each((
     enemy,
     health,
     at,
@@ -195,7 +195,7 @@ void _openLavaPit(
 }
 
 void _castWindBlast(World world, SceneTransform origin, double power) {
-  world.query2<Health, SceneTransform>(require: const [Enemy]).each((
+  world.query2<Health, SceneTransform>().having<Enemy>().each((
     enemy,
     health,
     at,
@@ -211,7 +211,7 @@ void _castWindBlast(World world, SceneTransform origin, double power) {
 
 void resetSkills(World world) {
   world.resource<SkillBook>().reset();
-  world.entitiesWith(require: const [LavaPit]).each(world.despawn);
+  world.entitiesWith<LavaPit>().each(world.despawn);
   // The player survives a restart.
-  world.entitiesWith(require: const [Player]).each(world.remove<Barrier>);
+  world.entitiesWith<Player>().each(world.remove<Barrier>);
 }

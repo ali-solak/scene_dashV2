@@ -50,12 +50,9 @@ void main() {
 
     game.emit(DamageDealt(target, runnerHealth));
     game.pump();
-    expect(game.world.query<SceneTransform>(require: const [Pop]).count(), 1);
+    expect(game.world.query<SceneTransform>().having<Pop>().count(), 1);
 
     game.pumpFixed(steps: (popSeconds * 60).ceil() + 2);
-    expect(
-      game.world.query<SceneTransform>(require: const [Pop]).isEmpty,
-      isTrue,
-    );
+    expect(game.world.query<SceneTransform>().having<Pop>().isEmpty, isTrue);
   });
 }

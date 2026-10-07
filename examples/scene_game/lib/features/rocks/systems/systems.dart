@@ -31,7 +31,10 @@ void updateFlameTrails(World world) {
   if (trails == null) return;
   final shape = trails.shape;
   shape.origins.clear();
-  world.query<NodeRef>(require: const [Rock, Flaming]).each((entity, binding) {
+  world.query<NodeRef>().having<Rock>().having<Flaming>().each((
+    entity,
+    binding,
+  ) {
     binding.node.globalTranslationInto(_rockScratch);
     shape.origins
       ..add(_rockScratch.x)

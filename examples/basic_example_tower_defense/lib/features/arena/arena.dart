@@ -15,7 +15,6 @@ part 'systems/systems.dart';
 
 void installArena(GameBuilder game) {
   game
-    ..registerComponent<Spin>()
     ..addSystem(Schedules.startup, spawnArena, runIf: hasResource<Scene>())
     ..addSystem(Schedules.update, spin);
 }

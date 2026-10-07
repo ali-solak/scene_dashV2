@@ -28,14 +28,7 @@ void main() {
     final messages = <String>[];
     final game = TestGame.headless(
       onDiagnostic: messages.add,
-      features: [
-        (game) => game
-          // Register components before the nested query runs.
-          ..registerComponent<_PA>()
-          ..registerComponent<_PB>()
-          ..registerComponent<_Enemy>()
-          ..addSystem(Schedules.update, nestedSystem),
-      ],
+      features: [(game) => game..addSystem(Schedules.update, nestedSystem)],
     );
     game.world
       ..spawn([_PA(), _PB()])

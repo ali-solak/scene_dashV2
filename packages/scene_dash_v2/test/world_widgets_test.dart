@@ -138,7 +138,7 @@ void main() {
   });
 
   testWidgets('EntityBuilder.matching honours require filters', (tester) async {
-    final game = await boot(features: [(game) => game.registerTag<Marked>()]);
+    final game = await boot(features: const []);
     game.world.spawn([Health(1)]); // unmarked: never a match
     final marked = game.world.spawn([Health(2), const Marked()]);
     drive(game);
@@ -146,7 +146,7 @@ void main() {
       GameScope(
         game: game,
         child: EntityBuilder<Health, double>.matching(
-          require: const [Marked],
+          where: (query) => query.having<Marked>(),
           select: (h) => h.current,
           builder: (context, hp) =>
               Text('$hp', textDirection: TextDirection.ltr),
@@ -170,7 +170,7 @@ void main() {
       'stops matching, and picks up exclude changes after a miss', (
     tester,
   ) async {
-    final game = await boot(features: [(game) => game.registerTag<Marked>()]);
+    final game = await boot(features: const []);
     final first = game.world.spawn([Health(1)]);
     final second = game.world.spawn([Health(2)]);
     drive(game);
@@ -178,7 +178,7 @@ void main() {
       GameScope(
         game: game,
         child: EntityBuilder<Health, double>.matching(
-          exclude: const [Marked],
+          where: (query) => query.without<Marked>(),
           select: (h) => h.current,
           builder: (context, hp) =>
               Text('$hp', textDirection: TextDirection.ltr),
@@ -287,7 +287,7 @@ void main() {
         game: game,
         child: WorldBuilder<List<double>>(
           select: (world) => [
-            for (final (_, h) in world.query<Health>().records) h.current,
+            for (final (_, h) in world.query<Health>().snapshot()) h.current,
           ],
           builder: (context, values) {
             builds++;
@@ -310,17 +310,17 @@ void main() {
   for (final (kind, select) in <(String, Object Function(World))>[
     (
       'set',
-      (world) => {for (final (_, h) in world.query<Health>().records) h.max},
+      (world) => {for (final (_, h) in world.query<Health>().snapshot()) h.max},
     ),
     (
       'map',
       (world) => {
-        for (final (e, h) in world.query<Health>().records) e.index: h.max,
+        for (final (e, h) in world.query<Health>().snapshot()) e.index: h.max,
       },
     ),
     (
       'lazy iterable',
-      (world) => world.query<Health>().records.map((r) => r.$2.max),
+      (world) => world.query<Health>().snapshot().map((r) => r.$2.max),
     ),
   ]) {
     testWidgets('WorldBuilder compares $kind selections by contents', (

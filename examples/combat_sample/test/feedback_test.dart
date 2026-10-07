@@ -50,11 +50,15 @@ void main() {
     final world = game.world;
     final enemy = dummyInFront(game);
     landPlayerStrike(game, enemy);
-    game.pumpFixed(steps: 2);
+    for (var step = 0; step < 4 && !world.has<HitFlash>(enemy); step++) {
+      game.pumpFixed(steps: 1);
+    }
 
     expect(world.has<HitFlash>(enemy), isTrue);
     expect(world.tryGet<Recoil>(enemy)?.direction.length, closeTo(1, 1e-6));
-    expect(world.has<HitPause>(enemy), isFalse, reason: 'light hits flow');
+    expect(world.has<HitPause>(enemy), isTrue, reason: 'a short pause');
+    game.pumpFixed(steps: ticksFor(lightHitPauseSeconds) + 1);
+    expect(world.has<HitPause>(enemy), isFalse);
 
     game.pumpFixed(steps: ticksFor(hitFlashSeconds) + 1);
     expect(world.has<HitFlash>(enemy), isFalse);

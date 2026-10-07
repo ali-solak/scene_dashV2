@@ -55,7 +55,7 @@ void slowMotionOnLoss(World world) {
 }
 
 void checkPlayerDeath(World world) {
-  final health = world.query<Health>(require: const [Player]).firstOrNull?.$2;
+  final health = world.query<Health>().having<Player>().firstOrNull?.$2;
   if (health != null && !health.alive) {
     world.setState(GameStatus.lost);
   }
