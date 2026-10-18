@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.6.1
+- minor perf upgrades
+
 ## 0.6.0
 - Stores create themselves on first use: spawning, `add<T>`, any type
   argument. `registerTag` and `registerComponent` are gone.

@@ -14,6 +14,9 @@ final class EntityRegistry {
   /// Highest slot index ever allocated, plus one (the live capacity in use).
   int _count = 0;
 
+  int get despawnCount => _despawnCount;
+  int _despawnCount = 0;
+
   EntityRegistry({int initialCapacity = 64})
     : _generations = Uint32List(initialCapacity),
       _alive = Uint8List(initialCapacity),
@@ -61,6 +64,7 @@ final class EntityRegistry {
     // Wrap-around is intentional and harmless for handle disambiguation.
     _generations[index] = (_generations[index] + 1) & 0xFFFFFFFF;
     _pushFree(index);
+    _despawnCount++;
     return true;
   }
 
@@ -80,6 +84,7 @@ final class EntityRegistry {
       _freeIndices[_count - 1 - i] = i;
     }
     _freeCount = _count;
+    _despawnCount++;
   }
 
   /// Resolves a slot [index] to a live [Entity] handle at the current

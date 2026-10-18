@@ -180,23 +180,44 @@ final class SceneTransform {
   /// Post-multiplies the current orientation by [delta] (local-space rotation),
   /// then re-normalizes.
   SceneTransform rotate(Quaternion delta) {
-    rotation
-      ..setFrom(rotation * delta)
-      ..normalize();
-    return this;
+    final d = delta.storage;
+    return _postMultiply(d[0], d[1], d[2], d[3]);
   }
 
   /// Rotates by [radians] about the local X axis.
-  SceneTransform rotateX(double radians) =>
-      rotate(Quaternion.axisAngle(Vector3(1, 0, 0), radians));
+  SceneTransform rotateX(double radians) {
+    final half = radians * 0.5;
+    return _postMultiply(math.sin(half), 0, 0, math.cos(half));
+  }
 
   /// Rotates by [radians] about the local Y axis.
-  SceneTransform rotateY(double radians) =>
-      rotate(Quaternion.axisAngle(Vector3(0, 1, 0), radians));
+  SceneTransform rotateY(double radians) {
+    final half = radians * 0.5;
+    return _postMultiply(0, math.sin(half), 0, math.cos(half));
+  }
 
   /// Rotates by [radians] about the local Z axis.
-  SceneTransform rotateZ(double radians) =>
-      rotate(Quaternion.axisAngle(Vector3(0, 0, 1), radians));
+  SceneTransform rotateZ(double radians) {
+    final half = radians * 0.5;
+    return _postMultiply(0, 0, math.sin(half), math.cos(half));
+  }
+
+  SceneTransform _postMultiply(double ox, double oy, double oz, double ow) {
+    final q = rotation.storage;
+    final x = q[0];
+    final y = q[1];
+    final z = q[2];
+    final w = q[3];
+    rotation
+      ..setValues(
+        w * ox + x * ow + y * oz - z * oy,
+        w * oy + y * ow + z * ox - x * oz,
+        w * oz + z * ow + x * oy - y * ox,
+        w * ow - x * ox - y * oy - z * oz,
+      )
+      ..normalize();
+    return this;
+  }
 
   // Copy and reset
 
@@ -254,7 +275,9 @@ final class SceneTransform {
   /// If the look direction is parallel to [up], a fallback up axis is chosen so
   /// the result stays well-defined. Translation and scale are not modified.
   SceneTransform lookAt(Vector3 target, {Vector3? up}) {
-    final forward = target - translation;
+    final forward = _lookForward
+      ..setFrom(target)
+      ..sub(translation);
     if (forward.length2 < 1e-12) {
       return this; // Degenerate: target == position.
     }
@@ -263,22 +286,41 @@ final class SceneTransform {
     // Local +Z points at the target: the engine's forward convention, which
     // the offline glTF import bakes source coordinates into.
     final zAxis = forward;
-    var upHint = up ?? Vector3(0, 1, 0);
-    var xAxis = upHint.cross(zAxis);
+    final upHint = _lookUp;
+    if (up == null) {
+      upHint.setValues(0, 1, 0);
+    } else {
+      upHint.setFrom(up);
+    }
+    final xAxis = upHint.crossInto(zAxis, _lookX);
     if (xAxis.length2 < 1e-12) {
       // up is parallel to the view direction: pick an orthogonal fallback.
-      upHint = (zAxis.x.abs() < 0.9) ? Vector3(1, 0, 0) : Vector3(0, 1, 0);
-      xAxis = upHint.cross(zAxis);
+      if (zAxis.x.abs() < 0.9) {
+        upHint.setValues(1, 0, 0);
+      } else {
+        upHint.setValues(0, 1, 0);
+      }
+      upHint.crossInto(zAxis, xAxis);
     }
     xAxis.normalize();
-    final yAxis = zAxis.cross(xAxis)..normalize();
+    final yAxis = zAxis.crossInto(xAxis, _lookY)..normalize();
 
     // The intended rotation maps the local basis onto (xAxis, yAxis, zAxis),
     // i.e. those are its columns. `Quaternion.setFromRotation` reads the matrix
     // such that `q.rotated(v) == matrixᵀ · v`, so transpose before converting.
     rotation
-      ..setFromRotation(Matrix3.columns(xAxis, yAxis, zAxis)..transpose())
+      ..setFromRotation(
+        _lookBasis
+          ..setColumns(xAxis, yAxis, zAxis)
+          ..transpose(),
+      )
       ..normalize();
     return this;
   }
+
+  static final Vector3 _lookForward = Vector3.zero();
+  static final Vector3 _lookUp = Vector3.zero();
+  static final Vector3 _lookX = Vector3.zero();
+  static final Vector3 _lookY = Vector3.zero();
+  static final Matrix3 _lookBasis = Matrix3.zero();
 }

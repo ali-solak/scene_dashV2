@@ -1,3 +1,4 @@
+import 'package:scene_dash_v2_core/advanced.dart' show RemoveAfterTracker;
 import 'package:scene_dash_v2_core/scene_dash_v2_core.dart';
 import 'package:test/test.dart';
 
@@ -150,6 +151,39 @@ void main() {
         isTrue,
         reason: 'the latest add carried no lifetime',
       );
+    });
+
+    test('cancel still finds rows reordered by an expiry', () {
+      final game = boot();
+      final short = game.world.spawn(<Object>[]);
+      final long = game.world.spawn(<Object>[]);
+      final moved = game.world.spawn(<Object>[]);
+      game.pump();
+
+      game.world
+        ..add(short, const Shield(), removeAfter: 2 * dt)
+        ..add(long, const Shield(), removeAfter: 60 * dt)
+        ..add(moved, const Shield(), removeAfter: 60 * dt);
+      game.pumpFixed(steps: 5);
+      expect(game.world.has<Shield>(short), isFalse);
+
+      game.world.add(moved, const Shield());
+      expect(game.world.expiryOf<Shield>(moved), isNull);
+      expect(game.world.expiryOf<Shield>(long), isNotNull);
+      expect(RemoveAfterTracker.of(game.world).length, 1);
+    });
+
+    test('tracking a dead or invalid handle is ignored', () {
+      final game = boot();
+      final stale = game.world.spawn(<Object>[]);
+      game.pump();
+      game.world.despawn(stale);
+      game.pump();
+
+      RemoveAfterTracker.of(game.world)
+        ..track(stale, Shield, 1)
+        ..track(Entity.invalid, Shield, 1);
+      expect(RemoveAfterTracker.of(game.world).length, 0);
     });
 
     test('manual remove cancels the tracker', () {

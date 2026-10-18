@@ -37,6 +37,8 @@ final class SpawnQueue {
   int _reportedAtRevision = -1;
   int _lastDiagnosticFrame = -1;
   final ObjectComponentStore<OwnedBy> _owned;
+  int _sweptAtDespawns = -1;
+  int _sweptAtRevision = -1;
 
   SpawnQueue._(this.world) : _owned = world.ensureObjectStore<OwnedBy>() {
     world
@@ -154,6 +156,13 @@ final class SpawnQueue {
 
   bool _sweepOwnedOnce() {
     if (_owned.length == 0) return false;
+    final despawns = world.entities.despawnCount;
+    final revision = _owned.revision;
+    if (despawns == _sweptAtDespawns && revision == _sweptAtRevision) {
+      return false;
+    }
+    _sweptAtDespawns = despawns;
+    _sweptAtRevision = revision;
     List<Entity>? doomed;
     for (var dense = 0; dense < _owned.length; dense++) {
       if (!world.isAlive(_owned.valueAt(dense).owner)) {
@@ -212,6 +221,7 @@ final class SpawnQueue {
 
   /// Drops unclaimed components when an entity is despawned by the world.
   void discard(Entity entity) {
+    if (_parked.isEmpty) return;
     _parked.remove(entity);
     _parkedAtFrame.remove(entity);
   }

@@ -15,6 +15,7 @@ final class RemoveAfterTracker {
   Uint32List _generations = Uint32List(8);
   Float64List _deadlines = Float64List(8);
   List<Type?> _types = List<Type?>.filled(8, null, growable: false);
+  Uint32List _rowsPerIndex = Uint32List(0);
   int _length = 0;
 
   RemoveAfterTracker._(this.world);
@@ -28,6 +29,7 @@ final class RemoveAfterTracker {
 
   /// Removes [type] from [entity] after [seconds].
   void track(Entity entity, Type type, double seconds) {
+    if (!world.isAlive(entity)) return;
     final row = _rowOf(entity, type);
     if (row >= 0) {
       _deadlines[row] = seconds;
@@ -39,6 +41,7 @@ final class RemoveAfterTracker {
     _deadlines[_length] = seconds;
     _types[_length] = type;
     _length++;
+    _countRow(entity.index);
   }
 
   /// Cancels a removal deadline.
@@ -75,8 +78,7 @@ final class RemoveAfterTracker {
       _removeRow(i);
       final entity = world.entities.resolve(index);
       if (entity.generation != generation) continue;
-      if (!world.stores.isRegistered(type) ||
-          !world.stores.require(type).containsIndex(index)) {
+      if (!(world.stores.lookup(type)?.containsIndex(index) ?? false)) {
         continue;
       }
       world.commands.removeByType(type, entity);
@@ -84,9 +86,14 @@ final class RemoveAfterTracker {
   }
 
   /// `World.reset` interplay: every tracked entity died, so drop all rows.
-  void reset() => _length = 0;
+  void reset() {
+    _length = 0;
+    _rowsPerIndex.fillRange(0, _rowsPerIndex.length, 0);
+  }
 
   int _rowOf(Entity entity, Type type) {
+    final index = entity.index;
+    if (index >= _rowsPerIndex.length || _rowsPerIndex[index] == 0) return -1;
     for (var i = 0; i < _length; i++) {
       if (_indices[i] == entity.index &&
           _generations[i] == entity.generation &&
@@ -97,7 +104,20 @@ final class RemoveAfterTracker {
     return -1;
   }
 
+  void _countRow(int index) {
+    if (index >= _rowsPerIndex.length) {
+      var capacity = _rowsPerIndex.isEmpty ? 64 : _rowsPerIndex.length;
+      while (capacity <= index) {
+        capacity *= 2;
+      }
+      _rowsPerIndex = Uint32List(capacity)
+        ..setRange(0, _rowsPerIndex.length, _rowsPerIndex);
+    }
+    _rowsPerIndex[index]++;
+  }
+
   void _removeRow(int row) {
+    _rowsPerIndex[_indices[row]]--;
     final last = _length - 1;
     if (row != last) {
       _indices[row] = _indices[last];

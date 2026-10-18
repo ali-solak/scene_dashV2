@@ -321,6 +321,23 @@ void main() {
       expect(game.world.entities.aliveCount, 0);
     });
 
+    test('ownedBy an already dead owner despawns on a quiet boundary', () {
+      final game = TestGame.headless(features: const []);
+      final owner = game.world.spawn([Position(0)]);
+      final kept = game.world.spawn([
+        Position(1),
+      ], ownedBy: game.world.spawn([]));
+      game.pump();
+      game.world.despawn(owner);
+      game.pump();
+      game.pump();
+
+      final orphan = game.world.spawn([Position(2)], ownedBy: owner);
+      game.pump();
+      expect(game.world.isAlive(orphan), isFalse);
+      expect(game.world.isAlive(kept), isTrue);
+    });
+
     test('World.reset rejects pending spawns; flush before resetting', () {
       final game = TestGame.headless(features: const []);
       game.world.spawn([Position(0)]);

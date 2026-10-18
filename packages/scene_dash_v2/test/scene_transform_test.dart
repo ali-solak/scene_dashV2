@@ -81,6 +81,30 @@ void main() {
       );
     });
 
+    test('rotate matches quaternion multiplication', () {
+      final base = Quaternion.euler(0.5, 0.3, 0.2);
+      final delta = Quaternion.euler(-0.2, 0.7, 0.1);
+      final t = SceneTransform.zero()
+        ..setRotation(base)
+        ..rotate(delta);
+      _expectVec3Close(
+        t.rotation.rotated(Vector3(1, 2, 3)),
+        (base * delta).rotated(Vector3(1, 2, 3)),
+        tol: 1e-6,
+      );
+    });
+
+    test('rotate by its own rotation squares it', () {
+      final squared = SceneTransform.zero()..setRotationX(0.3);
+      squared.rotate(squared.rotation);
+      final doubled = SceneTransform.zero()..setRotationX(0.6);
+      _expectVec3Close(
+        squared.rotation.rotated(Vector3(0, 1, 0)),
+        doubled.rotation.rotated(Vector3(0, 1, 0)),
+        tol: 1e-6,
+      );
+    });
+
     test('rotation stays normalized after many compositions', () {
       final t = SceneTransform.zero();
       for (var i = 0; i < 1000; i++) {

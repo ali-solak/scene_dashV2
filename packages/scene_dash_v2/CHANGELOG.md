@@ -1,4 +1,9 @@
 # Changelog
+
+## 0.6.1
+- minor perf upgrades
+- upgrade to flutter scene 0.24.3
+
 ## 0.6.0
 - `SceneTransform` sync writes a node only when its transform or bound node
   changed (or the node's matrix was replaced); unchanged entities cost about
