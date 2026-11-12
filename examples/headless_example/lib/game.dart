@@ -63,9 +63,9 @@ void move(World world) {
 
 void referee(World world) {
   final race = world.resource<RaceState>();
-  for (final _ in world.events<PlayerSpawned>()) {
+  world.eachEvent<PlayerSpawned>((_) {
     race.spawnsSeen++;
-  }
+  });
   race.boostAvailable = world.entitiesWith<BoostMarker>().count() > 0;
   if (race.winner == null) {
     final leader = world.query<Position>().having<PlayerMarker>().firstOrNull;
@@ -84,18 +84,10 @@ void installRace(GameBuilder game) {
   game.world.insert(RaceState());
   game
     ..addSystem(Schedules.startup, spawnRun, writes: {Position, Velocity})
-    ..addSystem(
-      Schedules.fixedUpdate,
-      move,
-      writes: {Position},
-      reads: {Velocity},
-    )
-    ..addSystem(
-      Schedules.fixedUpdate,
-      referee,
-      reads: {Position},
-      after: [move],
-    )
+    ..addSystems(Schedules.fixedUpdate, chain: true, [
+      (move, reads: {Velocity}, writes: {Position}),
+      (referee, reads: {Position}, writes: const {}),
+    ])
     ..addSystem(
       Schedules.fixedUpdate,
       reportStatus,

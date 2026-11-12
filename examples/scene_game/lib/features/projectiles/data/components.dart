@@ -46,7 +46,6 @@ final class Blaster {
   BlasterShots update({
     required bool pressed,
     required bool released,
-    required bool canceled,
     required bool held,
     required double dt,
   }) {
@@ -63,9 +62,7 @@ final class Blaster {
     }
 
     if (phase.state == BlasterPhase.charging) {
-      if (canceled) {
-        phase.go(BlasterPhase.ready);
-      } else if (released) {
+      if (released) {
         if (phase.elapsed >= blasterChargeThreshold) {
           charged = charge01;
           _startCooldown(chargedShotCooldown);

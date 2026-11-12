@@ -7,23 +7,15 @@ library;
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
+import 'package:scene_dash_v2/scene_dash_v2.dart';
+
+import '../features/player/player.dart' show CombatAction;
 
 class TouchControls extends StatelessWidget {
-  const TouchControls({
-    super.key,
-    required this.onMove,
-    required this.onAttackChanged,
-    required this.onRoll,
-    required this.onHeavy,
-  });
+  const TouchControls({super.key, required this.onMove});
 
   /// Normalized stick position: x right, y forward (up on screen).
   final void Function(double x, double y) onMove;
-
-  final ValueChanged<bool> onAttackChanged;
-
-  final VoidCallback onRoll;
-  final VoidCallback onHeavy;
 
   @override
   Widget build(BuildContext context) {
@@ -39,11 +31,23 @@ class TouchControls extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                _ActionButton(label: 'ROLL', size: 64, onPressed: onRoll),
-                const SizedBox(height: 16),
-                _ActionButton(label: 'HVY', size: 64, onPressed: onHeavy),
-                const SizedBox(height: 16),
-                _HoldButton(label: 'ATK', size: 90, onChanged: onAttackChanged),
+                _ActionButton(
+                  label: 'ROLL',
+                  size: 64,
+                  action: CombatAction.roll,
+                ),
+                SizedBox(height: 16),
+                _ActionButton(
+                  label: 'HVY',
+                  size: 64,
+                  action: CombatAction.heavy,
+                ),
+                SizedBox(height: 16),
+                _ActionButton(
+                  label: 'ATK',
+                  size: 90,
+                  action: CombatAction.attack,
+                ),
               ],
             ),
           ],
@@ -128,51 +132,27 @@ class _VirtualJoystickState extends State<VirtualJoystick> {
   }
 }
 
-class _HoldButton extends StatelessWidget {
-  const _HoldButton({
-    required this.label,
-    required this.size,
-    required this.onChanged,
-  });
-
-  final String label;
-  final double size;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Listener(
-      behavior: HitTestBehavior.opaque,
-      onPointerDown: (_) => onChanged(true),
-      onPointerUp: (_) => onChanged(false),
-      onPointerCancel: (_) => onChanged(false),
-      child: _ButtonFace(label: label, size: size),
-    );
-  }
-}
-
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
     required this.label,
     required this.size,
-    required this.onPressed,
+    required this.action,
   });
 
   final String label;
   final double size;
-  final VoidCallback onPressed;
+  final CombatAction action;
 
   @override
   Widget build(BuildContext context) {
-    return Listener(
-      behavior: HitTestBehavior.opaque,
-      onPointerDown: (_) => onPressed(),
+    return TouchAction<CombatAction>(
+      action: action,
       child: _ButtonFace(label: label, size: size),
     );
   }
 }
 
-/// The shared round face both buttons wear.
+/// The shared round face every button wears.
 class _ButtonFace extends StatelessWidget {
   const _ButtonFace({required this.label, required this.size});
 

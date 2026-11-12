@@ -2,29 +2,24 @@ part of '../player.dart';
 
 /// The knight's model, its animation mapper, and the i-frame ghost.
 void installPlayerVisuals(GameBuilder game) {
-  game
-    ..addSystem(
-      Schedules.update,
-      attachPlayerVisuals,
-      inSet: GameSets.logic,
-      reads: const {Player},
-      runIf: hasResource<Scene>(),
-    )
-    ..addSystem(
-      Schedules.update,
-      updatePlayerAnimation,
-      inSet: GameSets.logic,
-      reads: const {Player, Fighter, PlayerMotion},
-      writes: const {PlayerAnimator},
-      runIf: hasResource<Scene>(),
-    )
-    ..addSystem(
-      Schedules.update,
-      updatePlayerGhost,
-      inSet: GameSets.logic,
-      reads: const {Player, Fighter, NodeRef, Knockback},
-      runIf: hasResource<Scene>(),
-    );
+  game.addSystems(
+    Schedules.update,
+    inSet: GameSets.logic,
+    runIf: hasResource<Scene>(),
+    [
+      (attachPlayerVisuals, reads: const {Player}, writes: const {}),
+      (
+        updatePlayerAnimation,
+        reads: const {Player, Fighter, PlayerMotion},
+        writes: const {PlayerAnimator},
+      ),
+      (
+        updatePlayerGhost,
+        reads: const {Player, Fighter, NodeRef, Knockback},
+        writes: const {},
+      ),
+    ],
+  );
 }
 
 /// Attaches the player model or fallback capsule.

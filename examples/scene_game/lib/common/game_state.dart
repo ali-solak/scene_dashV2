@@ -10,18 +10,6 @@ sealed class GameEvent {
   const GameEvent();
 }
 
-final class FirePressed extends GameEvent {
-  const FirePressed();
-}
-
-final class FireReleased extends GameEvent {
-  const FireReleased();
-}
-
-final class FireCanceled extends GameEvent {
-  const FireCanceled();
-}
-
 final class RestartRequested extends GameEvent {
   const RestartRequested();
 }

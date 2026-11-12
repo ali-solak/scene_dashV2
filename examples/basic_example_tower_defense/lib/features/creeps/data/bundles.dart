@@ -28,6 +28,7 @@ List<Object> _creep(World world, double radius, int index) {
       radius,
       start.z + sin(angle) * spawnScatter,
     ),
+    InterpolateTransform(),
     const DespawnOnExit(GameStatus.playing),
   ];
 }

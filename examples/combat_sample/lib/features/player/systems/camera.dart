@@ -39,10 +39,10 @@ void updateCameraRig(World world) {
     return;
   }
 
-  for (final hit in world.events<DamageDealt>()) {
-    if (!hit.impact) continue;
+  world.eachEvent<DamageDealt>((hit) {
+    if (!hit.impact) return;
     rig.shake.addTrauma(hitTrauma(hit));
-  }
+  });
 
   final position = transform.translation;
   final target = _targetTransform(world, player);

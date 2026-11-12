@@ -33,4 +33,8 @@ jobs:
         working-directory: packages/scene_dash_v2
       - run: flutter test
         working-directory: examples/scene_game
+      - run: flutter test
+        working-directory: examples/combat_sample
+      - run: flutter test
+        working-directory: examples/basic_example_tower_defense
 

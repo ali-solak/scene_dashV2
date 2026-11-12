@@ -113,9 +113,9 @@ void setupWorld(World world) {
 /// Applies requested quality settings.
 void applyGraphicsQuality(World world) {
   var level = -1;
-  for (final request in world.events<QualityRequested>()) {
+  world.eachEvent<QualityRequested>((request) {
     level = request.level;
-  }
+  });
   if (level < 0 || level >= qualityPresets.length) return;
 
   final quality = world.resource<GraphicsQuality>();

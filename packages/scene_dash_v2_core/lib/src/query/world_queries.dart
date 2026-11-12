@@ -7,7 +7,7 @@ import 'query_4.dart';
 /// Query constructors that return query classes.
 extension ClassicWorldQueries on World {
   /// Creates a single-component query over component type [A].
-  Query1<A> query1<A>({
+  Query1<A> rawQuery1<A>({
     List<Type> withTypes = const <Type>[],
     List<Type> withoutTypes = const <Type>[],
   }) {
@@ -20,7 +20,7 @@ extension ClassicWorldQueries on World {
   }
 
   /// Creates a two-component query over component types [A] and [B].
-  Query2<A, B> query2<A, B>({
+  Query2<A, B> rawQuery2<A, B>({
     List<Type> withTypes = const <Type>[],
     List<Type> withoutTypes = const <Type>[],
   }) {
@@ -34,7 +34,7 @@ extension ClassicWorldQueries on World {
   }
 
   /// Creates a three-component query over [A], [B] and [C].
-  Query3<A, B, C> query3<A, B, C>({
+  Query3<A, B, C> rawQuery3<A, B, C>({
     List<Type> withTypes = const <Type>[],
     List<Type> withoutTypes = const <Type>[],
   }) {
@@ -49,7 +49,7 @@ extension ClassicWorldQueries on World {
   }
 
   /// Creates a four-component query over [A], [B], [C] and [D].
-  Query4<A, B, C, D> query4<A, B, C, D>({
+  Query4<A, B, C, D> rawQuery4<A, B, C, D>({
     List<Type> withTypes = const <Type>[],
     List<Type> withoutTypes = const <Type>[],
   }) {

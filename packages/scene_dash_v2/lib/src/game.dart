@@ -9,6 +9,7 @@ import 'scene_driver.dart';
 import 'scene_mount.dart';
 import 'scene_node_index.dart';
 import 'scene_sync.dart';
+import 'transform_interpolation.dart';
 
 /// Connects an [App] to a scene.
 final class Game {
@@ -37,10 +38,13 @@ final class Game {
     _nodeIndex,
   );
 
+  final TransformCapture _capture = TransformCapture();
+
   late final EcsFrameLoop _loop = EcsFrameLoop(
     app,
     onCommandBoundary: _mountStep,
     onFrameEnd: _onFrameEnd,
+    onFixedStepStart: _capture.capture,
   );
 
   /// Finishes scene work for one frame.
@@ -74,6 +78,7 @@ final class Game {
     AppDiagnostics diagnostics = const AppDiagnostics(),
     void Function()? onCommandBoundary,
     void Function()? onFrameEnd,
+    this.maxFrameDelta = 0.25,
   }) : root = scene.root,
        _extraCommandBoundary = onCommandBoundary,
        _extraFrameEnd = onFrameEnd,
@@ -90,6 +95,7 @@ final class Game {
     AppDiagnostics diagnostics = const AppDiagnostics(),
     void Function()? onCommandBoundary,
     void Function()? onFrameEnd,
+    this.maxFrameDelta = 0.25,
   }) : scene = null,
        root = Node(),
        _extraCommandBoundary = onCommandBoundary,
@@ -109,6 +115,8 @@ final class Game {
 
   final void Function()? _extraCommandBoundary;
   final void Function()? _extraFrameEnd;
+
+  final double maxFrameDelta;
 
   /// The ECS world.
   World get world => app.world;
@@ -176,6 +184,7 @@ final class Game {
     // stores exist, then mount any nodes spawned by startup systems and flush so
     // they are parented before the first frame's fixed/update steps run.
     _mountAdapter.initialize(app.world);
+    _capture.initialize(app.world);
     _mountStep();
     final driver = EcsSceneDriver(_loop);
     root.addComponent(driver);
@@ -187,7 +196,10 @@ final class Game {
   void onTick(Duration elapsed, double deltaSeconds) {
     final driver = _driver;
     if (driver == null) return;
-    final scaledDelta = _loop.frameStart(elapsed, deltaSeconds);
+    final wallDelta = deltaSeconds > maxFrameDelta
+        ? maxFrameDelta
+        : (deltaSeconds < 0 ? 0.0 : deltaSeconds);
+    final scaledDelta = _loop.frameStart(elapsed, wallDelta);
     final scene = this.scene;
     if (scene != null) {
       scene.update(scaledDelta);

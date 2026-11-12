@@ -38,47 +38,48 @@ void installEnemyVisuals(GameBuilder game) {
   game
     // Return despawned models to the pool.
     ..observe<ModelSlot>(onRemove: releaseEnemyModel)
-    // Attach bodies to new enemies.
-    ..addSystem(
-      Schedules.update,
-      attachEnemyVisuals,
+    ..group(
       inSet: GameSets.logic,
-      reads: const {Enemy, Brawler},
       runIf: hasResource<Scene>(),
-    )
-    ..addSystem(
-      Schedules.update,
-      updateBrawlerMaterials,
-      inSet: GameSets.logic,
-      reads: const {Enemy, Brawler, Dissolving},
-      writes: const {BrawlerVisuals},
-      runIf: hasResource<Scene>(),
-    )
-    ..addSystem(
-      Schedules.update,
-      applyEnemyRecoil,
-      inSet: GameSets.logic,
-      reads: const {Enemy, Brawler, Recoil},
-      writes: const {BrawlerVisuals},
-      after: const [updateBrawlerMaterials, updateGiantGrowth],
-      runIf: hasResource<Scene>(),
-    )
-    ..addSystem(
-      Schedules.update,
-      updateEnemyAnimation,
-      inSet: GameSets.logic,
-      reads: const {Enemy, Brawler, HitPause},
-      writes: const {EnemyAnimator},
-      runIf: hasResource<Scene>(),
-    )
-    ..addSystem(
-      Schedules.update,
-      updateGiantGrowth,
-      inSet: GameSets.logic,
-      reads: const {Enemy, Brawler, Transforming},
-      writes: const {BrawlerVisuals},
-      after: const [updateBrawlerMaterials],
-      runIf: hasResource<Scene>(),
+      (game) => game
+        // Attach bodies to new enemies.
+        ..addSystem(
+          Schedules.update,
+          attachEnemyVisuals,
+          reads: const {Enemy, Brawler},
+        )
+        ..addSystem(
+          Schedules.update,
+          updateBrawlerMaterials,
+          reads: const {Enemy, Brawler, Dissolving},
+          writes: const {BrawlerVisuals},
+        )
+        ..addSystem(
+          Schedules.update,
+          applyEnemyRecoil,
+          reads: const {Enemy, Brawler, Recoil},
+          writes: const {BrawlerVisuals},
+          after: const [updateBrawlerMaterials, updateGiantGrowth],
+        )
+        ..addSystem(
+          Schedules.update,
+          updateEnemyAnimation,
+          reads: const {Enemy, Brawler, HitPause},
+          writes: const {EnemyAnimator},
+        )
+        ..addSystem(
+          Schedules.update,
+          updateGiantGrowth,
+          reads: const {Enemy, Brawler, Transforming},
+          writes: const {BrawlerVisuals},
+          after: const [updateBrawlerMaterials],
+        )
+        ..addSystem(
+          Schedules.update,
+          updateHealthBars,
+          reads: const {Enemy, Brawler, Health, SceneTransform},
+          writes: const {EnemyHealthBar},
+        ),
     )
     // Fixed step, unlike the rest of this group: it rides the brawl
     // machine's entry edge, which is one fixed tick wide.
@@ -89,14 +90,6 @@ void installEnemyVisuals(GameBuilder game) {
       reads: const {Player, Enemy, Brawler, SceneTransform},
       // Run after enemy decisions.
       after: const [brawlerDriver, coordinateAggro],
-    )
-    ..addSystem(
-      Schedules.update,
-      updateHealthBars,
-      inSet: GameSets.logic,
-      reads: const {Enemy, Brawler, Health, SceneTransform},
-      writes: const {EnemyHealthBar},
-      runIf: hasResource<Scene>(),
     );
 }
 
@@ -250,12 +243,13 @@ void releaseEnemyModel(World world, Entity entity, ModelSlot slot) {
 /// Render-side consumer of the brawl machine + velocity.
 void updateEnemyAnimation(World world) {
   final dt = world.dt;
+  final paused = world.handle<HitPause>();
   world.query2<Brawler, EnemyAnimator>().having<Enemy>().each((
     enemy,
     brawler,
     animator,
   ) {
-    if (animator.hold(world.has<HitPause>(enemy))) return;
+    if (animator.hold(paused.has(enemy))) return;
     animator.update(
       brawler,
       dt,
@@ -265,12 +259,13 @@ void updateEnemyAnimation(World world) {
 }
 
 void applyEnemyRecoil(World world) {
+  final recoils = world.handle<Recoil>();
   world.query2<Brawler, BrawlerVisuals>().having<Enemy>().each((
     enemy,
     brawler,
     visuals,
   ) {
-    final recoil = world.tryGet<Recoil>(enemy);
+    final recoil = recoils.of(enemy);
     if (recoil == null) {
       visuals.applyLean(_noLean, 0);
       return;

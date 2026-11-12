@@ -4,6 +4,7 @@ List<Object> towerBundle(World world, TowerKind kind, Vector3 at) => [
   Tower(kind),
   Health(kind.health),
   SceneTransform.fromVector(at),
+  const Static(),
   const DespawnOnExit(GameStatus.playing),
   ...switch (kind) {
     TowerKind.bolt => [Gun()],

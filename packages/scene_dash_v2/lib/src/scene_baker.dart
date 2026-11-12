@@ -35,8 +35,8 @@ extension WorldSceneBaking on World {
   /// level only bakes the new nodes. Returns how many entities were spawned.
   ///
   /// [bundle] builds each entity's components, defaulting to the authored
-  /// component plus a [NodeRef]. Types it returns must be registered
-  /// (`registerComponent`/`registerTag` at install time) or they park unseen.
+  /// component plus a [NodeRef]. Types it returns that nothing else names
+  /// park unseen until `world.ensureStore<T>()` or a query creates their store.
   int bakeSceneComponents<T extends Object>({
     SceneBundle<T>? bundle,
     Node? root,

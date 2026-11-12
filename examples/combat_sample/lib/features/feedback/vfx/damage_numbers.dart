@@ -22,9 +22,9 @@ void installDamageNumbers(GameBuilder game) {
 
 void spawnDamageNumbers(World world) {
   var spread = 0;
-  for (final hit in world.events<DamageDealt>()) {
+  world.eachEvent<DamageDealt>((hit) {
     final transform = world.tryGet<SceneTransform>(hit.target);
-    if (transform == null) continue;
+    if (transform == null) return;
     final side = (spread++ % 3 - 1) * damageNumberSpread;
     final origin = transform.translation.clone()..y += damageNumberHeight;
     final opacity = ValueNotifier<double>(1);
@@ -59,7 +59,7 @@ void spawnDamageNumbers(World world) {
       NodeRef(node),
       DespawnAfter(damageNumberSeconds),
     ]);
-  }
+  });
 }
 
 void floatDamageNumbers(World world) {

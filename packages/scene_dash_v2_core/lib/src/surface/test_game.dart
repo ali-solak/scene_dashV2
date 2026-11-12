@@ -13,7 +13,6 @@ import '../time/frame_time.dart';
 import '../time/game_clock.dart';
 import '../world/world.dart';
 import 'game_builder.dart';
-import 'remove_after.dart';
 import 'spawning.dart';
 import 'world_extensions.dart';
 
@@ -60,7 +59,7 @@ final class TestGame {
   World get world => app.world;
 
   /// The gameplay clock (pause, `timeScale`, `freezeFor` hitstop).
-  GameClock get clock => world.resources.get<GameClock>();
+  GameClock get clock => world.clock;
 
   // Input
 
@@ -84,7 +83,7 @@ final class TestGame {
 
   // Frames
 
-  void _boundary() => SpawnQueue.of(world).flush();
+  void _boundary() => world.spawnQueue.flush();
 
   /// Runs startup once.
   void start() {
@@ -119,7 +118,7 @@ final class TestGame {
       ..elapsed = _elapsed
       ..frame += 1;
     // Age inputs before frame start.
-    advanceInputBuffers(world.resources.values, dt);
+    advanceInput(world.resources.values, dt);
     app.runSchedule(Schedules.frameStart);
     app.applyStateTransitions();
     _boundary();
@@ -131,12 +130,19 @@ final class TestGame {
       fixedTime
         ..delta = fixedDt
         ..tick += 1;
-      app.runSchedule(Schedules.fixedUpdate);
+      final resources = world.resources.values;
+      beginInputStep(resources);
+      try {
+        app.runSchedule(Schedules.fixedUpdate);
+      } finally {
+        endInputStep(resources);
+      }
       // Refreshes win before deadlines advance.
-      world.resources.tryGet<RemoveAfterTracker>()?.tick(fixedDt);
+      world.removeAfterTrackerOrNull?.tick(fixedDt);
       _boundary();
     }
-    world.resources.get<FrameTime>().delta = scaled;
+    fixedTime.alpha = _accumulator / fixedDt;
+    world.frameTime.delta = scaled;
     app.runSchedule(Schedules.postPhysics);
     _boundary();
     app.runSchedule(Schedules.update);

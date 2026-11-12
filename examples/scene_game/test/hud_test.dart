@@ -36,23 +36,15 @@ void main() {
     }
   }
 
-  Future<void> pumpHud(
-    WidgetTester tester,
-    WorldGame game, {
-    void Function(bool)? onFireChanged,
-    VoidCallback? onFireCanceled,
-  }) {
+  Future<void> pumpHud(WidgetTester tester, WorldGame game) {
     return tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: GameScope(
             game: game,
-            child: GameHud(
-              onLeftChanged: (_) {},
-              onRightChanged: (_) {},
-              onFireChanged: onFireChanged ?? (_) {},
-              onFireCanceled: onFireCanceled ?? () {},
-              onRestart: () {},
+            child: InputBindings<GameAction>(
+              keys: const {},
+              child: GameHud(onRestart: () {}),
             ),
           ),
         ),
@@ -78,38 +70,57 @@ void main() {
     expect(fire.dy, greaterThan(size.height / 2));
   });
 
-  testWidgets('touch down begins holding and release fires', (tester) async {
-    final events = <bool>[];
-    await pumpHud(tester, await bootHud(), onFireChanged: events.add);
+  testWidgets('touch down holds fire and lifting releases it', (tester) async {
+    final game = await bootHud();
+    final buttons = game.world.buttons<GameAction>();
+    await pumpHud(tester, game);
 
     final gesture = await tester.startGesture(
       tester.getCenter(find.byIcon(Icons.bolt_rounded)),
     );
-    await tester.pump();
-    expect(events.last, isTrue, reason: 'press begins holding');
-
+    expect(buttons.pressed(GameAction.fire), isTrue);
     await gesture.up();
-    await tester.pump();
-    expect(events.last, isFalse, reason: 'release fires (ends holding)');
+    expect(buttons.pressed(GameAction.fire), isFalse);
+    buttons.advanceFrame();
+    expect(buttons.justReleased(GameAction.fire), isTrue);
   });
 
-  testWidgets('tap cancel cancels rather than fires', (tester) async {
-    var canceled = false;
-    final events = <bool>[];
-    await pumpHud(
-      tester,
-      await bootHud(),
-      onFireChanged: events.add,
-      onFireCanceled: () => canceled = true,
-    );
+  testWidgets('dragging off fire cancels rather than fires', (tester) async {
+    final game = await bootHud();
+    final buttons = game.world.buttons<GameAction>();
+    await pumpHud(tester, game);
 
     final gesture = await tester.startGesture(
       tester.getCenter(find.byIcon(Icons.bolt_rounded)),
     );
+    await gesture.moveBy(const Offset(-80, 0));
+    expect(buttons.pressed(GameAction.fire), isFalse);
+    await gesture.up();
+    buttons.advanceFrame();
+    expect(buttons.justReleased(GameAction.fire), isFalse);
+  });
+
+  testWidgets('a held key lights the matching touch button', (tester) async {
+    final game = await bootHud();
+    await pumpHud(tester, game);
+    Color fill() =>
+        (tester
+                    .widget<AnimatedContainer>(
+                      find
+                          .ancestor(
+                            of: find.byIcon(Icons.arrow_left_rounded),
+                            matching: find.byType(AnimatedContainer),
+                          )
+                          .first,
+                    )
+                    .decoration!
+                as BoxDecoration)
+            .color!;
+    final idle = fill();
+    game.world.buttons<GameAction>().press(GameAction.left);
+    drive(game);
     await tester.pump();
-    await gesture.cancel();
-    await tester.pump();
-    expect(canceled, isTrue);
+    expect(fill(), isNot(idle));
   });
 
   testWidgets('charge progress is shown in the fire semantics', (tester) async {
@@ -118,17 +129,10 @@ void main() {
     // Drive the real blaster to exactly 60% charge.
     const span = blasterMaxChargeDuration - blasterChargeThreshold;
     game.world.single<Blaster>()
-      ..update(
-        pressed: true,
-        released: false,
-        canceled: false,
-        held: true,
-        dt: 0,
-      )
+      ..update(pressed: true, released: false, held: true, dt: 0)
       ..update(
         pressed: false,
         released: false,
-        canceled: false,
         held: true,
         dt: blasterChargeThreshold + 0.6 * span,
       );
@@ -142,27 +146,14 @@ void main() {
     final game = await bootHud();
     // A charged release puts the real blaster into cooldown.
     game.world.single<Blaster>()
-      ..update(
-        pressed: true,
-        released: false,
-        canceled: false,
-        held: true,
-        dt: 0,
-      )
+      ..update(pressed: true, released: false, held: true, dt: 0)
       ..update(
         pressed: false,
         released: false,
-        canceled: false,
         held: true,
         dt: blasterChargeThreshold + 0.2,
       )
-      ..update(
-        pressed: false,
-        released: true,
-        canceled: false,
-        held: false,
-        dt: 0,
-      );
+      ..update(pressed: false, released: true, held: false, dt: 0);
     await pumpHud(tester, game);
     expect(find.bySemanticsLabel('Blaster cooling down'), findsOneWidget);
     handle.dispose();

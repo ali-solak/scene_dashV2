@@ -13,8 +13,6 @@
 //   * record view, constructed per call — the README idiom inside a system;
 //   * record view `.snapshot()` for-in — the documented cold-path alternative.
 import 'package:scene_dash_v2_core/advanced.dart';
-import 'package:scene_dash_v2_core/scene_dash_v2_core.dart'
-    show WorldRecordQueries;
 import 'package:scene_dash_v2_benchmarks/harness.dart';
 
 final class Position {
@@ -58,9 +56,10 @@ void main(List<String> args) {
   // queries are built here and the record views are constructed inline —
   // which is the point: per-call construction is what the record spelling
   // costs.
-  final cachedQ2 = ClassicWorldQueries(world).query2<Position, Velocity>();
-  final cachedQ2Unfrozen = ClassicWorldQueries(world)
-      .query2<Position, Velocity>(withoutTypes: const [Frozen]);
+  final cachedQ2 = world.rawQuery2<Position, Velocity>();
+  final cachedQ2Unfrozen = world.rawQuery2<Position, Velocity>(
+    withoutTypes: const [Frozen],
+  );
 
   var sink = 0.0;
 
@@ -74,7 +73,7 @@ void main(List<String> args) {
     });
   });
   benchRepeat('record view .each (per-call construct)', n, () {
-    WorldRecordQueries(world).query2<Position, Velocity>().each((e, p, v) {
+    world.query2<Position, Velocity>().each((e, p, v) {
       p
         ..x += v.x * dt
         ..y += v.y * dt
@@ -82,9 +81,7 @@ void main(List<String> args) {
     });
   });
   benchRepeat('record view .snapshot() for-in', n, () {
-    for (final (_, p, v) in WorldRecordQueries(
-      world,
-    ).query2<Position, Velocity>().snapshot()) {
+    for (final (_, p, v) in world.query2<Position, Velocity>().snapshot()) {
       p
         ..x += v.x * dt
         ..y += v.y * dt
@@ -97,26 +94,17 @@ void main(List<String> args) {
     cachedQ2Unfrozen.each((e, p, v) => p.x += v.x * dt);
   });
   benchRepeat('record view .each exclude:', n, () {
-    WorldRecordQueries(world)
-        .query2<Position, Velocity>()
-        .without<Frozen>()
-        .each((e, p, v) => p.x += v.x * dt);
+    world.query2<Position, Velocity>().without<Frozen>().each(
+      (e, p, v) => p.x += v.x * dt,
+    );
   });
 
   section('Construction alone (object kept observable)', entities: 1);
-  benchRepeat('classic query2(...) construct', 1, () {
-    sink +=
-        identityHashCode(
-          ClassicWorldQueries(world).query2<Position, Velocity>(),
-        ) &
-        1;
+  benchRepeat('classic rawQuery2(...) construct', 1, () {
+    sink += identityHashCode(world.rawQuery2<Position, Velocity>()) & 1;
   }, minTime: const Duration(milliseconds: 200));
   benchRepeat('record query2(...) construct', 1, () {
-    sink +=
-        identityHashCode(
-          WorldRecordQueries(world).query2<Position, Velocity>(),
-        ) &
-        1;
+    sink += identityHashCode(world.query2<Position, Velocity>()) & 1;
   }, minTime: const Duration(milliseconds: 200));
 
   // Keep `sink` observable so the read loops are not optimized away.

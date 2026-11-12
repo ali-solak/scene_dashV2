@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.7.0
+- `InputBindings<A>(keys: {...})` and `TouchAction<A>` map keys and touch
+  areas onto `ButtonInput<A>`. Sources on one action are counted; losing
+  focus, pausing the app or unmounting cancels what they held.
+  `TouchAction(cancelOnDrag: true)` cancels once the pointer leaves touch
+  slop. Debug builds warn when the bound input is not the world's resource,
+  since its edges would never latch.
+- `InterpolateTransform`: an opt-in component whose node gets the blend of
+  the last two fixed steps at `FixedTime.alpha`. `snap()` skips the blend
+  after a teleport. `SceneTransform` keeps the real value. Under a
+  `PhysicsWorld` the alpha follows the scene's physics accumulator.
+- `Static`: transform sync writes the entity once, and again only when its
+  `SceneTransform` is re-added or `Static` is removed. Only the changed rows
+  are rewritten.
+- `onTick` clamps the wall delta to `maxFrameDelta` (0.25 s, a `boot`
+  parameter) before the clock scales it, so both `delta` and
+  `unscaledDelta` are clamped.
+- `WorldGame.reassemble` reports once in debug that schedule changes need a
+  hot restart.
+- Requires scene_dash_v2_core 0.7.0.
+
 ## 0.6.1
 - minor perf upgrades
 - upgrade to flutter scene 0.24.3

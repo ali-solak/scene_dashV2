@@ -17,7 +17,7 @@ void main(List<String> args) {
     final entity = world.entities.spawn();
     world.insertNow<Position>(entity, Position(i.toDouble()));
   }
-  final query = world.query1<Position>();
+  final query = world.rawQuery1<Position>();
   var sink = 0;
 
   section('Query entity handle probe', entities: n);

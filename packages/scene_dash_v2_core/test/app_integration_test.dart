@@ -55,7 +55,7 @@ final class MovePlayerAdapter implements SystemAdapter {
 
   @override
   void initialize(World world) {
-    _players = world.query2<Position, Velocity>(withTypes: const [Player]);
+    _players = world.rawQuery2<Position, Velocity>(withTypes: const [Player]);
     _time = world.resources.get<FixedTime>();
   }
 
@@ -129,20 +129,20 @@ void main() {
 
         // After startup, exactly one player exists at the origin.
         final afterStartup = <Position>[];
-        app.world.query1<Position>().each((e, p) => afterStartup.add(p));
+        app.world.rawQuery1<Position>().each((e, p) => afterStartup.add(p));
         expect(afterStartup, hasLength(1));
         expect(afterStartup.single.x, 0);
 
         app.runSchedule(Schedules.update);
 
         final moved = <Position>[];
-        app.world.query1<Position>().each((e, p) => moved.add(p));
+        app.world.rawQuery1<Position>().each((e, p) => moved.add(p));
         expect(moved.single.x, closeTo(0.5, 1e-9));
         expect(moved.single.y, closeTo(1.0, 1e-9));
 
         app.runSchedule(Schedules.update);
         final moved2 = <Position>[];
-        app.world.query1<Position>().each((e, p) => moved2.add(p));
+        app.world.rawQuery1<Position>().each((e, p) => moved2.add(p));
         expect(moved2.single.x, closeTo(1.0, 1e-9));
       },
     );
@@ -167,7 +167,7 @@ void main() {
       // Only one spawn system registered → only one player after startup.
       app.start();
       var count = 0;
-      app.world.query1<Position>().each((e, p) => count++);
+      app.world.rawQuery1<Position>().each((e, p) => count++);
       expect(count, 1);
     });
 

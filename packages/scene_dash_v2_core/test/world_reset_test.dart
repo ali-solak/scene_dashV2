@@ -31,7 +31,7 @@ void main() {
 
       expect(world.isAlive(e), isFalse);
       expect(world.tryGet<Position>(e), isNull);
-      expect(world.query1<Position>().get(e), isNull);
+      expect(world.rawQuery1<Position>().get(e), isNull);
     });
 
     test('stores are emptied but stay registered, with a revision bump', () {
@@ -52,7 +52,7 @@ void main() {
         greaterThan(revisionBefore),
         reason: 'revision bump is what integration caches key off',
       );
-      expect(world.query1<Position>().isEmpty, isTrue);
+      expect(world.rawQuery1<Position>().isEmpty, isTrue);
       expect(world.queryEntities(withTypes: const [Enemy]).isEmpty, isTrue);
     });
 
@@ -201,7 +201,7 @@ void main() {
       final queried = querying.entities.spawn();
       querying.insertNow<Position>(queried, Position(1));
       expect(
-        () => querying.query1<Position>().each((entity, position) {
+        () => querying.rawQuery1<Position>().each((entity, position) {
           querying.despawnAll();
         }),
         throwsA(isA<AssertionError>()),

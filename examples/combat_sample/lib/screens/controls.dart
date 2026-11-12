@@ -22,12 +22,26 @@ import '../common/inputs.dart';
 const double _tapSlopPixels = 16;
 const Duration _tapWindow = Duration(milliseconds: 280);
 
+final Map<LogicalKeyboardKey, CombatAction> combatKeys = {
+  LogicalKeyboardKey.keyJ: CombatAction.attack,
+  LogicalKeyboardKey.space: CombatAction.roll,
+  LogicalKeyboardKey.keyK: CombatAction.heavy,
+  LogicalKeyboardKey.keyF: CombatAction.heavy,
+};
+
 const List<LogicalKeyboardKey> _skillKeys = [
   LogicalKeyboardKey.digit1,
   LogicalKeyboardKey.digit2,
   LogicalKeyboardKey.digit3,
   LogicalKeyboardKey.digit4,
 ];
+
+final Set<LogicalKeyboardKey> _moveKeys = {
+  LogicalKeyboardKey.keyW,
+  LogicalKeyboardKey.keyA,
+  LogicalKeyboardKey.keyS,
+  LogicalKeyboardKey.keyD,
+};
 
 final bool showTouchControls =
     const bool.fromEnvironment('touchControls') ||
@@ -54,20 +68,18 @@ class GameControls extends StatefulWidget {
 class _GameControlsState extends State<GameControls>
     with WidgetsBindingObserver {
   final FocusNode _focus = FocusNode(debugLabel: 'combat-controls');
-  final Set<LogicalKeyboardKey> _pressed = <LogicalKeyboardKey>{};
+  final Set<LogicalKeyboardKey> _moving = <LogicalKeyboardKey>{};
 
   late WorldGame _game;
   late ButtonInput<CombatAction> _buttons;
   late AxisInput<MoveAxis> _axes;
-  late InputBuffer<CombatAction> _buffer;
   late LookInput _look;
+  CombatAction? _mouseAction;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Global handling survives HUD focus changes.
-    HardwareKeyboard.instance.addHandler(_handleKey);
   }
 
   @override
@@ -77,113 +89,80 @@ class _GameControlsState extends State<GameControls>
     final world = _game.world;
     _buttons = world.buttons<CombatAction>();
     _axes = world.axes<MoveAxis>();
-    _buffer = world.buffer<CombatAction>();
     _look = world.resource<LookInput>();
   }
 
   @override
   void dispose() {
-    HardwareKeyboard.instance.removeHandler(_handleKey);
     WidgetsBinding.instance.removeObserver(this);
+    _releaseOwnInput();
     _focus.dispose();
-    _buttons.releaseAll();
-    _axes.clear();
     super.dispose();
   }
-
-  // Focus
-  void _reclaimFocus() => _focus.requestFocus();
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _reclaimFocus();
+      _focus.requestFocus();
     } else {
-      _releaseAllInput();
+      _releaseOwnInput();
     }
   }
 
-  void _releaseAllInput() {
-    _pressed.clear();
-    _keyAttack = false;
-    _pointerAttack = false;
-    _buttons.releaseAll();
+  void _releaseOwnInput() {
+    _moving.clear();
     _axes.clear();
+    _releaseMouse(cancel: true);
   }
-
-  // Attack
 
   bool get _fighting => _game.world.state<GameStatus>() == GameStatus.fighting;
 
-  // Keyboard and pointer attacks release independently.
-  bool _keyAttack = false;
-  bool _pointerAttack = false;
-
-  void _syncAttack() {
-    final edge = _buttons.setPressed(
-      CombatAction.attack,
-      _keyAttack || _pointerAttack,
-    );
-    if (edge == ButtonEdge.pressed && _fighting) {
-      _buffer.record(CombatAction.attack);
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    final key = event.logicalKey;
+    if (_moveKeys.contains(key)) {
+      if (event is KeyUpEvent) {
+        _moving.remove(key);
+      } else {
+        _moving.add(key);
+      }
+      _syncMoveAxes();
+      return KeyEventResult.handled;
     }
+    if (event is! KeyDownEvent) {
+      return _isEventKey(key) ? KeyEventResult.handled : KeyEventResult.ignored;
+    }
+    final slot = _skillKeys.indexOf(key);
+    if (slot >= 0 && slot < Skill.values.length && _fighting) {
+      _game.emit(SkillCast(Skill.values[slot]));
+    }
+    switch (key) {
+      case LogicalKeyboardKey.tab when _fighting:
+        _game.emit(const LockPressed());
+      case LogicalKeyboardKey.keyQ when _fighting:
+        _game.emit(const LockCycled());
+      case LogicalKeyboardKey.escape:
+        _game.emit(const SkillMenuToggled());
+    }
+    return _isEventKey(key) ? KeyEventResult.handled : KeyEventResult.ignored;
   }
 
-  // Keyboard
-
-  bool _isGameKey(LogicalKeyboardKey key) =>
+  bool _isEventKey(LogicalKeyboardKey key) =>
       _skillKeys.contains(key) ||
-      key == LogicalKeyboardKey.keyW ||
-      key == LogicalKeyboardKey.keyA ||
-      key == LogicalKeyboardKey.keyS ||
-      key == LogicalKeyboardKey.keyD ||
-      key == LogicalKeyboardKey.space ||
-      key == LogicalKeyboardKey.keyJ ||
-      key == LogicalKeyboardKey.keyK ||
-      key == LogicalKeyboardKey.keyF ||
       key == LogicalKeyboardKey.tab ||
       key == LogicalKeyboardKey.keyQ ||
       key == LogicalKeyboardKey.escape;
 
-  bool _handleKey(KeyEvent event) {
-    final key = event.logicalKey;
-    if (event is KeyDownEvent) {
-      _pressed.add(key);
-      final slot = _skillKeys.indexOf(key);
-      if (slot >= 0 && slot < Skill.values.length && _fighting) {
-        _game.emit(SkillCast(Skill.values[slot]));
-      }
-      switch (key) {
-        case LogicalKeyboardKey.space when _fighting:
-          _buffer.record(CombatAction.roll);
-        case LogicalKeyboardKey.keyJ:
-          _keyAttack = true;
-          _syncAttack();
-        case LogicalKeyboardKey.keyK || LogicalKeyboardKey.keyF when _fighting:
-          _buffer.record(CombatAction.heavy);
-        case LogicalKeyboardKey.tab when _fighting:
-          _game.emit(const LockPressed());
-        case LogicalKeyboardKey.keyQ when _fighting:
-          _game.emit(const LockCycled());
-        case LogicalKeyboardKey.escape:
-          _game.emit(const SkillMenuToggled());
-      }
-    } else if (event is KeyUpEvent) {
-      _pressed.remove(key);
-      if (key == LogicalKeyboardKey.keyJ) {
-        _keyAttack = false;
-        _syncAttack();
-      }
-    }
+  void _onFocusChange(bool focused) {
+    if (focused) return;
+    _moving.clear();
     _syncMoveAxes();
-    return _isGameKey(key);
   }
 
   void _syncMoveAxes() {
     double axis(LogicalKeyboardKey negative, LogicalKeyboardKey positive) {
       var value = 0.0;
-      if (_pressed.contains(negative)) value -= 1;
-      if (_pressed.contains(positive)) value += 1;
+      if (_moving.contains(negative)) value -= 1;
+      if (_moving.contains(positive)) value += 1;
       return value;
     }
 
@@ -198,7 +177,16 @@ class _GameControlsState extends State<GameControls>
       );
   }
 
-  // Pointer
+  void _releaseMouse({bool cancel = false}) {
+    final action = _mouseAction;
+    if (action == null) return;
+    _mouseAction = null;
+    if (cancel) {
+      _buttons.cancel(action);
+    } else {
+      _buttons.release(action);
+    }
+  }
 
   Offset? _touchDownPosition;
   Duration? _touchDownTime;
@@ -209,12 +197,11 @@ class _GameControlsState extends State<GameControls>
       if (event.buttons & kMiddleMouseButton != 0) {
         if (_fighting) _game.emit(const LockPressed());
       } else if (event.buttons & kPrimaryButton != 0) {
-        if (HardwareKeyboard.instance.isShiftPressed) {
-          if (_fighting) _buffer.record(CombatAction.heavy);
-        } else {
-          _pointerAttack = true;
-          _syncAttack();
-        }
+        _releaseMouse();
+        _mouseAction = HardwareKeyboard.instance.isShiftPressed
+            ? CombatAction.heavy
+            : CombatAction.attack;
+        _buttons.press(_mouseAction!);
       }
     } else {
       _touchDownPosition = event.position;
@@ -223,11 +210,8 @@ class _GameControlsState extends State<GameControls>
     }
   }
 
-  void _onPointerUpOrCancel(PointerEvent event) {
-    if (_pointerAttack) {
-      _pointerAttack = false;
-      _syncAttack();
-    }
+  void _onPointerUp(PointerEvent event) {
+    _releaseMouse(cancel: event is PointerCancelEvent);
     if (event is PointerUpEvent &&
         event.kind != PointerDeviceKind.mouse &&
         _fighting &&
@@ -254,39 +238,38 @@ class _GameControlsState extends State<GameControls>
   @override
   Widget build(BuildContext context) {
     return Focus(
-      focusNode: _focus,
-      autofocus: true,
-      child: Listener(
-        onPointerDown: (_) => _reclaimFocus(),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Listener(
-              onPointerDown: _onPointerDown,
-              onPointerUp: _onPointerUpOrCancel,
-              onPointerCancel: _onPointerUpOrCancel,
-              onPointerMove: _onPointerMove,
-              behavior: HitTestBehavior.opaque,
-              child: widget.scene,
-            ),
-            if (widget.showTouchControls)
-              GameStateBuilder<GameStatus>(
-                builder: (context, status) => status == GameStatus.fighting
-                    ? TouchControls(
-                        onMove: (x, y) => _axes
-                          ..setValue(MoveAxis.x, x)
-                          ..setValue(MoveAxis.y, y),
-                        onAttackChanged: (held) {
-                          _pointerAttack = held;
-                          _syncAttack();
-                        },
-                        onRoll: () => _buffer.record(CombatAction.roll),
-                        onHeavy: () => _buffer.record(CombatAction.heavy),
-                      )
-                    : const SizedBox.shrink(),
+      canRequestFocus: false,
+      onKeyEvent: _onKey,
+      onFocusChange: _onFocusChange,
+      child: InputBindings<CombatAction>(
+        keys: combatKeys,
+        focusNode: _focus,
+        child: Listener(
+          onPointerDown: (_) => _focus.requestFocus(),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Listener(
+                onPointerDown: _onPointerDown,
+                onPointerUp: _onPointerUp,
+                onPointerCancel: _onPointerUp,
+                onPointerMove: _onPointerMove,
+                behavior: HitTestBehavior.opaque,
+                child: widget.scene,
               ),
-            widget.hud,
-          ],
+              if (widget.showTouchControls)
+                GameStateBuilder<GameStatus>(
+                  builder: (context, status) => status == GameStatus.fighting
+                      ? TouchControls(
+                          onMove: (x, y) => _axes
+                            ..setValue(MoveAxis.x, x)
+                            ..setValue(MoveAxis.y, y),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              widget.hud,
+            ],
+          ),
         ),
       ),
     );

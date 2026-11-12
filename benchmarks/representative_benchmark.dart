@@ -60,11 +60,13 @@ void main(List<String> args) {
   final world = _build(n);
 
   // Movement over non-frozen entities (~75% of N pass the filter).
-  final movers = world.query2<Position, Velocity>(withoutTypes: const [Frozen]);
+  final movers = world.rawQuery2<Position, Velocity>(
+    withoutTypes: const [Frozen],
+  );
   // A filtered single-component scan over players (~50% of N).
-  final players = world.query1<Position>(withTypes: const [Player]);
+  final players = world.rawQuery1<Position>(withTypes: const [Player]);
   // A three-component query (entities that also have Health, ~one third).
-  final living = world.query3<Position, Velocity, Health>();
+  final living = world.rawQuery3<Position, Velocity, Health>();
 
   var sink = 0.0;
 

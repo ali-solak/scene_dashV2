@@ -5,29 +5,28 @@ void installSkillEffects(GameBuilder game) {
     ..observe<Burning>(
       onAdd: (world, entity, _) => world.tryGet<Brawler>(entity)?.sinceHurt = 0,
     )
-    ..addSystem(
-      Schedules.fixedUpdate,
-      tickBurning,
+    ..group(
       inSet: GameSets.actions,
-      reads: const {Health},
-      writes: const {Burning},
       runIf: inState(GameStatus.fighting),
-    )
-    ..addSystem(
-      Schedules.fixedUpdate,
-      tickLavaPits,
-      inSet: GameSets.actions,
-      reads: const {Enemy, Health, SceneTransform, Burning},
-      writes: const {LavaPit},
-      after: const [tickBurning],
-      runIf: inState(GameStatus.fighting),
-    )
-    ..addSystem(
-      Schedules.fixedUpdate,
-      tickBarriers,
-      inSet: GameSets.actions,
-      writes: const {Barrier},
-      runIf: inState(GameStatus.fighting),
+      (game) => game
+        ..addSystem(
+          Schedules.fixedUpdate,
+          tickBurning,
+          reads: const {Health},
+          writes: const {Burning},
+        )
+        ..addSystem(
+          Schedules.fixedUpdate,
+          tickLavaPits,
+          reads: const {Enemy, Health, SceneTransform, Burning},
+          writes: const {LavaPit},
+          after: const [tickBurning],
+        )
+        ..addSystem(
+          Schedules.fixedUpdate,
+          tickBarriers,
+          writes: const {Barrier},
+        ),
     );
 }
 

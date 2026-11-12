@@ -44,6 +44,7 @@ final class StoreRegistry {
   ObjectComponentStore<T> ensureObject<T>() {
     final existing = _stores[T];
     if (existing != null) return existing as ObjectComponentStore<T>;
+    assert(_debugNoSplit<T>());
     final created = ObjectComponentStore<T>();
     _add(T, created);
     return created;
@@ -67,6 +68,27 @@ final class StoreRegistry {
   }
 
   int get count => _all.length;
+
+  bool _debugNoSplit<T>() {
+    for (final MapEntry(key: type, value: store) in _stores.entries) {
+      if (store.holdsSubtype<T>()) {
+        throw AssertionError(
+          'Creating a store for $T next to the store of its supertype $type '
+          'splits them: a $T goes to its own store, and queries over $type '
+          'stop seeing it. Read $T through $type, or give them no common '
+          'component supertype.',
+        );
+      }
+      if (store is ObjectComponentStore<T>) {
+        throw AssertionError(
+          'Creating a store for $T next to the store of its subtype $type '
+          'splits them: a $type stays in its own store, and queries over $T '
+          'do not see it. Name $T before $type, or query $type directly.',
+        );
+      }
+    }
+    return true;
+  }
 
   ComponentStore? supertypeStoreAccepting(Object part) {
     final type = part.runtimeType;

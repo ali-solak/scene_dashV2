@@ -22,14 +22,14 @@ void countCombo(World world) {
   final meter = world.resource<ComboMeter>();
   meter.sinceHit += world.dt;
   if (meter.sinceHit > comboTimeoutSeconds) meter.drop();
-  for (final hit in world.events<DamageDealt>()) {
-    if (!hit.impact) continue;
+  world.eachEvent<DamageDealt>((hit) {
+    if (!hit.impact) return;
     if (world.has<Player>(hit.target)) {
       meter.drop();
     } else if (world.has<Enemy>(hit.target)) {
       meter.land();
     }
-  }
+  });
 }
 
 void resetCombo(World world) => world.resource<ComboMeter>().reset();

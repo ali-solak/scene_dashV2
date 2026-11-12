@@ -1,32 +1,19 @@
-/// A lightweight, generational handle to an entity.
-///
-/// An entity is identified by a reusable [index] into the dense storage rows
-/// and a [generation] counter. When an entity is despawned its index becomes
-/// available for reuse, and the generation is bumped, so a stale [Entity] value
-/// that still points at the old generation can be detected and rejected rather
-/// than silently addressing a different, newer entity that reused the index.
-final class Entity {
-  /// The reusable slot index this entity occupies.
-  final int index;
+extension type const Entity._(int _bits) implements Object {
+  static const int _span = 0x1000000;
+  static const int indexMask = 0xFFFFFF;
+  static const int generationMask = 0x1FFFFFFF;
+  static const int maxIndex = indexMask - 1;
 
-  /// The generation stamp that disambiguates index reuse.
-  final int generation;
+  const Entity(int index, int generation)
+    : _bits = (generation & generationMask) * _span + index;
 
-  /// Creates an entity handle.
-  const Entity(this.index, this.generation);
+  static const Entity invalid = Entity._(indexMask);
 
-  /// A sentinel value representing "no entity".
-  static const Entity invalid = Entity(0xFFFFFFFF, 0);
+  int get index => _bits & indexMask;
 
-  bool get isValid => index != invalid.index;
+  int get generation => _bits ~/ _span;
 
-  @override
-  bool operator ==(Object other) =>
-      other is Entity && other.index == index && other.generation == generation;
+  bool get isValid => index != indexMask;
 
-  @override
-  int get hashCode => Object.hash(index, generation);
-
-  @override
-  String toString() => 'Entity($index v$generation)';
+  String get label => 'Entity($index v$generation)';
 }

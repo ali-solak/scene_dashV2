@@ -145,11 +145,11 @@ void _strikeEnemies(
 }
 
 void applyDamage(World world) {
-  for (final hit in world.events<HitLanded>()) {
-    if (_ignoresHit(world, hit.target)) continue;
-    if (_absorbHit(world, hit)) continue;
+  world.eachEvent<HitLanded>((hit) {
+    if (_ignoresHit(world, hit.target)) return;
+    if (_absorbHit(world, hit)) return;
     _applyHit(world, hit);
-  }
+  });
 }
 
 bool _ignoresHit(World world, Entity target) {

@@ -10,33 +10,18 @@ import '../features/projectiles/projectiles.dart';
 import 'debug_panel.dart';
 
 /// Plain Flutter HUD over the scene. Each section is a [WorldBuilder] on a
-/// quantised value; intent flows back through callbacks.
+/// quantised value; buttons write `ButtonInput<GameAction>` through the
+/// enclosing `InputBindings`.
 class GameHud extends StatelessWidget {
-  const GameHud({
-    super.key,
-    required this.onLeftChanged,
-    required this.onRightChanged,
-    required this.onFireChanged,
-    required this.onFireCanceled,
-    required this.onRestart,
-  });
+  const GameHud({super.key, required this.onRestart});
 
-  final ValueChanged<bool> onLeftChanged;
-  final ValueChanged<bool> onRightChanged;
-  final ValueChanged<bool> onFireChanged;
-  final VoidCallback onFireCanceled;
   final VoidCallback onRestart;
 
   @override
   Widget build(BuildContext context) {
     return GameStateBuilder<GameStatus>(
       builder: (context, status) => switch (status) {
-        GameStatus.playing => _PlayingHud(
-          onLeftChanged: onLeftChanged,
-          onRightChanged: onRightChanged,
-          onFireChanged: onFireChanged,
-          onFireCanceled: onFireCanceled,
-        ),
+        GameStatus.playing => const _PlayingHud(),
         GameStatus.lost => _GameOverPanel(onRestart: onRestart),
       },
     );
@@ -72,17 +57,7 @@ class _Shadowed extends StatelessWidget {
 }
 
 class _PlayingHud extends StatelessWidget {
-  const _PlayingHud({
-    required this.onLeftChanged,
-    required this.onRightChanged,
-    required this.onFireChanged,
-    required this.onFireCanceled,
-  });
-
-  final ValueChanged<bool> onLeftChanged;
-  final ValueChanged<bool> onRightChanged;
-  final ValueChanged<bool> onFireChanged;
-  final VoidCallback onFireCanceled;
+  const _PlayingHud();
 
   @override
   Widget build(BuildContext context) {
@@ -137,12 +112,7 @@ class _PlayingHud extends StatelessWidget {
           ),
         ),
         const Positioned(top: 64, left: 24, child: DebugPanel()),
-        _Controls(
-          onLeftChanged: onLeftChanged,
-          onRightChanged: onRightChanged,
-          onFireChanged: onFireChanged,
-          onFireCanceled: onFireCanceled,
-        ),
+        const _Controls(),
       ],
     );
   }
@@ -150,17 +120,7 @@ class _PlayingHud extends StatelessWidget {
 
 /// Movement grouped bottom-left; a large fire control bottom-right.
 class _Controls extends StatelessWidget {
-  const _Controls({
-    required this.onLeftChanged,
-    required this.onRightChanged,
-    required this.onFireChanged,
-    required this.onFireCanceled,
-  });
-
-  final ValueChanged<bool> onLeftChanged;
-  final ValueChanged<bool> onRightChanged;
-  final ValueChanged<bool> onFireChanged;
-  final VoidCallback onFireCanceled;
+  const _Controls();
 
   @override
   Widget build(BuildContext context) {
@@ -176,30 +136,32 @@ class _Controls extends StatelessWidget {
                 _HoldButton(
                   icon: Icons.arrow_left_rounded,
                   semanticLabel: 'Move left',
-                  onChanged: onLeftChanged,
+                  action: GameAction.left,
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: 16),
                 _HoldButton(
                   icon: Icons.arrow_right_rounded,
                   semanticLabel: 'Move right',
-                  onChanged: onRightChanged,
+                  action: GameAction.right,
                 ),
               ],
             ),
           ),
           Align(
             alignment: Alignment.bottomRight,
-            // Ring and cooldown read the blaster off the world; the
-            // button's pressed visuals stay widget state.
-            child: WorldBuilder<(double, double, bool, bool)>(
+            child: WorldBuilder<(double, double, bool, bool, bool)>(
               select: (world) {
+                final held = world.buttons<GameAction>().pressed(
+                  GameAction.fire,
+                );
                 final blaster = world.singleOrNull<Blaster>();
-                if (blaster == null) return (0.0, 0.0, false, true);
+                if (blaster == null) return (0.0, 0.0, false, true, held);
                 return (
                   _centi(blaster.charge01),
                   _centi(blaster.cooldown01),
                   blaster.isCharging,
                   blaster.isReady,
+                  held,
                 );
               },
               builder: (context, b) => _FireControl(
@@ -207,8 +169,7 @@ class _Controls extends StatelessWidget {
                 cooldown01: b.$2,
                 charging: b.$3,
                 ready: b.$4,
-                onChanged: onFireChanged,
-                onCanceled: onFireCanceled,
+                held: b.$5,
               ),
             ),
           ),
@@ -218,103 +179,71 @@ class _Controls extends StatelessWidget {
   }
 }
 
-class _HoldButton extends StatefulWidget {
+class _HoldButton extends StatelessWidget {
   const _HoldButton({
     required this.icon,
     required this.semanticLabel,
-    required this.onChanged,
+    required this.action,
   });
 
   final IconData icon;
   final String semanticLabel;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  State<_HoldButton> createState() => _HoldButtonState();
-}
-
-class _HoldButtonState extends State<_HoldButton> {
-  bool _held = false;
-
-  void _setHeld(bool value) {
-    if (_held == value) return;
-    setState(() => _held = value);
-    widget.onChanged(value);
-  }
+  final GameAction action;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: widget.semanticLabel,
+      label: semanticLabel,
       button: true,
-      // A raw Listener, not GestureDetector: tap recognizers reject once the
-      // pointer drifts past the touch slop, releasing a held button under a
-      // moving thumb. The listener owns its pointer for the full press.
-      child: Listener(
-        behavior: HitTestBehavior.opaque,
-        onPointerDown: (_) => _setHeld(true),
-        onPointerUp: (_) => _setHeld(false),
-        onPointerCancel: (_) => _setHeld(false),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 90),
-          width: 92,
-          height: 92,
-          decoration: BoxDecoration(
-            color: _held ? Colors.white30 : Colors.black38,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white54, width: 1.5),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black45,
-                blurRadius: 12,
-                offset: Offset(0, 4),
-              ),
-            ],
+      child: TouchAction<GameAction>(
+        action: action,
+        child: WorldBuilder<bool>(
+          select: (world) => world.buttons<GameAction>().pressed(action),
+          builder: (context, held) => AnimatedContainer(
+            duration: const Duration(milliseconds: 90),
+            width: 92,
+            height: 92,
+            decoration: BoxDecoration(
+              color: held ? Colors.white30 : Colors.black38,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white54, width: 1.5),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black45,
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(icon, color: Colors.white, size: 54),
           ),
-          child: Icon(widget.icon, color: Colors.white, size: 54),
         ),
       ),
     );
   }
 }
 
-/// Hold-capable fire control: press holds, release fires, `onTapCancel`
-/// cancels. The ring reads the quantised world selection, never the
-/// mutable Blaster.
-class _FireControl extends StatefulWidget {
+/// Press holds, release fires, dragging off cancels.
+class _FireControl extends StatelessWidget {
   const _FireControl({
     required this.charge01,
     required this.cooldown01,
     required this.charging,
     required this.ready,
-    required this.onChanged,
-    required this.onCanceled,
+    required this.held,
   });
 
   final double charge01;
   final double cooldown01;
   final bool charging;
   final bool ready;
-  final ValueChanged<bool> onChanged;
-  final VoidCallback onCanceled;
-
-  @override
-  State<_FireControl> createState() => _FireControlState();
-}
-
-class _FireControlState extends State<_FireControl> {
-  bool _pressed = false;
-
-  void _setPressed(bool value) {
-    if (_pressed == value) return;
-    setState(() => _pressed = value);
-  }
+  final bool held;
 
   String get _semanticLabel {
-    if (widget.charging) {
-      return 'Charging ${(widget.charge01 * 100).round()} percent';
+    if (charging) {
+      return 'Charging ${(charge01 * 100).round()} percent';
     }
-    if (widget.cooldown01 > 0 && !widget.ready) {
+    if (cooldown01 > 0 && !ready) {
       return 'Blaster cooling down';
     }
     return 'Blaster ready';
@@ -322,16 +251,16 @@ class _FireControlState extends State<_FireControl> {
 
   @override
   Widget build(BuildContext context) {
-    final cooling = widget.cooldown01 > 0 && !widget.charging;
-    final fullCharge = widget.charging && widget.charge01 >= 0.999;
+    final cooling = cooldown01 > 0 && !charging;
+    final fullCharge = charging && charge01 >= 0.999;
 
     // The ring shows charge while held and a faint ready ring otherwise;
     // the cooldown is shown separately as a vertical recovery meter above
     // the button.
     final double ringProgress;
     final Color ringColor;
-    if (widget.charging) {
-      ringProgress = widget.charge01;
+    if (charging) {
+      ringProgress = charge01;
       ringColor = fullCharge
           ? const Color(0xFFFFE16A)
           : const Color(0xFF53E6FF);
@@ -340,24 +269,13 @@ class _FireControlState extends State<_FireControl> {
       ringColor = const Color(0x5553E6FF);
     }
 
-    final dim = cooling && !_pressed;
+    final dim = cooling && !held;
     final fireButton = Semantics(
       label: _semanticLabel,
       button: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (_) {
-          _setPressed(true);
-          widget.onChanged(true);
-        },
-        onTapUp: (_) {
-          _setPressed(false);
-          widget.onChanged(false);
-        },
-        onTapCancel: () {
-          _setPressed(false);
-          widget.onCanceled();
-        },
+      child: TouchAction<GameAction>(
+        action: GameAction.fire,
+        cancelOnDrag: true,
         child: SizedBox(
           width: 116,
           height: 116,
@@ -373,7 +291,7 @@ class _FireControlState extends State<_FireControl> {
                 width: 84,
                 height: 84,
                 decoration: BoxDecoration(
-                  color: _pressed
+                  color: held
                       ? Colors.white30
                       : (dim ? Colors.black54 : Colors.black38),
                   shape: BoxShape.circle,
@@ -410,7 +328,7 @@ class _FireControlState extends State<_FireControl> {
         SizedBox(
           height: 54,
           width: 18,
-          child: cooling ? _CooldownBar(recovery: 1 - widget.cooldown01) : null,
+          child: cooling ? _CooldownBar(recovery: 1 - cooldown01) : null,
         ),
         const SizedBox(height: 6),
         fireButton,

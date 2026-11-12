@@ -21,12 +21,12 @@ import 'features/world/data/config.dart';
 import 'features/world/world.dart';
 import 'hud/debug_panel.dart';
 import 'screens/controls.dart';
+
 import 'package:flutter_scene/physics.dart';
 
 const bool showDebugDraw = false;
 
 Future<void> main() async {
-  final input = ButtonInput<GameAction>();
   final cameraRig = CameraRig();
   final fps = FpsCounter();
 
@@ -45,7 +45,7 @@ Future<void> main() async {
             GameSets.actions,
           ])
           ..configureSets(Schedules.update, [GameSets.logic, GameSets.rules])
-          ..world.insert(input)
+          ..world.insert(ButtonInput<GameAction>())
           ..world.insert(cameraRig)
           ..world.insert(fps)
           ..world.insert(DebugSettings(debugDraw: showDebugDraw));
@@ -64,12 +64,7 @@ Future<void> main() async {
   runApp(
     GameScope(
       game: game,
-      child: RockDodgeApp(
-        game: game,
-        input: input,
-        cameraRig: cameraRig,
-        fps: fps,
-      ),
+      child: RockDodgeApp(game: game, cameraRig: cameraRig, fps: fps),
     ),
   );
 }
@@ -78,13 +73,11 @@ class RockDodgeApp extends StatefulWidget {
   const RockDodgeApp({
     super.key,
     required this.game,
-    required this.input,
     required this.cameraRig,
     required this.fps,
   });
 
   final SceneGame game;
-  final ButtonInput<GameAction> input;
   final CameraRig cameraRig;
   final FpsCounter fps;
 
@@ -110,8 +103,6 @@ class _RockDodgeAppState extends State<RockDodgeApp> {
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         body: GameControls(
-          game: widget.game,
-          input: widget.input,
           scene: SceneView(
             widget.game.scene,
             cameraBuilder: (elapsed) =>

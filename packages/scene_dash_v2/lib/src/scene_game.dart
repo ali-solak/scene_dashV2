@@ -12,6 +12,7 @@ import 'physics_plugin.dart';
 import 'scene_commands.dart';
 import 'node_ref.dart';
 import 'scene_transform.dart';
+import 'transform_interpolation.dart';
 
 /// A game without a scene.
 class WorldGame {
@@ -28,12 +29,14 @@ class WorldGame {
     AppDiagnostics diagnostics = const AppDiagnostics(),
     void Function(String message)? onDiagnostic,
     AccessConflictPolicy accessConflictPolicy = AccessConflictPolicy.warn,
+    double maxFrameDelta = 0.25,
   }) async {
     late final World world;
     final engine = Game.headless(
       accessConflictPolicy: accessConflictPolicy,
       onDiagnostic: onDiagnostic,
       diagnostics: diagnostics,
+      maxFrameDelta: maxFrameDelta,
       onCommandBoundary: () => SpawnQueue.of(world).flush(),
     );
     world = engine.world;
@@ -60,7 +63,9 @@ class WorldGame {
     world
       ..ensureObjectStore<NodeRef>()
       ..ensureObjectStore<SceneTransform>()
+      ..ensureObjectStore<InterpolateTransform>()
       ..ensureTagStore<PhysicsDriven>()
+      ..ensureTagStore<Static>()
       ..ensureTagStore<Mounted>();
     if (physics != null) {
       engine.root.addComponent(physics);
@@ -96,8 +101,24 @@ class WorldGame {
   /// queued state transition applies at the next frame start.
   void runSchedule(ScheduleLabel label) => world.runSchedule(label);
 
-  /// Hot-reload hook, forwarded by `GameHost`.
-  void reassemble() {}
+  bool _reportedReassemble = false;
+
+  void reassemble() {
+    assert(() {
+      if (_reportedReassemble) return true;
+      final sink = engine.app.onDiagnostic;
+      if (sink == null) return true;
+      _reportedReassemble = true;
+      sink(
+        'Hot reload: system bodies, widgets and constants reload in place, '
+        'but the schedule was built at boot. Added or removed systems, '
+        'features, ordering (before:/after:), runIf:, inSet:, observers, '
+        'states and event configuration take effect after a hot restart. '
+        '(Reported once.)',
+      );
+      return true;
+    }());
+  }
 
   /// Advances the game loop.
   void onTick(Duration elapsed, double deltaSeconds) =>
@@ -125,6 +146,7 @@ final class SceneGame extends WorldGame {
     AppDiagnostics diagnostics = const AppDiagnostics(),
     void Function(String message)? onDiagnostic,
     AccessConflictPolicy accessConflictPolicy = AccessConflictPolicy.warn,
+    double maxFrameDelta = 0.25,
   }) async {
     WidgetsFlutterBinding.ensureInitialized();
     await Scene.initializeStaticResources();
@@ -135,6 +157,7 @@ final class SceneGame extends WorldGame {
       accessConflictPolicy: accessConflictPolicy,
       onDiagnostic: onDiagnostic,
       diagnostics: diagnostics,
+      maxFrameDelta: maxFrameDelta,
       onCommandBoundary: () => SpawnQueue.of(world).flush(),
     );
     world = engine.world;

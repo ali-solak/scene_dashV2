@@ -1,3 +1,5 @@
+import 'package:meta/meta.dart' show internal;
+
 import '../commands/commands.dart';
 import '../entity/entity.dart';
 import '../entity/entity_registry.dart';
@@ -13,6 +15,9 @@ import '../surface/observers.dart';
 import '../surface/remove_after.dart';
 import '../surface/spawning.dart';
 import '../surface/tag.dart';
+import '../time/fixed_time.dart';
+import '../time/frame_time.dart';
+import '../time/game_clock.dart';
 
 /// Stores entities, components, resources, and events.
 final class World {
@@ -53,6 +58,62 @@ final class World {
   bool fixedContext = false;
 
   static const int _linearDespawnStoreLimit = 10;
+
+  int _cachedAtVersion = -1;
+  FrameTime? _frameTime;
+  FixedTime? _fixedTime;
+  GameClock? _clock;
+  SpawnQueue? _spawnQueue;
+  RemoveAfterTracker? _removeAfter;
+
+  void _refreshCache() {
+    final r = resources;
+    _frameTime = r.tryGet<FrameTime>();
+    _fixedTime = r.tryGet<FixedTime>();
+    _clock = r.tryGet<GameClock>();
+    _spawnQueue = r.tryGet<SpawnQueue>();
+    _removeAfter = r.tryGet<RemoveAfterTracker>();
+    _cachedAtVersion = r.version;
+  }
+
+  FrameTime get frameTime {
+    if (_cachedAtVersion != resources.version) _refreshCache();
+    return _frameTime ?? resources.get<FrameTime>();
+  }
+
+  FixedTime get fixedTime {
+    if (_cachedAtVersion != resources.version) _refreshCache();
+    return _fixedTime ?? resources.get<FixedTime>();
+  }
+
+  GameClock get clock {
+    if (_cachedAtVersion != resources.version) _refreshCache();
+    return _clock ?? resources.get<GameClock>();
+  }
+
+  @internal
+  SpawnQueue get spawnQueue {
+    if (_cachedAtVersion != resources.version) _refreshCache();
+    return _spawnQueue ?? SpawnQueue.of(this);
+  }
+
+  @internal
+  SpawnQueue? get spawnQueueOrNull {
+    if (_cachedAtVersion != resources.version) _refreshCache();
+    return _spawnQueue;
+  }
+
+  @internal
+  RemoveAfterTracker get removeAfterTracker {
+    if (_cachedAtVersion != resources.version) _refreshCache();
+    return _removeAfter ?? RemoveAfterTracker.of(this);
+  }
+
+  @internal
+  RemoveAfterTracker? get removeAfterTrackerOrNull {
+    if (_cachedAtVersion != resources.version) _refreshCache();
+    return _removeAfter;
+  }
 
   /// Number of queries currently iterating. Used by debug guards to detect
   /// structural mutation during active iteration.
@@ -167,11 +228,11 @@ final class World {
   /// Throws if the entity is stale or does not currently have [T].
   T get<T>(Entity entity) {
     if (!entities.isAlive(entity)) {
-      throw StateError('Cannot get $T from stale entity $entity.');
+      throw StateError('Cannot get $T from stale ${entity.label}.');
     }
     final value = tryGet<T>(entity);
     if (value == null) {
-      throw StateError('Entity $entity does not have component $T.');
+      throw StateError('${entity.label} does not have component $T.');
     }
     return value;
   }
@@ -247,7 +308,7 @@ final class World {
     );
     assert(
       entities.isAlive(entity),
-      'Cannot insert $componentType on stale entity $entity.',
+      'Cannot insert $componentType on stale ${entity.label}.',
     );
     if (!entities.isAlive(entity)) return;
     stores.require(componentType).insertDynamic(entity.index, component);
@@ -264,7 +325,7 @@ final class World {
     );
     assert(
       entities.isAlive(entity),
-      'Cannot remove $componentType from stale entity $entity.',
+      'Cannot remove $componentType from stale ${entity.label}.',
     );
     if (!entities.isAlive(entity)) return;
     if (stores.isRegistered(componentType)) {
@@ -278,9 +339,9 @@ final class World {
       _activeQueries == 0,
       'Structural mutation (despawn) while a query is iterating.',
     );
-    assert(entities.isAlive(entity), 'Cannot despawn stale entity $entity.');
+    assert(entities.isAlive(entity), 'Cannot despawn stale ${entity.label}.');
     if (!entities.isAlive(entity)) return;
-    resources.tryGet<SpawnQueue>()?.discard(entity);
+    spawnQueueOrNull?.discard(entity);
     final index = entity.index;
     final storeCount = stores.count;
     if (storeCount <= _linearDespawnStoreLimit) {
@@ -352,8 +413,8 @@ final class World {
       store.clear();
     }
     entities.despawnAll();
-    resources.tryGet<SpawnQueue>()?.reset();
-    resources.tryGet<RemoveAfterTracker>()?.reset();
+    spawnQueueOrNull?.reset();
+    removeAfterTrackerOrNull?.reset();
     for (var i = 0; i < _eventChannelList.length; i++) {
       _eventChannelList[i].clear();
     }

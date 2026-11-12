@@ -108,6 +108,7 @@ void main() {
     await tester.sendKeyUpEvent(LogicalKeyboardKey.space);
     await tester.sendKeyDownEvent(LogicalKeyboardKey.keyJ);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.keyJ);
+    drive(2);
     final buffer = game.world.buffer<CombatAction>();
     expect(buffer.has(CombatAction.roll), isFalse);
     expect(buffer.has(CombatAction.attack), isFalse);
@@ -118,7 +119,8 @@ void main() {
     expect(game.world.state<GameStatus>(), GameStatus.fighting);
     await tester.sendKeyDownEvent(LogicalKeyboardKey.space);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.space);
-    expect(buffer.has(CombatAction.roll), isTrue);
+    drive();
+    expect(game.world.single<Fighter>().phase.state, CombatPhase.rolling);
 
     await game.shutdown();
   });

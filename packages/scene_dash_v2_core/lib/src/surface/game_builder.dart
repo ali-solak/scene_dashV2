@@ -21,6 +21,8 @@ typedef WorldSystem = void Function(World world);
 /// Registers one game feature.
 typedef Feature = void Function(GameBuilder game);
 
+typedef SystemEntry = (WorldSystem, {Set<Type> reads, Set<Type> writes});
+
 /// Registers game features.
 final class GameBuilder {
   final App _app;
@@ -28,10 +30,56 @@ final class GameBuilder {
   /// Rejects systems without access declarations.
   final bool strictAccess;
 
-  final Map<Function, SystemLabel> _labels = <Function, SystemLabel>{};
-  int _sequence = 0;
+  final _SharedLabels _shared;
+  final RunCondition? _groupRunIf;
+  final SystemSet? _groupSet;
 
-  GameBuilder(this._app, {this.strictAccess = false});
+  GameBuilder(this._app, {this.strictAccess = false})
+    : _shared = _SharedLabels(),
+      _groupRunIf = null,
+      _groupSet = null;
+
+  GameBuilder._group(
+    this._app,
+    this.strictAccess,
+    this._shared,
+    this._groupRunIf,
+    this._groupSet,
+  );
+
+  void group(
+    void Function(GameBuilder game) register, {
+    RunCondition? runIf,
+    SystemSet? inSet,
+  }) {
+    register(
+      GameBuilder._group(
+        _app,
+        strictAccess,
+        _shared,
+        _both(_groupRunIf, runIf),
+        _setFor(inSet, 'group'),
+      ),
+    );
+  }
+
+  static RunCondition? _both(RunCondition? outer, RunCondition? inner) {
+    if (outer == null) return inner;
+    if (inner == null) return outer;
+    return (World world) => outer(world) && inner(world);
+  }
+
+  SystemSet? _setFor(SystemSet? own, String site) {
+    final shared = _groupSet;
+    if (own == null) return shared;
+    if (shared != null && shared != own) {
+      throw ArgumentError(
+        '$site(inSet: $own) inside a group(inSet: $shared). A system belongs '
+        'to one set; drop one of the two.',
+      );
+    }
+    return own;
+  }
 
   /// The world being configured.
   World get world => _app.world;
@@ -63,7 +111,7 @@ final class GameBuilder {
         'component types the system touches (or {} for none).',
       );
     }
-    final systemLabel = _labelFor(system, label);
+    final systemLabel = _labelFor(system, label, schedule);
     // Fixed schedules use fixed time.
     final fixed = schedule == Schedules.fixedUpdate;
     final adapter = declared
@@ -78,7 +126,7 @@ final class GameBuilder {
             _app.onDiagnostic,
           )
         : _FunctionSystem(system, systemLabel, fixed);
-    RunCondition? condition = runIf;
+    var condition = _both(_groupRunIf, runIf);
     if (condition != null && fixed) {
       final inner = condition;
       condition = (World world) {
@@ -102,9 +150,31 @@ final class GameBuilder {
         (s) => _requireLabel(s, 'independentOf'),
       ),
       runIf: condition,
-      inSet: inSet,
+      inSet: _setFor(inSet, 'addSystem(${systemLabel.id})'),
     );
     _app.addCleanup(adapter.disposeReaders);
+  }
+
+  void addSystems(
+    ScheduleLabel schedule,
+    List<SystemEntry> systems, {
+    RunCondition? runIf,
+    SystemSet? inSet,
+    bool chain = false,
+  }) {
+    WorldSystem? previous;
+    for (final (system, :reads, :writes) in systems) {
+      addSystem(
+        schedule,
+        system,
+        reads: reads,
+        writes: writes,
+        after: chain && previous != null ? [previous] : const <WorldSystem>[],
+        runIf: runIf,
+        inSet: inSet,
+      );
+      previous = system;
+    }
   }
 
   /// Registers a custom schedule [label].
@@ -135,21 +205,35 @@ final class GameBuilder {
     ComponentObserver<T>? onRemove,
   }) => ObserverRegistry.of(world).observe<T>(onAdd: onAdd, onRemove: onRemove);
 
-  SystemLabel _labelFor(WorldSystem system, String? override) {
-    final existing = _labels[system];
-    if (existing != null) {
-      // Keep one identity across schedules.
-      return existing;
-    }
-    final label = SystemLabel(
-      'system#${override ?? _nameOf(system)}@${_sequence++}',
-    );
-    _labels[system] = label;
+  SystemLabel _labelFor(
+    WorldSystem system,
+    String? override,
+    ScheduleLabel schedule,
+  ) {
+    final existing = _shared.labels[system];
+    if (existing != null) return existing;
+    final name = override ?? _nameOf(system);
+    final label = SystemLabel('system#$name@${_shared.sequence++}');
+    _shared.labels[system] = label;
+    if (override == null && name == 'closure') _warnUnnamed(label, schedule);
     return label;
   }
 
+  void _warnUnnamed(SystemLabel label, ScheduleLabel schedule) {
+    if (_shared.warnedUnnamed) return;
+    final sink = _app.onDiagnostic;
+    if (sink == null) return;
+    _shared.warnedUnnamed = true;
+    sink(
+      'System ${label.id} in $schedule has no readable name: it is a closure, '
+      'or this is a web or obfuscated build where function names are not '
+      'available. Diagnostics, profiles and conflict reports will show it as '
+      'closure@N. Pass label: to addSystem for a stable name. (Reported once.)',
+    );
+  }
+
   SystemLabel _requireLabel(WorldSystem system, String edge) {
-    final label = _labels[system];
+    final label = _shared.labels[system];
     if (label == null) {
       throw StateError(
         '$edge: [${_nameOf(system)}] references a system that has not been '
@@ -166,6 +250,12 @@ final class GameBuilder {
     final match = RegExp("from Function '([^']+)'").firstMatch(text);
     return match?.group(1) ?? 'closure';
   }
+}
+
+final class _SharedLabels {
+  final Map<Function, SystemLabel> labels = <Function, SystemLabel>{};
+  int sequence = 0;
+  bool warnedUnnamed = false;
 }
 
 /// A snapshot of function references, resolved by the schedule compiler after

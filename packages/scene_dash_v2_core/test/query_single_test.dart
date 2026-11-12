@@ -28,15 +28,15 @@ void main() {
   group('Query1.isEmpty', () {
     test('is true with no matches and false with at least one', () {
       final world = _worldWithStores();
-      expect(world.query1<Position>().isEmpty, isTrue);
+      expect(world.rawQuery1<Position>().isEmpty, isTrue);
       _spawn(world, position: Position(1, 1));
-      expect(world.query1<Position>().isEmpty, isFalse);
+      expect(world.rawQuery1<Position>().isEmpty, isFalse);
     });
 
     test('honours filters', () {
       final world = _worldWithStores();
       _spawn(world, position: Position(1, 1)); // not a Player
-      final players = world.query1<Position>(withTypes: const [Player]);
+      final players = world.rawQuery1<Position>(withTypes: const [Player]);
       expect(players.isEmpty, isTrue);
       _spawn(world, position: Position(2, 2), player: true);
       expect(players.isEmpty, isFalse);
@@ -46,13 +46,13 @@ void main() {
   group('Query1.singleOrNull / single', () {
     test('singleOrNull returns null when there are no matches', () {
       final world = _worldWithStores();
-      expect(world.query1<Position>().singleOrNull(), isNull);
+      expect(world.rawQuery1<Position>().singleOrNull(), isNull);
     });
 
     test('returns the one match as (entity, value)', () {
       final world = _worldWithStores();
       final e = _spawn(world, position: Position(3, 4));
-      final match = world.query1<Position>().single();
+      final match = world.rawQuery1<Position>().single();
       expect(match.$1, e);
       expect(match.$2.x, 3);
     });
@@ -60,7 +60,7 @@ void main() {
     test('single throws when there are no matches', () {
       final world = _worldWithStores();
       expect(
-        () => world.query1<Position>().single(),
+        () => world.rawQuery1<Position>().single(),
         throwsA(isA<StateError>()),
       );
     });
@@ -70,11 +70,11 @@ void main() {
       _spawn(world, position: Position(1, 1));
       _spawn(world, position: Position(2, 2));
       expect(
-        () => world.query1<Position>().singleOrNull(),
+        () => world.rawQuery1<Position>().singleOrNull(),
         throwsA(isA<StateError>()),
       );
       expect(
-        () => world.query1<Position>().single(),
+        () => world.rawQuery1<Position>().single(),
         throwsA(isA<StateError>()),
       );
     });
@@ -82,7 +82,7 @@ void main() {
     test('does not leave a query marked active after resolving', () {
       final world = _worldWithStores();
       _spawn(world, position: Position(1, 1));
-      world.query1<Position>().single();
+      world.rawQuery1<Position>().single();
       // A structural change afterwards must not trip the active-query guard.
       expect(() => _spawn(world, position: Position(2, 2)), returnsNormally);
     });
@@ -93,7 +93,7 @@ void main() {
       final world = _worldWithStores();
       final e = _spawn(world, position: Position(5, 6), player: true);
       final single = Single<Position>(
-        world.query1<Position>(withTypes: const [Player]),
+        world.rawQuery1<Position>(withTypes: const [Player]),
       );
       expect(single.entity, e);
       expect(single.value.x, 5);
@@ -101,7 +101,7 @@ void main() {
 
     test('throws when zero or multiple match', () {
       final world = _worldWithStores();
-      final single = Single<Position>(world.query1<Position>());
+      final single = Single<Position>(world.rawQuery1<Position>());
       expect(() => single.value, throwsA(isA<StateError>()));
       _spawn(world, position: Position(1, 1));
       _spawn(world, position: Position(2, 2));
@@ -113,7 +113,7 @@ void main() {
     test('caches the resolution until beginRun', () {
       final world = _worldWithStores();
       final first = _spawn(world, position: Position(1, 1));
-      final single = Single<Position>(world.query1<Position>());
+      final single = Single<Position>(world.rawQuery1<Position>());
       expect(single.entity, first);
 
       // The cached result stays stable during the run.
@@ -129,7 +129,7 @@ void main() {
   group('OptionalSingle<A>', () {
     test('valueOrNull is null when none match, value when one matches', () {
       final world = _worldWithStores();
-      final opt = OptionalSingle<Position>(world.query1<Position>());
+      final opt = OptionalSingle<Position>(world.rawQuery1<Position>());
       expect(opt.isPresent, isFalse);
       expect(opt.valueOrNull, isNull);
       _spawn(world, position: Position(7, 8));
@@ -142,7 +142,7 @@ void main() {
       final world = _worldWithStores();
       _spawn(world, position: Position(1, 1));
       _spawn(world, position: Position(2, 2));
-      final opt = OptionalSingle<Position>(world.query1<Position>());
+      final opt = OptionalSingle<Position>(world.rawQuery1<Position>());
       expect(() => opt.valueOrNull, throwsA(isA<StateError>()));
       expect(
         () => opt.isPresent,
@@ -153,7 +153,7 @@ void main() {
 
     test('caches the resolution until beginRun', () {
       final world = _worldWithStores();
-      final opt = OptionalSingle<Position>(world.query1<Position>());
+      final opt = OptionalSingle<Position>(world.rawQuery1<Position>());
       expect(opt.isPresent, isFalse);
 
       _spawn(world, position: Position(3, 4));

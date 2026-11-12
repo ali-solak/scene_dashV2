@@ -53,7 +53,7 @@ void main() {
       _spawn(world, velocity: Velocity(0, 0)); // no position
 
       final seen = <double>[];
-      world.query1<Position>().each((entity, position) {
+      world.rawQuery1<Position>().each((entity, position) {
         seen.add(position.x);
       });
       expect(seen, unorderedEquals(<double>[1, 2]));
@@ -72,7 +72,7 @@ void main() {
       _spawn(world, velocity: Velocity(9, 9)); // no position
 
       final matched = <Entity>[];
-      world.query2<Position, Velocity>().each((entity, p, v) {
+      world.rawQuery2<Position, Velocity>().each((entity, p, v) {
         matched.add(entity);
         p.x += v.x; // immediate field write through the object reference
       });
@@ -104,7 +104,7 @@ void main() {
 
       final matched = <Entity>[];
       world
-          .query2<Position, Velocity>(
+          .rawQuery2<Position, Velocity>(
             withTypes: const [Player],
             withoutTypes: const [Frozen],
           )
@@ -131,7 +131,7 @@ void main() {
       );
 
       final matched = <Entity>{};
-      world.query2<Position, Velocity>().each((e, p, v) => matched.add(e));
+      world.rawQuery2<Position, Velocity>().each((e, p, v) => matched.add(e));
       expect(matched, <Entity>{a, b});
     });
   });
@@ -142,7 +142,7 @@ void main() {
       final e = _spawn(world, position: Position(3, 4));
       _spawn(world, position: Position(9, 9));
 
-      final position = world.query1<Position>().get(e);
+      final position = world.rawQuery1<Position>().get(e);
       expect(position, isNotNull);
       expect(position!.x, 3);
 
@@ -154,7 +154,7 @@ void main() {
     test('Query1.get returns null when the entity lacks the component', () {
       final world = _worldWithStores();
       final e = _spawn(world, velocity: Velocity(1, 1)); // no Position
-      expect(world.query1<Position>().get(e), isNull);
+      expect(world.rawQuery1<Position>().get(e), isNull);
     });
 
     test('Query1.get returns null for a stale (reused) entity handle', () {
@@ -164,8 +164,8 @@ void main() {
       // Reusing the freed slot bumps the generation, so the old handle is stale.
       final reused = _spawn(world, position: Position(2, 2));
       expect(reused.index, e.index);
-      expect(world.query1<Position>().get(e), isNull);
-      expect(world.query1<Position>().get(reused)!.x, 2);
+      expect(world.rawQuery1<Position>().get(e), isNull);
+      expect(world.rawQuery1<Position>().get(reused)!.x, 2);
     });
 
     test('Query1.get honours with/without filters', () {
@@ -173,11 +173,11 @@ void main() {
       final frozen = _spawn(world, position: Position(1, 1), frozen: true);
       final active = _spawn(world, position: Position(2, 2), player: true);
 
-      final players = world.query1<Position>(withTypes: const [Player]);
+      final players = world.rawQuery1<Position>(withTypes: const [Player]);
       expect(players.get(frozen), isNull); // not a Player
       expect(players.get(active), isNotNull);
 
-      final unfrozen = world.query1<Position>(withoutTypes: const [Frozen]);
+      final unfrozen = world.rawQuery1<Position>(withoutTypes: const [Frozen]);
       expect(unfrozen.get(frozen), isNull); // excluded by Frozen
     });
 
@@ -191,7 +191,11 @@ void main() {
       _spawn(world, position: Position(2, 2)); // no velocity
 
       var calls = 0;
-      final matched = world.query2<Position, Velocity>().get(e, (entity, p, v) {
+      final matched = world.rawQuery2<Position, Velocity>().get(e, (
+        entity,
+        p,
+        v,
+      ) {
         calls++;
         expect(entity, e);
         p.x += v.x; // write through
@@ -206,7 +210,7 @@ void main() {
       final e = _spawn(world, position: Position(1, 1)); // no velocity
 
       var called = false;
-      final matched = world.query2<Position, Velocity>().get(
+      final matched = world.rawQuery2<Position, Velocity>().get(
         e,
         (entity, p, v) => called = true,
       );
@@ -223,7 +227,7 @@ void main() {
       }
 
       var visits = 0;
-      world.query1<Position>().eachUntil((entity, position) {
+      world.rawQuery1<Position>().eachUntil((entity, position) {
         visits++;
         return visits < 3; // continue for two rows, stop on the third
       });
@@ -236,7 +240,7 @@ void main() {
       _spawn(world, position: Position(2, 0));
 
       final seen = <double>[];
-      world.query1<Position>().eachUntil((entity, position) {
+      world.rawQuery1<Position>().eachUntil((entity, position) {
         seen.add(position.x);
         return true;
       });
@@ -250,7 +254,7 @@ void main() {
 
       final seen = <Entity>[];
       world
-          .query1<Position>(
+          .rawQuery1<Position>(
             withTypes: const [Player],
             withoutTypes: const [Frozen],
           )
@@ -266,7 +270,7 @@ void main() {
       _spawn(world, velocity: Velocity(1, 1)); // no Position
 
       var visits = 0;
-      world.query1<Position>().eachUntil((entity, position) {
+      world.rawQuery1<Position>().eachUntil((entity, position) {
         visits++;
         return true;
       });
@@ -287,7 +291,7 @@ void main() {
       );
 
       final seen = <Entity>[];
-      world.query2<Position, Velocity>().eachUntil((entity, p, v) {
+      world.rawQuery2<Position, Velocity>().eachUntil((entity, p, v) {
         seen.add(entity);
         return true;
       });
@@ -300,7 +304,7 @@ void main() {
       final extra = world.entities.spawn();
 
       expect(
-        () => world.query1<Position>().eachUntil((entity, position) {
+        () => world.rawQuery1<Position>().eachUntil((entity, position) {
           world.insertNow<Position>(extra, Position(9, 9));
           return true;
         }),
@@ -311,7 +315,7 @@ void main() {
     test('does not leave a query marked active after an early exit', () {
       final world = _worldWithStores();
       _spawn(world, position: Position(0, 0));
-      world.query1<Position>().eachUntil((entity, position) => false);
+      world.rawQuery1<Position>().eachUntil((entity, position) => false);
       expect(() => _spawn(world, position: Position(1, 1)), returnsNormally);
     });
   });
@@ -322,7 +326,9 @@ void main() {
       _spawn(world, position: Position(1, 0));
       final wanted = _spawn(world, position: Position(5, 0));
 
-      final match = world.query1<Position>().firstWhere((entity, p) => p.x > 3);
+      final match = world.rawQuery1<Position>().firstWhere(
+        (entity, p) => p.x > 3,
+      );
       expect(match, isNotNull);
       expect(match!.$1, wanted);
       expect(match.$2.x, 5);
@@ -332,7 +338,7 @@ void main() {
       final world = _worldWithStores();
       _spawn(world, position: Position(1, 0));
       expect(
-        world.query1<Position>().firstWhere((entity, p) => p.x > 100),
+        world.rawQuery1<Position>().firstWhere((entity, p) => p.x > 100),
         isNull,
       );
     });
@@ -344,7 +350,7 @@ void main() {
       }
 
       var visits = 0;
-      world.query1<Position>().firstWhere((entity, p) {
+      world.rawQuery1<Position>().firstWhere((entity, p) {
         visits++;
         return true; // every row matches: only the first may be visited
       });
@@ -357,7 +363,7 @@ void main() {
       final active = _spawn(world, position: Position(2, 0));
 
       final match = world
-          .query1<Position>(withoutTypes: const [Frozen])
+          .rawQuery1<Position>(withoutTypes: const [Frozen])
           .firstWhere((entity, p) => true);
       expect(match!.$1, active);
     });
@@ -370,7 +376,7 @@ void main() {
         velocity: Velocity(3, 4),
       );
 
-      final match = world.query2<Position, Velocity>().firstWhere(
+      final match = world.rawQuery2<Position, Velocity>().firstWhere(
         (entity, p, v) => v.x == 3,
       );
       expect(match, isNotNull);
@@ -385,7 +391,7 @@ void main() {
       _spawn(world, position: Position(1, 0));
       _spawn(world, position: Position(5, 0));
 
-      final query = world.query1<Position>();
+      final query = world.rawQuery1<Position>();
       expect(query.any((entity, p) => p.x > 3), isTrue);
       expect(query.any((entity, p) => p.x > 100), isFalse);
     });
@@ -397,7 +403,7 @@ void main() {
       }
 
       var visits = 0;
-      world.query1<Position>().any((entity, p) {
+      world.rawQuery1<Position>().any((entity, p) {
         visits++;
         return true;
       });
@@ -406,7 +412,7 @@ void main() {
 
     test('any on an empty query is false', () {
       final world = _worldWithStores();
-      expect(world.query1<Position>().any((entity, p) => true), isFalse);
+      expect(world.rawQuery1<Position>().any((entity, p) => true), isFalse);
     });
   });
 
@@ -415,7 +421,7 @@ void main() {
       final world = _worldWithStores();
       final e = _spawn(world, position: Position(3, 4));
 
-      final record = world.query1<Position>().components(e);
+      final record = world.rawQuery1<Position>().components(e);
       expect(record, isNotNull);
       expect(record!.$1.x, 3);
 
@@ -433,7 +439,7 @@ void main() {
       );
       final positionOnly = _spawn(world, position: Position(9, 9));
 
-      final query = world.query2<Position, Velocity>();
+      final query = world.rawQuery2<Position, Velocity>();
       final record = query.components(both);
       expect(record, isNotNull);
       final (p, v) = record!;
@@ -450,17 +456,19 @@ void main() {
       world.despawnNow(dead);
 
       expect(
-        world.query1<Position>(withoutTypes: const [Frozen]).components(frozen),
+        world
+            .rawQuery1<Position>(withoutTypes: const [Frozen])
+            .components(frozen),
         isNull,
       );
-      expect(world.query1<Position>().components(dead), isNull);
+      expect(world.rawQuery1<Position>().components(dead), isNull);
     });
 
     test('components is null when the entity misses a later component', () {
       final world = _worldWithStores();
       final e = _spawn(world, velocity: Velocity(1, 1)); // no Position
-      expect(world.query2<Velocity, Position>().components(e), isNull);
-      expect(world.query2<Position, Velocity>().components(e), isNull);
+      expect(world.rawQuery2<Velocity, Position>().components(e), isNull);
+      expect(world.rawQuery2<Position, Velocity>().components(e), isNull);
     });
   });
 
@@ -471,7 +479,7 @@ void main() {
       final extra = world.entities.spawn();
 
       expect(
-        () => world.query1<Position>().each((entity, position) {
+        () => world.rawQuery1<Position>().each((entity, position) {
           world.insertNow<Position>(extra, Position(9, 9));
         }),
         throwsA(isA<AssertionError>()),

@@ -7,9 +7,9 @@ import 'name.dart';
 extension WorldDebugDescribe on World {
   /// Describes [entity] and its components.
   String debugDescribe(Entity entity) {
-    if (!isAlive(entity)) return '$entity <stale>';
+    if (!isAlive(entity)) return '${entity.label} <stale>';
     final index = entity.index;
-    final buffer = StringBuffer()..write(entity);
+    final buffer = StringBuffer()..write(entity.label);
     final name = tryGet<Name>(entity);
     if (name != null) buffer.write(' "${name.value}"');
     buffer.write(' [');

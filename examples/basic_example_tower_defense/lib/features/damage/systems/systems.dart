@@ -1,9 +1,9 @@
 part of '../damage.dart';
 
 void applyDamage(World world) {
-  for (final hit in world.events<DamageDealt>()) {
+  world.eachEvent<DamageDealt>((hit) {
     final health = world.tryGet<Health>(hit.target);
-    if (health == null || health.current <= 0) continue;
+    if (health == null || health.current <= 0) return;
     var amount = hit.amount;
     final shield = world.tryGet<Shield>(hit.target);
     if (shield != null) {
@@ -15,7 +15,7 @@ void applyDamage(World world) {
     }
     health.current -= amount;
     world.add(hit.target, const HitFlash(), removeAfter: hitFlashSeconds);
-  }
+  });
 }
 
 void destroyDead(World world) {
@@ -39,9 +39,9 @@ void rechargeShields(World world) {
 }
 
 void popOnDestroyed(World world) {
-  for (final destroyed in world.events<Destroyed>()) {
+  world.eachEvent<Destroyed>((destroyed) {
     world.spawn(popBundle(world, destroyed.at));
-  }
+  });
 }
 
 void animatePops(World world) {

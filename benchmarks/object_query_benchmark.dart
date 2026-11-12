@@ -56,10 +56,11 @@ void main(List<String> args) {
     if (i.isEven) world.insertNow<Frozen>(e, const Frozen());
   }
 
-  final q2 = world.query2<Position, Velocity>();
-  final q1 = world.query1<Position>();
-  final q2Unfrozen =
-      world.query2<Position, Velocity>(withoutTypes: const [Frozen]);
+  final q2 = world.rawQuery2<Position, Velocity>();
+  final q1 = world.rawQuery1<Position>();
+  final q2Unfrozen = world.rawQuery2<Position, Velocity>(
+    withoutTypes: const [Frozen],
+  );
 
   var sink = 0.0;
 

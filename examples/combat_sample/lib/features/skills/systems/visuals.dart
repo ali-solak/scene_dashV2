@@ -3,36 +3,32 @@ part of '../skills.dart';
 /// What the effects look like: burn flames, the barrier bubble and its
 /// mounted shield, and the lava pits' bodies and materials.
 void installSkillVisuals(GameBuilder game) {
-  game
-    ..addSystem(
-      Schedules.update,
-      attachLavaVisuals,
-      inSet: GameSets.logic,
-      reads: const {LavaPit, SceneTransform},
-      runIf: hasResource<Scene>(),
-    )
-    ..addSystem(
-      Schedules.update,
-      updateBurnFlames,
-      inSet: GameSets.logic,
-      reads: const {Enemy, Burning, NodeRef},
-      runIf: hasResource<Scene>(),
-    )
-    ..addSystem(
-      Schedules.update,
-      updateBarrierVisual,
-      inSet: GameSets.logic,
-      reads: const {Player, Barrier, NodeRef},
-      runIf: hasResource<Scene>(),
-    )
-    ..addSystem(
-      Schedules.update,
-      updateLavaMaterials,
-      inSet: GameSets.logic,
-      reads: const {LavaPit, NodeRef},
-      after: const [attachLavaVisuals],
-      runIf: hasResource<Scene>(),
-    );
+  game.group(
+    inSet: GameSets.logic,
+    runIf: hasResource<Scene>(),
+    (game) => game
+      ..addSystem(
+        Schedules.update,
+        attachLavaVisuals,
+        reads: const {LavaPit, SceneTransform},
+      )
+      ..addSystem(
+        Schedules.update,
+        updateBurnFlames,
+        reads: const {Enemy, Burning, NodeRef},
+      )
+      ..addSystem(
+        Schedules.update,
+        updateBarrierVisual,
+        reads: const {Player, Barrier, NodeRef},
+      )
+      ..addSystem(
+        Schedules.update,
+        updateLavaMaterials,
+        reads: const {LavaPit, NodeRef},
+        after: const [attachLavaVisuals],
+      ),
+  );
 }
 
 /// Updates attached burn flames.

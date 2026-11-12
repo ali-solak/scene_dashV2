@@ -47,22 +47,22 @@ void buyUpgrades(World world) {
   final book = world.resource<SkillBook>();
   final score = world.resource<Score>();
 
-  for (final request in world.events<SkillUpgradeRequested>()) {
+  world.eachEvent<SkillUpgradeRequested>((request) {
     final skill = request.skill;
-    if (book.isMaxed(skill)) continue;
-    if (!score.spend(book.priceOf(skill))) continue;
+    if (book.isMaxed(skill)) return;
+    if (!score.spend(book.priceOf(skill))) return;
     book.upgrade(skill);
-  }
+  });
 
-  for (final _ in world.events<VitalityRequested>()) {
-    if (book.vitalityLevel >= maxVitalityLevel) continue;
-    if (!score.spend(vitalityCost(book.vitalityLevel))) continue;
+  world.eachEvent<VitalityRequested>((_) {
+    if (book.vitalityLevel >= maxVitalityLevel) return;
+    if (!score.spend(vitalityCost(book.vitalityLevel))) return;
     book.vitalityLevel++;
     world.query<Health>().having<Player>().each((entity, health) {
       health.max += vitalityHealthPerLevel;
       health.current += vitalityHealthPerLevel;
     });
-  }
+  });
 }
 
 void castSkills(World world) {

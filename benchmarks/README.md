@@ -45,7 +45,7 @@ cached loop the classic API uses. Desktop JIT, N = 10k
 | classic `Query2.each` (construct once, cached) | 9.7 ns/entity |
 | record view `.each`, constructed per call | 9.7 ns/entity |
 | record view `snapshot()` for-in | 21.0 ns/entity |
-| classic `query2(...)` construction alone | ~87 ns/call |
+| classic `rawQuery2(...)` construction alone | ~87 ns/call |
 | record `query2(...)` construction alone | ~75 ns/call |
 
 These are older JIT measurements. `.each` hands off to the cached classic

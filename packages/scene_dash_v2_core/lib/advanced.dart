@@ -1,8 +1,7 @@
 /// Internal ECS APIs.
-// The query extensions use the same method names.
 library;
 
-export 'scene_dash_v2_core.dart' hide WorldRecordQueries;
+export 'scene_dash_v2_core.dart';
 export 'src/app/app.dart';
 export 'src/app/app_builder.dart';
 export 'src/app/plugin.dart';

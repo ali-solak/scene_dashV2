@@ -16,6 +16,8 @@ void moveBrawlers(World world) {
   if (playerRow == null) return;
   final playerPosition = playerRow.$2.translation;
   final dt = world.dt;
+  final mired = world.handle<Mired>();
+  final knockbacks = world.handle<Knockback>();
 
   world.query2<Brawler, SceneTransform>().having<Enemy>().each((
     entity,
@@ -36,11 +38,11 @@ void moveBrawlers(World world) {
       transform,
       playerPosition,
       dt,
-      mired: world.has<Mired>(entity),
+      mired: mired.has(entity),
     );
     brawler.velocity.setValues(velocityX, 0, velocityZ);
 
-    final knockback = world.tryGet<Knockback>(entity);
+    final knockback = knockbacks.of(entity);
     // Knockback owns airborne movement.
     if (knockback == null || !knockback.airborne) {
       transform.translation

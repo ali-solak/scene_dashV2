@@ -156,7 +156,7 @@ void main() {
       final world = _worldWithStores();
       _spawn(world, enemy: true);
       final wanted = _spawn(world, enemy: true, position: Position(7));
-      final positions = world.query1<Position>();
+      final positions = world.rawQuery1<Position>();
 
       final query = world.queryEntities(withTypes: const [Enemy]);
       expect(
@@ -225,7 +225,7 @@ void main() {
       _spawn(world, position: Position(3)); // no tag
       _spawn(world, enemy: true); // no Position
 
-      final query = world.query1<Position>(
+      final query = world.rawQuery1<Position>(
         withTypes: const [Enemy],
         withoutTypes: const [Stunned],
       );
@@ -244,7 +244,7 @@ void main() {
       world.insertNow<int>(both, 7);
       _spawn(world, position: Position(2)); // Position only
 
-      expect(world.query2<Position, int>().count(), 1);
+      expect(world.rawQuery2<Position, int>().count(), 1);
     });
   });
 }

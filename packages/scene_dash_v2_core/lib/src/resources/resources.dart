@@ -32,12 +32,17 @@ final class Resources {
   // every replaced resource for the lifetime of this collection.
   final Expando<bool> _disposed = Expando<bool>('disposed resource');
 
+  int _version = 0;
+
+  int get version => _version;
+
   /// Inserts or replaces the resource instance for type [T]. A replaced
   /// instance is disposed (if [Disposable]); re-inserting the identical
   /// instance is a no-op for disposal.
   void insert<T extends Object>(T resource) {
     final outgoing = _resources[T];
     _resources[T] = resource;
+    if (!identical(outgoing, resource)) _version++;
     if (resource is Disposable) _disposed[resource] = null;
     if (outgoing != null && !identical(outgoing, resource)) {
       _dispose(outgoing);
@@ -62,6 +67,7 @@ final class Resources {
     if (existing != null) return existing as T;
     final created = orElse();
     _resources[T] = created;
+    _version++;
     if (created is Disposable) _disposed[created] = null;
     return created;
   }
@@ -82,7 +88,10 @@ final class Resources {
   /// Removes and disposes [T].
   T? remove<T extends Object>() {
     final removed = _resources.remove(T);
-    if (removed != null) _dispose(removed);
+    if (removed != null) {
+      _version++;
+      _dispose(removed);
+    }
     return removed as T?;
   }
 
@@ -91,6 +100,7 @@ final class Resources {
   void disposeAll() {
     final values = _resources.values.toList();
     _resources.clear();
+    _version++;
     final failures = <({Object error, StackTrace stackTrace})>[];
     for (var i = values.length - 1; i >= 0; i--) {
       try {

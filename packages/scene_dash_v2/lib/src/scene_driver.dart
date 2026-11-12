@@ -19,6 +19,8 @@ final class EcsSceneDriver extends Component {
   final int maxSubsteps;
 
   double _accumulator = 0;
+  final PhysicsStepMirror _physicsMirror = PhysicsStepMirror();
+  int _stepsThisFrame = 0;
 
   EcsSceneDriver(
     this._loop, {
@@ -27,14 +29,25 @@ final class EcsSceneDriver extends Component {
   });
 
   @override
-  void fixedUpdate(double fixedDt) => _loop.fixedStep(fixedDt);
+  void fixedUpdate(double fixedDt) {
+    _stepsThisFrame++;
+    _loop.fixedStep(fixedDt);
+  }
 
   @override
   void update(double deltaSeconds) {
-    if (isMounted && node.getComponent<PhysicsWorld>() != null) {
-      // Scene physics owns the fixed steps.
+    final physics = isMounted ? node.getComponent<PhysicsWorld>() : null;
+    final double alpha;
+    if (physics != null) {
       _accumulator = 0;
+      alpha = _physicsMirror.advance(
+        frameDt: deltaSeconds,
+        steps: _stepsThisFrame,
+        fixedTimestep: physics.fixedTimestep,
+        maxSubsteps: physics.maxSubsteps,
+      );
     } else {
+      _physicsMirror.reset();
       _accumulator += deltaSeconds;
       var steps = 0;
       while (_accumulator >= fixedTimestep && steps < maxSubsteps) {
@@ -42,11 +55,30 @@ final class EcsSceneDriver extends Component {
         _accumulator -= fixedTimestep;
         steps++;
       }
-      if (_accumulator > fixedTimestep * maxSubsteps) {
-        // Drop excess accumulated time.
-        _accumulator = 0;
-      }
+      if (_accumulator > fixedTimestep * maxSubsteps) _accumulator = 0;
+      alpha = _accumulator / fixedTimestep;
     }
-    _loop.update(deltaSeconds);
+    _stepsThisFrame = 0;
+    _loop.update(deltaSeconds, fixedAlpha: alpha.clamp(0.0, 1.0));
   }
+}
+
+final class PhysicsStepMirror {
+  double _accumulator = 0;
+
+  double advance({
+    required double frameDt,
+    required int steps,
+    required double fixedTimestep,
+    required int maxSubsteps,
+  }) {
+    var accumulator = _accumulator + frameDt - steps * fixedTimestep;
+    if (accumulator > fixedTimestep * maxSubsteps || accumulator < 0) {
+      accumulator = 0;
+    }
+    _accumulator = accumulator;
+    return accumulator / fixedTimestep;
+  }
+
+  void reset() => _accumulator = 0;
 }

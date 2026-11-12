@@ -2,20 +2,20 @@ part of '../player.dart';
 
 void installPlayerActions(GameBuilder game) {
   game
-    ..addSystem(
+    ..addSystems(
       Schedules.fixedUpdate,
-      fighterDriver,
       inSet: GameSets.actions,
-      writes: const {Fighter},
       runIf: inState(GameStatus.fighting),
-    )
-    ..addSystem(
-      Schedules.fixedUpdate,
-      announceWindup,
-      inSet: GameSets.actions,
-      reads: const {Player, Fighter, PlayerMotion},
-      after: const [fighterDriver],
-      runIf: inState(GameStatus.fighting),
+      chain: true,
+      [
+        (bufferPresses, reads: const {}, writes: const {}),
+        (fighterDriver, reads: const {}, writes: const {Fighter}),
+        (
+          announceWindup,
+          reads: const {Player, Fighter, PlayerMotion},
+          writes: const {},
+        ),
+      ],
     )
     ..addSystem(
       Schedules.fixedUpdate,
@@ -47,6 +47,14 @@ void installPlayerActions(GameBuilder game) {
       after: const [fighterDriver],
       runIf: hasResource<Scene>(),
     );
+}
+
+void bufferPresses(World world) {
+  final buttons = world.buttons<CombatAction>();
+  final buffer = world.buffer<CombatAction>();
+  for (final action in CombatAction.values) {
+    if (buttons.justPressed(action)) buffer.record(action);
+  }
 }
 
 void announceWindup(World world) {

@@ -35,7 +35,7 @@ final class _TinyQueryAdapter implements SystemAdapter {
   void initialize(World world) {
     world.ensureObjectStore<Stat>();
     world.ensureTagStore<Flag>();
-    _query = world.query1<Stat>(withTypes: const <Type>[Flag]);
+    _query = world.rawQuery1<Stat>(withTypes: const <Type>[Flag]);
   }
 
   @override
@@ -104,7 +104,7 @@ void main(List<String> args) {
   const queryCount = 1000;
   final queries = List<Query1<Stat>>.generate(
     queryCount,
-    (_) => world.query1<Stat>(withTypes: const <Type>[Flag]),
+    (_) => world.rawQuery1<Stat>(withTypes: const <Type>[Flag]),
     growable: false,
   );
   benchRepeat('$queryCount query executions (16 matches)', queryCount, () {

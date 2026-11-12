@@ -11,14 +11,10 @@ import '../schedule/schedule_label.dart';
 import '../schedule/schedule_runner.dart';
 import '../state/despawn_after.dart';
 import '../state/states.dart';
-import '../time/fixed_time.dart';
-import '../time/frame_time.dart';
-import '../time/game_clock.dart';
 import '../world/world.dart';
+import 'component_handle.dart';
 import 'game_builder.dart';
 import 'observers.dart';
-import 'remove_after.dart';
-import 'spawning.dart';
 
 extension WorldSurface on World {
   /// Sends [event] to its own class's channel when one exists, otherwise to
@@ -38,6 +34,11 @@ extension WorldSurface on World {
     final reader = _eventReader<E>();
     if (!reader.hasUnread) return const [];
     return reader.drain();
+  }
+
+  void eachEvent<E extends Object>(void Function(E event) callback) {
+    final reader = _eventReader<E>();
+    if (reader.hasUnread) reader.forEach(callback);
   }
 
   EventReader<E> _eventReader<E extends Object>() {
@@ -90,7 +91,7 @@ extension WorldSurface on World {
   ///
   /// [ownedBy] links its lifetime to another entity.
   Entity spawn(List<Object> parts, {Entity? ownedBy}) =>
-      SpawnQueue.of(this).enqueue(parts, ownedBy: ownedBy);
+      spawnQueue.enqueue(parts, ownedBy: ownedBy);
 
   /// Queues despawning [entity], applied at the next command flush.
   void despawn(Entity entity) => commands.despawn(entity);
@@ -105,22 +106,18 @@ extension WorldSurface on World {
     double? removeAfter,
   }) {
     if (T == component.runtimeType) ensureStore<T>();
-    SpawnQueue.of(this).addPart(entity, component);
+    spawnQueue.addPart(entity, component);
     if (removeAfter != null) {
-      RemoveAfterTracker.of(this)
-          .track(entity, component.runtimeType, removeAfter);
+      removeAfterTracker.track(entity, component.runtimeType, removeAfter);
     } else {
-      resources.tryGet<RemoveAfterTracker>()?.cancel(
-        entity,
-        component.runtimeType,
-      );
+      removeAfterTrackerOrNull?.cancel(entity, component.runtimeType);
     }
   }
 
   /// Removes [T] from [entity] at the next command flush.
   void remove<T>(Entity entity) {
-    resources.tryGet<RemoveAfterTracker>()?.cancel(entity, T);
-    SpawnQueue.of(this).removePart<T>(entity);
+    removeAfterTrackerOrNull?.cancel(entity, T);
+    spawnQueue.removePart<T>(entity);
   }
 
   /// Time until [T] is removed from [entity].
@@ -129,8 +126,10 @@ extension WorldSurface on World {
       final remaining = tryGet<DespawnAfter>(entity)?.remaining;
       return remaining == null || remaining > 0 ? remaining : 0;
     }
-    return resources.tryGet<RemoveAfterTracker>()?.expiryOf(entity, T);
+    return removeAfterTrackerOrNull?.expiryOf(entity, T);
   }
+
+  ComponentHandle<T> handle<T extends Object>() => ComponentHandle<T>(this);
 
   EntityQuery entitiesWith<T extends Object>() =>
       EntityQuery(this, [ensureStore<T>()], const []);
@@ -164,21 +163,16 @@ extension WorldSurface on World {
   // Time
 
   /// Delta for the current schedule.
-  double get dt => fixedContext
-      ? resources.get<FixedTime>().delta
-      : resources.get<FrameTime>().delta;
+  double get dt => fixedContext ? fixedTime.delta : frameTime.delta;
 
   /// This frame's clock-scaled delta, explicitly (see [dt]).
-  double get delta => resources.get<FrameTime>().delta;
+  double get delta => frameTime.delta;
 
   /// The fixed timestep, explicitly (see [dt]).
-  double get fixedDelta => resources.get<FixedTime>().delta;
+  double get fixedDelta => fixedTime.delta;
 
   /// This frame's unscaled delta.
-  double get unscaledDelta => resources.get<FrameTime>().unscaledDelta;
-
-  /// The gameplay clock (pause, `timeScale`, `freezeFor` hitstop).
-  GameClock get clock => resources.get<GameClock>();
+  double get unscaledDelta => frameTime.unscaledDelta;
 
   // Input
 

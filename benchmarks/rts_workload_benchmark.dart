@@ -118,9 +118,9 @@ void main(List<String> args) {
   final n = entityCount(args);
   const dt = 1 / 60;
   final world = _freshWorld(n);
-  final movement = world.query2<Position, Velocity>();
-  final state = world.query3<Health, Target, UnitState>();
-  final selected = world.query1<Position>(withTypes: const <Type>[Selected]);
+  final movement = world.rawQuery2<Position, Velocity>();
+  final state = world.rawQuery3<Health, Target, UnitState>();
+  final selected = world.rawQuery1<Position>(withTypes: const <Type>[Selected]);
   final positions = world.stores.object<Position>();
   final grid = SpatialGrid(8);
   var sink = 0.0;

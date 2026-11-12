@@ -362,6 +362,14 @@ world.singleOrNull<Fighter>(); //   (throws on duplicates; null on none)
 world.get<Health>(enemy);      // throws if absent
 world.tryGet<Health>(enemy);   // null if absent, despawned, or slot reused
 world.has<Stunned>(enemy);
+
+// many lookups inside a loop? a handle resolves the store once
+final stunned = world.handle<Stunned>();
+final health = world.handle<Health>();
+world.query<Target>().each((entity, target) {
+  if (stunned.has(entity)) return;
+  health.of(target.entity)?.current -= 1;    // of / get / has, like
+});                                          //   tryGet / get / has
 ```
 
 ```dart
@@ -450,6 +458,28 @@ game.addSystem(Schedules.fixedUpdate, enemyAttacks, after: [closeIn]);
 // pair: ordering untouched, every other pairing keeps the net
 game.addSystem(Schedules.fixedUpdate, lockOn, writes: {Fighter},
     independentOf: [enemyAttacks]);
+
+// several systems in one call: each entry keeps its own access; runIf and
+// inSet apply to all; chain: true runs them in list order
+game.addSystems(Schedules.fixedUpdate, runIf: inState(GameStatus.playing),
+    inSet: GameSets.combat, chain: true, [
+  (closeIn, reads: {Target}, writes: {SceneTransform}),
+  (enemyAttacks, reads: {Target}, writes: {EnemyAttack}),
+  (lockOn, reads: const {}, writes: {Fighter}),
+]);
+
+// a shared gate and phase across schedules, or with per-system options
+game.group(runIf: inState(GameStatus.playing), inSet: GameSets.combat,
+    (game) {
+  game
+    ..addSystem(Schedules.fixedUpdate, closeIn, writes: {SceneTransform})
+    ..addSystem(Schedules.fixedUpdate, enemyAttacks, writes: {EnemyAttack},
+        runIf: every(0.5));      // AND-ed with the group's runIf
+});                              // a different inSet: inside throws
+
+// closures, web and obfuscated builds have no function names: the system
+// shows up as closure@N and a diagnostic says so once; name it instead
+game.addSystem(Schedules.update, (world) {}, label: 'tickHud');
 ```
 
 ```dart
@@ -551,6 +581,13 @@ world.clock.paused = true;           //   gameplay together; the fixed step
                                      //   never changes, so fixed-step
                                      //   gameplay stays deterministic
 // HUD / camera shake keep moving on world.unscaledDelta
+
+world.fixedTime.alpha                // 0..1: how far this frame is past the
+                                     //   last fixed step (render blending)
+SceneGame.boot(maxFrameDelta: 0.25)  // default: a wall delta is clamped
+                                     //   before the clock scales it, so a
+                                     //   breakpoint or a background tab
+                                     //   never lands as one giant frame
 ```
 
 Durations belong on components and tick with `world.dt`, so they pause,
@@ -772,6 +809,8 @@ void awardBounty(World world) {
   }
 }
 
+world.eachEvent<EnemyKilled>((event) => score.value += event.bounty);
+                                     // callback form: no Iterable allocated
 world.consumeAny<AttackPressed>();   // boolean form: advances the cursor in
                                      //   constant time without a result list
                                      // same cursor as events()
@@ -849,12 +888,36 @@ void installControls(GameBuilder game) {
 ```
 
 ```dart
-// Widget writes. Resolve once in a State, releaseAll() in dispose.
+// Widget writes, declaratively: keys and touch areas map to actions. Two
+// sources on one action release only when both let go; losing focus,
+// pausing the app or unmounting releases everything held.
+InputBindings<PlayerAction>(               // writes world.buttons<PlayerAction>()
+  keys: {                                  //   of the enclosing GameScope, or
+    LogicalKeyboardKey.keyA: PlayerAction.left,   //   input: yourButtonInput
+    LogicalKeyboardKey.arrowLeft: PlayerAction.left,
+    LogicalKeyboardKey.space: PlayerAction.attack,
+  },
+  child: Stack(children: [
+    const GameView(),                      // yours
+    const TouchAction<PlayerAction>(       // held while a pointer is down
+      action: PlayerAction.attack,
+      cancelOnDrag: true,                  // past touch slop: cancel, no
+                                           //   justReleased
+      child: AttackButton(),               // yours
+    ),
+  ]),
+)
+```
+
+```dart
+// Widget writes by hand. Resolve once in a State, releaseAll() in dispose.
 final buttons = GameScope.of(context).world.buttons<PlayerAction>();
 
 buttons.setPressed(PlayerAction.attack, keyDown || touchDown);
                              // returns the edge crossed; OR-combine sources
                              //   so releasing one never releases the other
+buttons.cancel(PlayerAction.attack);   // up without justReleased; an
+                                       //   unread justPressed is dropped too
 world.axes<GameAxis>().setValue(GameAxis.moveX, stick.dx);   // clamped [-1, 1]
 world.buffer<PlayerAction>().record(PlayerAction.roll);
 ```
@@ -862,6 +925,11 @@ world.buffer<PlayerAction>().record(PlayerAction.roll);
 ```dart
 // System reads.
 world.buttons<PlayerAction>().pressed(PlayerAction.attack);        // bool
+world.buttons<PlayerAction>().justPressed(PlayerAction.roll);      // edges:
+world.buttons<PlayerAction>().justReleased(PlayerAction.attack);   //   true for
+                             //   one frame in update systems and for one
+                             //   step in fixed systems; a tap between steps
+                             //   reads both edges in the next step
 world.buttons<PlayerAction>().axis(PlayerAction.left,
     PlayerAction.right);                                    // -1, 0, or +1
 world.axes<GameAxis>().value(GameAxis.moveX);       // 0.0 if never written
@@ -1173,6 +1241,14 @@ NodeRef(node)            // mounted into the scene automatically
 SceneTransform.zero()    // when present, written to the bound node whenever
                          //   it changes (or the node's matrix is replaced)
 const PhysicsDriven()    // a physics body owns the transform instead
+const Static()           // never moves: written once, again only when
+                         //   SceneTransform is re-added or Static removed;
+                         //   the per-frame sync skips it
+InterpolateTransform()   // moved in fixed steps: the node gets the blend
+                         //   of the last two steps at fixedTime.alpha;
+                         //   SceneTransform itself keeps the real value
+world.get<InterpolateTransform>(entity).snap();   // after a teleport: next
+                         //   frame writes the target without blending
 ```
 
 An entity's transform can also live on the node itself.
@@ -1286,7 +1362,14 @@ print(world.debugDescribe(grunt));
 
 // a component that overrides toString renders its live value instead of
 // its type; a Machine owner prints e.g. `striking (0.12s)`
+
+entity.label            // Entity(14 v2); an Entity is a packed int, so
+                        //   '$entity' prints the raw number
 ```
+
+Hot reload swaps system bodies in place, but the schedule was built at
+boot. `GameHost` reports once in debug that added systems, ordering,
+`runIf:` and `inSet:` changes need a hot restart.
 
 Debug builds warn once per system when a query loops inside another
 query's `each`. That can cause quadratic work, so move the inner query out

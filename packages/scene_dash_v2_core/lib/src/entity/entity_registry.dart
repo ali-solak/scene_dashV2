@@ -38,6 +38,11 @@ final class EntityRegistry {
       index = _freeIndices[--_freeCount];
     } else {
       index = _count;
+      if (index > Entity.maxIndex) {
+        throw StateError(
+          'Entity limit reached: ${Entity.maxIndex + 1} live slots.',
+        );
+      }
       _ensureCapacity(index + 1);
       _count = index + 1;
     }
@@ -62,7 +67,7 @@ final class EntityRegistry {
     final index = entity.index;
     _alive[index] = 0;
     // Wrap-around is intentional and harmless for handle disambiguation.
-    _generations[index] = (_generations[index] + 1) & 0xFFFFFFFF;
+    _generations[index] = (_generations[index] + 1) & Entity.generationMask;
     _pushFree(index);
     _despawnCount++;
     return true;
@@ -77,7 +82,7 @@ final class EntityRegistry {
       if (_alive[i] == 1) {
         _alive[i] = 0;
         // Wrap-around is intentional and harmless, as in despawn.
-        _generations[i] = (_generations[i] + 1) & 0xFFFFFFFF;
+        _generations[i] = (_generations[i] + 1) & Entity.generationMask;
       }
       // Rebuilding replaces any previous stack contents, so every slot
       // appears exactly once; the last pushed (slot 0) pops first.

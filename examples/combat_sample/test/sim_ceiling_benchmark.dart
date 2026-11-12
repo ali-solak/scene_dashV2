@@ -45,7 +45,6 @@ double measureFrameMs(int n, {int pits = 0}) {
 
   // Exact-N field: clear whatever wave 1 spawned.
   world.entitiesWith<Enemy>().each(world.despawn);
-  game.pumpFixed(steps: 1);
 
   // The player must survive N barbarians pounding on it for the whole
   // measurement; a death would flip the state and gate the sim off.

@@ -7,4 +7,6 @@ final class FixedTime {
 
   /// Number of fixed steps executed so far.
   int tick = 0;
+
+  double alpha = 0;
 }

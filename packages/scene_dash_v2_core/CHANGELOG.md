@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.7.0
+- `Entity` is an extension type over one `int` (24-bit index, 29-bit
+  generation, packed within 53 bits so it is exact on the web). Queries no
+  longer allocate a handle per row: `Query1.each` 5.0 → 3.8 ns/entity AOT.
+  `'$entity'` prints the packed number; use `entity.label`. Spawning past
+  `Entity.maxIndex` live slots throws a `StateError`.
+- The classic query constructors are `rawQuery1`..`rawQuery4`, so
+  `advanced.dart` exports the record `query`..`query4` without a clash.
+- Debug builds assert when a store would split a type: creating a store
+  for a type whose supertype or subtype already has one. Read the subtype
+  through the supertype's store (`tryGet`, `has`, `handle`) instead.
+- `GameBuilder.addSystems(schedule, [(system, reads:, writes:), ...],
+  runIf:, inSet:, chain:)` registers several systems in one call; each
+  entry keeps its own access, and `chain: true` runs them in list order.
+- `GameBuilder.group(runIf:, inSet:, (game) {...})` shares a run condition
+  (AND-ed with each system's) and a set across the systems it registers.
+- A system that can only be named `closure@N` (closures, web, obfuscated
+  builds) is reported once, pointing at `label:`.
+- `world.handle<T>()` resolves a store once for `of`/`get`/`has` lookups
+  inside loops.
+- `world.eachEvent<E>(callback)` reads events without allocating.
+- `ButtonInput.justPressed`/`justReleased`: one frame in update systems,
+  one step in fixed systems, so a fixed system never misses or repeats an
+  edge on frames with zero or several steps. `ButtonInput.cancel` lets go
+  without a release edge (`ButtonEdge.canceled`). `advanceInputBuffers` is
+  now `advanceInput`; `beginInputStep`/`endInputStep` bracket a fixed step.
+- `FixedTime.alpha`: the fraction of a fixed step left over this frame.
+  `EcsFrameLoop` takes `onFixedStepStart`, and `update` takes `fixedAlpha:`.
+- `World` caches `frameTime`, `fixedTime`, `clock`, `spawnQueue` and
+  `removeAfterTracker`, so `dt`, `add`, `remove` and `spawn` skip the
+  resource lookup. The spawn-queue and tracker getters are `@internal`.
+- `RemoveAfterTracker` indexes rows per entity; `add(removeAfter:)`,
+  `remove` and `expiryOf` no longer scan every tracked row.
+- The parked-part diagnostic names `ensureStore<T>()` instead of the removed
+  `registerComponent<T>()`.
+
 ## 0.6.1
 - minor perf upgrades
 

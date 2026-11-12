@@ -2,14 +2,14 @@ part of '../towers.dart';
 
 void placeTowers(World world) {
   final kind = world.resource<BuildChoice>().kind;
-  for (final request in world.events<PlaceTowerRequested>()) {
+  world.eachEvent<PlaceTowerRequested>((request) {
     final ground = groundAt(world, request.position, request.viewSize);
     if (ground == null) {
       world.resource<BuildChoice>().refusal = Refusal.edge;
     } else {
       placeTowerAt(world, kind, ground);
     }
-  }
+  });
 }
 
 Vector3? groundAt(World world, Offset point, Size viewSize) {

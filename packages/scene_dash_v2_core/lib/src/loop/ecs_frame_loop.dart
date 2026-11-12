@@ -1,7 +1,6 @@
 import '../app/app.dart';
 import '../input/input_buffer.dart';
 import '../schedule/schedules.dart';
-import '../surface/remove_after.dart';
 import '../time/fixed_time.dart';
 import '../time/frame_time.dart';
 import '../time/game_clock.dart';
@@ -20,11 +19,14 @@ final class EcsFrameLoop {
   /// Runs after render sync.
   final void Function()? onFrameEnd;
 
+  final void Function()? onFixedStepStart;
+
   EcsFrameLoop(
     this.app, {
     this.onBeforeUpdate,
     this.onCommandBoundary,
     this.onFrameEnd,
+    this.onFixedStepStart,
   });
 
   /// Inserts default [FrameTime]/[FixedTime]/[GameClock] resources if a
@@ -41,17 +43,18 @@ final class EcsFrameLoop {
     // Advance the profiler frame counter (if profiling is enabled) at the one
     // per-frame boundary, so timings can be attributed to a frame number.
     app.profiler?.beginFrame();
-    final clock = app.world.resources.get<GameClock>();
+    final world = app.world;
+    final clock = world.clock;
     // Apply a partial freeze to its full frame.
     final scaledDelta = deltaSeconds * clock.effectiveScale;
     clock.advanceFreeze(deltaSeconds);
-    app.world.resources.get<FrameTime>()
+    world.frameTime
       ..delta = scaledDelta
       ..unscaledDelta = deltaSeconds
       ..elapsed = elapsed
       ..frame += 1;
     // Age inputs before frame start.
-    advanceInputBuffers(app.world.resources.values, deltaSeconds);
+    advanceInput(world.resources.values, deltaSeconds);
     app.runSchedule(Schedules.frameStart);
     app.applyStateTransitions();
     onCommandBoundary?.call();
@@ -61,11 +64,18 @@ final class EcsFrameLoop {
 
   /// Runs one fixed step.
   void fixedStep(double fixedDt) {
-    app.world.resources.get<FixedTime>()
+    onFixedStepStart?.call();
+    app.world.fixedTime
       ..delta = fixedDt
       ..tick += 1;
-    app.runSchedule(Schedules.fixedPrePhysics);
-    app.world.resources.tryGet<RemoveAfterTracker>()?.tick(fixedDt);
+    final resources = app.world.resources.values;
+    beginInputStep(resources);
+    try {
+      app.runSchedule(Schedules.fixedPrePhysics);
+    } finally {
+      endInputStep(resources);
+    }
+    app.world.removeAfterTrackerOrNull?.tick(fixedDt);
     onCommandBoundary?.call();
   }
 
@@ -80,8 +90,10 @@ final class EcsFrameLoop {
   /// it is the value [frameStart] returned, routed through `Scene.update`'s
   /// component walk. `FrameTime.unscaledDelta` (set at [frameStart]) carries
   /// this frame's wall delta.
-  void update(double deltaSeconds) {
-    app.world.resources.get<FrameTime>().delta = deltaSeconds;
+  void update(double deltaSeconds, {double? fixedAlpha}) {
+    final world = app.world;
+    world.frameTime.delta = deltaSeconds;
+    if (fixedAlpha != null) world.fixedTime.alpha = fixedAlpha;
     app.runSchedule(Schedules.postPhysics);
     onCommandBoundary?.call();
     onBeforeUpdate?.call();

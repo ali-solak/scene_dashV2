@@ -1,3 +1,5 @@
+import 'button_input.dart';
+
 /// Keeps recent input actions in order.
 ///
 /// Entries use wall time and expire after [window].
@@ -121,11 +123,25 @@ final class InputBuffer<T> {
   }
 }
 
-/// Advances every automatic input buffer.
-void advanceInputBuffers(Iterable<Object> resources, double unscaledDt) {
+/// Ages automatic input buffers and latches button edges for the frame.
+void advanceInput(Iterable<Object> resources, double unscaledDt) {
   for (final resource in resources) {
     if (resource is InputBuffer && resource.autoAdvance) {
       resource.advance(unscaledDt);
+    } else if (resource is ButtonInput) {
+      resource.advanceFrame();
     }
+  }
+}
+
+void beginInputStep(Iterable<Object> resources) {
+  for (final resource in resources) {
+    if (resource is ButtonInput) resource.beginStep();
+  }
+}
+
+void endInputStep(Iterable<Object> resources) {
+  for (final resource in resources) {
+    if (resource is ButtonInput) resource.endStep();
   }
 }

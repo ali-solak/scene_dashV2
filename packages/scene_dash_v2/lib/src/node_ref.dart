@@ -20,3 +20,7 @@ final class PhysicsDriven {
 final class Mounted {
   const Mounted();
 }
+
+final class Static {
+  const Static();
+}

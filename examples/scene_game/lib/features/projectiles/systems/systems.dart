@@ -11,18 +11,14 @@ void attachBlaster(World world) {
 }
 
 void shootProjectiles(World world) {
-  final pressed = world.consumeAny<FirePressed>();
-  final released = world.consumeAny<FireReleased>();
-  final canceled = world.consumeAny<FireCanceled>();
-
+  final buttons = world.buttons<GameAction>();
   final player = world.query2<Blaster, NodeRef>().having<Player>().firstOrNull;
   if (player == null) return;
   final (_, blaster, binding) = player;
   final shots = blaster.update(
-    pressed: pressed,
-    released: released,
-    canceled: canceled,
-    held: world.buttons<GameAction>().pressed(GameAction.fire),
+    pressed: buttons.justPressed(GameAction.fire),
+    released: buttons.justReleased(GameAction.fire),
+    held: buttons.pressed(GameAction.fire),
     dt: world.dt,
   );
   if (shots.isEmpty) return;

@@ -2,18 +2,18 @@ part of '../rules.dart';
 
 void loseLife(World world) {
   final lives = world.resource<Lives>();
-  for (final _ in world.events<CreepReachedEnd>()) {
-    if (--lives.value > 0) continue;
+  world.eachEvent<CreepReachedEnd>((_) {
+    if (--lives.value > 0) return;
     lives.value = 0;
     world.setState(GameStatus.lost);
-  }
+  });
 }
 
 void collectBounty(World world) {
   final gold = world.resource<Gold>();
-  for (final destroyed in world.events<Destroyed>()) {
+  world.eachEvent<Destroyed>((destroyed) {
     gold.value += destroyed.bounty;
-  }
+  });
 }
 
 void startRun(World world) {
@@ -23,7 +23,7 @@ void startRun(World world) {
 
 void collectWaveBonus(World world) {
   final gold = world.resource<Gold>();
-  for (final cleared in world.events<WaveCleared>()) {
+  world.eachEvent<WaveCleared>((cleared) {
     gold.value += cleared.bonus;
-  }
+  });
 }

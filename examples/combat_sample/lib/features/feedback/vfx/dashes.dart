@@ -20,7 +20,7 @@ void installDashFx(GameBuilder game) {
 
 void ringShockwaveDust(World world) {
   final rig = world.resource<CameraRig>();
-  for (final wave in world.events<Shockwave>()) {
+  world.eachEvent<Shockwave>((wave) {
     rig.shake.addTrauma(shockwaveTrauma);
     for (var i = 0; i < shockwaveDustPuffs; i++) {
       final angle = i * 2 * math.pi / shockwaveDustPuffs;
@@ -30,11 +30,11 @@ void ringShockwaveDust(World world) {
         Vector3(math.sin(angle), 0, math.cos(angle)),
       );
     }
-  }
+  });
 }
 
 void kickDashDust(World world) {
-  for (final dash in world.events<Dashed>()) {
+  world.eachEvent<Dashed>((dash) {
     spawnDashDust(world, dash.position, dash.heading);
-  }
+  });
 }

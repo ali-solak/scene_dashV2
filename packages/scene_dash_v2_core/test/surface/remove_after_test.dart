@@ -310,4 +310,33 @@ void main() {
       expect(game.world.singleOrNull<Shield>, throwsStateError);
     });
   });
+
+  test('tracker rows stay consistent under churn across many entities', () {
+    final world = World();
+    final tracker = RemoveAfterTracker.of(world);
+    final entities = [for (var i = 0; i < 40; i++) world.entities.spawn()];
+    final model = <(Entity, Type), double>{};
+    var seed = 7;
+    int next(int bound) {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return seed % bound;
+    }
+
+    for (var round = 0; round < 4000; round++) {
+      final entity = entities[next(entities.length)];
+      final type = next(2) == 0 ? Shield : Other;
+      if (next(3) == 0) {
+        tracker.cancel(entity, type);
+        model.remove((entity, type));
+      } else {
+        final seconds = 1 + next(100).toDouble();
+        tracker.track(entity, type, seconds);
+        model[(entity, type)] = seconds;
+      }
+      expect(tracker.length, model.length);
+      for (final MapEntry(key: (e, t), :value) in model.entries) {
+        expect(tracker.expiryOf(e, t), value);
+      }
+    }
+  });
 }

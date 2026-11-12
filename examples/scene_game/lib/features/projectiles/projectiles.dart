@@ -37,9 +37,6 @@ part 'vfx/reticle.dart';
 
 void installProjectiles(GameBuilder game) {
   game
-    ..configureEvent<FirePressed>(retainedUpdates: null)
-    ..configureEvent<FireReleased>(retainedUpdates: null)
-    ..configureEvent<FireCanceled>(retainedUpdates: null)
     ..observe<LockOnReticle>(onRemove: disposeReticleModel)
     ..addSystem(
       OnEnter(GameStatus.playing),

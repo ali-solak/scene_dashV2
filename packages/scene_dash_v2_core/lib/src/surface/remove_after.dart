@@ -15,7 +15,8 @@ final class RemoveAfterTracker {
   Uint32List _generations = Uint32List(8);
   Float64List _deadlines = Float64List(8);
   List<Type?> _types = List<Type?>.filled(8, null, growable: false);
-  Uint32List _rowsPerIndex = Uint32List(0);
+  Int32List _next = Int32List(8);
+  Int32List _headByIndex = Int32List(0);
   int _length = 0;
 
   RemoveAfterTracker._(this.world);
@@ -40,8 +41,8 @@ final class RemoveAfterTracker {
     _generations[_length] = entity.generation;
     _deadlines[_length] = seconds;
     _types[_length] = type;
+    _link(_length, entity.index);
     _length++;
-    _countRow(entity.index);
   }
 
   /// Cancels a removal deadline.
@@ -73,8 +74,6 @@ final class RemoveAfterTracker {
       final index = _indices[i];
       final generation = _generations[i];
       final type = _types[i]!;
-      // Swap-remove first; the row swapped in from the end has not been
-      // ticked yet this pass, so continuing at [i] ticks it next.
       _removeRow(i);
       final entity = world.entities.resolve(index);
       if (entity.generation != generation) continue;
@@ -88,42 +87,56 @@ final class RemoveAfterTracker {
   /// `World.reset` interplay: every tracked entity died, so drop all rows.
   void reset() {
     _length = 0;
-    _rowsPerIndex.fillRange(0, _rowsPerIndex.length, 0);
+    _headByIndex.fillRange(0, _headByIndex.length, 0);
   }
 
   int _rowOf(Entity entity, Type type) {
     final index = entity.index;
-    if (index >= _rowsPerIndex.length || _rowsPerIndex[index] == 0) return -1;
-    for (var i = 0; i < _length; i++) {
-      if (_indices[i] == entity.index &&
-          _generations[i] == entity.generation &&
-          _types[i] == type) {
-        return i;
-      }
+    if (index >= _headByIndex.length) return -1;
+    final generation = entity.generation;
+    var row = _headByIndex[index] - 1;
+    while (row >= 0) {
+      if (_generations[row] == generation && _types[row] == type) return row;
+      row = _next[row] - 1;
     }
     return -1;
   }
 
-  void _countRow(int index) {
-    if (index >= _rowsPerIndex.length) {
-      var capacity = _rowsPerIndex.isEmpty ? 64 : _rowsPerIndex.length;
+  void _link(int row, int index) {
+    if (index >= _headByIndex.length) {
+      var capacity = _headByIndex.isEmpty ? 64 : _headByIndex.length;
       while (capacity <= index) {
         capacity *= 2;
       }
-      _rowsPerIndex = Uint32List(capacity)
-        ..setRange(0, _rowsPerIndex.length, _rowsPerIndex);
+      _headByIndex = Int32List(capacity)
+        ..setRange(0, _headByIndex.length, _headByIndex);
     }
-    _rowsPerIndex[index]++;
+    _next[row] = _headByIndex[index];
+    _headByIndex[index] = row + 1;
+  }
+
+  void _relink(int index, int from, int to) {
+    if (_headByIndex[index] == from + 1) {
+      _headByIndex[index] = to;
+      return;
+    }
+    var row = _headByIndex[index] - 1;
+    while (_next[row] != from + 1) {
+      row = _next[row] - 1;
+    }
+    _next[row] = to;
   }
 
   void _removeRow(int row) {
-    _rowsPerIndex[_indices[row]]--;
+    _relink(_indices[row], row, _next[row]);
     final last = _length - 1;
     if (row != last) {
+      _relink(_indices[last], last, row + 1);
       _indices[row] = _indices[last];
       _generations[row] = _generations[last];
       _deadlines[row] = _deadlines[last];
       _types[row] = _types[last];
+      _next[row] = _next[last];
     }
     _types[last] = null;
     _length = last;
@@ -138,6 +151,7 @@ final class RemoveAfterTracker {
     _indices = Int32List(newCap)..setRange(0, _length, _indices);
     _generations = Uint32List(newCap)..setRange(0, _length, _generations);
     _deadlines = Float64List(newCap)..setRange(0, _length, _deadlines);
+    _next = Int32List(newCap)..setRange(0, _length, _next);
     final types = List<Type?>.filled(newCap, null, growable: false);
     for (var i = 0; i < _length; i++) {
       types[i] = _types[i];

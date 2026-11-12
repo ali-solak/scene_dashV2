@@ -202,11 +202,11 @@ final class SpawnQueue {
         final type = part.runtimeType;
         if (!_reportedParkedTypes.add(type)) continue;
         sink(
-          'A spawn(...) part of type $type is still parked: no typed use '
-          '(a query naming $type, registerComponent<$type>()) has '
-          'registered its store, so it is invisible to queries. Register '
-          'it at install time if that is not the intent. (Reported once '
-          'per type.)',
+          'A spawn(...) part of type $type is still parked: nothing has '
+          'named $type yet (a query, get/tryGet/has, or add<$type>), so '
+          'no store exists and it is invisible to queries. Call '
+          'world.ensureStore<$type>() at install time if that is not the '
+          'intent. (Reported once per type.)',
         );
       }
     }

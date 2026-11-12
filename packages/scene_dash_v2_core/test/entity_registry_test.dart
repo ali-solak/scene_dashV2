@@ -48,4 +48,29 @@ void main() {
       }
     });
   });
+
+  test('Entity packs index and generation within 53 bits', () {
+    const top = Entity(Entity.maxIndex, Entity.generationMask);
+    expect(top.index, Entity.maxIndex);
+    expect(top.generation, Entity.generationMask);
+    expect((top as int) <= 9007199254740991, isTrue);
+    expect(const Entity(5, 3), const Entity(5, 3));
+    expect(const Entity(5, 3) == const Entity(5, 4), isFalse);
+    expect(const Entity(5, Entity.generationMask + 1).generation, 0);
+    expect(Entity.invalid.isValid, isFalse);
+    expect(const Entity(5, 3).label, 'Entity(5 v3)');
+  });
+
+  test('a slot reused a million times still tells handles apart', () {
+    final registry = EntityRegistry();
+    final first = registry.spawn();
+    var entity = first;
+    for (var i = 0; i < 1 << 21; i++) {
+      registry.despawn(entity);
+      entity = registry.spawn();
+    }
+    expect(entity.index, first.index);
+    expect(entity.generation, 1 << 21);
+    expect(registry.isAlive(first), isFalse);
+  });
 }

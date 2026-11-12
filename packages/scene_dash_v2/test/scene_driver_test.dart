@@ -121,7 +121,10 @@ void main() {
         ),
       );
       expect(game.root.getComponent<EcsSceneDriver>(), isNull);
-      expect(() => game.frameTick.addListener(() {}), throwsFlutterError);
+      expect(
+        () => game.frameTick.addListener(() {}),
+        throwsA(isA<Error>()),
+      );
       await game.shutdown();
     },
   );

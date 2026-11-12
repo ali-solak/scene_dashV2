@@ -20,8 +20,8 @@ void installReactions(GameBuilder game) {
 
 void reactToDamage(World world) {
   final player = world.entitiesWith<Player>().firstOrNull;
-  for (final hit in world.events<DamageDealt>()) {
-    if (!hit.impact || !world.isAlive(hit.target)) continue;
+  world.eachEvent<DamageDealt>((hit) {
+    if (!hit.impact || !world.isAlive(hit.target)) return;
     world.add(hit.target, const HitFlash(), removeAfter: hitFlashSeconds);
     final recoil = world.tryGet<Recoil>(hit.target);
     if (recoil == null) {
@@ -36,7 +36,7 @@ void reactToDamage(World world) {
     if (player != null && player != hit.target) {
       world.add(player, const HitPause(), removeAfter: pause);
     }
-  }
+  });
 }
 
 void ageRecoil(World world) {
