@@ -4,7 +4,8 @@ import 'package:flutter_scene/physics.dart' show BasicSimulation, PhysicsWorld;
 import 'package:flutter_scene/scene.dart' show Node, Scene;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scene_dash_v2/scene_dash_v2.dart';
-import 'package:scene_dash_v2/src/scene_driver.dart' show PhysicsStepMirror;
+import 'package:scene_dash_v2_core/advanced.dart' show App, EcsFrameLoop;
+import 'package:scene_dash_v2/src/scene_driver.dart' show EcsSceneDriver;
 
 enum Act { left, fire }
 
@@ -78,27 +79,33 @@ void main() {
     });
   });
 
-  test('alpha mirrors the scene physics accumulator', () {
+  test('alpha follows the scene physics world', () {
+    final app = App();
+    final loop = EcsFrameLoop(app)..ensureTimeResources();
+    app.start();
     final physics = PhysicsWorld(BasicSimulation());
-    final mirror = PhysicsStepMirror();
+    final driver = EcsSceneDriver(loop);
+    Node()
+      ..addComponent(physics)
+      ..addComponent(driver);
+    // ignore: invalid_use_of_internal_member
+    driver.mount();
     final fixed = physics.fixedTimestep;
     var accumulator = 0.0;
     for (final frame in [1.5, 0.25, 1.0, 2.25, 0.5, 12.0, 0.75, 3.0]) {
       final dt = frame * fixed;
-      var steps = 0;
       accumulator = Scene.advancePhysics(
         world: physics,
-        fixedUpdateWalk: (_) => steps++,
+        fixedUpdateWalk: driver.fixedUpdate,
         accumulator: accumulator,
         frameDt: dt,
       );
-      final alpha = mirror.advance(
-        frameDt: dt,
-        steps: steps,
-        fixedTimestep: fixed,
-        maxSubsteps: physics.maxSubsteps,
+      driver.update(dt);
+      expect(
+        app.world.fixedTime.alpha,
+        closeTo(physics.interpolationAlpha, 1e-9),
+        reason: 'frame $frame',
       );
-      expect(alpha, closeTo(accumulator / fixed, 1e-9), reason: 'frame $frame');
     }
   });
 

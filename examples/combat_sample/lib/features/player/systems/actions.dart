@@ -7,14 +7,10 @@ void installPlayerActions(GameBuilder game) {
       inSet: GameSets.actions,
       runIf: inState(GameStatus.fighting),
       chain: true,
-      [
-        (bufferPresses, reads: const {}, writes: const {}),
-        (fighterDriver, reads: const {}, writes: const {Fighter}),
-        (
-          announceWindup,
-          reads: const {Player, Fighter, PlayerMotion},
-          writes: const {},
-        ),
+      const [
+        SystemEntry(bufferPresses, reads: {}),
+        SystemEntry(fighterDriver, writes: {Fighter}),
+        SystemEntry(announceWindup, reads: {Player, Fighter, PlayerMotion}),
       ],
     )
     ..addSystem(

@@ -85,8 +85,8 @@ void installRace(GameBuilder game) {
   game
     ..addSystem(Schedules.startup, spawnRun, writes: {Position, Velocity})
     ..addSystems(Schedules.fixedUpdate, chain: true, [
-      (move, reads: {Velocity}, writes: {Position}),
-      (referee, reads: {Position}, writes: const {}),
+      SystemEntry(move, reads: {Velocity}, writes: {Position}),
+      SystemEntry(referee, reads: {Position}),
     ])
     ..addSystem(
       Schedules.fixedUpdate,

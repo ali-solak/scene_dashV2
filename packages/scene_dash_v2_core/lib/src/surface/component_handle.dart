@@ -9,6 +9,8 @@ import 'tag.dart';
 final class ComponentHandle<T extends Object> {
   final World _world;
   ComponentStore? _store;
+  ObjectComponentStore<T>? _typed;
+  bool _indexed = false;
   int _resolvedAtCount = -1;
   bool _settled = false;
 
@@ -28,19 +30,23 @@ final class ComponentHandle<T extends Object> {
     final exact = stores.lookup(T);
     if (exact != null) {
       _settled = true;
+      if (exact is ObjectComponentStore<T>) _typed = exact;
+      _indexed = _typed != null || exact is TagStore;
       return _store = exact;
     }
     if (<T>[] is List<Tag>) return _store = null;
     final supertype = stores.supertypeStoreOf<T>();
     if (supertype != null) return _store = supertype;
     _settled = true;
-    return _store = stores.ensureObject<T>();
+    _indexed = true;
+    return _store = _typed = stores.ensureObject<T>();
   }
 
   T? of(Entity entity) {
     if (!_world.entities.isAlive(entity)) return null;
     final store = _resolve();
-    if (store is ObjectComponentStore<T>) return store.valueOf(entity.index);
+    final typed = _typed;
+    if (typed != null) return typed.valueOf(entity.index);
     final value = store?.payloadOf(entity.index);
     return value is T ? value : null;
   }
@@ -61,9 +67,7 @@ final class ComponentHandle<T extends Object> {
     if (!_world.entities.isAlive(entity)) return false;
     final store = _resolve();
     if (store == null) return false;
-    if (store is TagStore || store is ObjectComponentStore<T>) {
-      return store.containsIndex(entity.index);
-    }
+    if (_indexed) return store.containsIndex(entity.index);
     return store.payloadOf(entity.index) is T;
   }
 }

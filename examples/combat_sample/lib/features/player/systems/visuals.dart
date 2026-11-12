@@ -6,17 +6,16 @@ void installPlayerVisuals(GameBuilder game) {
     Schedules.update,
     inSet: GameSets.logic,
     runIf: hasResource<Scene>(),
-    [
-      (attachPlayerVisuals, reads: const {Player}, writes: const {}),
-      (
+    const [
+      SystemEntry(attachPlayerVisuals, reads: {Player}),
+      SystemEntry(
         updatePlayerAnimation,
-        reads: const {Player, Fighter, PlayerMotion},
-        writes: const {PlayerAnimator},
+        reads: {Player, Fighter, PlayerMotion},
+        writes: {PlayerAnimator},
       ),
-      (
+      SystemEntry(
         updatePlayerGhost,
-        reads: const {Player, Fighter, NodeRef, Knockback},
-        writes: const {},
+        reads: {Player, Fighter, NodeRef, Knockback},
       ),
     ],
   );

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.1
+- Under a scene `PhysicsWorld`, `FixedTime.alpha` reads
+  `PhysicsWorld.interpolationAlpha` instead of re-deriving the engine's
+  accumulator.
+
 ## 0.7.0
 - `InputBindings<A>(keys: {...})` and `TouchAction<A>` map keys and touch
   areas onto `ButtonInput<A>`. Sources on one action are counted; losing

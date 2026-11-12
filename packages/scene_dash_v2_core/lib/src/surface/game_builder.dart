@@ -21,7 +21,15 @@ typedef WorldSystem = void Function(World world);
 /// Registers one game feature.
 typedef Feature = void Function(GameBuilder game);
 
-typedef SystemEntry = (WorldSystem, {Set<Type> reads, Set<Type> writes});
+/// One [GameBuilder.addSystems] entry; omit [reads] and [writes] to leave
+/// the system undeclared.
+final class SystemEntry {
+  final WorldSystem system;
+  final Set<Type>? reads;
+  final Set<Type>? writes;
+
+  const SystemEntry(this.system, {this.reads, this.writes});
+}
 
 /// Registers game features.
 final class GameBuilder {
@@ -163,7 +171,7 @@ final class GameBuilder {
     bool chain = false,
   }) {
     WorldSystem? previous;
-    for (final (system, :reads, :writes) in systems) {
+    for (final SystemEntry(:system, :reads, :writes) in systems) {
       addSystem(
         schedule,
         system,

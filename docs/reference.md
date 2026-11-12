@@ -463,9 +463,9 @@ game.addSystem(Schedules.fixedUpdate, lockOn, writes: {Fighter},
 // inSet apply to all; chain: true runs them in list order
 game.addSystems(Schedules.fixedUpdate, runIf: inState(GameStatus.playing),
     inSet: GameSets.combat, chain: true, [
-  (closeIn, reads: {Target}, writes: {SceneTransform}),
-  (enemyAttacks, reads: {Target}, writes: {EnemyAttack}),
-  (lockOn, reads: const {}, writes: {Fighter}),
+  SystemEntry(closeIn, reads: {Target}, writes: {SceneTransform}),
+  SystemEntry(enemyAttacks, reads: {Target}, writes: {EnemyAttack}),
+  SystemEntry(lockOn, writes: {Fighter}),
 ]);
 
 // a shared gate and phase across schedules, or with per-system options

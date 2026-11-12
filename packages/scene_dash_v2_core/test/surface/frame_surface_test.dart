@@ -193,9 +193,9 @@ void main() {
               game.addSystems(
                 Schedules.update,
                 [
-                  (third, reads: const {}, writes: {Health}),
-                  (second, reads: const {}, writes: {Health}),
-                  (first, reads: {Health}, writes: const {}),
+                  SystemEntry(third, writes: {Health}),
+                  SystemEntry(second, writes: {Health}),
+                  SystemEntry(first, reads: {Health}),
                 ],
                 runIf: gate == null ? null : (_) => gate(),
                 chain: chain,

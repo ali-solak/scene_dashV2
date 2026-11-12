@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.1
+- `addSystems` entries are `SystemEntry(system, reads:, writes:)`; both
+  fields are optional, so a read-only system skips `writes:` and an entry
+  with neither stays undeclared.
+- `ComponentHandle` keeps the typed store it resolved, so `of` and `has`
+  no longer type-test the store per call.
+
 ## 0.7.0
 - `Entity` is an extension type over one `int` (24-bit index, 29-bit
   generation, packed within 53 bits so it is exact on the web). Queries no
