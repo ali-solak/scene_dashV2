@@ -1,0 +1,30 @@
+Entity as an extension type (0.7.0), 2026-11-13
+Windows desktop, Dart 3.14.0, AOT executables, N = 10000.
+BEFORE: 79db82e (Entity is a class; queries allocate a handle per row).
+AFTER:  a9f6887 (Entity is an extension type over int).
+Each built from a clean worktree with only scene_dash_v2_core + benchmarks
+in the pub workspace:
+
+  dart compile exe benchmarks/object_query_benchmark.dart -o oq-<rev>.exe
+  oq-<rev>.exe 10000
+
+Three alternating runs. Single machine; timings are directional.
+
+                                       before run 1/2/3        after run 1/2/3
+  flat List<Actor> integrate           1.42 1.24 1.29          1.30 1.24 1.23
+  object sparse Query2                 7.34 7.21 7.27          5.41 5.42 5.46
+  flat List<Actor> sum x               0.78 0.77 0.77          0.78 0.76 0.78
+  object sparse Query1                 7.04 7.07 6.87          4.69 4.61 4.68
+  flat loop + bool check               0.85 0.81 0.85          0.82 0.82 0.91
+  object sparse Query2 excludes Frozen 6.72 6.64 6.63          5.16 5.21 5.17
+
+All values ns/op (ns per entity).
+
+Summary, mean of three:
+  Query1.each                     7.0 -> 4.7 ns/entity  (-34%)
+  Query2.each                     7.3 -> 5.4 ns/entity  (-25%)
+  Query2.each without<Frozen>     6.7 -> 5.2 ns/entity  (-22%)
+
+The flat-loop baselines do not move, so the gain is the per-row handle
+allocation the extension type removes. The 0.7.0 changelog previously quoted
+5.0 -> 3.8 ns/entity from an unsaved run; it now cites these numbers.

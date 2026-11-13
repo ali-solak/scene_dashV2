@@ -1246,9 +1246,14 @@ const Static()           // never moves: written once, again only when
                          //   the per-frame sync skips it
 InterpolateTransform()   // moved in fixed steps: the node gets the blend
                          //   of the last two steps at fixedTime.alpha;
-                         //   SceneTransform itself keeps the real value
-world.get<InterpolateTransform>(entity).snap();   // after a teleport: next
-                         //   frame writes the target without blending
+                         //   SceneTransform itself keeps the real value;
+                         //   write its SceneTransform only in fixed
+                         //   schedules: a write from update or
+                         //   OnEnter/OnExit lands between captures, shows
+                         //   only by alpha, and the blend fights it
+world.get<InterpolateTransform>(entity).snap();   // after a teleport or
+                         //   respawn: next frame writes the target without
+                         //   blending
 ```
 
 An entity's transform can also live on the node itself.

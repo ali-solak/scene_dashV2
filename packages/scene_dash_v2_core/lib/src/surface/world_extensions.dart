@@ -105,7 +105,7 @@ extension WorldSurface on World {
     T component, {
     double? removeAfter,
   }) {
-    if (T == component.runtimeType) ensureStore<T>();
+    if (T == component.runtimeType) storeOf<T>();
     spawnQueue.addPart(entity, component);
     if (removeAfter != null) {
       removeAfterTracker.track(entity, component.runtimeType, removeAfter);
@@ -132,7 +132,7 @@ extension WorldSurface on World {
   ComponentHandle<T> handle<T extends Object>() => ComponentHandle<T>(this);
 
   EntityQuery entitiesWith<T extends Object>() =>
-      EntityQuery(this, [ensureStore<T>()], const []);
+      EntityQuery(this, [filterOf<T>()], const []);
 
   // Single components
 

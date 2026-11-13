@@ -4,6 +4,25 @@ import 'package:test/test.dart';
 enum _Action { left, right, fire }
 
 void main() {
+  test('InputLatch follows inputs inserted or replaced after its first run', () {
+    final resources = Resources();
+    final latch = InputLatch(resources)..advanceFrame(0);
+    final input = resources.getOrInsert<ButtonInput<_Action>>(
+      ButtonInput<_Action>.new,
+    )..press(_Action.fire);
+    latch.advanceFrame(0);
+    expect(input.justPressed(_Action.fire), isTrue);
+    latch.beginStep();
+    expect(input.justPressed(_Action.fire), isTrue);
+    latch.endStep();
+    final replacement = ButtonInput<_Action>()..press(_Action.left);
+    resources.insert<ButtonInput<_Action>>(replacement);
+    latch.advanceFrame(0);
+    expect(replacement.justPressed(_Action.left), isTrue);
+    latch.advanceFrame(0);
+    expect(input.justPressed(_Action.fire), isTrue);
+  });
+
   group('ButtonInput', () {
     test('press/release track held state', () {
       final input = ButtonInput<_Action>();

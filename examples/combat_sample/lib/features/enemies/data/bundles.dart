@@ -22,4 +22,5 @@ List<Object> enemyBundle(
     giant: giant,
   ),
   SceneTransform(x, 0, z),
+  InterpolateTransform(),
 ];

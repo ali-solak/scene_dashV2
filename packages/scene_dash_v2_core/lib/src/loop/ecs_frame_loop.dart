@@ -21,6 +21,8 @@ final class EcsFrameLoop {
 
   final void Function()? onFixedStepStart;
 
+  late final InputLatch _latch = InputLatch(app.world.resources);
+
   EcsFrameLoop(
     this.app, {
     this.onBeforeUpdate,
@@ -53,8 +55,7 @@ final class EcsFrameLoop {
       ..unscaledDelta = deltaSeconds
       ..elapsed = elapsed
       ..frame += 1;
-    // Age inputs before frame start.
-    advanceInput(world.resources.values, deltaSeconds);
+    _latch.advanceFrame(deltaSeconds);
     app.runSchedule(Schedules.frameStart);
     app.applyStateTransitions();
     onCommandBoundary?.call();
@@ -68,12 +69,11 @@ final class EcsFrameLoop {
     app.world.fixedTime
       ..delta = fixedDt
       ..tick += 1;
-    final resources = app.world.resources.values;
-    beginInputStep(resources);
+    _latch.beginStep();
     try {
       app.runSchedule(Schedules.fixedPrePhysics);
     } finally {
-      endInputStep(resources);
+      _latch.endStep();
     }
     app.world.removeAfterTrackerOrNull?.tick(fixedDt);
     onCommandBoundary?.call();

@@ -10,6 +10,7 @@ import '../resources/resources.dart';
 import '../storage/component_store.dart';
 import '../storage/object_store.dart';
 import '../storage/store_registry.dart';
+import '../storage/subtype_filter.dart';
 import '../storage/tag_store.dart';
 import '../surface/observers.dart';
 import '../surface/remove_after.dart';
@@ -151,6 +152,19 @@ final class World {
   ComponentStore ensureStore<T>() =>
       stores.lookup(T) ??
       (<T>[] is List<Tag> ? stores.ensureTag<T>() : stores.ensureObject<T>());
+
+  ComponentStore storeOf<T>() =>
+      stores.lookup(T) ??
+      (<T>[] is List<Tag>
+          ? stores.ensureTag<T>()
+          : stores.supertypeStoreOf<T>() ?? stores.ensureObject<T>());
+
+  ComponentStore filterOf<T>() {
+    final store = storeOf<T>();
+    return store is TagStore || store is ObjectComponentStore<T>
+        ? store
+        : SubtypeFilter<T>(store);
+  }
 
   /// Registers an event channel for event type [T] if one does not yet exist.
   ///

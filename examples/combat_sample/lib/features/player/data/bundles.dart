@@ -10,4 +10,5 @@ List<Object> playerBundle() => [
   // Spawns at the arena rim looking at the center (facing pi = -Z).
   PlayerMotion()..facing = math.pi,
   SceneTransform(playerSpawnX, 0, playerSpawnZ),
+  InterpolateTransform(),
 ];

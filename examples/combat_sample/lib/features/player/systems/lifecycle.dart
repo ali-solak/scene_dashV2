@@ -19,6 +19,7 @@ void installPlayerLifecycle(GameBuilder game) {
         Health,
         Knockback,
         SceneTransform,
+        InterpolateTransform,
       },
       runIf: freshRun,
     )
@@ -57,6 +58,7 @@ void resetPlayerRun(World world) {
       .tryGet<SceneTransform>(player)
       ?.translation
       .setValues(playerSpawnX, 0, playerSpawnZ);
+  world.tryGet<InterpolateTransform>(player)?.snap();
   world.tryGet<PlayerAnimator>(player)?.reset();
 }
 

@@ -26,12 +26,12 @@ final class EntityQuery extends Query {
 
   EntityQuery having<T>() => EntityQuery(_world, [
     ..._withStores,
-    _world.ensureStore<T>(),
+    _world.filterOf<T>(),
   ], _withoutStores);
 
   EntityQuery without<T>() => EntityQuery(_world, _withStores, [
     ..._withoutStores,
-    _world.ensureStore<T>(),
+    _world.filterOf<T>(),
   ]);
 
   void each(EntityQueryCallback callback) {

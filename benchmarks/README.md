@@ -76,6 +76,20 @@ when its store is created, so the parked-part rows above only describe
 These are single desktop runs, timer overhead included. They do not
 predict a rendered frame rate.
 
+## Entity handles
+
+`Entity` became an extension type over `int` in 0.7.0, so queries stop
+allocating a handle per row.
+[`object_query_benchmark.dart`](object_query_benchmark.dart), AOT, N = 10k,
+mean of three runs
+([2026-11-13 capture](results/2026-11-13-entity-handle-aot-desktop.txt)):
+
+| Query | Before | After |
+| --- | ---: | ---: |
+| `Query1.each` | 7.0 ns/entity | 4.7 ns/entity |
+| `Query2.each` | 7.3 ns/entity | 5.4 ns/entity |
+| `Query2.each` without a tag | 6.7 ns/entity | 5.2 ns/entity |
+
 ## Despawn cost and store count
 
 Each store tracks which entities it holds in a per-entity bit set, so a

@@ -10,6 +10,10 @@ final class Health {
   final double max;
 }
 
+final class BossHealth extends Health {
+  BossHealth(super.max);
+}
+
 final class Marked implements Tag {
   const Marked();
 }
@@ -102,6 +106,28 @@ void main() {
     drive(game);
     await tester.pump();
     expect(find.text('dead'), findsOneWidget);
+  });
+
+  testWidgets('EntityBuilder over a subtype reads its supertype store '
+      'without splitting it', (tester) async {
+    final game = await boot();
+    game.world.ensureStore<Health>();
+    final boss = game.world.spawn([BossHealth(500)]);
+    drive(game);
+    await tester.pumpWidget(
+      GameScope(
+        game: game,
+        child: EntityBuilder<BossHealth, double>(
+          entity: boss,
+          select: (h) => h.current,
+          builder: (context, hp) =>
+              Text('$hp', textDirection: TextDirection.ltr),
+        ),
+      ),
+    );
+    expect(find.text('500.0'), findsOneWidget);
+    expect(game.world.stores.isRegistered(BossHealth), isFalse);
+    expect(game.world.query<Health>().count(), 1);
   });
 
   testWidgets('EntityBuilder.matching resolves through the world and '

@@ -57,7 +57,7 @@ final class QueryView1<A extends Object> {
     assert(_noteTypes(_world, [T]));
     return QueryView1._(_world, _a, [
       ..._with,
-      _world.ensureStore<T>(),
+      _world.filterOf<T>(),
     ], _without);
   }
 
@@ -65,7 +65,7 @@ final class QueryView1<A extends Object> {
     assert(_noteTypes(_world, [T]));
     return QueryView1._(_world, _a, _with, [
       ..._without,
-      _world.ensureStore<T>(),
+      _world.filterOf<T>(),
     ]);
   }
 
@@ -155,7 +155,7 @@ final class QueryView2<A extends Object, B extends Object> {
     assert(_noteTypes(_world, [T]));
     return QueryView2._(_world, _a, _b, [
       ..._with,
-      _world.ensureStore<T>(),
+      _world.filterOf<T>(),
     ], _without);
   }
 
@@ -163,7 +163,7 @@ final class QueryView2<A extends Object, B extends Object> {
     assert(_noteTypes(_world, [T]));
     return QueryView2._(_world, _a, _b, _with, [
       ..._without,
-      _world.ensureStore<T>(),
+      _world.filterOf<T>(),
     ]);
   }
 
@@ -267,7 +267,7 @@ final class QueryView3<A extends Object, B extends Object, C extends Object> {
     assert(_noteTypes(_world, [T]));
     return QueryView3._(_world, _a, _b, _c, [
       ..._with,
-      _world.ensureStore<T>(),
+      _world.filterOf<T>(),
     ], _without);
   }
 
@@ -275,7 +275,7 @@ final class QueryView3<A extends Object, B extends Object, C extends Object> {
     assert(_noteTypes(_world, [T]));
     return QueryView3._(_world, _a, _b, _c, _with, [
       ..._without,
-      _world.ensureStore<T>(),
+      _world.filterOf<T>(),
     ]);
   }
 
@@ -389,7 +389,7 @@ final class QueryView4<
     assert(_noteTypes(_world, [T]));
     return QueryView4._(_world, _a, _b, _c, _d, [
       ..._with,
-      _world.ensureStore<T>(),
+      _world.filterOf<T>(),
     ], _without);
   }
 
@@ -397,7 +397,7 @@ final class QueryView4<
     assert(_noteTypes(_world, [T]));
     return QueryView4._(_world, _a, _b, _c, _d, _with, [
       ..._without,
-      _world.ensureStore<T>(),
+      _world.filterOf<T>(),
     ]);
   }
 

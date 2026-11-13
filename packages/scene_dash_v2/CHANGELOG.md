@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0
+- Requires `scene_dash_v2_core` 0.8.0.
+- `EntityBuilder<T>` reads a subtype through its supertype's store instead
+  of creating a split store for it.
+- `InterpolateTransform` docs: write `SceneTransform` only in fixed
+  schedules, and `snap()` after a respawn as well as a teleport.
+
 ## 0.7.1
 - Under a scene `PhysicsWorld`, `FixedTime.alpha` reads
   `PhysicsWorld.interpolationAlpha` instead of re-deriving the engine's

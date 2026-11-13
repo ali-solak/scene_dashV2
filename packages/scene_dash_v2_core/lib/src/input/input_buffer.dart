@@ -1,3 +1,4 @@
+import '../resources/resources.dart';
 import 'button_input.dart';
 
 /// Keeps recent input actions in order.
@@ -123,25 +124,49 @@ final class InputBuffer<T> {
   }
 }
 
-/// Ages automatic input buffers and latches button edges for the frame.
-void advanceInput(Iterable<Object> resources, double unscaledDt) {
-  for (final resource in resources) {
-    if (resource is InputBuffer && resource.autoAdvance) {
-      resource.advance(unscaledDt);
-    } else if (resource is ButtonInput) {
-      resource.advanceFrame();
+final class InputLatch {
+  InputLatch(this._resources);
+
+  final Resources _resources;
+  final List<ButtonInput> _buttons = <ButtonInput>[];
+  final List<InputBuffer> _buffers = <InputBuffer>[];
+  int _version = -1;
+
+  void _refresh() {
+    if (_version == _resources.version) return;
+    _version = _resources.version;
+    _buttons.clear();
+    _buffers.clear();
+    for (final resource in _resources.values) {
+      if (resource is ButtonInput) {
+        _buttons.add(resource);
+      } else if (resource is InputBuffer && resource.autoAdvance) {
+        _buffers.add(resource);
+      }
     }
   }
-}
 
-void beginInputStep(Iterable<Object> resources) {
-  for (final resource in resources) {
-    if (resource is ButtonInput) resource.beginStep();
+  void advanceFrame(double unscaledDt) {
+    _refresh();
+    for (final buffer in _buffers) {
+      buffer.advance(unscaledDt);
+    }
+    for (final input in _buttons) {
+      input.advanceFrame();
+    }
   }
-}
 
-void endInputStep(Iterable<Object> resources) {
-  for (final resource in resources) {
-    if (resource is ButtonInput) resource.endStep();
+  void beginStep() {
+    _refresh();
+    for (final input in _buttons) {
+      input.beginStep();
+    }
+  }
+
+  void endStep() {
+    _refresh();
+    for (final input in _buttons) {
+      input.endStep();
+    }
   }
 }

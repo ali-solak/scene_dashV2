@@ -189,7 +189,7 @@ class _EntityBuilderState<T extends Object, S>
   @override
   void attached(WorldGame? previous) {
     // Ensure the component store exists.
-    game.world.ensureObjectStore<T>();
+    game.world.storeOf<T>();
     _dropMatch();
     _read(rebuild: false);
     _needsRead = false;

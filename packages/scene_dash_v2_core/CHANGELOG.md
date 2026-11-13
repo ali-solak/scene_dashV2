@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.0
+- `world.add`, `having<T>()`, `without<T>()` and `entitiesWith<T>()` use
+  the supertype's store when one exists instead of creating a split store
+  for the subtype; the filters type-test the stored value.
+- `advanceInput`/`beginInputStep`/`endInputStep` are replaced by
+  `InputLatch(resources)`, which caches the input resources against
+  `Resources.version` instead of scanning every resource each frame and
+  twice per fixed step.
+
 ## 0.7.1
 - `addSystems` entries are `SystemEntry(system, reads:, writes:)`; both
   fields are optional, so a read-only system skips `writes:` and an entry
@@ -10,7 +19,8 @@
 ## 0.7.0
 - `Entity` is an extension type over one `int` (24-bit index, 29-bit
   generation, packed within 53 bits so it is exact on the web). Queries no
-  longer allocate a handle per row: `Query1.each` 5.0 → 3.8 ns/entity AOT.
+  longer allocate a handle per row: `Query1.each` 7.0 → 4.7 ns/entity AOT
+  (`benchmarks/results/2026-11-13-entity-handle-aot-desktop.txt`).
   `'$entity'` prints the packed number; use `entity.label`. Spawning past
   `Entity.maxIndex` live slots throws a `StateError`.
 - The classic query constructors are `rawQuery1`..`rawQuery4`, so

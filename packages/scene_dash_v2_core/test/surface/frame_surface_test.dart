@@ -319,5 +319,34 @@ void main() {
       expect(world.has<Square>(square), isTrue);
       expect(world.handle<Square>().of(square), isA<Square>());
     });
+
+    test('add with a subtype keeps it in the supertype store', () {
+      final game = TestGame.headless()..start();
+      final world = game.world..ensureStore<Shape>();
+      final entity = world.spawn([Health(1)]);
+      game.pump();
+      world.add(entity, const Circle());
+      game.pump();
+      expect(world.stores.isRegistered(Circle), isFalse);
+      expect(world.query<Shape>().count(), 1);
+      expect(world.has<Circle>(entity), isTrue);
+    });
+
+    test('having and without filter subtypes through the supertype store', () {
+      final game = TestGame.headless()..start();
+      final world = game.world..ensureStore<Shape>();
+      final round = world.spawn([Health(1), const Circle()]);
+      final boxy = world.spawn([Health(2), const Square()]);
+      world.spawn([Health(3)]);
+      game.pump();
+      expect(world.query<Health>().having<Circle>().count(), 1);
+      expect(world.query<Health>().having<Circle>().first.$1, round);
+      expect(world.query<Health>().having<Square>().first.$1, boxy);
+      expect(world.query<Health>().without<Circle>().count(), 2);
+      expect(world.entitiesWith<Circle>().firstOrNull, round);
+      expect(world.entitiesWith<Square>().count(), 1);
+      expect(world.stores.isRegistered(Circle), isFalse);
+      expect(world.stores.isRegistered(Square), isFalse);
+    });
   });
 }

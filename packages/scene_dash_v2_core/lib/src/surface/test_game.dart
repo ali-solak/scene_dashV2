@@ -29,6 +29,7 @@ final class TestGame {
 
   bool _started = false;
   double _accumulator = 0;
+  late final InputLatch _latch = InputLatch(world.resources);
   Duration _elapsed = Duration.zero;
 
   /// Creates a headless game with [features].
@@ -117,8 +118,7 @@ final class TestGame {
       ..unscaledDelta = dt
       ..elapsed = _elapsed
       ..frame += 1;
-    // Age inputs before frame start.
-    advanceInput(world.resources.values, dt);
+    _latch.advanceFrame(dt);
     app.runSchedule(Schedules.frameStart);
     app.applyStateTransitions();
     _boundary();
@@ -130,12 +130,11 @@ final class TestGame {
       fixedTime
         ..delta = fixedDt
         ..tick += 1;
-      final resources = world.resources.values;
-      beginInputStep(resources);
+      _latch.beginStep();
       try {
         app.runSchedule(Schedules.fixedUpdate);
       } finally {
-        endInputStep(resources);
+        _latch.endStep();
       }
       // Refreshes win before deadlines advance.
       world.removeAfterTrackerOrNull?.tick(fixedDt);
